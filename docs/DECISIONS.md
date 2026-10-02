@@ -7,6 +7,21 @@ the evidence that would reopen the question.
 
 ## 2026-10-02 (goal sweep II)
 
+- **Julia-1 — FINAL after the comprehensive 135-claim benchmark
+  (docs/benchmarks/claim-verification-julia1-2026-10-02.md): REJECTED, AUC
+  0.529.** Independent subagent authored 135 ground-truthed claims (74
+  TRUE / 61 FALSE) from 14 real papers in `test_papers/`; orchestrator
+  verified every evidence quote verbatim (135/135 passed); all claims run
+  through 6 resident Julia-1 processes over 24k-char paper contexts. Mean
+  P(true): TRUE 0.505 vs FALSE 0.487 — no discrimination (coin flip) on
+  real research claims. At the owner's 0.99 bar: 132/135 unverified, 3
+  correct refutations, 0 dangerous. At any lower bar: decided accuracy
+  0.42–0.54 with up to 62 dangerous errors. Rejected as verdict engine
+  AND as triage/ranking filter (AUC 0.53 kills ranking too). ClaimGen +
+  the harness are reusable: any Stage-D engine (llama.cpp small generative,
+  0.5–1B Q4) reruns the same benchmark for a like-for-like comparison
+  before adoption.
+
 - **Local decision model — DEFERRAL LIFTED, ADOPT NOW (owner directive,
   staged build). Stages A+B SHIPPED; Stage C/D measured: JULIA-1 REJECTED
   as verdict engine — confirmed with the owner's context hypothesis TESTED.**
