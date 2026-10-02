@@ -7,6 +7,28 @@ the evidence that would reopen the question.
 
 ## 2026-10-02
 
+- **Slide deliverable runtimes surveyed — open-slide stays primary, Slidev
+  noted as the Markdown-flavoured alternative.** slideblocks-skill (MIT, 71★)
+  wraps Slidev but has been dormant since its creation month; recorded in
+  BACKLOG as an alternative runtime, chosen per session (React-canvas vs
+  Markdown decks).
+- **Paper Office (paperinstruments.com, MIT-skilled Python packages) —
+  recorded as the evidence-backed alternative for office deliverables.**
+  Benchmark: 92.5% task pass vs 80.7% upstream python-docx/pptx/openpyxl and
+  69.5% Anthropic office skills. Companion-tier like GenOffice; choice per
+  session (interactive suite vs agent-scripted manipulation). Python
+  host-side only — our runtime stays zero-Python.
+- **LiteParse (run-llama, 12.8k★, Apache-2.0, Rust with npm/wasm) —
+  appropriate as the host-side companion for document INGESTION** (parsing
+  the user's own PDFs/docs the agent must read), not for manipulation; its
+  official skill ships via `npx skills add run-llama/llamaparse-agent-skills
+  --skill liteparse`. Trigger recorded in BACKLOG; never bundled (would break
+  the zero-dependency runtime).
+- **figures4papers (ChenLiu-1996, 7.9k★) — reference-only for
+  `paper-figures`.** Publication-figure patterns (bar comparisons,
+  composition breakdowns) are exactly the target quality bar, but the
+  license is NOASSERTION (custom cite terms) — read for patterns, port
+  nothing without permission. Noted in BACKLOG with the caveat.
 - **Registry guard + project-conventions snippet — SHIPPED (owner-authorized,
   pulled ahead of the backlog triggers).** `pi.on("tool_call")` guard makes
   `.registry/**` package-owned (no agent tool, read or write) and `refs/**`
