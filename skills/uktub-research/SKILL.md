@@ -15,6 +15,9 @@ The registry is the source of truth; the bibliography is derived from it.
   cited, compared, or summarized — must be registered first. A literature
   review with unregistered sources is incomplete work: search, pick the
   strongest candidates, and register them before writing.
+- If a system or paper the user named has no search hits, say so explicitly in
+  the answer ("no indexed records found for X") — never silently drop it or
+  substitute a different work.
 - Use `search_papers` when the topic is open-ended: given a rough query, it
   returns merged candidates from OpenAlex, Crossref, and Semantic Scholar in
   relevance order, each with a DOI when one exists. Candidate DOIs appear in
