@@ -129,7 +129,11 @@ roadmap once figure workflows justify it.
 
 - More sources beyond OpenAlex/Crossref/Semantic Scholar (Europe PMC next).
 - Host adapters (Claude Code, Codex) behind the same core.
-- `paper-figures` skill for publication-grade figures (grant-proposal need).
+- `paper-figures` skill for publication-grade figures (grant-proposal need;
+  templates: evident-charts + OpenScience `core/figures`).
+- Skill folds from OpenScience `core` when sessions demand them:
+  literature-review loop discipline, claim-source auditing.
+- Grant-proposal support (template: OpenScience `research/research-grants`).
 - UI layer for non-technical users (enforcement lives there, not here).
 
 ## Attribution

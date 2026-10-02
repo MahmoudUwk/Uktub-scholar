@@ -7,6 +7,23 @@ the evidence that would reopen the question.
 
 ## 2026-10-02
 
+- **OpenScience (synthetic-sciences, Apache-2.0 repo / MIT skills) — THE
+  adoption library for the widened scope.** ~400 skills by domain; ours to
+  port piecemeal with NOTICE attribution as capabilities earn their place:
+  - Fits current surface (candidate skill folds, awaiting the real-session
+    evidence gate): `core/literature-review` (fixed-budget retrieval loop,
+    dedup, load-bearing-paper reading, PRISMA escalation),
+    `core/sources` (claim→source audit, provenance table),
+    `core/citations` (fabricated/mismatched .bib audits — mostly covered by
+    register + sync-bib).
+  - Roadmap templates: `research/research-grants` (NSF/NIH/DOE/DARPA
+    proposals — the grant direction), `core/figures` + `scientific-visualization`
+    (paper-figures skill, alongside evident-charts), `core/peer-review`,
+    `core/paper-writing`, `writing/latex-posters`, `writing/scientific-slides`,
+    `research/statistical-power`, `research/experimental-design`.
+  - Later (connector patterns): `databases/*` for the Europe PMC era.
+  - Never: cloud-compute, ml-training/inference, llm-tools, quantum,
+    biology/chemistry domains — specialist capability, not harness.
 - **Scope: all research kinds — ADOPTED as direction.** The package is not a
   literature-review tool; figures, data analysis, and grant-proposal support
   are in-arc, adopted one capability at a time as real sessions demand them.
