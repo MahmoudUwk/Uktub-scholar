@@ -25,6 +25,9 @@ For coding agents and human contributors working on `uktub-scholar`.
 ## Engineering rules
 
 - Minimal implementations; no abstraction without a second concrete consumer.
+- Harness wording (skill text, tool descriptions, refusal hints) changes only
+  after a real session shows a failure — never to make our own tests pass
+  (tests pin contracts for hosts; they are not the customer).
 - Every schema field needs a named consumer; every input limit names its source.
 - Registry schema changes bump `PRAGMA user_version`; never silently rewrite a
   foreign or newer database.

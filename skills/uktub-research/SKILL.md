@@ -52,10 +52,9 @@ the user's own sources.
 
 ## Batches
 
-- `register_papers` accepts at most 50 DOIs per call and refuses larger calls.
-  Split a long list into calls of 50 or fewer.
-- If registration order matters to you, use one batch call rather than several
-  parallel ones: batch results come back in input DOI order.
+- `register_papers` accepts at most 50 DOIs per call (the schema refuses more).
+  Batch results return in input DOI order — prefer one batch call over several
+  parallel ones when order matters to you.
 
 ## Compiling the document
 
@@ -84,10 +83,6 @@ the user's own sources.
   `uktub-scholar sync-bib` to re-render it from the registry.
 - Removing papers is a human CLI action: `uktub-scholar deregister <doi|citekey>...`.
   Run it via the shell only when the user asks for removal.
-- If search keeps degrading (`SEARCH_UNAVAILABLE`, provider warnings), suggest
-  the user set optional keys — `OPENALEX_API_KEY`, `SEMANTIC_SCHOLAR_API_KEY`,
-  `CROSSREF_MAILTO` (see README) — anonymous Semantic Scholar callers are
-  rate-limited hard.
 - All tools operate inside the project directory; `.registry` and `.git` are
   protected and path traversal is refused.
 - Failures arrive as `Refused: CODE — <what happened>. Next: <what to do>` —
