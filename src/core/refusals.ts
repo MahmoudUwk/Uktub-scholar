@@ -20,6 +20,7 @@ export type RefusalCode =
   | "COMPILE_ENGINE_MISSING"
   | "COMPILE_NO_ENTRY"
   | "COMPILE_TIMEOUT"
+  | "VERIFY_ENGINE_MISSING"
   | "PI_EXTENSION_API_UNAVAILABLE";
 
 export type WarningCode = "BIBTEX_UNAVAILABLE" | "DOI_TITLE_MISMATCH";
@@ -68,6 +69,9 @@ export const REFUSALS: Record<RefusalCode, RefusalEntry> = {
   },
   COMPILE_TIMEOUT: {
     next: "simplify the document or raise the budget via UKTUB_COMPILE_TIMEOUT_S (seconds), then retry",
+  },
+  VERIFY_ENGINE_MISSING: {
+    next: "install a verdict engine — Julia-1 (python3 with the julia package and UKTUB_JULIA_MODEL set to the checkpoint) or a llama.cpp server for a generative model — then retry",
   },
   PI_EXTENSION_API_UNAVAILABLE: {
     next: "upgrade Pi to >= 1.0.0, which exposes pi.registerTool",

@@ -7,6 +7,32 @@ the evidence that would reopen the question.
 
 ## 2026-10-02 (goal sweep II)
 
+- **Local decision model — DEFERRAL LIFTED, ADOPT NOW (owner directive,
+  staged build). Stages A+B SHIPPED; Stage C measured: JULIA-1 REJECTED as
+  the verdict engine.** Claim verification now has an engine-agnostic core
+  (`src/core/verify/claim.ts`): `verifyClaim(claim, chunk)` and
+  `verifyClaims(batch)` over one resident engine process, verdict mapping at
+  `VERIFY_MIN_CONFIDENCE` (default 0.99 — the owner's scientific-writing
+  bar), typed refusal `VERIFY_ENGINE_MISSING` when no engine is installed,
+  `scripts/julia_decide.py` resident JSONL runner. Engine facts measured
+  before building: Julia-1 (Apache-2.0, 144.3M encoder, mmBERT-small base)
+  is NOT a generative LLM — no GGUF, llama.cpp cannot run it; the engine is
+  its own Python package on CPU. Live real-paper test (our search over
+  OpenAlex, 4 pairs, one resident process, 4.4 s including 3.1 s model
+  load, ~0.3 s/verdict warm): title-restatement (supported) claims scored
+  confidence 0.725–0.777 → below the 0.99 bar → "unverified" (safe but
+  unable to confirm true claims), while a fabricated claim scored **0.738**
+  — high enough to pass any lower bar as "supported". Combined with the
+  formulation probes (clear entailments P 0.29–0.53; unrelated up to 0.58),
+  Julia-1 cannot discriminate scientific claim entailment at the owner's
+  bar: **verdict engine rejected on measurement; the interface, batch
+  design, and refusal path survive it.** Next stage (D): generative
+  verdict model via llama.cpp (already installed host-side; small instruct
+  GGUF, NLI-style judgment prompt), same `ClaimEngine` interface.
+  The doc-workflow reviewer agent (spawned to verify all claims in a
+  document) stays deferred until doc workflows exist and a passing engine
+  is in place.
+
 - **academic-pptx-skill (MIT, 1.1k★) — ADOPTED as the content-discipline
   template for slide deliverables.** Action titles (takeaway sentences),
   situation→complication→resolution argument structure, ghost-deck test,

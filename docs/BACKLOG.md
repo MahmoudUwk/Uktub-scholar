@@ -51,6 +51,19 @@ Adoption discipline: see `docs/DECISIONS.md`; attribution rules: `NOTICE.md`.
 
 ## Owner-gated (separate approval required)
 
+- **Claim verification (local decision model) — Stages A+B SHIPPED (engine-
+  agnostic `verifyClaim`/`verifyClaims`, 0.99 bar, resident-process batch);
+  Stage C measured: Julia-1 REJECTED as verdict engine (fabricated claim
+  outscored a true one, 0.738 vs 0.777/0.725 on entailments — no
+  discrimination at the 0.99 scientific bar). Stage D next: generative
+  verdict model via llama.cpp (host-installed), same `ClaimEngine`
+  interface; model choice TBD. Engine wiring: `UKTUB_JULIA_MODEL` +
+  `scripts/julia_decide.py` for Julia-class engines; typed refusal
+  `VERIFY_ENGINE_MISSING` when absent. FTS5 chunk retrieval comes later;
+  the verifier's interface is chunk-first so the retrieval layer plugs in
+  front of it. The doc-reviewer agent (verify-all-claims workflow) waits
+  for a passing engine.
+
 - **Evidence retrieval + claim verification (RAG-era design)** — when the
   owner green-lights retrieval: SQLite FTS5 over registered abstracts first
   (minimal, offline); the WeKnora-inspired pattern on top when corpus scale
