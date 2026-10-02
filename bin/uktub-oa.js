@@ -3,7 +3,7 @@
 // The CLI source is TypeScript (src/cli/main.ts). Node >= 23.6 runs type-stripped
 // TypeScript natively; Node 22.x (the Pi floor) needs --experimental-strip-types.
 // Zero runtime dependencies: the shim uses only node built-ins.
-import { spawnSync } from "node:process";
+import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
