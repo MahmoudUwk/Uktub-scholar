@@ -127,14 +127,11 @@ roadmap once figure workflows justify it.
 
 ## Next steps
 
-- More sources beyond OpenAlex/Crossref/Semantic Scholar (Europe PMC next).
-- Host adapters (Claude Code, Codex) behind the same core.
-- `paper-figures` skill for publication-grade figures (grant-proposal need;
-  templates: evident-charts + OpenScience `core/figures`).
-- Grant-proposal support (template: OpenScience `research/research-grants`).
-- Office-format deliverables (.docx/.pptx for co-authors): recommend GenOffice
-  host-side (companion, like evident-charts).
-- UI layer for non-technical users (enforcement lives there, not here).
+Active direction lives in `docs/BACKLOG.md` — every deferred capability
+(slides via open-slide, GenOffice deliverables, Europe PMC, paper-figures,
+grant support, host adapters, the UI workbench) is recorded there with the
+trigger that reopens it. Near-term: Europe PMC source, host adapters,
+`paper-figures` skill.
 
 ## Attribution
 

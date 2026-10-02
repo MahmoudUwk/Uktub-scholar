@@ -7,6 +7,18 @@ the evidence that would reopen the question.
 
 ## 2026-10-02
 
+- **open-slide (MIT, Vercel OSS) — deferred to backlog as the slides
+  runtime.** Agent-native React deck framework (fixed 1920×1080 canvas,
+  present mode, ships its own authoring skills). Not bundled: no slide
+  sessions yet, and a generated deck is its own project, not package
+  surface. Trigger + pattern recorded in `docs/BACKLOG.md`; content-guidance
+  template when triggered: OpenScience `writing/scientific-slides`.
+- **Backlog consolidated** — all deferred capabilities now live in
+  `docs/BACKLOG.md` with trigger conditions (companions: open-slide,
+  GenOffice, evident-charts; package capabilities: Europe PMC,
+  paper-figures, grants, host adapters; owner-gated: PDF acquisition,
+  evidence retrieval, UI workbench; long arc: RRSI-style evolution).
+
 - **First skill folds — ADOPTED (owner-authorized).** `uktub-research` gains
   "Running a review" (mode agreement, bounded loop, dedup, load-bearing
   reading, provenance marking) and the claim-source rule, adapted from
