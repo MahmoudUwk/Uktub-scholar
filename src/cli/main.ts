@@ -11,6 +11,7 @@
  */
 
 import { RegistryError, createRegistry, deregisterPapers, findEnclosingProject, listPapers, openRegistry, syncBibliography } from "../core/registry.ts";
+import { compileDocument, describeOutcome, prodSpawn } from "../core/compile/run.ts";
 import { renderRefusal } from "../core/refusals.ts";
 
 /** Injected I/O: the bin passes console writers; tests capture arrays. */
@@ -27,10 +28,13 @@ commands:
   init                          create the registry and an empty refs/references.bib
   deregister <doi|citekey>...   remove papers (cascade + re-render); by DOI or citekey
   sync-bib                      re-render refs/references.bib from the registry
-  list                          print registered papers in citekey order`;
+  list                          print registered papers in citekey order
+  compile [entry.tex]           compile with tectonic (PDF in build/); entry defaults
+                                to manuscript/main.tex, then main.tex, then a lone .tex`;
 
-/** One CLI run: returns the process exit code (0 success, 1 refusal/error). */
-export function runCli(argv: string[], io: CliIo): number {
+/** One CLI run: returns the process exit code (0 success, 1 refusal/error).
+ * Async because `compile` spawns the engine; callers await. */
+export async function runCli(argv: string[], io: CliIo): Promise<number> {
   const out = io.out;
   const err = io.err;
   const root = io.cwd ?? process.cwd();
@@ -113,6 +117,23 @@ export function runCli(argv: string[], io: CliIo): number {
         }
         return 0;
       }
+      case "compile": {
+        const [entry] = args;
+        const outcome = await compileDocument(
+          {
+            root,
+            env: process.env as Record<string, string | undefined>,
+            spawn: prodSpawn,
+          },
+          entry,
+        );
+        if (outcome.kind === "refusal") {
+          err(`error: ${renderRefusal({ code: outcome.code, message: outcome.message })}`);
+          return 1;
+        }
+        out(describeOutcome(outcome));
+        return outcome.kind === "compiled" ? 0 : 1;
+      }
       default:
         err(command === undefined ? USAGE : `error: unknown command "${command}"\n${USAGE}`);
         return 1;
@@ -130,5 +151,13 @@ export function runCli(argv: string[], io: CliIo): number {
 
 /* eslint-disable no-console -- console is the CLI's user interface. */
 if (process.argv[1] !== undefined && import.meta.url === new URL(`file://${process.argv[1]}`).href) {
-  process.exitCode = runCli(process.argv.slice(2), { out: console.log, err: console.error });
+  runCli(process.argv.slice(2), { out: console.log, err: console.error }).then(
+    (code) => {
+      process.exitCode = code;
+    },
+    (e: unknown) => {
+      console.error(`uktub-scholar: ${e instanceof Error ? e.message : String(e)}`);
+      process.exitCode = 1;
+    },
+  );
 }

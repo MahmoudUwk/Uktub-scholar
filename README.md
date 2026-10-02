@@ -13,8 +13,8 @@ Pi package (working name `uktub-scholar`; the final npm name is still open):
 pi install npm:uktub-scholar
 ```
 
-The extension registers exactly three tools: `search_papers`, `register_papers`,
-`list_papers`. It fails closed at load if the Pi 1.0 API surface is missing.
+The extension registers exactly four tools: `search_papers`, `register_papers`,
+`list_papers`, `compile_document`. It fails closed at load if the Pi 1.0 API surface is missing.
 
 CLI (development install — the package is currently `private`):
 
@@ -25,7 +25,8 @@ pnpm exec uktub-scholar --help   # bin shim runs the TypeScript CLI directly (ad
 ```
 
 CLI commands: `init` (create the registry and an empty `refs/references.bib`),
-`deregister <doi|citekey>...`, `sync-bib` (re-render the bibliography), `list`.
+`deregister <doi|citekey>...`, `sync-bib` (re-render the bibliography), `list`,
+`compile [entry.tex]` (Tectonic build; PDF in `build/`).
 
 ## Requirements
 
@@ -33,14 +34,18 @@ CLI commands: `init` (create the registry and an empty `refs/references.bib`),
   without flags on Node 22.21.1, 22.23.0, and 26.3.1; an ExperimentalWarning on
   22.x is expected.
 - Pi >= 1.0.0 (`@earendil-works/pi-coding-agent`), which exposes `pi.registerTool`.
+- `compile_document` / `uktub-scholar compile` need a local
+  [Tectonic](https://tectonic-typesetting.github.io) >= 0.15.0 — on `PATH` or at
+  `UKTUB_TECTONIC_BIN`. The engine is never downloaded or bundled; without it
+  the compile tools refuse (`COMPILE_ENGINE_MISSING`) and everything else works.
 
 ## Tools and limits
-
 | Tool | Limits | Source |
 |---|---|---|
 | `search_papers(query, limit?)` | `limit` default 5, clamped to max 20 | Feynman-incident-derived tool cap (labelled, R19) |
 | `register_papers(dois[])` | at most 50 DOIs per call; the whole call refuses `BATCH_TOO_LARGE` above the cap | client policy, Feynman-incident-informed (labelled, R19) |
 | `list_papers(limit?)` | cap 200; `truncated` + `remaining` returned at the cap | client policy (labelled, R19) |
+| `compile_document(entry?)` | 120 s engine budget (`UKTUB_COMPILE_TIMEOUT_S` overrides, seconds, min 5); diagnostics capped at 50 | client policy (labelled) |
 
 Search merges OpenAlex, Crossref, and Semantic Scholar (DataCite serves arXiv DOIs
 at registration) in RRF relevance order; a per-provider failure degrades the result
@@ -111,8 +116,6 @@ more for non-technical users, above the package, never inside it. See
 
 ## Next steps
 
-- Compile tool: portable diagnostics parser + Tectonic spawn (owner-approved
-  direction, not started).
 - More sources beyond OpenAlex/Crossref/Semantic Scholar (Europe PMC next).
 - Host adapters (Claude Code, Codex) behind the same core.
 - UI layer for non-technical users (enforcement lives there, not here).
@@ -125,5 +128,6 @@ Apache-2.0 attribution obligations are tracked there as well.
 
 ## Out of scope (v0)
 
-No PDF acquisition, no evidence retrieval, no compile tool — v0 is tools, not
-workflows (see the plan's Scope Boundaries).
+No PDF acquisition, no evidence retrieval, no drafting/writing tools — the
+package is tailored tools, not workflows. `compile_document` covers
+build-and-diagnostics only; thesis-scale orchestration stays with the user.

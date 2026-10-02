@@ -29,6 +29,8 @@ workflow, not a managed platform around it.
 
 ## Non-goals (v0)
 
-PDF acquisition, citation-checking, compilation, model gateways, accounts,
-and any UI. Host integrations for Claude Code / Codex are future adapters;
-the core stays host-agnostic.
+PDF acquisition, citation-checking, and drafting/writing tools.
+`compile_document` covers build-and-diagnostics only; thesis-scale
+orchestration stays with the user. Model gateways, accounts, and any UI are
+out. Host integrations for Claude Code / Codex are future adapters; the core
+stays host-agnostic.

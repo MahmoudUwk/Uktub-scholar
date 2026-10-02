@@ -7,6 +7,7 @@ import { Value } from "typebox/value";
 
 import uktubOaExtension from "../src/pi/extension.ts";
 import { createRegistry } from "../src/core/registry.ts";
+import { CompileDocumentOutput } from "../src/core/tools/compile.ts";
 import { ListPapersOutput } from "../src/core/tools/list.ts";
 import { RegisterPapersOutput } from "../src/core/tools/register.ts";
 import { SearchPapersOutput } from "../src/core/tools/search.ts";
@@ -75,12 +76,12 @@ test("load guard: Pi without registerTool throws the typed refusal, not a TypeEr
   );
 });
 
-test("registration: exactly the three tools, exact names, TypeBox parameters and outputSchema", () => {
+test("registration: exactly the four tools, exact names, TypeBox parameters and outputSchema", () => {
   const { fakePi, tools } = makeFakePi(true);
   uktubOaExtension(fakePi as never);
   assert.deepEqual(
     tools.map((tool) => tool.name),
-    ["search_papers", "register_papers", "list_papers"],
+    ["search_papers", "register_papers", "list_papers", "compile_document"],
   );
   for (const tool of tools) {
     assert.equal(typeof tool.label, "string");
@@ -93,6 +94,7 @@ test("registration: exactly the three tools, exact names, TypeBox parameters and
     if (tool.name === "search_papers") assert.deepEqual(tool.outputSchema, SearchPapersOutput);
     if (tool.name === "register_papers") assert.deepEqual(tool.outputSchema, RegisterPapersOutput);
     if (tool.name === "list_papers") assert.deepEqual(tool.outputSchema, ListPapersOutput);
+    if (tool.name === "compile_document") assert.deepEqual(tool.outputSchema, CompileDocumentOutput);
   }
 });
 

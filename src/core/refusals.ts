@@ -17,6 +17,9 @@ export type RefusalCode =
   | "PATH_REFUSED"
   | "SEARCH_UNAVAILABLE"
   | "BATCH_TOO_LARGE"
+  | "COMPILE_ENGINE_MISSING"
+  | "COMPILE_NO_ENTRY"
+  | "COMPILE_TIMEOUT"
   | "PI_EXTENSION_API_UNAVAILABLE";
 
 export type WarningCode = "BIBTEX_UNAVAILABLE" | "DOI_TITLE_MISMATCH";
@@ -56,6 +59,15 @@ export const REFUSALS: Record<RefusalCode, RefusalEntry> = {
   },
   BATCH_TOO_LARGE: {
     next: "split the batch: at most 50 DOIs per register_papers call",
+  },
+  COMPILE_ENGINE_MISSING: {
+    next: "install tectonic (tectonic-typesetting.github.io) or set UKTUB_TECTONIC_BIN to the binary path, then retry",
+  },
+  COMPILE_NO_ENTRY: {
+    next: "create manuscript/main.tex or pass entry with the project-relative .tex file to compile",
+  },
+  COMPILE_TIMEOUT: {
+    next: "simplify the document or raise the budget via UKTUB_COMPILE_TIMEOUT_S (seconds), then retry",
   },
   PI_EXTENSION_API_UNAVAILABLE: {
     next: "upgrade Pi to >= 1.0.0, which exposes pi.registerTool",

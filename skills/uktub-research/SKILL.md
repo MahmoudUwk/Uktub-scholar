@@ -1,13 +1,15 @@
 ---
 name: uktub-research
-description: Guidance for using uktub-scholar scholarly tools — when to search versus register, citekey usage, uncitable papers, batch limits, and registry hygiene for LaTeX bibliographies.
+description: Guidance for using uktub-scholar scholarly tools — when to search versus register, citekey usage, uncitable papers, batch limits, LaTeX compilation with the local Tectonic engine, and registry hygiene for bibliographies.
 ---
 
 # Scholarly research with uktub-scholar
 
-Three tools manage a local paper registry and a rendered `references.bib` beside
-the user's LaTeX project: `search_papers`, `register_papers`, `list_papers`.
-The registry is the source of truth; the bibliography is derived from it.
+Four tools manage a local paper registry, a rendered `references.bib`, and
+LaTeX compilation beside the user's project: `search_papers`,
+`register_papers`, `list_papers`, `compile_document`. The registry is the
+source of truth; the bibliography is derived from it; the PDF is derived from
+the user's own sources.
 
 ## Search versus register
 
@@ -54,6 +56,26 @@ The registry is the source of truth; the bibliography is derived from it.
   Split a long list into calls of 50 or fewer.
 - If registration order matters to you, use one batch call rather than several
   parallel ones: batch results come back in input DOI order.
+
+## Compiling the document
+
+- `compile_document` runs the user's local Tectonic binary (PATH or
+  `UKTUB_TECTONIC_BIN`). There is no download and no bundled engine — a missing
+  engine refuses; tell the user how to install it instead of improvising.
+- Entry resolution: `entry` omitted → `manuscript/main.tex`, then `main.tex`,
+  then a lone top-level `.tex`. Several candidates refuse with the list — pass
+  `entry` explicitly rather than guessing.
+- Output goes to `build/` in the project root. Treat `build/` as disposable:
+  never cite it, never hand-edit it, and do not `rm -rf` anything else to "clean"
+  the project.
+- On failure the result carries structured diagnostics (severity, file, line,
+  message). Fix the named source locations — the LaTeX sources are the user's
+  files; write with the host's file-editing tools, then recompile. Compile
+  errors are ordinary results, not run-ending failures; report what did not
+  compile and continue.
+- Warnings (overfull boxes, undefined citations) ride along on successful
+  compiles. Mention them only when they matter to the user's ask; do not
+  silently hide a broken reference in a "successful" build.
 
 ## Registry hygiene
 

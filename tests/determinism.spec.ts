@@ -160,7 +160,7 @@ describe("sync-bib recovery", () => {
     writeFileSync(join(root, BIBLIOGRAPHY_REL_PATH), "garbage", "utf-8");
     const out: string[] = [];
     const err: string[] = [];
-    assert.equal(runCli(["sync-bib"], { out: (line) => out.push(line), err: (line) => err.push(line), cwd: root }), 0);
+    assert.equal(await runCli(["sync-bib"], { out: (line) => out.push(line), err: (line) => err.push(line), cwd: root }), 0);
     assert.match(out.join("\n"), /Rendered 2/);
     assert.equal(err.length, 0);
     assert.equal(readBib(), renderAfterTwo, "sync-bib did not restore the true render byte-identically");

@@ -7,6 +7,7 @@ import type { TSchema } from "typebox";
 import { Type } from "typebox";
 
 import { WriteQueue } from "../core/queue.ts";
+import { CompileDocumentOutput, compileDocumentTool } from "../core/tools/compile.ts";
 import { ListPapersOutput, listPapersTool } from "../core/tools/list.ts";
 import { RegisterPapersOutput, registerPapersTool } from "../core/tools/register.ts";
 import { SearchPapersOutput, searchPapersTool } from "../core/tools/search.ts";
@@ -14,7 +15,8 @@ import { refusalResult, validateContext, type ToolContext, type ToolResult } fro
 import { resolve } from "node:path";
 
 /**
- * Uktub Scholar Pi extension (U5, R14, KTD7): registers exactly the three v0 tools
+ * Uktub Scholar Pi extension (U5, R14, KTD7): registers exactly the four tools
+ * (search, register, list, compile_document)
  * and nothing else — no prompt mutation, no commands, no providers — and fails
  * closed at load if the Pi 1.0 API surface is missing.
  *
@@ -175,5 +177,24 @@ export default function uktubOaExtension(pi: ExtensionAPI): void {
     }),
     outputSchema: ListPapersOutput,
     run: (ctx, params) => listPapersTool(ctx, params as { limit?: number }),
+  });
+
+  registerTool(pi, rootFor, {
+    name: "compile_document",
+    label: "Compile the document",
+    description:
+      "Compile the project's LaTeX entry with a local Tectonic engine (the user's binary: PATH or " +
+      "UKTUB_TECTONIC_BIN). Entry defaults to manuscript/main.tex, then main.tex, then a lone top-level " +
+      ".tex; with several candidates the refusal names them. Output (PDF) lands in build/; structured " +
+      "diagnostics (severity, file, line, message) come back on failure, so fix and recompile. " +
+      "The engine must be installed — a missing engine is a refusal, not a download. " +
+      REFUSAL_SEMANTICS,
+    parameters: Type.Object({
+      entry: Type.Optional(
+        Type.String({ description: "Project-relative .tex path; omit to use the default entry resolution" }),
+      ),
+    }),
+    outputSchema: CompileDocumentOutput,
+    run: (ctx, params) => compileDocumentTool(ctx, params as { entry?: string }),
   });
 }
