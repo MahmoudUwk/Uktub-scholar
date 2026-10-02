@@ -7,6 +7,7 @@ import type { TSchema } from "typebox";
 import { Type } from "typebox";
 
 import { WriteQueue } from "../core/queue.ts";
+import { guardToolCall } from "../core/guard.ts";
 import { CompileDocumentOutput, compileDocumentTool } from "../core/tools/compile.ts";
 import { ListPapersOutput, listPapersTool } from "../core/tools/list.ts";
 import { RegisterPapersOutput, registerPapersTool } from "../core/tools/register.ts";
@@ -120,13 +121,31 @@ function registerTool<TParams extends TSchema, TOut>(
   pi.registerTool(tool);
 }
 
-export default function uktubOaExtension(pi: ExtensionAPI): void {
+export default function uktubScholarExtension(pi: ExtensionAPI): void {
   if (typeof pi.registerTool !== "function") {
     throw new Error(
       "Refused: PI_EXTENSION_API_UNAVAILABLE — uktub-scholar requires Pi 1.0+ exposing pi.registerTool. Next: upgrade Pi to >= 1.0.0.",
     );
   }
   const rootFor = makeRootResolver();
+
+  // Registry guard: the package contract (.registry package-owned, refs/
+  // agent-read-only) holds against the host's own tools, not just ours.
+  // Absent `pi.on` (older host) the guard degrades to the documented
+  // convention — tools and CLI still enforce their own refusals.
+  if (typeof pi.on === "function") {
+    let guardRoot: string | null = null;
+    pi.on("tool_call", async (event: unknown, ctx: unknown) => {
+      guardRoot ??= resolve(
+        typeof (ctx as { cwd?: string } | null)?.cwd === "string" && (ctx as { cwd?: string }).cwd!.length > 0
+          ? (ctx as { cwd?: string }).cwd!
+          : process.cwd(),
+      );
+      const e = event as { toolName?: string; input?: unknown };
+      const verdict = guardToolCall(guardRoot, e.toolName ?? "", e.input);
+      return verdict.ok ? undefined : { block: true, reason: verdict.reason };
+    });
+  }
 
   registerTool(pi, rootFor, {
     name: "search_papers",

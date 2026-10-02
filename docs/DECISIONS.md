@@ -7,6 +7,14 @@ the evidence that would reopen the question.
 
 ## 2026-10-02
 
+- **Registry guard + project-conventions snippet — SHIPPED (owner-authorized,
+  pulled ahead of the backlog triggers).** `pi.on("tool_call")` guard makes
+  `.registry/**` package-owned (no agent tool, read or write) and `refs/**`
+  agent-read-only against the host's own tools; pure classification in
+  `src/core/guard.ts`, honest bash-scan limits documented. Optional
+  `AGENTS.md`/`SYSTEM.md` snippet documented in README (never auto-written
+  by `init`). Verified: 124 offline specs + live sandbox (blocked
+  `sqlite3 .registry/...` verbatim; benign bash passed).
 - **open-slide (MIT, Vercel OSS) — deferred to backlog as the slides
   runtime.** Agent-native React deck framework (fixed 1920×1080 canvas,
   present mode, ships its own authoring skills). Not bundled: no slide

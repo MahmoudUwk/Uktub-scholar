@@ -59,6 +59,39 @@ Optional environment keys, read live at call time, never required:
   rate-limited hard)
 - `CROSSREF_MAILTO` — Crossref polite-pool contact
 
+## Registry guard
+
+The extension installs a `tool_call` hook that makes the package contract hold
+against the host's own tools, not just ours:
+
+- **`.registry/**` is package-owned** — no agent tool (including bash) touches
+  it, read or write; papers go through the tools. Blocking bash mentions is
+  deliberate: the threat is arbitrary SQLite writes (`sqlite3`), which no
+  allow-list can characterize.
+- **`refs/references.bib` is agent-read-only** — write/edit are refused;
+  bash passes only non-destructive reads (`cat`, `grep`), never redirects,
+  `rm`/`mv`/`tee`/`sed -i`/`truncate`.
+
+Honest limits: the bash rule scans the command text, not a shell parse — the
+sandbox remains the hard boundary; this is the seatbelt. Removing the
+extension removes the guard (trust-the-user: no hidden knobs).
+
+## Project conventions (optional)
+
+Pi loads hierarchical instruction files (`AGENTS.md`, `SYSTEM.md`). For a
+research project, drop this into the project's `AGENTS.md` (never written by
+`init` — the folder stays yours):
+
+```markdown
+- This is a uktub-scholar project (registry at .registry/, bibliography in refs/).
+- Papers: only via the uktub-scholar tools; cite only citekeys from list_papers.
+- Never hand-edit refs/references.bib; it is rendered by the registry.
+- LaTeX sources live in manuscript/; compile with compile_document (PDF in build/).
+```
+
+`SYSTEM.md` (project system prompt) works too if you want the framing in every
+session's leading prompt.
+
 ## Registry and bibliography
 
 - The registry is a single SQLite file at `.registry/registry.db` beside the LaTeX

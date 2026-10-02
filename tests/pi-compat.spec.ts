@@ -29,6 +29,7 @@ interface RegisteredDef {
 
 function makeFakePi(withRegisterTool: boolean) {
   const tools: RegisteredDef[] = [];
+  const hooks: Record<string, (event: unknown, ctx: unknown) => Promise<unknown>> = {};
   const fakePi = {
     // registerTool omitted entirely when absent — the guard must key on its existence.
     ...(withRegisterTool
@@ -38,9 +39,11 @@ function makeFakePi(withRegisterTool: boolean) {
           },
         }
       : {}),
-    on() {},
+    on(event: string, handler: (e: unknown, c: unknown) => Promise<unknown>) {
+      hooks[event] = handler;
+    },
   };
-  return { fakePi, tools };
+  return { fakePi, tools, hooks };
 }
 
 /** A minimal ExtensionToolContext stand-in: execute only reads `cwd`. */
@@ -156,4 +159,25 @@ test("root resolution: ctx.cwd is resolved once; later cwd changes are ignored (
     rmSync(rootA, { recursive: true, force: true });
     rmSync(rootB, { recursive: true, force: true });
   }
+});
+
+test("registry guard: tool_call hook blocks .registry and refs writes, passes our tools", async () => {
+  const { fakePi, hooks } = makeFakePi(true);
+  uktubOaExtension(fakePi as never);
+  const handler = hooks["tool_call"];
+  assert.equal(typeof handler, "function", "extension must register the guard hook");
+  const ctx = { cwd: "/tmp/uktub-guard-e2e" };
+  const verdictFor = async (toolName: string, input: unknown) =>
+    (await handler({ type: "tool_call", toolCallId: "t1", toolName, input }, ctx)) as
+      | { block: boolean; reason: string }
+      | undefined;
+
+  const reg = await verdictFor("bash", { command: "sqlite3 .registry/registry.db 'drop table papers'" });
+  assert.ok(reg?.block === true && /package-owned/.test(reg.reason));
+
+  const refs = await verdictFor("write", { path: "refs/references.bib", content: "x" });
+  assert.ok(refs?.block === true && /read-only for you/.test(refs.reason));
+
+  assert.equal(await verdictFor("write", { path: "manuscript/main.tex", content: "x" }), undefined);
+  assert.equal(await verdictFor("register_papers", { dois: ["10.1234/a"] }), undefined);
 });

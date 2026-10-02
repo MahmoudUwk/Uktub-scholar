@@ -20,18 +20,6 @@ Adoption discipline: see `docs/DECISIONS.md`; attribution rules: `NOTICE.md`.
 
 ## Package capabilities (build here when triggered)
 
-- **Registry-guard hook** — Pi extension using the tool-interception hook
-  surface to block built-in write/bash tools from `.registry/**` and keep
-  `refs/**` read-only for the agent, making the package contract enforceable
-  against the host's own tools (reference: walkinglabs learn-harness-engineering
-  Pi harness analysis; community pattern: pi-agent-harness `.env` guard).
-  Trigger: first real session where an agent bypasses the fence and corrupts
-  a registry — until then convention + typed refusals suffice (trust-the-user).
-- **Research-project `AGENTS.md`/`SYSTEM.md` snippet** — documented convention
-  (not auto-written by `init`) declaring project framing for hosts that load
-  hierarchical instruction files. Trigger: sessions where the model misses
-  project framing despite the skill.
-
 - **Europe PMC source** — trigger: sessions need PubMed/biomedical coverage.
   Patterns: OpenScience `databases/pubmed-database`, workspace `europepmc`
   skill; Unpaywall is forbidden (workspace rule) — OA via OpenAlex only.
