@@ -28,3 +28,14 @@ This package is licensed under AGPL-3.0-only. Third-party provenance is recorded
   Apache-2.0 code is included in v0; `NOTICE` obligations would attach to any future copied
   file, which must be listed here. Source: https://github.com/synthetic-sciences/openscience
   (commit 10e03a984313cae78424cf798e316e81ad4433fc inspected read-only).
+- Skill methods adapted (ideas, not text; owner-authorized 2026-10-02):
+  `skills/uktub-research/SKILL.md` sections "Running a review" (retrieval-loop
+  discipline) and the claim-source marking rule derive from that repo's MIT
+  `core/literature-review` and `core/sources` skills (upstream
+  K-Dense-AI/claude-scientific-writer, MIT). No skill text is copied verbatim.
+
+## evident-charts / GenOffice (companion recommendations, not bundled)
+
+- evident-charts (MIT, https://github.com/rhiever/evident-charts) and GenOffice
+  (Apache-2.0, https://github.com/genspark-ai/genoffice) are recommended
+  host-side companions; nothing from either is included in this package.

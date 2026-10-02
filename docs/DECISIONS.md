@@ -7,6 +7,21 @@ the evidence that would reopen the question.
 
 ## 2026-10-02
 
+- **First skill folds — ADOPTED (owner-authorized).** `uktub-research` gains
+  "Running a review" (mode agreement, bounded loop, dedup, load-bearing
+  reading, provenance marking) and the claim-source rule, adapted from
+  OpenScience `core/literature-review` + `core/sources` (ideas, not text;
+  NOTICE updated). This opens the evidence gate by owner instruction; future
+  folds still wait on real sessions.
+- **GenOffice (genspark-ai, Apache-2.0) — NOT our UI; recommended companion
+  for office-format deliverables.** It is an AI office-document suite
+  (.docx/.xlsx/.pptx/PDF editors with an agent panel + CLI/skill/MCP), not a
+  research workbench — no registry/bibliography/project concept, so adopting
+  it as the package UI would be the wrong shape. Our future UI stays the
+  dedicated thin workbench (VISION). When grant/collaboration sessions need
+  .docx/.pptx deliverables for co-authors, recommend GenOffice host-side
+  (same pattern as evident-charts). Reopen as embedded UI only if it gains a
+  project/workspace concept.
 - **OpenScience (synthetic-sciences, Apache-2.0 repo / MIT skills) — THE
   adoption library for the widened scope.** ~400 skills by domain; ours to
   port piecemeal with NOTICE attribution as capabilities earn their place:

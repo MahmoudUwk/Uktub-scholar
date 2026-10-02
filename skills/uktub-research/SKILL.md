@@ -56,6 +56,20 @@ the user's own sources.
   Batch results return in input DOI order — prefer one batch call over several
   parallel ones when order matters to you.
 
+## Running a review
+
+- Agree the mode first: a related-work pass (fast, coverage-best-effort) or a
+  systematic review (explicit query set, PRISMA-style screening, reported
+  counts). Never present a best-effort pass as systematic.
+- Budget the loop: bounded `search_papers` calls (cap 20 per call), dedup by
+  DOI across queries, rank by topical fit to the stated question.
+- Read the load-bearing papers — the ones the ranking keeps surfacing — before
+  writing; register everything the answer will rely on.
+- For review-style answers, mark each claim: supported / partially supported /
+  unsupported by the registered sources. A provenance table (claim → citekey)
+  is the deliverable, not prose alone. Never attach a source that is not in
+  the registry; if the registry lacks a source, say so.
+
 ## Compiling the document
 
 - `compile_document` runs the user's local Tectonic binary (PATH or

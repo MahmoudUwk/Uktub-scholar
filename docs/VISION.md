@@ -13,6 +13,17 @@ Researchers who live in a terminal: they run LaTeX toolchains, git, and
 backups themselves. The package is a careful librarian inside their
 workflow, not a managed platform around it.
 
+## How capabilities arrive
+
+The scope is all kinds of research output; adoption is evidence-gated and
+attributed. Two standing sources: the OpenScience skill library
+(synthetic-sciences, MIT skills — literature-review loops, claim-source
+audits, grant proposals, figures, peer review) ported piecemeal with NOTICE
+attribution, and companion skills the user installs host-side for fast-moving
+third-party capabilities (evident-charts for charts, GenOffice for
+.docx/.pptx deliverables). The future UI for non-technical users is a
+dedicated thin workbench above this package — never an adopted office suite.
+
 ## Principles
 
 1. **Trust the technical user.** Conventions over enforcement. We own
