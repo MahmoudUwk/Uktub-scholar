@@ -177,3 +177,26 @@ Chunk: full paper text (24k chars) · Engine: Julia-1 144M encoder, 6 resident C
 1. Independent subagent authored 135 claims (74 TRUE / 61 FALSE, 8–12 per paper, reworded not copied; FALSE = contradicted or plausible fabrication).
 2. Orchestrator verified every evidence quote verbatim against the paper text (135/135 passed, 0 dropped).
 3. Claims batched through 6 resident Julia-1 processes (24k-char paper context), verdicts mapped at the 0.99 bar, threshold sweep computed over the full P(true) distribution.
+
+## Addendum: GLiNER2.5-Decide (340M, Apache-2.0) on the same 135 claims
+
+Same dataset, same passages. Input: `Passage: …\n\nClaim: …`, labels
+`["supported", "refuted"]` (best of 3 encodings; the encoding that puts the
+claim inside the labels mislabels contradictions as support). DeBERTa-v2
+encoder, 512-token window.
+
+| Condition | Latency | Accuracy | TP | TN | FP | FN |
+|---|---|---|---|---|---|---|
+| A: 4000-char window | 2125 ms/claim | 0.541 | 66 | 7 | 54 | 8 |
+| B: 1800-char chunk | 801 ms/claim | 0.533 | 68 | 4 | 57 | 6 |
+
+Majority-class baseline ("everything supported") = 74/135 = **0.548** —
+GLiNER2.5-Decide sits at or below it: it answers "supported" to 120/135
+claims, including 54 of the 61 fabricated ones.
+
+**Conclusion of the two-model sweep: sub-1B decision/classifier encoders
+(Julia-1 144M, GLiNER2.5-Decide 340M) cannot verify scientific claims
+against real papers — both score coin-flip. The Stage-D verdict engine must
+be either (a) an NLI/FEVER-trained model (premise-entailment is its native
+task — e.g. DeBERTa-v3 FEVER-class models, ~400 MB, CPU-fast) or (b) a small
+generative model via llama.cpp (0.5–1B Q4). Both rerun this benchmark.

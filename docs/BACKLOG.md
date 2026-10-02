@@ -55,10 +55,14 @@ Adoption discipline: see `docs/DECISIONS.md`; attribution rules: `NOTICE.md`.
   agnostic `verifyClaim`/`verifyClaims`, 0.99 bar, resident-process batch).
   Julia-1 FINAL: REJECTED by the comprehensive 135-claim, 14-paper benchmark
   (AUC 0.529 — coin flip; docs/benchmarks/claim-verification-julia1-2026-10-02.md).
-  Rejected as verdict engine AND triage filter. Stage D: generative verdict
-  model via llama.cpp — SMALL per owner constraint (0.5–1B Q4 GGUF ≈
-  400–800 MB, ~1–3 s per CPU verdict), must beat AUC 0.529 / pass the same
-  benchmark before adoption; same `ClaimEngine` interface. Engine wiring:
+  Rejected as verdict engine AND triage filter. GLiNER2.5-Decide (340M)
+  measured the same on the identical benchmark (accuracy 0.541/0.533 vs
+  majority baseline 0.548; benchmark doc addendum) — sub-1B classifiers are
+  out as a class. Stage D engine candidates (must pass the same 135-claim
+  benchmark): **(a) NLI/FEVER-trained model — primary candidate**
+  (DeBERTa-v3 FEVER-class, ~400 MB, CPU-fast; premise-entailment is the
+  native task), **(b) 0.5–1B instruct via llama.cpp** (~1–3 s per CPU
+  verdict); same `ClaimEngine` interface. Engine wiring:
   `UKTUB_JULIA_MODEL` + `scripts/julia_decide.py` for Julia-class engines;
   typed refusal `VERIFY_ENGINE_MISSING` when absent. FTS5 chunk retrieval
   comes later; the verifier's interface is chunk-first so the retrieval
@@ -66,6 +70,15 @@ Adoption discipline: see `docs/DECISIONS.md`; attribution rules: `NOTICE.md`.
   workflow) waits for a passing engine. Benchmark dataset:
   /tmp/claims-bench/claims-verified.json (135 claims, evidence-verified) —
   copy alongside future engine runs for like-for-like comparison.
+- **Report writer (companion, roadmap)** — AstaBrief-8B (allenai,
+  Apache-2.0, Qwen3-8B): single-pass cited reports from query + tagged
+  excerpts, distilled from Asta ScholarQA (86.3 vs 87.6 avg on CS2 —
+  near-pipeline quality in one pass). Host-side via llama.cpp (~5 GB Q4;
+  minutes/report on CPU — fine for a writer, wrong for verdicts). Caveat
+  from its own eval: citation precision 55% — our registry-first citation
+  rule is the corrective. Trigger: first report-writing session; flow =
+  our search/register tools feed tagged excerpts → AstaBrief drafts →
+  compile_document finalizes. Pipeline prior art: Asta ScholarQA.
 
 - **Evidence retrieval + claim verification (RAG-era design)** — when the
   owner green-lights retrieval: SQLite FTS5 over registered abstracts first

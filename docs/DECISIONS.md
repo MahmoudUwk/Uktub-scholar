@@ -5,6 +5,33 @@ re-proposed without new evidence (RRSI discipline: the edit history exists so
 dead hypotheses are not redrawn). Entries record the verdict, the reason, and
 the evidence that would reopen the question.
 
+## 2026-10-02 (goal sweep III)
+
+- **GLiNER2.5-Decide (340M, Apache-2.0) — measured and REJECTED for claim
+  verification.** Same 135-claim benchmark, best of 3 input encodings:
+  accuracy 0.541 (4000-char window) / 0.533 (1800-char chunk) — at or below
+  the majority baseline (0.548); it answers "supported" to 120/135 claims
+  including 54 of 61 fabricated ones. Addendum in the benchmark doc. With
+  Julia-1's AUC 0.529, the two-model sweep yields a finding: sub-1B
+  decision/classifier encoders cannot verify scientific claims. Stage-D
+  engine candidates narrowed to (a) NLI/FEVER-trained models (DeBERTa-v3
+  FEVER-class, ~400 MB — fact verification is their native task, primary
+  candidate) or (b) 0.5–1B instruct via llama.cpp; both rerun the benchmark.
+- **AstaBrief-8B (allenai, Apache-2.0, Qwen3-8B) — ADOPTED as the
+  host-side "Writer" companion for report synthesis (roadmap; not bundled).**
+  Single-pass cited scientific reports from a query + tagged excerpts;
+  distilled from the multi-step Asta ScholarQA pipeline (86.3 vs 87.6 avg on
+  ScholarQA-CS2 — near-pipeline quality at one pass). Caveats recorded:
+  citation precision 55% (its own eval) — our registry-first workflow
+  (citations only from registered papers) is the corrective; ~5 GB Q4 and
+  minutes per report on CPU — fine for a writer, wrong for verdicts (the
+  fast-model constraint applies to claim verification only). Trigger: first
+  report-writing session; integration = our search/register tools feed
+  tagged excerpts, AstaBrief drafts, our compile tool finalizes.
+- **ScholarQA (Asta) — the pipeline pattern is prior art** for the future
+  report workflow (retrieve → group → write → cite); AstaBrief is its
+  single-pass distillation. No code adopted.
+
 ## 2026-10-02 (goal sweep II)
 
 - **Julia-1 — FINAL after the comprehensive 135-claim benchmark
