@@ -5,6 +5,45 @@ re-proposed without new evidence (RRSI discipline: the edit history exists so
 dead hypotheses are not redrawn). Entries record the verdict, the reason, and
 the evidence that would reopen the question.
 
+## 2026-10-02 (goal sweep II)
+
+- **academic-pptx-skill (MIT, 1.1k★) — ADOPTED as the content-discipline
+  template for slide deliverables.** Action titles (takeaway sentences),
+  situation→complication→resolution argument structure, ghost-deck test,
+  one-exhibit-per-results-slide, citation standards on every borrowed figure,
+  Q&A-ending conclusions slide. Complements open-slide (runtime) — this is
+  the "what slides must say" layer. Recorded in BACKLOG's slides entry;
+  MIT, NOTICE-attribute when ported.
+- **WeKnora (Tencent, 31.8k★, MIT+exceptions, Go platform) — NOT adopted as
+  a component; recorded as prior art for the deferred evidence-retrieval
+  design.** It is a self-hosted RAG platform (documents → queryable RAG +
+  reasoning agent + wiki) — adopting it would add a second service plane to
+  a single-folder local package. Our minimal path stays SQLite-FTS5-first;
+  the WeKnora-inspired pattern (chunk retrieval → cheap relevance filter →
+  claim-vs-passage verification) is the design sketch for when evidence
+  retrieval unrolls, with a local CPU-class decision model (owner proposal:
+  Julia-1) as the chunk filter / claim checker. **Decision model DEFERRED**
+  by owner instruction; model choice re-evaluated at build time.
+- **OpenMed v2.3.0 — still not adoptable (clinical SDK), one transferable
+  idea already embodied.** The release (253 commits) is a local-first
+  healthcare SDK across Python/JS/Swift/Android: redaction, clinical
+  evidence tables, abstention, GGUF/TensorRT runtimes. Domain remains
+  clinical-informatics; the transferable concept — typed abstention (a
+  typed "I don't know" outcome instead of a guess) — is exactly our
+  refusal/warning discipline, already shipped. Revisit only if a
+  biomedical-research session type appears.
+- **karpathy/autoresearch (97k★, NO LICENSE) — PATTERN ADOPTED, CODE NOT
+  ADOPTABLE.** It is an autonomous LLM-training experiment loop (agent edits
+  `train.py`, 5-minute fixed budget, keep-or-discard by val_bpb; human owns
+  `program.md`), not a general simulation/coding harness, and it ships
+  without a license — redistributing its code into this AGPL repo is not
+  permitted. What we adopt is the pattern, which joins our RRSI-derived
+  discipline: budget-bounded keep-or-discard experiment loops with a single
+  metric, and human-owned instruction files over agent-edited code.
+  Simulation/coding capabilities themselves come from the OpenScience
+  library (physics, quantum, coding categories), ported per BACKLOG
+  triggers — recorded there as the computational-experiments entry.
+
 ## 2026-10-02
 
 - **Slide deliverable runtimes surveyed — open-slide stays primary, Slidev
