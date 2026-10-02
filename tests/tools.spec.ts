@@ -281,6 +281,15 @@ describe("list_papers", () => {
 // ── search ─────────────────────────────────────────────────────────────────
 
 describe("search_papers", () => {
+  it("refuses an empty or blank query with QUERY_REQUIRED", async () => {
+    const result = await searchPapersTool(makeCtx(NO_FETCH), { query: "   " });
+    assert.match(result.content[0]?.text ?? "", /Refused: QUERY_REQUIRED/);
+    assert.equal(result.structuredContent, null);
+    const refused: unknown = result.details.refused;
+    assert.ok(refused && typeof refused === "object" && "code" in refused);
+    assert.equal(refused.code, "QUERY_REQUIRED");
+  });
+
   it("returns RRF order and per-provider warnings in structuredContent", async () => {
     const { fetchFn } = createSearchFetch({
       openalex: fakeWorks("oa", 3),

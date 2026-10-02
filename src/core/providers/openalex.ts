@@ -147,9 +147,13 @@ export async function searchOpenAlex(
 
   const url = `${cfg.openalexBaseUrl}/works?${params.toString()}`;
   const body = await getJson(fetchFn, cfg, "openalex", url);
+  // Provenance is user-visible (model transcript, logs): strip the credential
+  // query params from the echoed URL — the fetch itself uses the full `url`.
+  const provenance = new URL(url);
+  provenance.searchParams.delete("api_key");
   const candidates: PaperCandidate[] = [];
   for (const work of asArray(asRecord(body)?.["results"])) {
-    const candidate = normalizeOpenAlexWork(work, url);
+    const candidate = normalizeOpenAlexWork(work, provenance.toString());
     if (candidate !== null) candidates.push(candidate);
   }
   return candidates;

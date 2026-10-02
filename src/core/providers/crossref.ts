@@ -128,10 +128,14 @@ export async function searchCrossref(
 
   const url = `${cfg.crossrefBaseUrl}/works?${params.toString()}`;
   const body = await getJson(fetchFn, cfg, "crossref", url);
+  // Provenance is user-visible: the polite-pool contact email is stripped from
+  // the echoed URL (the fetch itself uses the full `url`).
+  const provenance = new URL(url);
+  provenance.searchParams.delete("mailto");
   const items = asArray(asRecord(asRecord(body)?.["message"])?.["items"]);
   const candidates: PaperCandidate[] = [];
   for (const item of items) {
-    const candidate = normalizeCrossrefItem(item, url);
+    const candidate = normalizeCrossrefItem(item, provenance.toString());
     if (candidate !== null) candidates.push(candidate);
   }
   return candidates;

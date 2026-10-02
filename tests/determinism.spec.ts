@@ -316,13 +316,23 @@ describe("parallel fake-Pi execute calls", () => {
     }
 
     assert.deepEqual(
-      firstResult.structuredContent?.outcomes.map((outcome) => [outcome.doi, outcome.status, outcome.citekey]),
-      [["10.9001/one", "registered", "holder2024same"]],
+      firstResult.structuredContent?.outcomes.map((outcome) => [outcome.doi, outcome.status]),
+      [["10.9001/one", "registered"]],
     );
     assert.deepEqual(
-      secondResult.structuredContent?.outcomes.map((outcome) => [outcome.doi, outcome.status, outcome.citekey]),
-      [["10.9001/two", "registered", "holder2024samea"]],
+      secondResult.structuredContent?.outcomes.map((outcome) => [outcome.doi, outcome.status]),
+      [["10.9001/two", "registered"]],
     );
+
+    // Both committed; the collision resolved as base + base-26 suffix. WHICH
+    // call holds the base key is queue-arrival dependent (documented: the
+    // batch parameter is the reproducible path) — the contract is that the
+    // assignments are distinct, valid, and pinned once.
+    const citekeys = [
+      firstResult.structuredContent?.outcomes[0]?.citekey,
+      secondResult.structuredContent?.outcomes[0]?.citekey,
+    ].sort();
+    assert.deepEqual(citekeys, ["holder2024same", "holder2024samea"]);
     // Both rows committed through the BEGIN IMMEDIATE fence.
     assert.equal(listPapers(db).length, 2);
     const bib = readBib();

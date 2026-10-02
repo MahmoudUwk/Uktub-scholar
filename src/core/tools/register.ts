@@ -12,10 +12,10 @@ import { Type } from "typebox";
 import { RegistryError, openRegistry, registerPaper } from "../registry.ts";
 import type { RegisterOutcome } from "../registry.ts";
 import { InvalidDoiError, fetchPaperMetadata, reasonOf } from "../scholarly.ts";
-import { fetchWithRetry, retryOpts } from "../providers/http.ts";
+import { fetchWithRetry, plainText, retryOpts } from "../providers/http.ts";
 import type { PaperRecord, ProviderConfig } from "../providers/types.ts";
-import { WARNINGS } from "../refusals.ts";
-import type { WarningCode } from "../refusals.ts";
+import { REFUSALS, WARNINGS } from "../refusals.ts";
+import type { RefusalCode, WarningCode } from "../refusals.ts";
 import { providerConfigOf, refusalResult, type RenderedWarning, type ToolContext, type ToolResult } from "./context.ts";
 
 /**
@@ -34,6 +34,7 @@ export const RegisterPapersOutput = Type.Object({
       citable: Type.Union([Type.Boolean(), Type.Null()]),
       refusalCode: Type.Union([Type.String(), Type.Null()]),
       refusalMessage: Type.Union([Type.String(), Type.Null()]),
+      refusalNext: Type.Union([Type.String(), Type.Null()]),
       warnings: Type.Array(Type.String()),
     }),
   ),
@@ -50,6 +51,7 @@ export interface RegisterPapersStructured {
     citable: boolean | null;
     refusalCode: string | null;
     refusalMessage: string | null;
+    refusalNext: string | null;
     warnings: string[];
   }[];
   warnings: RenderedWarning[];
@@ -76,14 +78,15 @@ async function crossCheckTitle(
   crossrefTitle: string,
 ): Promise<string | null> {
   try {
-    const url = `${cfg.openalexBaseUrl}/works/https://doi.org/${doi}` +
+    const url = `${cfg.openalexBaseUrl}/works/${encodeURIComponent(`https://doi.org/${doi}`)}` +
       (cfg.openalexApiKey ? `?api_key=${encodeURIComponent(cfg.openalexApiKey)}` : "");
     const response = await fetchWithRetry(ctx.fetch, url, retryOpts(cfg));
     if (response.status !== 200) return null;
     const body: unknown = JSON.parse(response.body);
     if (typeof body !== "object" || body === null) return null;
-    const title = (body as Record<string, unknown>)["title"];
-    if (typeof title !== "string" || title.length === 0 || crossrefTitle.length === 0) return null;
+    const raw = (body as Record<string, unknown>)["title"];
+    const title = typeof raw === "string" ? plainText(raw) : null;
+    if (title === null || title.length === 0 || crossrefTitle.length === 0) return null;
     const normalize = (value: string) => value.toLowerCase().replace(/\s+/g, " ").trim();
     return normalize(title) !== normalize(crossrefTitle) ? title : null;
   } catch {
@@ -109,9 +112,10 @@ async function resolveDoi(ctx: ToolContext, cfg: ProviderConfig, rawDoi: string)
         mismatch: null,
       };
     }
-    // Provider-layer failure (network down, unusable envelope): this DOI could
-    // not be resolved; the rest of the batch still proceeds (R5 per-DOI rows).
-    return { doi: rawDoi, record: null, failure: { code: "DOI_NOT_FOUND", message: `resolution failed for "${rawDoi}": ${reasonOf(err)}` }, mismatch: null };
+    // Provider-layer failure (network down, unusable envelope): the same
+    // outage class search maps to SEARCH_UNAVAILABLE — DOI_NOT_FOUND stays
+    // reserved for "no provider knows this DOI" (record === null above).
+    return { doi: rawDoi, record: null, failure: { code: "SEARCH_UNAVAILABLE", message: `resolution failed for "${rawDoi}": ${reasonOf(err)}` }, mismatch: null };
   }
 }
 
@@ -148,25 +152,30 @@ export async function registerPapersTool(
     // trip per distinct DOI) while outcomes still assemble in input order.
     // Null prototype: DOI strings become bare lookup keys, nothing more.
     const resolves: Record<string, Promise<Resolved>> = Object.create(null);
-    const resolveOnce = (doi: string): Promise<Resolved> =>
-      (resolves[doi] ??= resolveDoi(ctx, cfg, doi));
-    const resolved = await Promise.all(args.dois.map(resolveOnce));
+    const resolved = await Promise.all(
+      args.dois.map((doi) => (resolves[doi] ??= resolveDoi(ctx, cfg, doi))),
+    );
 
     // Write phase: each DOI's transactional section through the FIFO queue in
-    // call-arrival order; `Promise.all` of the queued sections reassembles the
-    // results in the SAME order the calls arrived (KTD5).
-    const settled = await Promise.all(
+    // call-arrival order. allSettled: one section's raw error (e.g. a
+    // bibliography fs failure registerPaper rethrows) must not strand the
+    // still-queued sections behind it — every queued section runs against the
+    // open handle and reports its own outcome; the first raw error is
+    // rethrown AFTER the queue drains and the handle closes cleanly (KTD5).
+    const settledSettled = await Promise.allSettled(
       resolved.map(
         (one): Promise<RegisterPapersStructured["outcomes"][number] & { rendered: RenderedWarning[] }> =>
           ctx.queue.runExclusive(async () => {
             if (one.failure !== null || one.record === null) {
+              const code = (one.failure?.code ?? "DOI_NOT_FOUND") as RefusalCode;
               return {
                 doi: one.doi,
                 status: "refused" as const,
                 citekey: null,
                 citable: null,
-                refusalCode: one.failure?.code ?? "DOI_NOT_FOUND",
+                refusalCode: code,
                 refusalMessage: one.failure?.message ?? `no provider knows "${one.doi}"`,
+                refusalNext: REFUSALS[code]?.next ?? null,
                 warnings: [] as string[],
                 rendered: [] as RenderedWarning[],
               };
@@ -206,6 +215,7 @@ export async function registerPapersTool(
                 citable: outcome.citable,
                 refusalCode: null,
                 refusalMessage: null,
+                refusalNext: null,
                 warnings: rendered.map((warning) => warning.code),
                 rendered,
               };
@@ -218,6 +228,7 @@ export async function registerPapersTool(
                   citable: null,
                   refusalCode: err.code,
                   refusalMessage: err.message,
+                  refusalNext: REFUSALS[err.code as RefusalCode]?.next ?? null,
                   warnings: [] as string[],
                   rendered: [] as RenderedWarning[],
                 };
@@ -228,11 +239,23 @@ export async function registerPapersTool(
       ),
     );
 
+    // Drain done: collect per-section outcomes; a raw (non-refusal) error is
+    // rethrown only after every queued section finished and the `finally`
+    // below has closed the handle — no zombie sections, no lost outcomes.
+    let rawError: unknown = null;
+    const settled = settledSettled.flatMap((r) => {
+      if (r.status === "fulfilled") return [r.value];
+      rawError ??= r.reason;
+      return [];
+    });
+
     const warnings: RenderedWarning[] = [];
     const outcomes: RegisterPapersStructured["outcomes"] = settled.map(({ rendered, ...outcome }) => {
       warnings.push(...rendered);
       return outcome;
     });
+
+    if (rawError !== null) throw rawError;
 
     const registered = outcomes.filter((outcome) => outcome.status !== "refused");
     return {

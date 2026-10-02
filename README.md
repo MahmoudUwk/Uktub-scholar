@@ -75,7 +75,7 @@ Every tool failure is a typed refusal rendered as
 `Refused: CODE — <message>. Next: <next>.`; warnings attach to successful
 outcomes instead. Codes: `REGISTRY_NOT_INITIALIZED`, `REGISTRY_CORRUPT`,
 `REGISTRY_SCHEMA_UNSUPPORTED`, `REGISTRY_BUSY`, `INVALID_DOI`, `DOI_NOT_FOUND`,
-`PATH_REFUSED`, `SEARCH_UNAVAILABLE`, `BATCH_TOO_LARGE`,
+`QUERY_REQUIRED`, `PATH_REFUSED`, `SEARCH_UNAVAILABLE`, `BATCH_TOO_LARGE`,
 `PI_EXTENSION_API_UNAVAILABLE`. Warnings: `BIBTEX_UNAVAILABLE`,
 `DOI_TITLE_MISMATCH`. Paths are confined to the project root; `.registry` and
 `.git` are protected segments.

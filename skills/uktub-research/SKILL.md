@@ -52,6 +52,12 @@ The registry is the source of truth; the bibliography is derived from it.
 - Never hand-edit `refs/references.bib`. It is rendered by the registry and is
   overwritten on the next registry write. If it diverges or is damaged, run
   `uktub-oa sync-bib` to re-render it from the registry.
+- Removing papers is a human CLI action: `uktub-oa deregister <doi|citekey>...`.
+  Run it via the shell only when the user asks for removal.
+- If search keeps degrading (`SEARCH_UNAVAILABLE`, provider warnings), suggest
+  the user set optional keys — `OPENALEX_API_KEY`, `SEMANTIC_SCHOLAR_API_KEY`,
+  `CROSSREF_MAILTO` (see README) — anonymous Semantic Scholar callers are
+  rate-limited hard.
 - All tools operate inside the project directory; `.registry` and `.git` are
   protected and path traversal is refused.
 - Failures arrive as `Refused: CODE — <what happened>. Next: <what to do>` —

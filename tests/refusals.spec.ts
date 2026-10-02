@@ -25,11 +25,19 @@ function listTsFiles(dir: string): string[] {
   return out;
 }
 
+const SCAN_PATTERN = /"(REGISTRY_NOT_INITIALIZED|REGISTRY_CORRUPT|REGISTRY_SCHEMA_UNSUPPORTED|REGISTRY_BUSY|INVALID_DOI|DOI_NOT_FOUND|QUERY_REQUIRED|PATH_REFUSED|SEARCH_UNAVAILABLE|BATCH_TOO_LARGE|PI_EXTENSION_API_UNAVAILABLE)"/g;
+// Mirror guarantee: the pattern above must know every code the table declares.
+const ALL_CODES: RefusalCode[] = [
+  "REGISTRY_NOT_INITIALIZED", "REGISTRY_CORRUPT", "REGISTRY_SCHEMA_UNSUPPORTED", "REGISTRY_BUSY",
+  "INVALID_DOI", "DOI_NOT_FOUND", "QUERY_REQUIRED", "PATH_REFUSED", "SEARCH_UNAVAILABLE",
+  "BATCH_TOO_LARGE", "PI_EXTENSION_API_UNAVAILABLE",
+];
+
 test("every refusal code referenced in src/ has a table entry with stable next", () => {
   const referenced = new Set<string>();
   for (const file of listTsFiles(srcRoot)) {
     const src = readFileSync(file, "utf8");
-    for (const match of src.matchAll(/"(REGISTRY_NOT_INITIALIZED|REGISTRY_CORRUPT|REGISTRY_SCHEMA_UNSUPPORTED|REGISTRY_BUSY|INVALID_DOI|DOI_NOT_FOUND|SEARCH_UNAVAILABLE|BATCH_TOO_LARGE|PI_EXTENSION_API_UNAVAILABLE)"/g)) {
+    for (const match of src.matchAll(SCAN_PATTERN)) {
       referenced.add(match[1] as RefusalCode);
     }
   }
@@ -37,6 +45,13 @@ test("every refusal code referenced in src/ has a table entry with stable next",
     const entry = REFUSALS[code as RefusalCode];
     assert.ok(entry, `code ${code} referenced in src/ has no REFUSALS entry`);
     assert.ok(entry.next.length > 0, `code ${code} has an empty next hint`);
+  }
+});
+
+test("the scan pattern covers every code the REFUSALS table declares", () => {
+  const patternSources = new Set([...ALL_CODES]);
+  for (const code of Object.keys(REFUSALS)) {
+    assert.ok(patternSources.has(code as RefusalCode), `REFUSALS code ${code} is missing from the scan pattern — a deleted table entry would go unnoticed`);
   }
 });
 

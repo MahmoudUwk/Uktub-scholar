@@ -75,6 +75,11 @@ export function runCli(argv: string[], io: CliIo): number {
         }
         return 0;
       }
+      case "help":
+      case "--help":
+      case "-h":
+        out(USAGE);
+        return 0;
       case "list": {
         const db = openRegistry(root);
         try {

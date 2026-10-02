@@ -22,4 +22,7 @@ if (result.error) {
   process.exitCode = 1;
 } else if (typeof result.status === "number") {
   process.exitCode = result.status;
+} else {
+  // status === null: the child died to a signal — never report success.
+  process.exitCode = 1;
 }

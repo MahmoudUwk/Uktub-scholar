@@ -44,14 +44,17 @@ test("src/core imports nothing Pi-specific", () => {
 });
 
 test("src/pi is the only place importing the Pi peer package", () => {
-  const piDir = join(root, "pi");
-  const coreFiles = listTsFiles(join(root, "core"));
-  for (const file of coreFiles) {
-    const src = readFileSync(file, "utf8");
-    assert.ok(
-      !src.includes("@earendil-works"),
-      `${file} must not import the Pi package (KTD1: adapter is the only Pi consumer)`,
-    );
+  for (const dir of ["core", "cli"] as const) {
+    for (const file of listTsFiles(join(root, dir))) {
+      const src = readFileSync(file, "utf8");
+      assert.ok(
+        !src.includes("@earendil-works"),
+        `${file} must not import the Pi package (KTD1: adapter is the only Pi consumer)`,
+      );
+    }
   }
-  void piDir;
+  // src/pi must reference the peer (it is the adapter); its imports are
+  // covered by the first test's deny scan being scoped to core.
+  const piFiles = listTsFiles(join(root, "pi"));
+  assert.ok(piFiles.length > 0, "src/pi exists");
 });
