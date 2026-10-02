@@ -22,8 +22,8 @@ function listTsFiles(dir: string): string[] {
   return out;
 }
 
-const CORE_ALLOW_PREFIXES = ["node:", ".", "/"]; // built-ins, package-internal (relative), absolute fs paths in tests only
-const CORE_DENY = ["@earendil-works", "typebox"];
+const CORE_ALLOW_PREFIXES = ["node:", ".", "/", "typebox"]; // built-ins, package-internal, absolute fs paths in tests only; typebox is a host-agnostic JSON Schema builder and a declared peer dep (plan U4)
+const CORE_DENY = ["@earendil-works"]; // Pi host package: adapter-only (typebox is a host-agnostic JSON Schema builder and a declared peer dep, allowed anywhere)
 
 test("src/core imports nothing Pi-specific", () => {
   const coreDir = join(root, "core");
@@ -37,9 +37,7 @@ test("src/core imports nothing Pi-specific", () => {
           `${file} imports "${spec}" — src/core must not depend on host packages (KTD1)`,
         );
       }
-      const allowed =
-        CORE_ALLOW_PREFIXES.some((p) => spec.startsWith(p)) ||
-        spec === "typebox" === false; // typebox allowed only outside core for now
+      const allowed = CORE_ALLOW_PREFIXES.some((p) => spec.startsWith(p));
       assert.ok(allowed, `${file} imports "${spec}" — outside the core allowlist`);
     }
   }

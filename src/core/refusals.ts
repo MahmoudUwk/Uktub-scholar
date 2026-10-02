@@ -13,6 +13,7 @@ export type RefusalCode =
   | "REGISTRY_BUSY"
   | "INVALID_DOI"
   | "DOI_NOT_FOUND"
+  | "PATH_REFUSED"
   | "SEARCH_UNAVAILABLE"
   | "BATCH_TOO_LARGE"
   | "PI_EXTENSION_API_UNAVAILABLE";
@@ -43,6 +44,9 @@ export const REFUSALS: Record<RefusalCode, RefusalEntry> = {
   DOI_NOT_FOUND: {
     next: "verify the DOI resolves (doi.org) or re-run search_papers and register from the result's DOI",
   },
+  PATH_REFUSED: {
+    next: "operate inside the project directory; .registry and .git are protected system segments and path traversal is refused",
+  },
   SEARCH_UNAVAILABLE: {
     next: "retry later; no scholarly provider answered — check network connectivity or provider status",
   },
@@ -61,4 +65,19 @@ export const WARNINGS: Record<WarningCode, RefusalEntry> = {
   DOI_TITLE_MISMATCH: {
     next: "provider metadata disagrees on this DOI's title; verify you registered the intended paper",
   },
+};
+
+/** Rendered refusal shape: everything a host needs to fail a tool call (R7). */
+export interface Refused {
+  code: RefusalCode;
+  /** Free-form what-happened text; only `code` and `next` are stable (KTD6). */
+  message: string;
+}
+
+/**
+ * The one refusal rendering (KTD6): `Refused: CODE — <message>. Next: <next>.`
+ * The code and next text are byte-stable per code; the message is free-form.
+ */
+export function renderRefusal(refused: Refused): string {
+  return `Refused: ${refused.code} — ${refused.message}. Next: ${REFUSALS[refused.code].next}.`;
 };
