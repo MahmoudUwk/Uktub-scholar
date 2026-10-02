@@ -90,6 +90,13 @@ pnpm test
 Tests are fully offline: provider fakes are the only search path. Evidence tiers
 (fake-driven specs, real-Pi smoke, live API) are never mixed in one run.
 
+## Interactive sandbox
+
+`scripts/test-sandbox.sh` — disposable Docker Pi TUI with the live package
+mounted, ADC mounted read-only, and an isolated registry volume (`--fresh`
+wipes it). The TUI also shows a registry panel (below the editor) that
+refreshes after every tool call.
+
 ## Attribution
 
 Borrowed-code provenance is recorded per file in `NOTICE.md`. Licence: MIT;
