@@ -1,4 +1,4 @@
-# uktub-oa
+# uktub-scholar
 
 Local-first scholarly research tools for coding agents: paper search, a citation
 registry, and a rendered `references.bib`. Ships as a Pi 1.0 package; the core is
@@ -7,10 +7,10 @@ same core.
 
 ## Install
 
-Pi package (working name `uktub-oa`; the final npm name is still open):
+Pi package (working name `uktub-scholar`; the final npm name is still open):
 
 ```
-pi install npm:uktub-oa
+pi install npm:uktub-scholar
 ```
 
 The extension registers exactly three tools: `search_papers`, `register_papers`,
@@ -20,7 +20,7 @@ CLI (development install — the package is currently `private`):
 
 ```
 pnpm install
-pnpm exec uktub-oa --help   # bin shim runs the TypeScript CLI directly (adds
+pnpm exec uktub-scholar --help   # bin shim runs the TypeScript CLI directly (adds
                       # --experimental-strip-types on Node 22.x)
 ```
 
@@ -57,10 +57,10 @@ Optional environment keys, read live at call time, never required:
 ## Registry and bibliography
 
 - The registry is a single SQLite file at `.registry/registry.db` beside the LaTeX
-  project, created by `uktub-oa init`.
+  project, created by `uktub-scholar init`.
 - `refs/references.bib` is **derived state**: rendered only by the registry,
   re-rendered inside every registry write, agent-write-protected. Hand edits are
-  overwritten by the next registry write; `uktub-oa sync-bib` restores it
+  overwritten by the next registry write; `uktub-scholar sync-bib` restores it
   idempotently after any divergence.
 - Citekeys are pinned once at first registration (first-author family + year +
   first significant title word, base-26 suffix on collision) and never recomputed.
@@ -99,7 +99,8 @@ refreshes after every tool call.
 
 ## Attribution
 
-Borrowed-code provenance is recorded per file in `NOTICE.md`. Licence: MIT;
+Borrowed-code provenance is recorded per file in `NOTICE.md`. Licence:
+AGPL-3.0-only;
 Apache-2.0 attribution obligations are tracked there as well.
 
 ## Out of scope (v0)

@@ -1,7 +1,7 @@
-# Test sandbox for the uktub-oa package — a clean, disposable Pi environment.
+# Test sandbox for the uktub-scholar package — a clean, disposable Pi environment.
 # NOT a product deployment artifact; dev-only tooling.
 #
-# Build:  docker build -t uktub-oa-sandbox -f docker/test-sandbox.Dockerfile .
+# Build:  docker build -t uktub-scholar-sandbox -f docker/test-sandbox.Dockerfile .
 # Run:    scripts/test-sandbox.sh   (mounts the repo + your ADC credentials)
 FROM node:26-slim
 
@@ -10,7 +10,7 @@ RUN apt-get update \
  && rm -rf /var/lib/apt/lists/* \
  && npm install -g @earendil-works/pi-coding-agent
 
-# The package under test is mounted at /uktub-oa (live source, not baked).
+# The package under test is mounted at /uktub-scholar (live source, not baked).
 ENV GOOGLE_CLOUD_LOCATION=global
 WORKDIR /workspace/project
 

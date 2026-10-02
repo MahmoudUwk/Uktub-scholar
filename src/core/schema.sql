@@ -1,4 +1,4 @@
--- The uktub-oa registry: one self-contained SQLite file at
+-- The uktub-scholar registry: one self-contained SQLite file at
 -- `.registry/registry.db` beside the LaTeX project (R9). Journal mode stays
 -- DELETE (set at open in registry.ts): one file is the whole registry, and
 -- backup = copy one file (KTD2).

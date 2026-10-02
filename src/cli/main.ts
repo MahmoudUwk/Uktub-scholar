@@ -1,5 +1,5 @@
 /**
- * uktub-oa CLI (U6, R17): the human owns init, removal, bibliography healing,
+ * uktub-scholar CLI (U6, R17): the human owns init, removal, bibliography healing,
  * and listing. Every registry operation goes through src/core/registry.ts —
  * the CLI is a second caller of the exact functions the agent tools use
  * (structural parity), so no behavior can drift between the two paths.
@@ -21,7 +21,7 @@ export interface CliIo {
   cwd?: string;
 }
 
-const USAGE = `usage: uktub-oa <command>
+const USAGE = `usage: uktub-scholar <command>
 
 commands:
   init                          create the registry and an empty refs/references.bib

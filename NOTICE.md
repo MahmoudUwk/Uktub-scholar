@@ -1,6 +1,6 @@
 # NOTICE — per-file provenance
 
-This package is MIT-licensed. Third-party provenance is recorded per file or directory below.
+This package is licensed under AGPL-3.0-only. Third-party provenance is recorded per file or directory below.
 
 ## Project-internal extraction (same author, UktubAI workspace)
 

@@ -1,9 +1,9 @@
 {
-  "name": "uktub-oa",
+  "name": "uktub-scholar",
   "version": "0.1.0",
   "description": "Local-first scholarly research tools for coding agents: paper search, registry, bibliography. Pi package; CLI included.",
   "type": "module",
-  "license": "MIT",
+  "license": "AGPL-3.0-only",
   "private": true,
   "keywords": [
     "pi-package"
@@ -12,7 +12,7 @@
     "node": ">=22.19"
   },
   "bin": {
-    "uktub-oa": "./bin/uktub-oa.js"
+    "uktub-scholar": "./bin/uktub-scholar.js"
   },
   "pi": {
     "extensions": [

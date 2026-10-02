@@ -77,7 +77,7 @@ afterEach(() => {
   rmSync(root, { recursive: true, force: true });
 });
 
-describe("uktub-oa init", () => {
+describe("uktub-scholar init", () => {
   it("is idempotent: the second init keeps the existing registry and bibliography", () => {
     db.close();
     const first = runCli(["init"], io());
@@ -105,7 +105,7 @@ describe("uktub-oa init", () => {
   });
 });
 
-describe("uktub-oa deregister", () => {
+describe("uktub-scholar deregister", () => {
   it("removes by citekey and by DOI, re-renders the bibliography, reports removed|missing", () => {
     const { citekeyA, doiB } = registerFixture();
     db.close();
@@ -136,7 +136,7 @@ describe("uktub-oa deregister", () => {
   });
 });
 
-describe("uktub-oa list", () => {
+describe("uktub-scholar list", () => {
   it("prints rows in citekey order with citekey, year, title, venue, citable, and provenance", () => {
     registerFixture();
     db.close();
@@ -168,7 +168,7 @@ describe("uktub-oa list", () => {
   });
 });
 
-describe("uktub-oa error paths", () => {
+describe("uktub-scholar error paths", () => {
   it("list without a registry prints the refusal code and exits 1", () => {
     db.close();
     rmSync(join(root, ".registry", "registry.db"));
@@ -176,7 +176,7 @@ describe("uktub-oa error paths", () => {
     const code = runCli(["list"], capture);
     assert.equal(code, 1);
     assert.match(capture.lines.err.join("\n"), /REGISTRY_NOT_INITIALIZED/);
-    assert.match(capture.lines.err.join("\n"), /uktub-oa init/);
+    assert.match(capture.lines.err.join("\n"), /uktub-scholar init/);
   });
 
   it("unknown command prints usage and exits 1", () => {

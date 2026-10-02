@@ -14,7 +14,7 @@ import { refusalResult, validateContext, type ToolContext, type ToolResult } fro
 import { resolve } from "node:path";
 
 /**
- * Uktub OA Pi extension (U5, R14, KTD7): registers exactly the three v0 tools
+ * Uktub Scholar Pi extension (U5, R14, KTD7): registers exactly the three v0 tools
  * and nothing else — no prompt mutation, no commands, no providers — and fails
  * closed at load if the Pi 1.0 API surface is missing.
  *
@@ -121,7 +121,7 @@ function registerTool<TParams extends TSchema, TOut>(
 export default function uktubOaExtension(pi: ExtensionAPI): void {
   if (typeof pi.registerTool !== "function") {
     throw new Error(
-      "Refused: PI_EXTENSION_API_UNAVAILABLE — uktub-oa requires Pi 1.0+ exposing pi.registerTool. Next: upgrade Pi to >= 1.0.0.",
+      "Refused: PI_EXTENSION_API_UNAVAILABLE — uktub-scholar requires Pi 1.0+ exposing pi.registerTool. Next: upgrade Pi to >= 1.0.0.",
     );
   }
   const rootFor = makeRootResolver();

@@ -1,9 +1,9 @@
 ---
 name: uktub-research
-description: Guidance for using uktub-oa scholarly tools — when to search versus register, citekey usage, uncitable papers, batch limits, and registry hygiene for LaTeX bibliographies.
+description: Guidance for using uktub-scholar scholarly tools — when to search versus register, citekey usage, uncitable papers, batch limits, and registry hygiene for LaTeX bibliographies.
 ---
 
-# Scholarly research with uktub-oa
+# Scholarly research with uktub-scholar
 
 Three tools manage a local paper registry and a rendered `references.bib` beside
 the user's LaTeX project: `search_papers`, `register_papers`, `list_papers`.
@@ -59,8 +59,8 @@ The registry is the source of truth; the bibliography is derived from it.
 
 - Never hand-edit `refs/references.bib`. It is rendered by the registry and is
   overwritten on the next registry write. If it diverges or is damaged, run
-  `uktub-oa sync-bib` to re-render it from the registry.
-- Removing papers is a human CLI action: `uktub-oa deregister <doi|citekey>...`.
+  `uktub-scholar sync-bib` to re-render it from the registry.
+- Removing papers is a human CLI action: `uktub-scholar deregister <doi|citekey>...`.
   Run it via the shell only when the user asks for removal.
 - If search keeps degrading (`SEARCH_UNAVAILABLE`, provider warnings), suggest
   the user set optional keys — `OPENALEX_API_KEY`, `SEMANTIC_SCHOLAR_API_KEY`,

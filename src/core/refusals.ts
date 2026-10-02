@@ -28,10 +28,10 @@ export interface RefusalEntry {
 
 export const REFUSALS: Record<RefusalCode, RefusalEntry> = {
   REGISTRY_NOT_INITIALIZED: {
-    next: "run `uktub-oa init` in the project root, then retry",
+    next: "run `uktub-scholar init` in the project root, then retry",
   },
   REGISTRY_CORRUPT: {
-    next: "the registry file is not a valid SQLite database; restore it from backup or delete it and run `uktub-oa init` (papers are lost)",
+    next: "the registry file is not a valid SQLite database; restore it from backup or delete it and run `uktub-scholar init` (papers are lost)",
   },
   REGISTRY_SCHEMA_UNSUPPORTED: {
     next: "the registry was created by a different schema version; upgrade the package or restore a matching registry",

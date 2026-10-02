@@ -104,7 +104,7 @@ test("refusal mapping: core refusal becomes isError:true content carrying code +
     const result = await call(tools, "register_papers", { dois: ["10.1234/abc"] }, root);
     assert.equal(result.isError, true);
     assert.match(result.content[0].text, /Refused: REGISTRY_NOT_INITIALIZED/);
-    assert.match(result.content[0].text, /uktub-oa init/);
+    assert.match(result.content[0].text, /uktub-scholar init/);
     assert.ok("refused" in result.details && result.details.refused !== null, "refusal details missing");
     assert.equal(result.structuredContent, undefined);
   } finally {

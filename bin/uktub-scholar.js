@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Bin shim for the uktub-oa CLI.
+// Bin shim for the uktub-scholar CLI.
 // The CLI source is TypeScript (src/cli/main.ts). Node >= 23.6 runs type-stripped
 // TypeScript natively; Node 22.x (the Pi floor) needs --experimental-strip-types.
 // Zero runtime dependencies: the shim uses only node built-ins.
@@ -18,7 +18,7 @@ const result = needsFlag
   : spawnSync(process.execPath, [mainTs, ...args], { stdio: "inherit" });
 
 if (result.error) {
-  console.error(`uktub-oa: failed to start: ${result.error.message}`);
+  console.error(`uktub-scholar: failed to start: ${result.error.message}`);
   process.exitCode = 1;
 } else if (typeof result.status === "number") {
   process.exitCode = result.status;
