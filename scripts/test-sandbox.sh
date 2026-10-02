@@ -19,8 +19,12 @@ fi
 
 docker volume create uktub-scholar-sandbox-project >/dev/null
 
+# Project: env wins, else the gcloud CLI's configured project (no hardcoding).
+if [ -z "${GOOGLE_CLOUD_PROJECT:-}" ] && command -v gcloud >/dev/null 2>&1; then
+  GOOGLE_CLOUD_PROJECT="$(gcloud config get-value project 2>/dev/null)"
+fi
 if [ -z "${GOOGLE_CLOUD_PROJECT:-}" ]; then
-  echo "Set GOOGLE_CLOUD_PROJECT (your GCP project for Vertex) before running the sandbox." >&2
+  echo "Set GOOGLE_CLOUD_PROJECT (your GCP project for Vertex), or configure 'gcloud config set project'." >&2
   exit 1
 fi
 
