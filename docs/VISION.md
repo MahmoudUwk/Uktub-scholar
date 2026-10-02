@@ -3,7 +3,9 @@
 **Uktub Scholar** is a local-first scholarly research package for coding
 agents (Pi first): find papers, register sources, keep a clean bibliography,
 write citation-grounded LaTeX — inside the project folder the researcher
-already owns.
+already owns. The long arc is broader than literature work: support all
+kinds of research output — data analysis, figures, grant proposals — one
+adopted capability at a time, each earning its place with real sessions.
 
 ## Who it is for
 

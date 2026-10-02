@@ -7,6 +7,17 @@ the evidence that would reopen the question.
 
 ## 2026-10-02
 
+- **Scope: all research kinds — ADOPTED as direction.** The package is not a
+  literature-review tool; figures, data analysis, and grant-proposal support
+  are in-arc, adopted one capability at a time as real sessions demand them.
+- **evident-charts (rhiever, MIT) — RECOMMENDED COMPANION, not bundled.** One
+  week old and evolving fast; vendoring would freeze it and bloat the
+  package. Users install it host-side (`npx skills add rhiever/evident-charts`)
+  when they need charts. Reopen vendoring (or write our own
+  `paper-figures` skill) when figure sessions accumulate — its rule
+  structure (code-checkable first, vision review where code can't) is the
+  template.
+
 - **Sandbox-by-default for agent sessions — REJECTED.** Opt-in stays. Evidence:
   Gemini CLI, Aider, and Pi all default sandbox off; default-on frameworks
   (Codex, OpenHands) pair it with approval ladders that belong to the host

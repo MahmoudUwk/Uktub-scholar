@@ -114,10 +114,22 @@ cache with one-way sync. Sandboxing is opt-in; a future UI layer may enforce
 more for non-technical users, above the package, never inside it. See
 `docs/VISION.md` and `AGENTS.md`.
 
+## Companion skills
+
+Chart/figure work (papers, grant proposals): we recommend installing
+[evident-charts](https://github.com/rhiever/evident-charts) (MIT) alongside
+this package — it teaches the agent clear, honest chart-making with
+rendered-image review, and installs host-side in one command
+(`npx skills add rhiever/evident-charts` for Agent-Skills agents). We do not
+bundle it: the skill evolves upstream and belongs to the host, not the
+package. A LaTeX/PGF-flavoured `paper-figures` skill of our own is on the
+roadmap once figure workflows justify it.
+
 ## Next steps
 
 - More sources beyond OpenAlex/Crossref/Semantic Scholar (Europe PMC next).
 - Host adapters (Claude Code, Codex) behind the same core.
+- `paper-figures` skill for publication-grade figures (grant-proposal need).
 - UI layer for non-technical users (enforcement lives there, not here).
 
 ## Attribution
