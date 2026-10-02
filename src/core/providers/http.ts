@@ -23,6 +23,7 @@ import {
   type ProviderName,
 } from "./types.ts";
 import { normalizeRegistryDoi } from "../doi.ts";
+import { decodeHtmlEntities } from "../bibrender.ts";
 
 /** Per-attempt fetch timeout (product default, `request-timeout-config.ts`).
  *  Client policy, not a provider rule. */
@@ -55,8 +56,7 @@ export async function fetchWithRetry(
 ): Promise<FetchResult> {
   const timeoutMs = opts.timeoutMs ?? DEFAULT_SCHOLARLY_PROVIDER_TIMEOUT_MS;
   const maxRetries = opts.maxRetries ?? MAX_RETRIES;
-  const sleep = opts.sleep ?? ((ms) => new Promise((r) => setTimeout(r, ms)));
-  const sleptMs: number[] = [];
+  const sleep = opts.sleep ?? ((ms) => defaultSleep(ms));
   let attempt = 0;
   for (;;) {
     const ctrl = new AbortController();
@@ -68,18 +68,19 @@ export async function fetchWithRetry(
       });
       const retryable = res.status === 429 || (res.status >= 500 && res.status < 600);
       if (!retryable || attempt >= maxRetries) {
-        return { status: res.status, body: await res.text(), attempts: attempt + 1, sleptMs };
+        return { status: res.status, body: await res.text() };
       }
+      // Release the rejected response's socket before backing off — under
+      // shared-pool 429s the abandoned undici stream would otherwise stay
+      // open until GC.
+      await res.body?.cancel();
       const raw = res.headers.get("retry-after");
       const secs = raw !== null && /^[0-9]+$/.test(raw.trim()) ? parseInt(raw.trim(), 10) : NaN;
       const wait = Number.isNaN(secs) ? backoffMs(attempt) : Math.min(secs * 1000, 5000);
-      sleptMs.push(wait);
       await sleep(wait);
     } catch (err) {
       if (attempt >= maxRetries) throw err;
-      const wait = backoffMs(attempt);
-      sleptMs.push(wait);
-      await sleep(wait);
+      await sleep(backoffMs(attempt));
     } finally {
       clearTimeout(timer);
     }
@@ -100,34 +101,13 @@ export function asArray(value: unknown): unknown[] {
   return Array.isArray(value) ? value : [];
 }
 
-/**
- * Minimal HTML entity decoder for provider text: HTML's named core set plus
- * decimal/hex numeric references. Unknown entities pass through verbatim —
- * this layer never guesses at text it does not recognize.
- */
-function decodeEntities(text: string): string {
-  return text.replace(/&(?:#[xX][0-9a-fA-F]+|#[0-9]+|amp|lt|gt|quot|apos);/g, (entity) => {
-    if (entity === "&amp;") return "&";
-    if (entity === "&lt;") return "<";
-    if (entity === "&gt;") return ">";
-    if (entity === "&quot;") return '"';
-    if (entity === "&apos;") return "'";
-    const numeric = entity.slice(1, -1);
-    const codePoint = numeric.startsWith("#x") || numeric.startsWith("#X")
-      ? parseInt(numeric.slice(2), 16)
-      : parseInt(numeric.slice(1), 10);
-    const decoded = Number.isFinite(codePoint) ? String.fromCodePoint(codePoint) : entity;
-    return decoded;
-  });
-}
-
 /** Provider text as plain words: Crossref and OpenAlex ship titles, venues
  *  and abstracts with HTML entities and JATS/HTML inline markup. Tags become a
  *  space, entities are decoded, and whitespace collapses — markup removed,
  *  wording untouched. */
 export function plainText(value: string | null): string | null {
   if (value === null) return null;
-  const text = decodeEntities(value.replace(/<[^>]+>/g, " "))
+  const text = decodeHtmlEntities(value.replace(/<[^>]+>/g, " "))
     .replace(/\s+/g, " ")
     .trim();
   return text.length > 0 ? text : null;
@@ -177,8 +157,9 @@ const DEFAULT_LIMIT = 10;
 
 /** Real-time sleep; the injected seam everywhere else in this layer. */
 export function defaultSleep(ms: number): Promise<void> {
-  // Executor form: the project lib (ES2023) predates Promise.withResolvers.
-  return new Promise((resolve) => setTimeout(resolve, ms));
+  const { promise, resolve } = Promise.withResolvers<void>();
+  setTimeout(resolve, ms);
+  return promise;
 }
 
 /** Optional provider timeout and test sleep, passed to the retry helper. */

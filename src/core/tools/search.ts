@@ -58,6 +58,9 @@ export async function searchPapersTool(
   ctx: ToolContext,
   args: { query: string; limit?: number },
 ): Promise<ToolResult<SearchPapersStructured>> {
+  if (typeof args.query !== "string" || args.query.trim().length === 0) {
+    return refusalResult({ code: "QUERY_REQUIRED", message: "search_papers needs a non-empty query" });
+  }
   try {
     const result = await searchPapers(ctx.fetch, providerConfigOf(ctx), {
       query: args.query,

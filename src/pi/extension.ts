@@ -10,7 +10,7 @@ import { WriteQueue } from "../core/queue.ts";
 import { ListPapersOutput, listPapersTool } from "../core/tools/list.ts";
 import { RegisterPapersOutput, registerPapersTool } from "../core/tools/register.ts";
 import { SearchPapersOutput, searchPapersTool } from "../core/tools/search.ts";
-import type { ToolContext, ToolResult } from "../core/tools/context.ts";
+import { refusalResult, validateContext, type ToolContext, type ToolResult } from "../core/tools/context.ts";
 import { resolve } from "node:path";
 
 /**
@@ -59,8 +59,24 @@ const now: ToolContext["now"] = () => new Date();
 /** The package owns write serialization (KTD5): one queue per process. */
 const queue = new WriteQueue();
 
-function toolCtx(rootFor: (ctx: ExtensionToolContext) => string, ctx: ExtensionToolContext): ToolContext {
-  return { root: rootFor(ctx), fetch: fetchLike, env: liveEnv, now, queue };
+function toolCtx(
+  rootFor: (ctx: ExtensionToolContext) => string,
+  ctx: ExtensionToolContext,
+  mkRefusal: (code: "PATH_REFUSED", message: string) => ToolResult<never>,
+): ToolContext | ToolResult<never> {
+  const root = rootFor(ctx);
+  // R16 enforcement point: the resolved root is validated once, fail-closed —
+  // relative roots, `..` traversal, and protected segments refuse before any
+  // tool touches the filesystem.
+  const check = validateContext({
+    root,
+    fetch: fetchLike,
+    env: liveEnv,
+    now,
+    queue,
+  });
+  if (!check.ok) return mkRefusal("PATH_REFUSED", check.message);
+  return { root, fetch: fetchLike, env: liveEnv, now, queue };
 }
 
 /** Map a core tool result onto Pi's AgentToolResult (KTD6, KTD7). */
@@ -98,7 +114,9 @@ function registerTool<TParams extends TSchema, TOut>(
       // `signal` is not forwarded: the core FetchLike surface takes no abort
       // signal in v0; a cancelled call's writes still serialize through the
       // queue and land or roll back atomically (KTD5).
-      return toPiResult(await def.run(toolCtx(rootFor, ctx), params));
+      const toolContext = toolCtx(rootFor, ctx, (code, message) => refusalResult({ code, message }));
+      if (!("root" in toolContext)) return toPiResult(toolContext);
+      return toPiResult(await def.run(toolContext, params));
     },
   };
   pi.registerTool(tool);

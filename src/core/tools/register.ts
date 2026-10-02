@@ -12,6 +12,7 @@ import { Type } from "typebox";
 import { RegistryError, openRegistry, registerPaper } from "../registry.ts";
 import type { RegisterOutcome } from "../registry.ts";
 import { InvalidDoiError, fetchPaperMetadata, reasonOf } from "../scholarly.ts";
+import { fetchWithRetry, retryOpts } from "../providers/http.ts";
 import type { PaperRecord, ProviderConfig } from "../providers/types.ts";
 import { WARNINGS } from "../refusals.ts";
 import type { WarningCode } from "../refusals.ts";
@@ -77,9 +78,9 @@ async function crossCheckTitle(
   try {
     const url = `${cfg.openalexBaseUrl}/works/https://doi.org/${doi}` +
       (cfg.openalexApiKey ? `?api_key=${encodeURIComponent(cfg.openalexApiKey)}` : "");
-    const response = await ctx.fetch(url);
+    const response = await fetchWithRetry(ctx.fetch, url, retryOpts(cfg));
     if (response.status !== 200) return null;
-    const body: unknown = JSON.parse(await response.text());
+    const body: unknown = JSON.parse(response.body);
     if (typeof body !== "object" || body === null) return null;
     const title = (body as Record<string, unknown>)["title"];
     if (typeof title !== "string" || title.length === 0 || crossrefTitle.length === 0) return null;
@@ -143,7 +144,13 @@ export async function registerPapersTool(
 
   try {
     // Fetch phase: concurrent, outside the queue — no registry state touched.
-    const resolved = await Promise.all(args.dois.map((doi) => resolveDoi(ctx, cfg, doi)));
+    // Duplicate DOIs in one batch share a single resolve (one network round
+    // trip per distinct DOI) while outcomes still assemble in input order.
+    // Null prototype: DOI strings become bare lookup keys, nothing more.
+    const resolves: Record<string, Promise<Resolved>> = Object.create(null);
+    const resolveOnce = (doi: string): Promise<Resolved> =>
+      (resolves[doi] ??= resolveDoi(ctx, cfg, doi));
+    const resolved = await Promise.all(args.dois.map(resolveOnce));
 
     // Write phase: each DOI's transactional section through the FIFO queue in
     // call-arrival order; `Promise.all` of the queued sections reassembles the

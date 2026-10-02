@@ -13,6 +13,7 @@ export type RefusalCode =
   | "REGISTRY_BUSY"
   | "INVALID_DOI"
   | "DOI_NOT_FOUND"
+  | "QUERY_REQUIRED"
   | "PATH_REFUSED"
   | "SEARCH_UNAVAILABLE"
   | "BATCH_TOO_LARGE"
@@ -43,6 +44,9 @@ export const REFUSALS: Record<RefusalCode, RefusalEntry> = {
   },
   DOI_NOT_FOUND: {
     next: "verify the DOI resolves (doi.org) or re-run search_papers and register from the result's DOI",
+  },
+  QUERY_REQUIRED: {
+    next: "provide a search query — search_papers requires non-empty query text",
   },
   PATH_REFUSED: {
     next: "operate inside the project directory; .registry and .git are protected system segments and path traversal is refused",

@@ -67,8 +67,10 @@ function withStandardMonth(bibtex: string): string {
 
 /** HTML entities Crossref's BibTeX carries (`journal={Environmental Science &amp;amp; Technology}`,
  *  seen double-escaped in the 2026-09-29 live run): the five XML names plus numeric references. An
- *  unknown named entity is not guessed at. Decoded at most twice, enough for the observed double escape. */
-function decodeHtmlEntities(text: string): string {
+ *  unknown named entity is not guessed at. Decoded at most twice, enough for the observed double escape.
+ *  Single owner for the package: providers/plainText reuse it (bounds-checked, unlike a naive
+ *  fromCodePoint decode which throws on out-of-range numeric refs). */
+export function decodeHtmlEntities(text: string): string {
   const named: Record<string, string> = { amp: "&", lt: "<", gt: ">", quot: '"', apos: "'" };
   const decodeOnce = (input: string): string =>
     input.replace(/&(?:#(\d{1,7})|#[xX]([0-9a-fA-F]{1,6})|(amp|lt|gt|quot|apos));/g, (match, dec?: string, hex?: string, name?: string) => {

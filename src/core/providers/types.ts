@@ -131,12 +131,12 @@ export interface FetchLike {
     ok?: boolean;
     headers: { get(name: string): string | null };
     text(): Promise<string>;
+    /** Undici responses carry a cancelable stream; structural fakes omit it. */
+    body?: { cancel(): Promise<void> } | null;
   }>;
 }
 
 export interface FetchResult {
   status: number;
   body: string;
-  attempts: number;
-  sleptMs: number[];
 }

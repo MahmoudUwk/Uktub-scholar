@@ -5,7 +5,7 @@
 
 import { Type } from "typebox";
 
-import { RegistryError, listPapers, openRegistry } from "../registry.ts";
+import { RegistryError, countPapers, listPapers, openRegistry } from "../registry.ts";
 import { refusalResult, type ToolContext, type ToolResult } from "./context.ts";
 
 /**
@@ -66,8 +66,11 @@ export function listPapersTool(ctx: ToolContext, args: { limit?: number } = {}):
     const cap = typeof args.limit === "number" && Number.isFinite(args.limit) && args.limit >= 1
       ? Math.min(Math.trunc(args.limit), LIST_PAPERS_CAP)
       : LIST_PAPERS_CAP;
-    const rows = listPapers(db);
-    const papers = rows.slice(0, cap).map((row) => ({
+    // Cap+1 probe: one row past the cap detects truncation; COUNT(*) gives
+    // the remaining marker without materializing the whole registry.
+    const probed = listPapers(db, cap + 1);
+    const truncated = probed.length > cap;
+    const papers = (truncated ? probed.slice(0, cap) : probed).map((row) => ({
       citekey: row.citekey,
       doi: row.doi,
       title: row.title,
@@ -78,7 +81,7 @@ export function listPapersTool(ctx: ToolContext, args: { limit?: number } = {}):
       bibtexSource: row.bibtexSource,
       ingestedAt: row.ingestedAt,
     }));
-    const remaining = rows.length - papers.length;
+    const remaining = truncated ? countPapers(db) - cap : 0;
     const structured: ListPapersStructured = { papers, truncated: remaining > 0, remaining };
     return {
       content: [

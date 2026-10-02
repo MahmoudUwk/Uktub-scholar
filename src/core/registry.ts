@@ -310,8 +310,17 @@ export interface PaperRow {
   ingestedAt: string;
 }
 
-/** Every paper in citekey ASC order — the total order every consumer shares (KTD6). */
-export function listPapers(db: DatabaseSync): PaperRow[] {
+/** Papers in citekey ASC order — the total order every consumer shares (KTD6).
+ *  `limit` pushes the cap into SQL (the tool layer's truncation probe uses
+ *  cap+1); omit it to read the whole registry (the CLI's human listing). */
+export function listPapers(db: DatabaseSync, limit?: number): PaperRow[] {
+  const statement = Number.isInteger(limit) && limit !== undefined && limit >= 0
+    ? db.prepare(
+      "SELECT doi, citekey, title, authors_json, year, venue, bibtex_source, citable, ingested_at FROM papers ORDER BY citekey ASC LIMIT ?",
+    )
+    : db.prepare(
+      "SELECT doi, citekey, title, authors_json, year, venue, bibtex_source, citable, ingested_at FROM papers ORDER BY citekey ASC",
+    );
   const rows = allRows<{
     doi: string;
     citekey: string;
@@ -323,9 +332,8 @@ export function listPapers(db: DatabaseSync): PaperRow[] {
     citable: number;
     ingested_at: string;
   }>(
-    db.prepare(
-      "SELECT doi, citekey, title, authors_json, year, venue, bibtex_source, citable, ingested_at FROM papers ORDER BY citekey ASC",
-    ),
+    statement,
+    ...(Number.isInteger(limit) && limit !== undefined && limit >= 0 ? [limit] : []),
   );
   return rows.map((row) => ({
     doi: row.doi,
@@ -338,6 +346,13 @@ export function listPapers(db: DatabaseSync): PaperRow[] {
     citable: Number(row.citable) === 1,
     ingestedAt: row.ingested_at,
   }));
+}
+
+/** Total registry size — the truncation arithmetic behind `list_papers`'s
+ *  `remaining` marker without materializing every row. */
+export function countPapers(db: DatabaseSync): number {
+  const row = db.prepare("SELECT COUNT(*) AS n FROM papers").get() as { n: number };
+  return Number(row.n);
 }
 
 // ── deregistration ─────────────────────────────────────────────────────────
