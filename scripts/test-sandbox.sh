@@ -9,15 +9,20 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
+# Sandbox data (registry, references.bib, session transcripts) persists on the
+# HOST, one level above the repo — inspect files directly; nothing is hidden in
+# Docker volumes. `--fresh` wipes these two directories.
+DATA_DIR="$(cd .. && pwd)/uktub-sandbox"
+
 ADC="$HOME/.config/gcloud/application_default_credentials.json"
 [ -f "$ADC" ] || { echo "No ADC credentials at $ADC — run: gcloud auth application-default login" >&2; exit 1; }
 
 if [ "${1:-}" = "--fresh" ]; then
-  docker volume rm uktub-scholar-sandbox-project >/dev/null 2>&1 || true
+  rm -rf "$DATA_DIR/project" "$DATA_DIR/sessions"
   shift
 fi
 
-docker volume create uktub-scholar-sandbox-project >/dev/null
+mkdir -p "$DATA_DIR/project" "$DATA_DIR/sessions"
 
 # Project: env wins, else the gcloud CLI's configured project (no hardcoding).
 if [ -z "${GOOGLE_CLOUD_PROJECT:-}" ] && command -v gcloud >/dev/null 2>&1; then
@@ -34,6 +39,6 @@ exec docker run --rm -it \
   -e TERM="${TERM:-xterm-256color}" \
   -v "$(pwd)":/uktub-scholar \
   -v "$ADC":/adc/adc.json:ro \
-  -v uktub-scholar-sandbox-project:/workspace/project \
-  -v uktub-scholar-sandbox-sessions:/root/.pi/agent/sessions \
+  -v "$DATA_DIR/project":/workspace/project \
+  -v "$DATA_DIR/sessions":/root/.pi/agent/sessions \
   uktub-scholar-sandbox "$@"
