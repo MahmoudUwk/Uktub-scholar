@@ -11,9 +11,14 @@ The registry is the source of truth; the bibliography is derived from it.
 
 ## Search versus register
 
+- **The registry is the bibliography.** Any paper your answer relies on —
+  cited, compared, or summarized — must be registered first. A literature
+  review with unregistered sources is incomplete work: search, pick the
+  strongest candidates, and register them before writing.
 - Use `search_papers` when the topic is open-ended: given a rough query, it
   returns merged candidates from OpenAlex, Crossref, and Semantic Scholar in
-  relevance order, each with a DOI when one exists.
+  relevance order, each with a DOI when one exists. Candidate DOIs appear in
+  the tool result text.
 - Use `register_papers` once you have DOIs — from search results, from the
   user's own list, or from a paper's page. Do not register on the user's
   behalf without checking the titles match what they asked for.

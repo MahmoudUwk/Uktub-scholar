@@ -89,7 +89,18 @@ export function listPapersTool(ctx: ToolContext, args: { limit?: number } = {}):
           type: "text",
           text:
             `${papers.length} paper${papers.length === 1 ? "" : "s"} in the registry` +
-            (structured.truncated ? ` — ${remaining} more beyond the cap of ${cap}` : ""),
+            (structured.truncated ? ` — ${remaining} more beyond the cap of ${cap}` : "") +
+            // The model reads ONLY this text: citekeys must be visible for
+            // \cite usage without codemode.
+            (papers.length > 0
+              ? "\n" +
+                papers
+                  .map(
+                    (paper) =>
+                      `  ${paper.citekey} — ${paper.title} (${paper.year ?? "n.d."})${paper.citable ? "" : "  [uncitable]"}`,
+                  )
+                  .join("\n")
+              : "\n  (registry is empty — register papers with register_papers)"),
         },
       ],
       structuredContent: structured,

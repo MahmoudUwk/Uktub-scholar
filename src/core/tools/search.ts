@@ -91,6 +91,19 @@ export async function searchPapersTool(
             (structured.truncated ? ` (truncated to the requested ${structured.requested})` : "") +
             (structured.warnings.length > 0
               ? ` — ${structured.warnings.length} provider warning${structured.warnings.length === 1 ? "" : "s"}`
+              : "") +
+            // The model reads ONLY this text (structuredContent is for
+            // codemode callers): each candidate must appear here or the model
+            // cannot select and register it. One deterministic line each.
+            (structured.candidates.length > 0
+              ? "\n" +
+                structured.candidates
+                  .map(
+                    (candidate, index) =>
+                      `${index + 1}. ${candidate.doi ?? "no DOI"} — ${candidate.title}` +
+                      ` (${candidate.year ?? "n.d."}${candidate.venue ? `, ${candidate.venue}` : ""})`,
+                  )
+                  .join("\n")
               : ""),
         },
       ],

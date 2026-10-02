@@ -26,4 +26,5 @@ exec docker run --rm -it \
   -v "$(pwd)":/uktub-oa \
   -v "$ADC":/adc/adc.json:ro \
   -v uktub-oa-sandbox-project:/workspace/project \
+  -v uktub-oa-sandbox-sessions:/root/.pi/agent/sessions \
   uktub-oa-sandbox "$@"
