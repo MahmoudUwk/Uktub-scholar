@@ -6,7 +6,7 @@
  */
 import { describe, it, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, readFileSync, existsSync, rmSync } from "node:fs";
+import { mkdtempSync, mkdirSync, readFileSync, existsSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
@@ -102,6 +102,18 @@ describe("uktub-scholar init", () => {
     const code = runCli(["init"], capture);
     assert.equal(code, 1);
     assert.match(capture.lines.err.join("\n"), /REGISTRY_SCHEMA_UNSUPPORTED/);
+  });
+
+  it("refuses init inside an existing project (nested registries), exit 1", () => {
+    db.close();
+    const subdir = join(root, "manuscript", "chapters");
+    mkdirSync(subdir, { recursive: true });
+    const capture = io();
+    capture.cwd = subdir;
+    const code = runCli(["init"], capture);
+    assert.equal(code, 1);
+    assert.match(capture.lines.err.join("\n"), /nested projects are not supported/);
+    assert.ok(!existsSync(join(subdir, ".registry")));
   });
 });
 

@@ -93,9 +93,29 @@ Tests are fully offline: provider fakes are the only search path. Evidence tiers
 ## Interactive sandbox
 
 `scripts/test-sandbox.sh` — disposable Docker Pi TUI with the live package
-mounted, ADC mounted read-only, and an isolated registry volume (`--fresh`
-wipes it). The TUI also shows a registry panel (below the editor) that
-refreshes after every tool call.
+mounted, ADC mounted read-only. Project data (registry, bibliography) and Pi
+session transcripts persist on the host next to the repo (`../uktub-sandbox/`)
+for direct inspection; `--fresh` wipes both. The TUI also shows a registry
+panel (below the editor) that refreshes after every tool call.
+
+## Design principles
+
+Trust the technical user — conventions over enforcement; the package owns only
+`.registry/` and `refs/references.bib`, the user owns everything else (git,
+layout, toolchains). The project folder is the whole world: no global index,
+no parallel session store (Pi owns sessions), nested projects are refused.
+`references.bib` is canonical; the SQLite registry is a derived agent-side
+cache with one-way sync. Sandboxing is opt-in; a future UI layer may enforce
+more for non-technical users, above the package, never inside it. See
+`docs/VISION.md` and `AGENTS.md`.
+
+## Next steps
+
+- Compile tool: portable diagnostics parser + Tectonic spawn (owner-approved
+  direction, not started).
+- More sources beyond OpenAlex/Crossref/Semantic Scholar (Europe PMC next).
+- Host adapters (Claude Code, Codex) behind the same core.
+- UI layer for non-technical users (enforcement lives there, not here).
 
 ## Attribution
 

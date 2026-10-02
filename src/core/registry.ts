@@ -16,7 +16,7 @@
  * `now` (KTD6).
  */
 import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { dirname, join, parse, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import type { SQLInputValue, StatementSync } from "node:sqlite";
 
@@ -104,6 +104,23 @@ function openDatabaseFile(abs: string): DatabaseSync {
       // The open failure is the report.
     }
     throw asRegistryError(err);
+  }
+}
+
+/**
+ * Walk up from `root` and return the nearest ancestor directory that already
+ * contains a project registry, or null. `root` itself is excluded — re-running
+ * `init` in the project root is the documented idempotent path (DVC-style
+ * nesting rule: one registry per tree, never nested projects).
+ */
+export function findEnclosingProject(root: string): string | null {
+  const resolved = resolve(root);
+  let dir = dirname(resolved);
+  const stop = parse(dir).root;
+  while (true) {
+    if (existsSync(join(dir, REGISTRY_REL_PATH))) return dir;
+    if (dir === stop) return null;
+    dir = dirname(dir);
   }
 }
 

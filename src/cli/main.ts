@@ -10,7 +10,7 @@
  * directly).
  */
 
-import { RegistryError, createRegistry, deregisterPapers, listPapers, openRegistry, syncBibliography } from "../core/registry.ts";
+import { RegistryError, createRegistry, deregisterPapers, findEnclosingProject, listPapers, openRegistry, syncBibliography } from "../core/registry.ts";
 import { renderRefusal } from "../core/refusals.ts";
 
 /** Injected I/O: the bin passes console writers; tests capture arrays. */
@@ -39,6 +39,13 @@ export function runCli(argv: string[], io: CliIo): number {
   try {
     switch (command) {
       case "init": {
+        const enclosing = findEnclosingProject(root);
+        if (enclosing) {
+          err(
+            `error: ${enclosing} already contains a uktub-scholar registry — nested projects are not supported\nrun commands from that project root instead`,
+          );
+          return 1;
+        }
         const db = createRegistry(root);
         db.close();
         out(`Initialized registry at ${root}/.registry/registry.db (refs/references.bib rendered).`);
