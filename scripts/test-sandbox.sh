@@ -19,8 +19,13 @@ fi
 
 docker volume create uktub-oa-sandbox-project >/dev/null
 
+if [ -z "${GOOGLE_CLOUD_PROJECT:-}" ]; then
+  echo "Set GOOGLE_CLOUD_PROJECT (your GCP project for Vertex) before running the sandbox." >&2
+  exit 1
+fi
+
 exec docker run --rm -it \
-  -e GOOGLE_CLOUD_PROJECT=uktubai-prod \
+  -e GOOGLE_CLOUD_PROJECT \
   -e GOOGLE_APPLICATION_CREDENTIALS=/adc/adc.json \
   -e TERM="${TERM:-xterm-256color}" \
   -v "$(pwd)":/uktub-oa \
