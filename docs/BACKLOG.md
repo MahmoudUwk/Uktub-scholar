@@ -52,12 +52,20 @@ Adoption discipline: see `docs/DECISIONS.md`; attribution rules: `NOTICE.md`.
 ## Owner-gated (separate approval required)
 
 - **Claim verification (local decision model) — Stages A+B SHIPPED (engine-
-  agnostic `verifyClaim`/`verifyClaims`, 0.99 bar, resident-process batch);
-  Stage C measured: Julia-1 REJECTED as verdict engine (fabricated claim
-  outscored a true one, 0.738 vs 0.777/0.725 on entailments — no
-  discrimination at the 0.99 scientific bar). Stage D next: generative
-  verdict model via llama.cpp (host-installed), same `ClaimEngine`
-  interface; model choice TBD. Engine wiring: `UKTUB_JULIA_MODEL` +
+  agnostic `verifyClaim`/`verifyClaims`, 0.99 bar, resident-process batch).
+  Stage C measured TWICE: first with title-only chunks (wrong — garbage
+  separation), then with real abstracts per the owner's context hypothesis
+  (confirmed: context is the biggest factor) — but Julia-1 still fails:
+  a fabricated claim scored 0.975, above both true claims (0.761–0.904);
+  contrastive own-vs-decoy margins are inconsistent (+0.54/−0.54 for the
+  same claim; a true claim scored higher on the decoy). Verdict: fast
+  lexical triage signal only — REJECTED as verdict engine at the 0.99
+  scientific bar. Speed is excellent and length-insensitive (~25–95 ms per
+  verdict; encoder window truncation makes 6000 chars cost the same as an
+  abstract). Stage D next: generative verdict model via llama.cpp — SMALL
+  per owner constraint (0.5–1B Q4 GGUF ≈ 400–800 MB, ~1–3 s per CPU
+  verdict), measured on the same real-paper benchmark before adoption;
+  same `ClaimEngine` interface. Engine wiring: `UKTUB_JULIA_MODEL` +
   `scripts/julia_decide.py` for Julia-class engines; typed refusal
   `VERIFY_ENGINE_MISSING` when absent. FTS5 chunk retrieval comes later;
   the verifier's interface is chunk-first so the retrieval layer plugs in
