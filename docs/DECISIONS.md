@@ -7,6 +7,22 @@ the evidence that would reopen the question.
 
 ## 2026-10-02 (goal sweep III)
 
+- **Corrected-usage retests + external audit — rejections STAND; Stage-D
+  primary candidate switched to MiniCheck.** External best-practices study
+  (HF cards, package sources, commit history, independent evals) surfaced
+  two usage concerns; both retested: Julia-1 at its EVALUATED operating
+  point (max_length=1024, head_length=512, abstract context) collapses to
+  P(true) ≈ 0.005 for ALL claims (worse than at 8192; our snapshot already
+  includes the criteria-preservation fix a85b1273 and our 24k-char inputs
+  fit the native 8192 window, so no truncation bug); GLiNER claim-first
+  with 300-word passages says "supported" to all four probes (positive-label
+  bias confirmed in every encoding). Audit's architectural finding: neither
+  model was trained for NLI — we evaluated routers on an entailment task.
+  Purpose-trained tool class: **MiniCheck** (LLM-AggreFact fact-verification;
+  RoBERTa-large 355M = 72.7 BAcc, Flan-T5-large 770M = 74.7, CPU-feasible) —
+  primary Stage-D candidate, must pass the same 135-claim benchmark
+  (AUC ≥ 0.80, decided-acc ≥ 0.90 bars in benchmarks/README.md).
+
 - **GLiNER2.5-Decide (340M, Apache-2.0) — measured and REJECTED for claim
   verification.** Same 135-claim benchmark, best of 3 input encodings:
   accuracy 0.541 (4000-char window) / 0.533 (1800-char chunk) — at or below

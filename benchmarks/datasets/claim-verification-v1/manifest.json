@@ -1,0 +1,41 @@
+{
+ "dataset": "claim-verification-v1",
+ "created": "2026-10-02",
+ "size": 135,
+ "labels": {
+  "TRUE": 74,
+  "FALSE": 61
+ },
+ "kinds": {
+  "numeric": 36,
+  "finding": 39,
+  "dataset": 23,
+  "method": 37
+ },
+ "papers": 14,
+ "corpus": {
+  "source_pdfs": "/home/mahmoud/Desktop/AI_Projects/UktubAI/test_papers/{RF,smarthome}/*.pdf (84 MB, owner's library \u2014 NOT in this repo)",
+  "text_extraction": "pdftotext -q <pdf> <text> ; whitespace-normalized before use",
+  "note": "Text files are derived from the owner's PDFs; extract locally with the command above. Claims quote 10-40-word passages from those texts (scholarly quotation)."
+ },
+ "schema": {
+  "id": "stable claim id (c001\u2026)",
+  "paper": "text file basename (which paper the claim is checked against)",
+  "claim": "single-sentence, standalone, present tense, reworded (never copied from the paper)",
+  "label": "TRUE = paper explicitly states/entails it; FALSE = contradicts or fabricates",
+  "evidence": "verbatim 10-40-word quote from the paper supporting the label",
+  "kind": "numeric | method | finding | dataset"
+ },
+ "rules": [
+  "claims are decidable from that paper alone (no outside knowledge)",
+  "TRUE claims are reworded, never sentence-copies",
+  "FALSE = contradicted OR plausible fabrication (right magnitude, wrong value)",
+  "every claim carries a verbatim evidence quote; a claim whose quote is not found in the paper is dropped"
+ ],
+ "provenance": {
+  "benchmarks_run": [
+   "docs/benchmarks/claim-verification-julia1-2026-10-02.md (Julia-1 AUC 0.529; GLiNER2.5-Decide accuracy 0.541/0.533)"
+  ],
+  "engine_results": "per-run results JSON lands next to the dated report in docs/benchmarks/"
+ }
+}

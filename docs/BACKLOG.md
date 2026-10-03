@@ -70,6 +70,7 @@ Adoption discipline: see `docs/DECISIONS.md`; attribution rules: `NOTICE.md`.
   workflow) waits for a passing engine. Benchmark dataset:
   /tmp/claims-bench/claims-verified.json (135 claims, evidence-verified) —
   copy alongside future engine runs for like-for-like comparison.
+- **NOTE (2026-10-02):** both Julia-1 and GLiNER2.5-Decide retested under corrected, best-practice usage (evaluated operating point; claim-first input) — rejections stand (benchmark doc, Addendum 2). Stage-D primary candidate is now MiniCheck (purpose-trained fact verification).
 - **Report writer (companion, roadmap)** — AstaBrief-8B (allenai,
   Apache-2.0, Qwen3-8B): single-pass cited reports from query + tagged
   excerpts, distilled from Asta ScholarQA (86.3 vs 87.6 avg on CS2 —

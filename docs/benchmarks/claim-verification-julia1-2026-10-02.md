@@ -200,3 +200,33 @@ against real papers — both score coin-flip. The Stage-D verdict engine must
 be either (a) an NLI/FEVER-trained model (premise-entailment is its native
 task — e.g. DeBERTa-v3 FEVER-class models, ~400 MB, CPU-fast) or (b) a small
 generative model via llama.cpp (0.5–1B Q4). Both rerun this benchmark.
+
+
+## Addendum 2: corrected-usage retests (external best-practice audit, 2026-10-02)
+
+An external best-practices study (HF cards, package sources, commit history,
+independent evals) found two real usage concerns; both were retested:
+
+1. **Julia-1 operating point.** Published accuracy (73.15% typed / 80.5%
+   noul-with-descriptions) was measured at `max_length=1024, head_length=512`
+   on SHORT general-domain states; `inference-policy.json` marks long-context
+   accuracy "not established". Our snapshot IS at the criteria-fix revision
+   (a85b1273 = our snapshot hash — the "silently discarded criteria" bug does
+   NOT apply), and our 24k-char states fit the native 8192 window (strict
+   encoding never raised). **Retest at 1024/512 with abstract context:**
+   P(true) collapses to 0.0002–0.0065 for ALL claims including entailments —
+   worse separation than at 8192. **Julia-1 now rejected across 5
+   configurations and 2 formulations.**
+2. **GLiNER right-truncation.** Right truncation would cut the claim (at the
+   string end) on long passages — a real risk hermes flagged. **Retest with
+   claim-first + 300-word passage, plain and description labels:**
+   "supported" to ALL FOUR claims including the unrelated one — the
+   documented positive-label bias (62–70/101 in an independent eval; ours:
+   120/135) holds in every encoding. **Rejection robust across 4 encodings.**
+
+External audit also confirmed the architectural verdict: neither model was
+trained for NLI — we evaluated routers on an entailment task. The
+purpose-trained tool class for passage-entails-claim is **MiniCheck**
+(LLM-AggreFact: MiniCheck-RoBERTa-Large 355M = 72.7 BAcc, MiniCheck-Flan-T5
+770M = 74.7, CPU-feasible — github.com/Liyan06/MiniCheck) — now the primary
+Stage-D candidate, ahead of 0.5–1B instruct LLMs.
