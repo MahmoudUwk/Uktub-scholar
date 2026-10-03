@@ -14,8 +14,12 @@
  */
 import { readFileSync, writeFileSync, readdirSync, existsSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
+import { DatabaseSync } from "node:sqlite";
 
 import { juliaEngine, mapVerdict, DEFAULT_MIN_CONFIDENCE } from "../src/core/verify/claim.ts";
+import { loadChunkConfig } from "../src/core/config.ts";
+import { replaceChunks, cachedVerdicts, saveVerdicts, claimHashOf, chunksOf } from "../src/core/verify/store.ts";
+import { verifyPairsParallel, mapParallel, mapChunkVerdict } from "../src/core/verify/pipeline.ts";
 
 function arg(name: string, fallback?: string): string | undefined {
   const i = process.argv.indexOf(`--${name}`);
@@ -26,6 +30,8 @@ const datasetDir = arg("dataset", "benchmarks/datasets/claim-verification-v1")!;
 const textDir = arg("text-dir")!;
 const engineName = arg("engine", "julia")!;
 const cap = Number(arg("cap", "24000"));
+const chunked = process.argv.includes("--chunked");
+const date = new Date().toISOString().slice(0, 10);
 
 const ds = JSON.parse(readFileSync(join(datasetDir, "claims.json"), "utf8"));
 const claims: { id: string; paper: string; claim: string; label: string; kind?: string }[] = ds.claims;
@@ -38,6 +44,70 @@ if (engineName !== "julia") {
   process.exit(2);
 }
 const engine = juliaEngine({ env: process.env });
+
+if (chunked) {
+  // Chunked like-for-like: each claim is verified against EVERY chunk of its
+  // paper (cache-integrated, parallel resident engines); paper verdict =
+  // any-supported. Same dataset, same metrics at claim level.
+  const cfg = loadChunkConfig(process.cwd(), { env: process.env, required: true });
+  const bar = Number(process.env.UKTUB_VERIFY_MIN_CONFIDENCE ?? cfg.verification.min_confidence);
+  const model = `julia:${process.env.UKTUB_JULIA_MODEL ?? "SupersonicLabs/Julia-1"}`;
+  const papers = [...new Set(claims.map((c) => c.paper))];
+  const scratch = new DatabaseSync(":memory:");
+  scratch.exec(readFileSync(new URL("../src/core/schema.sql", import.meta.url), "utf8"));
+  const stubPaper = scratch.prepare(
+    "INSERT INTO papers (doi, citekey, title, authors_json, year, venue, provider_bibtex, bibtex_source, citable, ingested_at) VALUES (?, ?, ?, '[]', NULL, NULL, NULL, NULL, 0, ?)",
+  );
+  for (const p of papers) stubPaper.run(p, p.slice(0, 40), p, new Date().toISOString());
+  for (const p of papers) replaceChunks(scratch, p, texts[p], cfg.chunking);
+  console.log(`chunked: ${papers.length} papers -> ${scratch.prepare("SELECT count(*) n FROM chunks").get()?.n} chunks (target ${cfg.chunking.chunk_tokens} tokens, overlap ${cfg.chunking.overlap_tokens})`);
+
+  const t0 = Date.now();
+  const results = await mapParallel(claims, cfg.verification.workers, (c) => {
+    const chunks = chunksOf(scratch, c.paper);
+    const cached = cachedVerdicts(scratch, c.claim, model, bar, chunks.map((ch) => ch.content_hash));
+    const missing = chunks.filter((ch) => !cached.has(ch.content_hash));
+    const freshRows = missing.map((ch) => ({ state: ch.text, instructions: c.claim }));
+    return verifyPairsParallel(() => juliaEngine({ env: process.env }), freshRows, Math.max(1, Math.floor(cfg.verification.workers / papers.length))).then((pTrues) => {
+      missing.forEach((ch, j) => saveVerdicts(scratch, [{ claim_hash: claimHashOf(c.claim), chunk_hash: ch.content_hash, model, min_confidence: bar, verdict: mapChunkVerdict(pTrues[j], bar).verdict, confidence: pTrues[j], evidence_quote: ch.text.includes(c.evidence ?? "\u0000") ? c.evidence : null }]));
+      const ps = chunks.map((ch, j) => missing.includes(ch) ? pTrues[j] : cached.get(ch.content_hash)!.confidence);
+      const supported = chunks.some((ch, j) => mapChunkVerdict(ps[j], bar).verdict === "supported");
+      const refuted = chunks.some((ch, j) => mapChunkVerdict(ps[j], bar).verdict === "refuted");
+      const best = supported ? Math.max(...ps.filter((p) => p >= bar)) : refuted ? Math.min(...ps.filter((p) => 1 - p >= bar)) : Math.max(...ps);
+      return { ...c, pTrue: best, verdict: supported ? "supported" : refuted ? "refuted" : "unverified", chunkCount: chunks.length };
+    });
+  });
+  const wall = Date.now() - t0;
+
+  function evalAt(bar: number) {
+    let tp = 0, fp = 0, tn = 0, fn = 0, dangerous = 0;
+    for (const r of results) {
+      const isTrue = r.label === "TRUE";
+      if (r.verdict === "supported") isTrue ? tp++ : (fp++, dangerous++);
+      else if (r.verdict === "refuted") !isTrue ? tn++ : (fn++, dangerous++);
+    }
+    const decided = tp + fp + tn + fn;
+    return { bar, tp, tn, fp, fn, unverified: results.length - decided, dangerous, decided, decidedAccuracy: decided ? +((tp + tn) / decided).toFixed(3) : 0 };
+  }
+  console.log(`=== 135 claims CHUNKED · ${cfg.verification.workers} workers · wall=${(wall / 1000).toFixed(0)}s ===`);
+  console.log("confusion at bar:", JSON.stringify(evalAt(bar)));
+  for (const b of [0.5, 0.6, 0.7, 0.8, 0.85, 0.9, 0.95, 0.99]) console.log(JSON.stringify(evalAt(b)));
+  const trues = results.filter((r) => r.label === "TRUE").map((r) => r.pTrue);
+  const falses = results.filter((r) => r.label === "FALSE").map((r) => r.pTrue);
+  const mean = (a: number[]) => a.reduce((x, y) => x + y, 0) / a.length;
+  const all = results.map((r) => ({ p: r.pTrue, y: r.label === "TRUE" ? 1 : 0 })).sort((a, b) => a.p - b.p);
+  let rankSum = 0; all.forEach((x, i) => { rankSum += x.y ? i + 1 : 0; });
+  const n1 = trues.length, n0 = falses.length;
+  console.log(`mean P(true): TRUE=${mean(trues).toFixed(3)} FALSE=${mean(falses).toFixed(3)}  AUC=${((rankSum - (n1 * (n1 + 1)) / 2) / (n1 * n0)).toFixed(3)}`);
+  writeFileSync(join(outDirSafe(), `${engineName}+chunks-claim-verification-v1-${date}.results.json`), JSON.stringify({ results, wallMs: wall, bar }, null, 1));
+  process.exit(0);
+}
+
+function outDirSafe(): string {
+  const d = join("docs", "benchmarks");
+  mkdirSync(d, { recursive: true });
+  return d;
+}
 
 const t0 = Date.now();
 const rows = claims.map((c) => ({ state: (texts[c.paper] ?? "").slice(0, cap), instructions: c.claim }));
@@ -72,9 +142,6 @@ console.log(`=== ${claims.length} claims · engine=${engineName} · bar=${bar} �
 console.log("confusion:", JSON.stringify(evalAt(bar)));
 console.log("sweep:");
 for (const b of [0.5, 0.6, 0.7, 0.8, 0.85, 0.9, 0.95, 0.99]) console.log(JSON.stringify(evalAt(b)));
-console.log(`mean P(true): TRUE=${mean(trues).toFixed(3)} FALSE=${mean(falses).toFixed(3)}  AUC=${auc}`);
-
-const date = new Date().toISOString().slice(0, 10);
 const outDir = join("docs", "benchmarks");
 mkdirSync(outDir, { recursive: true });
 writeFileSync(join(outDir, `${engineName}-claim-verification-v1-${date}.results.json`), JSON.stringify({ results, wallMs: wall, bar, auc }, null, 1));

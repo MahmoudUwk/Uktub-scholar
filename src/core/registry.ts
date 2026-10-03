@@ -32,7 +32,7 @@ export const REGISTRY_REL_PATH = ".registry/registry.db";
 export const BIBLIOGRAPHY_REL_PATH = "refs/references.bib";
 
 /** The only schema version this package speaks (KTD4). */
-export const REGISTRY_SCHEMA_VERSION = 1;
+export const REGISTRY_SCHEMA_VERSION = 2;
 
 /**
  * R15/KTD5: cross-process writes serialize through SQLite's busy wait. The
@@ -91,6 +91,25 @@ function readUserVersion(db: DatabaseSync): number {
   return getRow<{ user_version: number }>(db.prepare("PRAGMA user_version"))?.user_version ?? 0;
 }
 
+/** Additive in-place migration: v1 registries gain the v2 tables (chunks,
+ * claim_verdicts, claim_pointers) by re-running the idempotent schema file
+ * inside one transaction. Never rewrites rows; refuses anything newer. */
+function migrateIfV1(db: DatabaseSync): void {
+  if (readUserVersion(db) !== 1) return;
+  db.exec("BEGIN IMMEDIATE");
+  try {
+    db.exec(readFileSync(new URL("./schema.sql", import.meta.url), "utf8"));
+    db.exec("COMMIT");
+  } catch (err) {
+    try {
+      db.exec("ROLLBACK");
+    } catch {
+      // rollback of a failed DDL transaction; original error is the report
+    }
+    throw err;
+  }
+}
+
 function openDatabaseFile(abs: string): DatabaseSync {
   let opened: DatabaseSync | undefined;
   try {
@@ -137,7 +156,16 @@ export function openRegistry(root: string): DatabaseSync {
   }
   const db = openDatabaseFile(abs);
   const version = readUserVersion(db);
-  if (version !== REGISTRY_SCHEMA_VERSION) {
+  if (version === 1) {
+    // Additive in-place migration to the current schema (v2: chunks,
+    // claim_verdicts, claim_pointers). Existing rows are never rewritten.
+    try {
+      migrateIfV1(db);
+    } catch (err) {
+      db.close();
+      throw asRegistryError(err);
+    }
+  } else if (version !== REGISTRY_SCHEMA_VERSION) {
     db.close();
     throw new RegistryError(
       "REGISTRY_SCHEMA_UNSUPPORTED",

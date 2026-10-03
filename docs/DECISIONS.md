@@ -7,6 +7,15 @@ the evidence that would reopen the question.
 
 ## 2026-10-02 (goal sweep III)
 
+- **Chunked re-benchmark (owner architecture) -- Julia-1 still fails: AUC
+  0.461 chunked vs 0.529 whole-paper; fabricated claims outscore true ones
+  (0.697 vs 0.666) under chunk+query too.** The chunking/pointer/cache
+  subsystem is ADOPTED and kept (config/chunking.yaml + src/core/chunk.ts +
+  verify/store.ts + verify/pipeline.ts + `uktub-scholar trace`;
+  tokenizer-calibrated chars_per_token 2.8; registry schema v2 with additive
+  v1-to-v2 migration). It is the substrate every Stage-D engine plugs into;
+  the Julia-1 rejection is final under both input architectures.
+
 - **Corrected-usage retests + external audit — rejections STAND; Stage-D
   primary candidate switched to MiniCheck.** External best-practices study
   (HF cards, package sources, commit history, independent evals) surfaced

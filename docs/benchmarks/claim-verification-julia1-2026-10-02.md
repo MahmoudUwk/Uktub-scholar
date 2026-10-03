@@ -261,3 +261,25 @@ Stage-D candidate, ahead of 0.5–1B instruct LLMs.
   statement "sub-1B decision/classifier encoders cannot verify scientific
   claims" is supported for these two models on this dataset and should be
   tested per-model, not assumed, for other members of the class.
+
+## Addendum 4: chunked re-benchmark under the owner's architecture (2026-10-02)
+
+Owner directive implemented and measured: papers chunked to 8192-token
+targets (yaml-configured, tokenizer-calibrated chars/token 2.8 -- the densest
+paper measures 3.10; strict encoding never raised), every claim verified
+against EVERY chunk in parallel (4 workers, 42 chunks over 14 papers, one
+resident process per worker), paper verdict = any-chunk-supported, verdicts
+cached content-addressed in the registry.
+
+| Metric | Whole-paper (24k chars) | Chunked (8192-token, any-chunk) |
+|---|---|---|
+| AUC | 0.529 | **0.461** |
+| Mean P(true) TRUE / FALSE | 0.505 / 0.487 | 0.666 / **0.697** |
+| Verdicts @0.99 | 3 decided (correct) | 1 decided (correct) - 134 unverified |
+| Wall | 272 s (6 workers) | 900 s (4 workers, 420 chunk-verifications) |
+
+Fabricated claims still outscore true ones under chunk+query. **Chunking did
+not rescue Julia-1 -- the rejection is robust across both input
+architectures.** The chunking/pointer/cache infrastructure is kept
+(engine-agnostic): MiniCheck or any Stage-D engine plugs into the same
+chunk-first pipeline and reruns this benchmark.

@@ -30,7 +30,8 @@ commands:
   sync-bib                      re-render refs/references.bib from the registry
   list                          print registered papers in citekey order
   compile [entry.tex]           compile with tectonic (PDF in build/); entry defaults
-                                to manuscript/main.tex, then main.tex, then a lone .tex`;
+                                to manuscript/main.tex, then main.tex, then a lone .tex
+  trace <doc-id>                show verified claims of a document → paper → chunk refs`;
 
 /** One CLI run: returns the process exit code (0 success, 1 refusal/error).
  * Async because `compile` spawns the engine; callers await. */
@@ -133,6 +134,35 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
         }
         out(describeOutcome(outcome));
         return outcome.kind === "compiled" ? 0 : 1;
+      }
+      case "trace": {
+        const [docId] = args;
+        if (!docId) {
+          err(`error: trace needs a document id\n${USAGE}`);
+          return 1;
+        }
+        const db = openRegistry(root);
+        try {
+          const { traceDocument } = await import("../core/verify/store.ts");
+          const rows = traceDocument(db, docId);
+          if (rows.length === 0) {
+            out(`No verified claims recorded for document "${docId}".`);
+            return 0;
+          }
+          for (const r of rows) {
+            out(
+              [
+                r.claim_text,
+                `  → ${r.verdict} (${r.confidence.toFixed(3)} via ${r.model} @ ${r.min_confidence})`,
+                `  → ${r.citekey} — ${r.title}`,
+                `  → ${r.chunk_id} chars ${r.char_start}–${r.char_end}${r.evidence_quote ? `\n  → "${r.evidence_quote}"` : ""}`,
+              ].join("\n"),
+            );
+          }
+          return 0;
+        } finally {
+          db.close();
+        }
       }
       default:
         err(command === undefined ? USAGE : `error: unknown command "${command}"\n${USAGE}`);

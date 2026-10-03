@@ -22,7 +22,7 @@ function listTsFiles(dir: string): string[] {
   return out;
 }
 
-const CORE_ALLOW_PREFIXES = ["node:", ".", "/", "typebox"]; // built-ins, package-internal, absolute fs paths in tests only; typebox is a host-agnostic JSON Schema builder and a declared peer dep (plan U4)
+const CORE_ALLOW_PREFIXES = ["node:", ".", "/", "typebox", "yaml"]; // built-ins, package-internal, absolute fs paths in tests only; typebox is a host-agnostic JSON Schema builder and a declared peer dep (plan U4); yaml is the sole runtime dep (chunking config, owner directive 2026-10-02)
 const CORE_DENY = ["@earendil-works"]; // Pi host package: adapter-only (typebox is a host-agnostic JSON Schema builder and a declared peer dep, allowed anywhere)
 
 test("src/core imports nothing Pi-specific", () => {

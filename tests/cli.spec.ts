@@ -10,6 +10,7 @@ import { mkdtempSync, mkdirSync, readFileSync, existsSync, rmSync } from "node:f
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
+import { replaceChunks, chunksOf, saveVerdicts, savePointers } from "../src/core/verify/store.ts";
 
 import { runCli, type CliIo } from "../src/cli/main.ts";
 import {
@@ -231,5 +232,31 @@ describe("uktub-scholar compile (offline paths)", () => {
     const capture = io();
     assert.equal(await runCli(["explode"], capture), 1);
     assert.match(capture.lines.err.join("\n"), /compile \[entry\.tex\]/);
+  });
+});
+
+describe("uktub-scholar trace", () => {
+  it("prints an empty state for an unknown document and rows for a recorded one", async () => {
+    const capture = io();
+    assert.equal(await runCli(["trace", "no-such-doc"], capture), 0);
+    assert.match(capture.lines.out.join("\n"), /No verified claims/);
+
+    const db = new DatabaseSync(join(root, ".registry", "registry.db"));
+    db.prepare(
+      "INSERT INTO papers (doi, citekey, title, authors_json, year, venue, provider_bibtex, bibtex_source, citable, ingested_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+    ).run("10.9999/t", "t2026", "Trace Paper", '["T"]', 2026, null, "bibtex", "crossref", 1, "2026-10-02T00:00:00Z");
+    replaceChunks(db, "10.9999/t", "The tower is in Paris.", { chunk_tokens: 64, overlap_tokens: 0, chars_per_token: 4.0, boundary: "hard" });
+    const chunks = chunksOf(db, "10.9999/t");
+    const { claimHashOf } = await import("../src/core/verify/store.ts");
+    saveVerdicts(db, [{ claim_hash: claimHashOf("The tower is in Paris."), chunk_hash: chunks[0].content_hash, model: "m", min_confidence: 0.99, verdict: "supported", confidence: 0.995, evidence_quote: "The tower is in Paris." }]);
+    savePointers(db, [{ doc_id: "thesis-ch1", claim_text: "The tower is in Paris.", claim_hash: claimHashOf("The tower is in Paris."), doi: "10.9999/t", chunk_index: chunks[0].chunk_index, char_start: chunks[0].char_start, char_end: chunks[0].char_end, verdict: "supported", confidence: 0.995, model: "m", min_confidence: 0.99 }]);
+    db.close();
+
+    const capture2 = io();
+    assert.equal(await runCli(["trace", "thesis-ch1"], capture2), 0);
+    const out2 = capture2.lines.out.join("\n");
+    assert.match(out2, /The tower is in Paris\./);
+    assert.match(out2, /t2026/);
+    assert.match(out2, /10\.9999\/t#c0/);
   });
 });

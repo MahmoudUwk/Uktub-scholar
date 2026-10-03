@@ -1,0 +1,11 @@
+# uktub-scholar chunking + claim verification (every limit names its source)
+chunking:
+  chunk_tokens: 8192      # decision-model input window (owner directive, 2026-10-02)
+  overlap_tokens: 128     # carried into the next chunk (continuity, not context)
+  chars_per_token: 2.8    # calibrated on this corpus with the mmBERT tokenizer (median 4.1, densest paper 3.10; 0.9 headroom so strict_encoding never raises)
+  boundary: paragraph     # paragraph | hard
+verification:
+  engine: julia           # ClaimEngine adapter in src/core/verify/claim.ts
+  min_confidence: 0.99    # base bar; env UKTUB_VERIFY_MIN_CONFIDENCE overrides (existing contract)
+  workers: 4              # resident engine processes (each loads the checkpoint once)
+  record_negative_pointers: false   # pointers are written for supported chunks only
