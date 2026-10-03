@@ -47,3 +47,38 @@ over-confident probabilities and NO safe operating bar — at 0.95 it is a
 coin flip WITH dangerous verdicts. Consistent with the checkpoint's
 invalid calibration temperatures. Kept as a measured-rejected engine;
 the Router-mode adapter (scripts/laya_decide.py) survives it.
+
+## Addendum: usage audit (independent subagent, 2026-10-03)
+
+Hypothesis "we used Laya wrong" was tested surgically on 10 failing cases
+(chunks only) against the card and the installed package source.
+
+**Usage exonerated:**
+- Worker matches the card's exact long-document prescription (Router mode,
+  `model="multilingual"`, `max_len=8192`); signature and answer extraction
+  match `Router.predict` (router.py:963-985).
+- `criteria` on noul is first-class API (agent.py:956-972 renders the
+  true/false texts as the option pair); package presets use noul+criteria.
+- Nothing truncated: `state_tokens_dropped=0` (5,047 state tokens vs 8,192).
+- Exact-usage reproduction re-scored all 10 cases within ±0.0005 of the
+  benchmark; recorded paper-level scores provably came from the evidence
+  chunk.
+
+**Root cause (model limitation, proven by control):** laya-multilingual's
+noul collapses to a claim-blind "true" prior beyond ~1,000-2,000 chars of
+dense prose. An unrelated claim ("The Eiffel Tower is located in Berlin")
+scores 0.706 on a full chunk, 0.920-0.944 on 3k-char in-window slices —
+and 0.013 on a trivial out-of-domain sentence. Dose-response saturates for
+ANY claim past ~2,000 chars. The card's long-context table is a choice
+task (needle in filler), never noul entailment at length; its entailment
+evidence (XNLI 0.843) is short-premise.
+
+**Short-state sanity:** evidence-sentence-only states discriminate (8/10;
+one negation miss) — the failure is length-dependent, not claim-dependent.
+No parameter combination recovers full-chunk discrimination (bare noul,
+minimal wording, criteria removal, max_len 1024 vs 8192, predict_long,
+english and typed-decisions checkpoints all ≤4/10; predict_long is
+actively harmful for FALSE claims via max-over-windows, 0.89-0.96).
+
+The "rejected" verdict stands; the corrected root cause is
+**length-dependent claim-blindness**, not usage error.

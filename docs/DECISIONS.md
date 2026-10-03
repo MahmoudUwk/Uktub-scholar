@@ -5,6 +5,20 @@ re-proposed without new evidence (RRSI discipline: the edit history exists so
 dead hypotheses are not redrawn). Entries record the verdict, the reason, and
 the evidence that would reopen the question.
 
+## 2026-10-03 (engine usage audit — Laya / Julia-1)
+
+- **Independent surgical audit of both rejected local engines** (10 failing
+  cases, chunks only, card + package-source ground truth). Laya: usage
+  EXONERATED (card-correct, nothing truncated, ±0.0005 reproduction); root
+  cause is length-dependent claim-blindness — noul collapses to a
+  claim-blind "true" prior beyond ~2k chars (unrelated-claim control scores
+  0.71-0.94 on full chunks, 0.013 on a trivial sentence). Julia-1: our
+  prompt wording was outside its training distribution (fixing lifts
+  direction-correct 1/10 to 6/10) but even in-distribution short states
+  miss numeric contradictions (2,400 vs 240 → pTrue 0.57-0.99) — the 144M
+  encoder rejection stands regardless of usage. Both addenda live in their
+  benchmark reports.
+
 ## 2026-10-03 (OpenRouter hosted decision models)
 
 - **Mercury Decide (inception/mercury-decide:free, System One decisions

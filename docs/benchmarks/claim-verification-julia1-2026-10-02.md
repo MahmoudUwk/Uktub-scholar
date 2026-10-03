@@ -283,3 +283,33 @@ not rescue Julia-1 -- the rejection is robust across both input
 architectures.** The chunking/pointer/cache infrastructure is kept
 (engine-agnostic): MiniCheck or any Stage-D engine plugs into the same
 chunk-first pipeline and reruns this benchmark.
+
+## Addendum: usage audit (independent subagent, 2026-10-03)
+
+Hypothesis "we used Julia-1 wrong" was tested surgically on 10 failing
+cases (chunks only) against the card and the installed package source.
+
+**Two real usage deviations found (our side):**
+1. Prompt wording: our 40-word multi-clause instructions sit outside the
+   training/eval distribution — noul instructions there are 5-11-word
+   declarative propositions. Using the claim itself as the proposition
+   raises direction-correct cases from 1/10 to 6/10 at the 0.5 threshold.
+2. State length: training states are 83-528-token JSON records (median
+   255) and the published benchmark pins max_length=1024; our ~5k-token
+   prose chunks are permitted (8,192 strict limit) but unevaluated
+   territory per the card.
+
+**Confirmed correct:** criteria on noul is per-spec and HELPS (483/600
+with descriptive criteria vs 391/600 literal — CPU FP32 re-run; the
+80.67% card figure is the CUDA BF16 run). Nothing was truncated (strict
+encoding would raise; head budget 256 ≥ our ~109-token prompt).
+
+**Root cause that remains (model limitation):** even with 20-60-token
+evidence sentences as state — fully in-distribution length — verbatim
+restatements score 0.82-1.0 but numeric contradictions are missed
+(5,000 vs 114 subcarriers; 2,400 vs 240 recordings; 3x114x2000 vs
+3x224x224; pTrue 0.57-0.99 for false claims). A 144M encoder cannot
+compare numbers. **The rejection stands regardless of usage: Julia-1 is
+unsuited to numeric scientific claim verification.** (Also noted: 5 of 10
+recorded scores showed reproducibility drift under benign runtime
+variation — borderline outputs are unstable.)
