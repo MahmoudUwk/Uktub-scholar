@@ -214,15 +214,17 @@ independent evals) found two real usage concerns; both were retested:
    (a85b1273 = our snapshot hash — the "silently discarded criteria" bug does
    NOT apply), and our 24k-char states fit the native 8192 window (strict
    encoding never raised). **Retest at 1024/512 with abstract context:**
-   P(true) collapses to 0.0002–0.0065 for ALL claims including entailments —
-   worse separation than at 8192. **Julia-1 now rejected across 5
-   configurations and 2 formulations.**
-2. **GLiNER right-truncation.** Right truncation would cut the claim (at the
-   string end) on long passages — a real risk hermes flagged. **Retest with
-   claim-first + 300-word passage, plain and description labels:**
-   "supported" to ALL FOUR claims including the unrelated one — the
-   documented positive-label bias (62–70/101 in an independent eval; ours:
-   120/135) holds in every encoding. **Rejection robust across 4 encodings.**
+   P(true) collapsed to 0.0002–0.0065 for ALL claims — but see Addendum 3:
+   that retest also changed the formulation, so treat it as a prompt
+   artifact, not an operating-point result. The standing Julia-1 evidence
+   is the auditor-validated 24k-char benchmark (AUC 0.529).
+2. **GLiNER right-truncation.** Right truncation cut the claim on long
+   passages in condition A (struck). **Retests with claim-first + 300-word
+   passage (plain and description labels) AND the documented
+   schema-builder format with few-shot examples:** "supported" to ALL FOUR
+   probes at 0.93–0.996 confidence — the documented positive-label bias
+   (62–70/101 independent; ours 120/135) holds in every encoding.
+   **Rejection robust across the valid configurations.**
 
 External audit also confirmed the architectural verdict: neither model was
 trained for NLI — we evaluated routers on an entailment task. The
