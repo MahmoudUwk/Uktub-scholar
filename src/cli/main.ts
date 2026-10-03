@@ -31,6 +31,8 @@ commands:
   list                          print registered papers in citekey order
   compile [entry.tex]           compile with tectonic (PDF in build/); entry defaults
                                 to manuscript/main.tex, then main.tex, then a lone .tex
+  verify <doi> <claim>...       verify claims against a paper's chunks with the
+                                configured engine (default mercury via OpenRouter)
   trace <doc-id>                show verified claims of a document → paper → chunk refs`;
 
 /** One CLI run: returns the process exit code (0 success, 1 refusal/error).
@@ -134,6 +136,28 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
         }
         out(describeOutcome(outcome));
         return outcome.kind === "compiled" ? 0 : 1;
+      }
+      case "verify": {
+        const [doi, ...claims] = args;
+        if (!doi || claims.length === 0) {
+          err(`error: verify needs a DOI and at least one claim\n${USAGE}`);
+          return 1;
+        }
+        const { runVerifyClaims } = await import("../core/tools/verify.ts");
+        try {
+          const structured = await runVerifyClaims(
+            { root, env: process.env as Record<string, string | undefined> },
+            { doi, claims },
+          );
+          for (const r of structured.results) {
+            out(`${r.verdict.toUpperCase()} (p=${r.confidence.toFixed(3)}, chunk ${r.bestChunkIndex ?? "-"}): ${r.claim}`);
+          }
+          out(`engine: ${structured.model}`);
+          return 0;
+        } catch (e) {
+          err(`error: ${(e as Error).message}`);
+          return 1;
+        }
       }
       case "trace": {
         const [docId] = args;

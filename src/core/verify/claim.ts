@@ -311,13 +311,16 @@ export function systemoneEndpointEngine(opts: {
 }
 
 /** Shared OpenRouter client behavior: per-call throttle (labelled client
- * policy — free tier is 20 req/min) and one retry on 429, sleeping until the
- * rate-limit window resets (bounded at 70 s). */
-function openrouterThrottleMs(env: Record<string, string | undefined>): number {
+ * policy — the free tier allows 20 req/min) and up to three retries on 429,
+ * sleeping until the rate-limit window resets (bounded at 70 s). Free-tier
+ * models default to a 3.5 s spacing; explicit env wins. */
+function openrouterThrottleMs(env: Record<string, string | undefined>, model: string): number {
   const raw = env.UKTUB_OPENROUTER_MIN_INTERVAL_MS;
-  if (raw === undefined || raw === "") return 0;
-  const v = Number(raw);
-  return Number.isFinite(v) && v >= 0 && v <= 60_000 ? v : 0;
+  if (raw !== undefined && raw !== "") {
+    const v = Number(raw);
+    return Number.isFinite(v) && v >= 0 && v <= 60_000 ? v : 0;
+  }
+  return model.endsWith(":free") ? 3_500 : 0; // client policy: openrouter free tier is 20 req/min
 }
 
 async function openrouterFetchWithRetry(
@@ -338,11 +341,21 @@ async function openrouterFetchWithRetry(
     throw new Error(`unreachable: ${e instanceof Error ? e.message : String(e)}`);
   });
   // Free tiers use fixed per-minute windows: retry 429s up to three times,
-  // sleeping to the window reset (bounded) before each attempt.
+  // sleeping to the window reset (bounded). A reset far in the future (e.g.
+  // the exhausted DAILY free allowance) fails fast — sleeping would only
+  // burn into the caller's timeout.
   for (let attempt = 0; res.status === 429 && attempt < 3; attempt++) {
     const resetHeader = res.headers.get("x-ratelimit-reset");
     const resetAt = resetHeader ? Number(resetHeader) : 0;
-    const sleepMs = Math.min(Math.max(resetAt - Date.now() + 250, 1_000), 70_000); // client policy: bounded retry window
+    const resetInMs = resetAt - Date.now();
+    if (resetInMs > 90_000) {
+      const source = res.headers.get("x-ratelimit-limit") ?? "openrouter free tier";
+      throw new Error(
+        `HTTP 429 rate limited until ${new Date(resetAt).toISOString()} (${source}); ` +
+        "switch model (e.g. a paid or non-free id via UKTUB_OPENROUTER_MODEL) or wait for the daily reset",
+      );
+    }
+    const sleepMs = Math.min(Math.max(resetInMs + 250, 1_000), 70_000); // client policy: bounded retry window
     await new Promise((r) => setTimeout(r, sleepMs));
     res = await send().catch((e: unknown) => {
       throw new Error(`unreachable: ${e instanceof Error ? e.message : String(e)}`);
@@ -367,7 +380,7 @@ export function openrouterDecisionsEngine(opts: {
   const key = opts.env.OPENROUTER_API_KEY;
   if (!key) throw new EngineError("openrouter decisions engine: OPENROUTER_API_KEY is not set");
   const doFetch = opts.fetchImpl ?? fetch;
-  const throttleMs = openrouterThrottleMs(opts.env);
+  const throttleMs = openrouterThrottleMs(opts.env, opts.model);
   const lastCallAt = { value: 0 };
   return {
     async run(rows) {
@@ -415,7 +428,7 @@ export function openrouterChatEngine(opts: {
   const key = opts.env.OPENROUTER_API_KEY;
   if (!key) throw new EngineError("openrouter chat engine: OPENROUTER_API_KEY is not set");
   const doFetch = opts.fetchImpl ?? fetch;
-  const throttleMs = openrouterThrottleMs(opts.env);
+  const throttleMs = openrouterThrottleMs(opts.env, opts.model);
   const lastCallAt = { value: 0 };
   return {
     async run(rows) {

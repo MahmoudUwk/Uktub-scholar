@@ -9,6 +9,7 @@ import { Type } from "typebox";
 import { WriteQueue } from "../core/queue.ts";
 import { guardToolCall } from "../core/guard.ts";
 import { CompileDocumentOutput, compileDocumentTool } from "../core/tools/compile.ts";
+import { VerifyClaimsOutput, VerifyClaimsParams, verifyClaimsTool } from "../core/tools/verify.ts";
 import { ListPapersOutput, listPapersTool } from "../core/tools/list.ts";
 import { RegisterPapersOutput, registerPapersTool } from "../core/tools/register.ts";
 import { SearchPapersOutput, searchPapersTool } from "../core/tools/search.ts";
@@ -215,5 +216,21 @@ export default function uktubScholarExtension(pi: ExtensionAPI): void {
     }),
     outputSchema: CompileDocumentOutput,
     run: (ctx, params) => compileDocumentTool(ctx, params as { entry?: string }),
+  });
+
+  registerTool(pi, rootFor, {
+    name: "verify_claims",
+    label: "Verify claims against a paper",
+    description:
+      "Check claims against a registered paper's ingested text, chunk-first: every claim is verified " +
+      "against every chunk and the paper verdict is any-chunk-supported / any-chunk-refuted at the " +
+      "configured confidence bar (0.99). The engine comes from verification.engine in " +
+      "config/chunking.yaml — mercury-decide:free via OpenRouter by default (needs OPENROUTER_API_KEY), " +
+      "or a local llama.cpp System One endpoint (verification.engine: llama-cpp, UKTUB_VERIFY_URL). " +
+      "Unverifiable claims come back `unverified` — never guess. " +
+      REFUSAL_SEMANTICS,
+    parameters: VerifyClaimsParams,
+    outputSchema: VerifyClaimsOutput,
+    run: (ctx, params) => verifyClaimsTool(ctx, params as { doi: string; claims: string[] }),
   });
 }

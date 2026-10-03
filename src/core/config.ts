@@ -95,12 +95,19 @@ export function loadChunkConfig(base: string, opts: { env?: Record<string, strin
   } catch (e) {
     throw new ConfigError(`yaml parse failed for ${path}: ${e instanceof Error ? e.message : String(e)}`);
   }
-  return validate(parsed);
+  const c = validate(parsed);
+  // Engine override: UKTUB_VERIFY_ENGINE switches the verification engine
+  // without editing the yaml (e.g. openrouter ↔ llama-cpp for offline runs).
+  const engineOverride = opts.env?.[VERIFY_ENGINE_ENV];
+  if (engineOverride) c.verification.engine = engineOverride;
+  return c;
 }
+
+export const VERIFY_ENGINE_ENV = "UKTUB_VERIFY_ENGINE";
 
 export const DEFAULTS: ChunkConfig = {
   chunking: { chunk_tokens: 8192, overlap_tokens: 128, chars_per_token: 4.0, boundary: "paragraph" },
-  verification: { engine: "julia", min_confidence: 0.99, workers: 4, record_negative_pointers: false },
+  verification: { engine: "openrouter", min_confidence: 0.99, workers: 4, record_negative_pointers: false },
 };
 
 

@@ -13,8 +13,8 @@ Pi package (working name `uktub-scholar`; the final npm name is still open):
 pi install npm:uktub-scholar
 ```
 
-The extension registers exactly four tools: `search_papers`, `register_papers`,
-`list_papers`, `compile_document`. It fails closed at load if the Pi 1.0 API surface is missing.
+The extension registers exactly five tools: `search_papers`, `register_papers`,
+`list_papers`, `compile_document`, `verify_claims`. It fails closed at load if the Pi 1.0 API surface is missing.
 
 CLI (development install — the package is currently `private`):
 
@@ -26,7 +26,8 @@ pnpm exec uktub-scholar --help   # bin shim runs the TypeScript CLI directly (ad
 
 CLI commands: `init` (create the registry and an empty `refs/references.bib`),
 `deregister <doi|citekey>...`, `sync-bib` (re-render the bibliography), `list`,
-`compile [entry.tex]` (Tectonic build; PDF in `build/`).
+`compile [entry.tex]` (Tectonic build; PDF in `build/`),
+`verify <doi> <claim>...` (chunk-first claim verification).
 
 ## Requirements
 
@@ -46,6 +47,18 @@ CLI commands: `init` (create the registry and an empty `refs/references.bib`),
 | `register_papers(dois[])` | at most 50 DOIs per call; the whole call refuses `BATCH_TOO_LARGE` above the cap | client policy, Feynman-incident-informed (labelled, R19) |
 | `list_papers(limit?)` | cap 200; `truncated` + `remaining` returned at the cap | client policy (labelled, R19) |
 | `compile_document(entry?)` | 120 s engine budget (`UKTUB_COMPILE_TIMEOUT_S` overrides, seconds, min 5); diagnostics capped at 50 | client policy (labelled) |
+| `verify_claims(doi, claims[])` | at most 8 claims/call, 2,000 chars/claim; every claim is verified against every chunk of the paper; verdicts cached content-addressed | client policy (labelled) |
+
+Claim verification engines (`verification.engine` in `config/chunking.yaml`,
+override per run with `UKTUB_VERIFY_ENGINE`): `openrouter` — default,
+`inception/mercury-decide:free` via the System One decisions API (needs
+`OPENROUTER_API_KEY`; free tier is 20 req/min and ~1,000 calls/day — the
+engine throttles and fails fast with the reset time); `llama-cpp` — any
+local llama.cpp build serving `/v1/systemone` (point `UKTUB_VERIFY_URL`,
+default `http://127.0.0.1:8080`; decision GGUFs: ggml-org/Laya-GGUF,
+ggml-org/Julia-1-GGUF; serve with `--batch-size 8192 --ubatch-size 8192`);
+plus `k2`, `bev`, `lumma`, `julia`, `laya` adapters. Measured engines:
+docs/benchmarks/.
 
 Search merges OpenAlex, Crossref, and Semantic Scholar (DataCite serves arXiv DOIs
 at registration) in RRF relevance order; a per-provider failure degrades the result

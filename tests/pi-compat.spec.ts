@@ -79,12 +79,12 @@ test("load guard: Pi without registerTool throws the typed refusal, not a TypeEr
   );
 });
 
-test("registration: exactly the four tools, exact names, TypeBox parameters and outputSchema", () => {
+test("registration: exactly the five tools, exact names, TypeBox parameters and outputSchema", () => {
   const { fakePi, tools } = makeFakePi(true);
   uktubOaExtension(fakePi as never);
   assert.deepEqual(
     tools.map((tool) => tool.name),
-    ["search_papers", "register_papers", "list_papers", "compile_document"],
+    ["search_papers", "register_papers", "list_papers", "compile_document", "verify_claims"],
   );
   for (const tool of tools) {
     assert.equal(typeof tool.label, "string");
