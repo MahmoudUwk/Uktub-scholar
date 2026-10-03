@@ -230,3 +230,32 @@ purpose-trained tool class for passage-entails-claim is **MiniCheck**
 (LLM-AggreFact: MiniCheck-RoBERTa-Large 355M = 72.7 BAcc, MiniCheck-Flan-T5
 770M = 74.7, CPU-feasible — github.com/Liyan06/MiniCheck) — now the primary
 Stage-D candidate, ahead of 0.5–1B instruct LLMs.
+
+
+## Addendum 3: audit corrections (2026-10-02, independent reviewer + external study)
+
+- **Condition A struck as invalid.** With 4000-char inputs the 512-token
+  window cut the claim out of 135/135 rows (right truncation, no error), so
+  condition-A numbers measured nothing. Condition B (1800-char chunk,
+  claim inside the window) stands: accuracy 0.533, "supported" to 57/61
+  fabricated claims.
+- **Documented format tried (the auditor's gap).** gliner2's own
+  schema-builder best practice — classification with instruction, label
+  descriptions, and few-shot examples, `model.extract(...,
+  include_confidence=True)` — on 4 probe pairs: "supported" at confidence
+  0.927–0.996 for ENTailed, CONTRADICTED, and UNRELATED alike. The
+  positive-label bias is the model, not the encoding.
+- **Julia-1 attribution corrected.** The 1024/512 retest changed the
+  formulation at the same time (added a "Passage:" prefix), so the
+  everything-collapses-to-zero result cannot be attributed to the operating
+  point alone. The standing evidence for Julia-1's rejection is the
+  auditor-validated 24k-char benchmark itself (AUC 0.529, methodologically
+  sound) plus inference-policy's "long-context task accuracy not
+  established".
+- **Generalized conclusion, precisely stated:** Julia-1 rejected (AUC 0.529
+  at scale, auditor-validated method); GLiNER2.5-Decide rejected (three
+  surviving configurations: 1800-char B run, claim-first, documented
+  schema+few-shot — all majority-baseline or all-supported). The class-level
+  statement "sub-1B decision/classifier encoders cannot verify scientific
+  claims" is supported for these two models on this dataset and should be
+  tested per-model, not assumed, for other members of the class.

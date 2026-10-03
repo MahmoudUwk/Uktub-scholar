@@ -11,13 +11,19 @@ the evidence that would reopen the question.
   primary candidate switched to MiniCheck.** External best-practices study
   (HF cards, package sources, commit history, independent evals) surfaced
   two usage concerns; both retested: Julia-1 at its EVALUATED operating
-  point (max_length=1024, head_length=512, abstract context) collapses to
-  P(true) ≈ 0.005 for ALL claims (worse than at 8192; our snapshot already
-  includes the criteria-preservation fix a85b1273 and our 24k-char inputs
-  fit the native 8192 window, so no truncation bug); GLiNER claim-first
-  with 300-word passages says "supported" to all four probes (positive-label
-  bias confirmed in every encoding). Audit's architectural finding: neither
-  model was trained for NLI — we evaluated routers on an entailment task.
+  point (max_length=1024, head_length=512, abstract context) collapsed to
+  P(true) ≈ 0.005 for ALL claims — but that retest also changed the
+  formulation ("Passage:" prefix added), so the collapse is partly a prompt
+  artifact; the STANDING evidence for Julia-1 is the auditor-validated
+  24k-char benchmark (AUC 0.529 — settings, polarity, metrics, and dataset
+  all verified by an independent reviewer). GLiNER condition-A (4000-char)
+  was struck as invalid by the same audit (claim beyond the 512-token
+  window in 135/135 rows); its rejection survives on three valid
+  configurations: 1800-char run (0.533), claim-first (all-supported), and
+  the DOCUMENTED schema-builder format with few-shot examples ("supported"
+  at 0.93–0.996 for entailments, contradictions, and unrelated alike).
+  Audit's architectural finding: neither model was trained for NLI — we
+  evaluated routers on an entailment task.
   Purpose-trained tool class: **MiniCheck** (LLM-AggreFact fact-verification;
   RoBERTa-large 355M = 72.7 BAcc, Flan-T5-large 770M = 74.7, CPU-feasible) —
   primary Stage-D candidate, must pass the same 135-claim benchmark
