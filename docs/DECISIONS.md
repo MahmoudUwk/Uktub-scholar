@@ -5,6 +5,15 @@ re-proposed without new evidence (RRSI discipline: the edit history exists so
 dead hypotheses are not redrawn). Entries record the verdict, the reason, and
 the evidence that would reopen the question.
 
+## 2026-10-03 (K2-Type engine)
+
+- **K2-Type-0.9B (jev decision server, GPU) ADOPTED as primary verification
+  engine; chunked AUC 0.814 vs Julia-1 0.529/0.461.** Safe knee at 0.95:
+  18 confirmations, 18/18 correct, 0 dangerous, never refutes. Default bar
+  stays 0.99 pending owner call (0.95 knee documented in the benchmark
+  report). Residual blind spot: numeric fabrications score high — treat
+  K2 confirmations as evidence, not proof, for quantity-bearing claims.
+
 ## 2026-10-02 (goal sweep III)
 
 - **Chunked re-benchmark (owner architecture) -- Julia-1 still fails: AUC

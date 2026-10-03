@@ -16,7 +16,7 @@ import { readFileSync, writeFileSync, readdirSync, existsSync, mkdirSync } from 
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 
-import { juliaEngine, mapVerdict, DEFAULT_MIN_CONFIDENCE } from "../src/core/verify/claim.ts";
+import { juliaEngine, k2Engine, mapVerdict, DEFAULT_MIN_CONFIDENCE } from "../src/core/verify/claim.ts";
 import { loadChunkConfig } from "../src/core/config.ts";
 import { replaceChunks, cachedVerdicts, saveVerdicts, claimHashOf, chunksOf } from "../src/core/verify/store.ts";
 import { verifyPairsParallel, mapParallel, mapChunkVerdict } from "../src/core/verify/pipeline.ts";
@@ -39,11 +39,12 @@ const claims: { id: string; paper: string; claim: string; label: string; kind?: 
 const texts: Record<string, string> = {};
 for (const f of readdirSync(textDir)) if (f.endsWith(".txt")) texts[f.slice(0, -4)] = readFileSync(join(textDir, f), "utf8").replace(/\s+/g, " ");
 
-if (engineName !== "julia") {
-  console.error(`engine "${engineName}" has no adapter yet (implemented: julia)`);
+if (engineName !== "julia" && engineName !== "k2") {
+  console.error(`engine "${engineName}" has no adapter yet (implemented: julia, k2)`);
   process.exit(2);
 }
-const engine = juliaEngine({ env: process.env });
+const engineFactory = engineName === "k2" ? () => k2Engine({ env: process.env }) : () => juliaEngine({ env: process.env });
+const engine = engineFactory();
 
 if (chunked) {
   // Chunked like-for-like: each claim is verified against EVERY chunk of its
@@ -51,7 +52,7 @@ if (chunked) {
   // any-supported. Same dataset, same metrics at claim level.
   const cfg = loadChunkConfig(process.cwd(), { env: process.env, required: true });
   const bar = Number(process.env.UKTUB_VERIFY_MIN_CONFIDENCE ?? cfg.verification.min_confidence);
-  const model = `julia:${process.env.UKTUB_JULIA_MODEL ?? "SupersonicLabs/Julia-1"}`;
+  const model = engineName === "k2" ? "k2:IFM/K2-Type-0.9B" : `julia:${process.env.UKTUB_JULIA_MODEL ?? "SupersonicLabs/Julia-1"}`;
   const papers = [...new Set(claims.map((c) => c.paper))];
   const scratch = new DatabaseSync(":memory:");
   scratch.exec(readFileSync(new URL("../src/core/schema.sql", import.meta.url), "utf8"));
@@ -68,7 +69,7 @@ if (chunked) {
     const cached = cachedVerdicts(scratch, c.claim, model, bar, chunks.map((ch) => ch.content_hash));
     const missing = chunks.filter((ch) => !cached.has(ch.content_hash));
     const freshRows = missing.map((ch) => ({ state: ch.text, instructions: c.claim }));
-    return verifyPairsParallel(() => juliaEngine({ env: process.env }), freshRows, Math.max(1, Math.floor(cfg.verification.workers / papers.length))).then((pTrues) => {
+    return verifyPairsParallel(engineFactory, freshRows, Math.max(1, Math.floor(cfg.verification.workers / papers.length))).then((pTrues) => {
       missing.forEach((ch, j) => saveVerdicts(scratch, [{ claim_hash: claimHashOf(c.claim), chunk_hash: ch.content_hash, model, min_confidence: bar, verdict: mapChunkVerdict(pTrues[j], bar).verdict, confidence: pTrues[j], evidence_quote: ch.text.includes(c.evidence ?? "\u0000") ? c.evidence : null }]));
       const ps = chunks.map((ch, j) => missing.includes(ch) ? pTrues[j] : cached.get(ch.content_hash)!.confidence);
       const supported = chunks.some((ch, j) => mapChunkVerdict(ps[j], bar).verdict === "supported");

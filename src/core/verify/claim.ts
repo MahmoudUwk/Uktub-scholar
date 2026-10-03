@@ -125,6 +125,44 @@ export function juliaEngine(opts: {
   };
 }
 
+/**
+ * K2-Type engine adapter (jev decision server, resident on one CUDA GPU):
+ * POSTs one `noul` question per row to TypeSafe `/v1/systemone` —
+ * `{"state": <passage>, "questions": {"c": {"type": "noul", "instructions": <claim>}}}`
+ * → `answers.c.noul` = P(true). The server is the owner of the fit limit:
+ * inputs over 8192 tokens are refused with HTTP 413 (documented provider
+ * limit) — surfaced as an EngineError, never truncated. URL:
+ * `UKTUB_K2_URL` (default http://127.0.0.1:8000). Stateless client; a
+ * worker-safe factory returns independent instances sharing the one server.
+ */
+export function k2Engine(opts: { env: Record<string, string | undefined>; fetchImpl?: typeof fetch }): ClaimEngine {
+  const url = (opts.env.UKTUB_K2_URL ?? "http://127.0.0.1:8000").replace(/\/+$/, "") + "/v1/systemone";
+  const doFetch = opts.fetchImpl ?? fetch;
+  return {
+    async run(rows) {
+      if (rows.length === 0) return [];
+      const pTrues: number[] = [];
+      for (const row of rows) {
+        const res = await doFetch(url, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ state: row.state, questions: { c: { type: "noul", instructions: row.instructions } } }),
+          signal: AbortSignal.timeout(120_000), // client policy: 413/tokenize/first-inference outliers
+        }).catch((e: unknown) => {
+          throw new EngineError(`k2 engine unreachable at ${url}: ${e instanceof Error ? e.message : String(e)}`);
+        });
+        if (res.status === 413) throw new EngineError(`k2 engine: row exceeds the server's 8192-token fit limit (HTTP 413)`);
+        if (!res.ok) throw new EngineError(`k2 engine HTTP ${res.status}: ${(await res.text()).slice(-300)}`);
+        const parsed = (await res.json()) as { answers?: Record<string, { noul?: number }> };
+        const p = parsed.answers?.c?.noul;
+        if (typeof p !== "number") throw new EngineError(`k2 engine: response missing answers.c.noul`);
+        pTrues.push(p);
+      }
+      return pTrues;
+    },
+  };
+}
+
 /** Typed engine failure (R7-shaped): callers map it to a refusal result. */
 export class EngineError extends Error {
   constructor(message: string) {
