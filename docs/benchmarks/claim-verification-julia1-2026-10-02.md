@@ -313,3 +313,27 @@ compare numbers. **The rejection stands regardless of usage: Julia-1 is
 unsuited to numeric scientific claim verification.** (Also noted: 5 of 10
 recorded scores showed reproducibility drift under benign runtime
 variation — borderline outputs are unstable.)
+
+## Addendum: bev-decider-0.4B and Lumma-fev-0.6b (2026-10-03)
+
+Two further open local engines, same 135-claim harness. bev ran on its own
+/v1/systemone server (GPU) at its documented 2,048-token state limit — a
+2048-token chunk arm (config/chunking-2048.yaml, 144 chunks); whole-paper
+skipped (would truncate). Lumma-fev-0.6b served the standard whole and 8k
+chunked arms.
+
+| Engine (mode) | AUC | P(true) T / F | @0.99 | Sweep | Wall |
+|---|---|---|---|---|---|
+| bev-decider-0.4B (2048-chunked) | 0.671 | .866 / .809 | 3 decided, 3/3, 0 FP | @0.95: 17 decided, 2 dangerous | 298 s |
+| Lumma-fev-0.6b (whole) | 0.449 | — | 0 decided | below chance | 149 s |
+| Lumma-fev-0.6b (8k chunked) | 0.456 | .438 / .446 | 0 decided | inverted | 330 s |
+
+**bev-decider:** below K2's chunked AUC (0.671 vs 0.814) but keeps the
+zero-false-positive discipline at 0.99 and — unlike K2/Julia/Laya —
+correctly rejects the numeric fabrication pair (P 0.338 on "2,400 vs 240
+recordings"). Never refutes (tn=0). Same 0.99-knee shape as K2.
+CC-BY-NC-4.0: benchmark-only, flagged for any product use.
+
+**Lumma-fev-0.6b:** REJECTED — AUC below chance in both modes with the
+card's own calibration warning confirmed on our distribution. (Its 4B
+sibling, claimed 0.78 typed-decisions, remains untested.)

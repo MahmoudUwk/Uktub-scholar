@@ -16,7 +16,7 @@ import { readFileSync, writeFileSync, readdirSync, existsSync, mkdirSync } from 
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 
-import { juliaEngine, k2Engine, layaEngine, openrouterChatEngine, openrouterDecisionsEngine, mapVerdict, DEFAULT_MIN_CONFIDENCE } from "../src/core/verify/claim.ts";
+import { juliaEngine, k2Engine, layaEngine, bevEngine, lummaEngine, openrouterChatEngine, openrouterDecisionsEngine, mapVerdict, DEFAULT_MIN_CONFIDENCE } from "../src/core/verify/claim.ts";
 import { loadChunkConfig } from "../src/core/config.ts";
 import { replaceChunks, cachedVerdicts, saveVerdicts, claimHashOf, chunksOf } from "../src/core/verify/store.ts";
 import { verifyPairsParallel, mapParallel, mapChunkVerdict } from "../src/core/verify/pipeline.ts";
@@ -39,8 +39,8 @@ const claims: { id: string; paper: string; claim: string; label: string; kind?: 
 const texts: Record<string, string> = {};
 for (const f of readdirSync(textDir)) if (f.endsWith(".txt")) texts[f.slice(0, -4)] = readFileSync(join(textDir, f), "utf8").replace(/\s+/g, " ");
 
-if (engineName !== "julia" && engineName !== "k2" && engineName !== "laya" && engineName !== "openrouter" && engineName !== "openrouter-chat") {
-  console.error(`engine "${engineName}" has no adapter yet (implemented: julia, k2, laya, openrouter, openrouter-chat)`);
+if (engineName !== "julia" && engineName !== "k2" && engineName !== "laya" && engineName !== "openrouter" && engineName !== "openrouter-chat" && engineName !== "bev" && engineName !== "lumma") {
+  console.error(`engine "${engineName}" has no adapter yet (implemented: julia, k2, laya, openrouter, openrouter-chat, bev, lumma)`);
   process.exit(2);
 }
 if ((engineName === "openrouter" && !process.env.UKTUB_OPENROUTER_MODEL) || (engineName === "openrouter-chat" && !process.env.UKTUB_OPENROUTER_CHAT_MODEL)) {
@@ -54,10 +54,14 @@ const engineFactory =
   : engineName === "laya" ? () => layaEngine({ env: process.env })
   : engineName === "openrouter" ? () => openrouterDecisionsEngine({ env: process.env, model: openrouterModel })
   : engineName === "openrouter-chat" ? () => openrouterChatEngine({ env: process.env, model: openrouterChatModel })
+  : engineName === "bev" ? () => bevEngine({ env: process.env })
+  : engineName === "lumma" ? () => lummaEngine({ env: process.env })
   : () => juliaEngine({ env: process.env });
 const engine = engineFactory();
 const engineKey = engineName === "openrouter" ? `openrouter:${openrouterModel}`
   : engineName === "openrouter-chat" ? `openrouter-chat:${openrouterChatModel}`
+  : engineName === "bev" ? "bev:avbiswas/bev-decider-0.4B"
+  : engineName === "lumma" ? "lumma:FrontiersMind/lumma-fev-0.6b"
   : engineName;
 
 if (chunked) {

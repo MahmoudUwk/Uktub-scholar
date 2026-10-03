@@ -250,26 +250,59 @@ function workerEngine(opts: {
  * worker-safe factory returns independent instances sharing the one server.
  */
 export function k2Engine(opts: { env: Record<string, string | undefined>; fetchImpl?: typeof fetch }): ClaimEngine {
-  const url = (opts.env.UKTUB_K2_URL ?? "http://127.0.0.1:8000").replace(/\/+$/, "") + "/v1/systemone";
+  return systemoneEndpointEngine({
+    env: opts.env,
+    fetchImpl: opts.fetchImpl,
+    url: (opts.env.UKTUB_K2_URL ?? "http://127.0.0.1:8000").replace(/\/+$/, "") + "/v1/systemone",
+    label: "k2",
+  });
+}
+
+/** bev-decider (avbiswas/bev-decider-0.4B): System One server, 2,048-token state limit (provider limit — pair with the 2048-token chunk config). URL: `UKTUB_BEV_URL`. */
+export function bevEngine(opts: { env: Record<string, string | undefined>; fetchImpl?: typeof fetch }): ClaimEngine {
+  return systemoneEndpointEngine({
+    env: opts.env,
+    fetchImpl: opts.fetchImpl,
+    url: (opts.env.UKTUB_BEV_URL ?? "http://127.0.0.1:8009").replace(/\/+$/, "") + "/v1/systemone",
+    label: "bev",
+  });
+}
+
+/** Lumma-fev (FrontiersMind/lumma-fev-0.6b): System One server, 8,192-token states. URL: `UKTUB_LUMMA_URL`. */
+export function lummaEngine(opts: { env: Record<string, string | undefined>; fetchImpl?: typeof fetch }): ClaimEngine {
+  return systemoneEndpointEngine({
+    env: opts.env,
+    fetchImpl: opts.fetchImpl,
+    url: (opts.env.UKTUB_LUMMA_URL ?? "http://127.0.0.1:8010").replace(/\/+$/, "") + "/v1/systemone",
+    label: "lumma",
+  });
+}
+
+/** Shared TypeSafe System One HTTP client: one `noul` row per request, `answers.c.noul` = P(true). Stateless, worker-safe. */
+export function systemoneEndpointEngine(opts: {
+  env: Record<string, string | undefined>;
+  fetchImpl?: typeof fetch;
+  url: string;
+  label: string;
+}): ClaimEngine {
   const doFetch = opts.fetchImpl ?? fetch;
   return {
     async run(rows) {
       if (rows.length === 0) return [];
       const pTrues: number[] = [];
       for (const row of rows) {
-        const res = await doFetch(url, {
+        const res = await doFetch(opts.url, {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({ state: row.state, questions: { c: { type: "noul", instructions: row.instructions } } }),
-          signal: AbortSignal.timeout(120_000), // client policy: 413/tokenize/first-inference outliers
+          signal: AbortSignal.timeout(120_000), // client policy: local cold-start outliers
         }).catch((e: unknown) => {
-          throw new EngineError(`k2 engine unreachable at ${url}: ${e instanceof Error ? e.message : String(e)}`);
+          throw new EngineError(`${opts.label} engine unreachable at ${opts.url}: ${e instanceof Error ? e.message : String(e)}`);
         });
-        if (res.status === 413) throw new EngineError(`k2 engine: row exceeds the server's 8192-token fit limit (HTTP 413)`);
-        if (!res.ok) throw new EngineError(`k2 engine HTTP ${res.status}: ${(await res.text()).slice(-300)}`);
+        if (!res.ok) throw new EngineError(`${opts.label} engine HTTP ${res.status}: ${(await res.text()).slice(-300)}`);
         const parsed = (await res.json()) as { answers?: Record<string, { noul?: number }> };
         const p = parsed.answers?.c?.noul;
-        if (typeof p !== "number") throw new EngineError(`k2 engine: response missing answers.c.noul`);
+        if (typeof p !== "number") throw new EngineError(`${opts.label} engine: response missing answers.c.noul`);
         pTrues.push(p);
       }
       return pTrues;

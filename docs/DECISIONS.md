@@ -5,6 +5,16 @@ re-proposed without new evidence (RRSI discipline: the edit history exists so
 dead hypotheses are not redrawn). Entries record the verdict, the reason, and
 the evidence that would reopen the question.
 
+## 2026-10-03 (bev-decider / Lumma-fev)
+
+- **bev-decider-0.4B** (2048-token chunk arm, its documented limit): AUC
+  0.671 — below K2's 0.814 — but zero-FP at 0.99 (3/3) and it is the first
+  LOCAL engine to correctly reject the numeric fabrication pair (0.338 on
+  "2,400 vs 240"). Never refutes. CC-BY-NC-4.0: benchmark-only.
+- **Lumma-fev-0.6b REJECTED**: AUC 0.449 whole / 0.456 chunked — below
+  chance in both modes; the card's own calibration warning confirmed on our
+  distribution. The 4B sibling remains untested.
+
 ## 2026-10-03 (engine usage audit — Laya / Julia-1)
 
 - **Independent surgical audit of both rejected local engines** (10 failing
