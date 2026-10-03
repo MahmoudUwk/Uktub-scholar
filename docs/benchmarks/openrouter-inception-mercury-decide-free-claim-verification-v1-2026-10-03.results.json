@@ -1,0 +1,1222 @@
+{
+ "results": [
+  {
+   "id": "c001",
+   "paper": "2411.09996v1",
+   "claim": "The HSD dataset provides CSI measurements for six distinct human activities, including running and boxing.",
+   "label": "TRUE",
+   "evidence": "The HSD dataset contains CSI measurements for six human activities: running, walking, falling, boxing, arm circling, and floor cleaning",
+   "kind": "dataset",
+   "pTrue": 0.9875683488609656
+  },
+  {
+   "id": "c002",
+   "paper": "2411.09996v1",
+   "claim": "CSI in the HSD dataset is measured over 5,000 subcarriers for each activity.",
+   "label": "FALSE",
+   "evidence": "CSI is measured for each activity, across 114 subcarriers and 3 channels (one per antenna) over 2000 samples at a 500 Hz rate.",
+   "kind": "numeric",
+   "pTrue": 0.0011695100531836026
+  },
+  {
+   "id": "c003",
+   "paper": "2411.09996v1",
+   "claim": "Masked Spectrogram Modeling pretraining uses high masking ratios of roughly 80 percent to make reconstruction harder.",
+   "label": "TRUE",
+   "evidence": "We employ high masking ratios (e.g., 80%) as in [7] to reduce redundancy and make reconstruction more challenging.",
+   "kind": "method",
+   "pTrue": 0.9875683513878672
+  },
+  {
+   "id": "c004",
+   "paper": "2411.09996v1",
+   "claim": "For the human activity sensing task, the entire ViT encoder is unfrozen and finetuned together with the classifier head.",
+   "label": "FALSE",
+   "evidence": "The ViT encoder is entirely frozen, only the linear classifier is finetuned on the dataset.",
+   "kind": "method",
+   "pTrue": 0.0009110511053911487
+  },
+  {
+   "id": "c005",
+   "paper": "2411.09996v1",
+   "claim": "On the segmentation dataset, the best model is a pretrained ViT-M with a 70 percent masking ratio, which beats the best scratch-trained model despite being four times smaller.",
+   "label": "TRUE",
+   "evidence": "The best model is the pretrained ViT-M with a 70% masking ratio, which slightly outperforms the best scratch-trained model, ViT-L, while being four times smaller.",
+   "kind": "finding",
+   "pTrue": 0.9859363720011503
+  },
+  {
+   "id": "c006",
+   "paper": "2411.09996v1",
+   "claim": "The RRD dataset consists of 2,400 over-the-air recordings collected in downtown Toronto.",
+   "label": "FALSE",
+   "evidence": "Data collection took place in downtown Toronto, Canada, resulting in 240 recordings, which cover approximately 24 seconds of RF activity.",
+   "kind": "numeric",
+   "pTrue": 0.0052201264286673285
+  },
+  {
+   "id": "c007",
+   "paper": "2411.09996v1",
+   "claim": "In the segmentation dataset label images, NR signals are marked as 1, LTE signals as 2, and noise as 0.",
+   "label": "TRUE",
+   "evidence": "A corresponding label image is also created, marking NR signals as 1, LTE signals as 2, and noise as 0.",
+   "kind": "dataset",
+   "pTrue": 0.9953904269937597
+  },
+  {
+   "id": "c008",
+   "paper": "2411.09996v1",
+   "claim": "The pretrained ViT model is outperformed by a four-times larger model trained from scratch on spectrogram segmentation.",
+   "label": "FALSE",
+   "evidence": "the pretrained ViT model outperforms a four-times larger model that is trained from scratch on the spectrogram segmentation task",
+   "kind": "finding",
+   "pTrue": 0.007121430240556491
+  },
+  {
+   "id": "c009",
+   "paper": "2411.09996v1",
+   "claim": "The ideal masking ratio for pretraining lies between roughly 70 and 80 percent.",
+   "label": "TRUE",
+   "evidence": "the ideal masking ratio for pretraining is around 70% to 80%",
+   "kind": "finding",
+   "pTrue": 0.9971990731791999
+  },
+  {
+   "id": "c010",
+   "paper": "2411.09996v1",
+   "claim": "HSD recordings are kept at their original 3 x 114 x 2000 shape when fed to the model.",
+   "label": "FALSE",
+   "evidence": "The CSI is processed by resizing each recording to a shape of 3×224×224.",
+   "kind": "numeric",
+   "pTrue": 0.0009110511405710916
+  },
+  {
+   "id": "c011",
+   "paper": "2504.14100v1",
+   "claim": "The best LoRA configuration for RF signal classification uses alpha = 8 and rank = 50, adding about 1.5 million task-specific parameters.",
+   "label": "TRUE",
+   "evidence": "The best performance is achieved at α = 8 and R = 50 which adds approximately 1.5 million additional parameters.",
+   "kind": "numeric",
+   "pTrue": 0.2689414213699951
+  },
+  {
+   "id": "c012",
+   "paper": "2504.14100v1",
+   "claim": "WavesFM roughly doubles the 5G NR positioning error compared to the supervised baseline.",
+   "label": "FALSE",
+   "evidence": "Notably, it achieves half the positioning error of the SL model while sharing 80% of its parameters across the four tasks.",
+   "kind": "finding",
+   "pTrue": 0.0020507437371870448
+  },
+  {
+   "id": "c013",
+   "paper": "2504.14100v1",
+   "claim": "The 5G CSI pre-training dataset was gathered with the user terminal at 476 distinct locations and contains 476 samples.",
+   "label": "TRUE",
+   "evidence": "the UT was positioned\nat 476 distinct locations",
+   "kind": "dataset",
+   "pTrue": 0.9859363750487529
+  },
+  {
+   "id": "c014",
+   "paper": "2504.14100v1",
+   "claim": "The WiFi CSI pre-training dataset contains a total of 8,400 samples.",
+   "label": "FALSE",
+   "evidence": "The dataset has a total of 840 WiFi CSI samples.",
+   "kind": "numeric",
+   "pTrue": 0.007577241576009728
+  },
+  {
+   "id": "c015",
+   "paper": "2504.14100v1",
+   "claim": "During evaluation, the last two of the twelve ViT blocks are unfrozen for the positioning, channel estimation, and RF classification tasks.",
+   "label": "TRUE",
+   "evidence": "for the other three tasks, we unfreeze the last 2 of 12 ViT blocks, retaining 80% parameter sharing",
+   "kind": "method",
+   "pTrue": 0.4378234991142019
+  },
+  {
+   "id": "c016",
+   "paper": "2504.14100v1",
+   "claim": "The least-squares estimator surpasses both learned models for SNRs above 13 dB.",
+   "label": "TRUE",
+   "evidence": "with LS surpassing them for SNRs above 13 dB.",
+   "kind": "finding",
+   "pTrue": 0.18242552602881168
+  },
+  {
+   "id": "c017",
+   "paper": "2504.14100v1",
+   "claim": "In the simulated MIMO-OFDM system, the base station is equipped with 64 antennas.",
+   "label": "FALSE",
+   "evidence": "the user has a single antenna and the base station has 16 antennas",
+   "kind": "numeric",
+   "pTrue": 0.0015978451957567106
+  },
+  {
+   "id": "c018",
+   "paper": "2504.14100v1",
+   "claim": "The RF signal classification dataset spans 45 different signal type classes.",
+   "label": "FALSE",
+   "evidence": "spectrograms representing various signal types, such as WiFi, FM radio,\nCellular, Bluetooth, and others, with a total of 20 classes",
+   "kind": "dataset",
+   "pTrue": 0.001325022327248827
+  },
+  {
+   "id": "c019",
+   "paper": "2504.14100v1",
+   "claim": "The RF-S pre-training dataset contains more than 5,000 spectrogram samples.",
+   "label": "FALSE",
+   "evidence": "the dataset has a total of 3, 332 spectrogram\nsamples",
+   "kind": "numeric",
+   "pTrue": 0.001169510525067824
+  },
+  {
+   "id": "c020",
+   "paper": "2504.14100v1",
+   "claim": "ViT-WiFi, whose pre-training data closely matches the human activity task, converges in about 20 fine-tuning epochs.",
+   "label": "TRUE",
+   "evidence": "demonstrates rapid convergence by reaching peak performance\nin an average of 20 epochs",
+   "kind": "finding",
+   "pTrue": 0.2942149783515162
+  },
+  {
+   "id": "c021",
+   "paper": "2506.06718v2",
+   "claim": "The IQFM encoder uses a ShuffleNetV2 (0.5x) backbone with roughly 341k trainable parameters.",
+   "label": "TRUE",
+   "evidence": "Our implementation, based\non the official PyTorch release, contains approximately 341k\ntrainable parameters and leverages depthwise separable and\ngrouped convolutions",
+   "kind": "method",
+   "pTrue": 0.09534945975773548
+  },
+  {
+   "id": "c022",
+   "paper": "2506.06718v2",
+   "claim": "The over-the-air testbed dataset contains 1,115,378 labeled samples split 70/30 into train and test sets.",
+   "label": "TRUE",
+   "evidence": "The dataset contains 1,115,378 labeled samples, with a stratified 70/30 train/test split.",
+   "kind": "dataset",
+   "pTrue": 0.11920292358664389
+  },
+  {
+   "id": "c023",
+   "paper": "2506.06718v2",
+   "claim": "The mechanical rotation of the transmitter produced 500 distinct AoA classes.",
+   "label": "FALSE",
+   "evidence": "rotating the transmitter across azimuth and elevation angles\nfrom −70◦ to 70◦ in 10◦ increments, producing 225 classes.",
+   "kind": "numeric",
+   "pTrue": 0.22270012850745968
+  },
+  {
+   "id": "c024",
+   "paper": "2506.06718v2",
+   "claim": "With a single labeled sample per class, task-specific SSL reaches 99.67 percent modulation accuracy versus 14.27 percent for the supervised baseline.",
+   "label": "TRUE",
+   "evidence": "it reaches 99.67%, surpassing the supervised baseline (14.27%)\nand the joint model (60.48%) by 6.98× and 1.36×",
+   "kind": "finding",
+   "pTrue": 0.9924227596075622
+  },
+  {
+   "id": "c025",
+   "paper": "2506.06718v2",
+   "claim": "Channel masking augmentation improves modulation classification accuracy.",
+   "label": "FALSE",
+   "evidence": "Consequently, modulation performance typically degrades, as\nspatial characteristics alone are insufficient for accurate modulation discrimination.",
+   "kind": "finding",
+   "pTrue": 0.037326887076403345
+  },
+  {
+   "id": "c026",
+   "paper": "2506.06718v2",
+   "claim": "The LoRA adaptation used for out-of-distribution tasks adds roughly 840,000 trainable parameters.",
+   "label": "FALSE",
+   "evidence": "Low-Rank Adaptation,\nwhich introduces approximately 84K trainable parameters into\nthe convolutional layers.",
+   "kind": "numeric",
+   "pTrue": 0.05340333488442917
+  },
+  {
+   "id": "c027",
+   "paper": "2506.06718v2",
+   "claim": "RML2016.10a covers 24 digital and analog modulation schemes.",
+   "label": "FALSE",
+   "evidence": "This benchmark dataset contains IQ samples from 11 digital and\nanalog modulation schemes",
+   "kind": "dataset",
+   "pTrue": 0.32082130082460697
+  },
+  {
+   "id": "c028",
+   "paper": "2506.06718v2",
+   "claim": "KNN-based pseudo-labeling on the modulation-specific encoder attains 99.99 percent accuracy.",
+   "label": "TRUE",
+   "evidence": "pseudolabeling achieves 99.99% accuracy (Table IV), confirming the\nencoder’s effectiveness in modulation-specific representation",
+   "kind": "finding",
+   "pTrue": 0.037326883729827086
+  },
+  {
+   "id": "c029",
+   "paper": "2506.06718v2",
+   "claim": "In the ablation study, removing both cyclic time shifting and channel masking collapses AoA accuracy to 0.95 percent.",
+   "label": "TRUE",
+   "evidence": "while excluding both TR and CM results in a substantial decline to\n0.95%",
+   "kind": "finding",
+   "pTrue": 0.037326887879581695
+  },
+  {
+   "id": "c030",
+   "paper": "2506.06718v2",
+   "claim": "The joint-task model beats the task-specific SSL model on AoA classification in the one-shot setting.",
+   "label": "FALSE",
+   "evidence": "task-specific SSL achieves 65.45% accuracy for AoA—145×\nbetter than the supervised model (0.45%) and 2× higher than\nthe joint model (32.42%)",
+   "kind": "finding",
+   "pTrue": 0.07585818263281055
+  },
+  {
+   "id": "c031",
+   "paper": "2509.03077v1",
+   "claim": "The captured dataset comprises 68 GB across 4,609 recording files.",
+   "label": "TRUE",
+   "evidence": "The total recordings captured is 68 GB constituting 4,609\nnumber of files",
+   "kind": "dataset",
+   "pTrue": 0.9706877673407197
+  },
+  {
+   "id": "c032",
+   "paper": "2509.03077v1",
+   "claim": "The development set of the dataset contains 922 files.",
+   "label": "FALSE",
+   "evidence": "the dataset was split into 3,687 files for the\ndevelopment set and 922 files for the test set",
+   "kind": "dataset",
+   "pTrue": 0.02931222852544515
+  },
+  {
+   "id": "c033",
+   "paper": "2509.03077v1",
+   "claim": "The two selected augmentations are antenna dropout and zero masking, each applied with probability 0.2.",
+   "label": "TRUE",
+   "evidence": "In our experiments we set p1 = 0.2 and p2 = 0.2.",
+   "kind": "method",
+   "pTrue": 0.993307148354407
+  },
+  {
+   "id": "c034",
+   "paper": "2509.03077v1",
+   "claim": "Doubling the number of linear classifier layers improves frozen-encoder AoA error by 46 percent, from 7.92 to 4.28 degrees.",
+   "label": "TRUE",
+   "evidence": "By doubling the number of linear layers,\nwe improve the performance by 46% from 7.92 to 4.28\ndegrees of error.",
+   "kind": "finding",
+   "pTrue": 0.94659667246
+  },
+  {
+   "id": "c035",
+   "paper": "2509.03077v1",
+   "claim": "With frozen encoder weights the proposed method attains an AoA MAE of 8.93 degrees, worse than random initialization.",
+   "label": "FALSE",
+   "evidence": "challenging AoA task, bringing down the MAE to a more\nreasonable 4 degrees of error.",
+   "kind": "finding",
+   "pTrue": 0.010986942094235046
+  },
+  {
+   "id": "c036",
+   "paper": "2509.03077v1",
+   "claim": "The dataset covers modulation schemes including 16-QAM, 64-QAM, BPSK, QPSK, PAM4, and continuous wave.",
+   "label": "TRUE",
+   "evidence": "These are 16-QAM,\n64-QAM, BPSK, QPSK, PAM4, and continuous wave (CW)\nAM modulation.",
+   "kind": "dataset",
+   "pTrue": 0.9770226294209299
+  },
+  {
+   "id": "c037",
+   "paper": "2509.03077v1",
+   "claim": "Antenna dropout was borrowed into this work from prior augmentation techniques for image classification.",
+   "label": "FALSE",
+   "evidence": "This work is the first to introduce antenna dropout as\nan augmentation technique in wireless communications operating directly on received IQ data streams.",
+   "kind": "method",
+   "pTrue": 0.002981032226074057
+  },
+  {
+   "id": "c038",
+   "paper": "2509.03077v1",
+   "claim": "Self-supervised pretraining ran for 200 epochs on the MoCo framework.",
+   "label": "FALSE",
+   "evidence": "LARS 0.3 × batch size/256 10−4 1024 20 (∼ 3 − 6 hours) Dynamic",
+   "kind": "numeric",
+   "pTrue": 0.0010987312403015134
+  },
+  {
+   "id": "c039",
+   "paper": "2509.03077v1",
+   "claim": "In low-label regimes the SSL approach improves over fully supervised baselines by up to about 41 percent.",
+   "label": "TRUE",
+   "evidence": "achieving up to\n41% improvement over fully supervised baselines and\nexceeding performance with the full scale of data",
+   "kind": "finding",
+   "pTrue": 0.9940889309440073
+  },
+  {
+   "id": "c040",
+   "paper": "2511.15162v1",
+   "claim": "The paper builds the first multimodal wireless foundation model that processes both raw IQ streams and image-like modalities.",
+   "label": "TRUE",
+   "evidence": "we propose and build the first multimodal wireless\nfoundation model capable of processing both raw IQ streams\nand image-like wireless modalities",
+   "kind": "method",
+   "pTrue": 0.9978172831327526
+  },
+  {
+   "id": "c041",
+   "paper": "2511.15162v1",
+   "claim": "The spectrogram pretraining dataset contains a total of 3,200 samples.",
+   "label": "TRUE",
+   "evidence": "The dataset contains a total of 3200\nsamples.",
+   "kind": "dataset",
+   "pTrue": 0.9971990723669563
+  },
+  {
+   "id": "c042",
+   "paper": "2511.15162v1",
+   "claim": "Pretraining applies a fixed 90 percent masking ratio to both modalities.",
+   "label": "FALSE",
+   "evidence": "We use a fixed 70% masking ratio\nfor both modalities.",
+   "kind": "numeric",
+   "pTrue": 0.0007554057003049127
+  },
+  {
+   "id": "c043",
+   "paper": "2511.15162v1",
+   "claim": "The multimodal WFM has roughly 70 million parameters.",
+   "label": "FALSE",
+   "evidence": "Because\nIQFM is a compact model (∼ 0.3M parameters) compared\nto the multimodal WFM (∼ 7M), model capacity should be\nconsidered",
+   "kind": "numeric",
+   "pTrue": 0.0028009268344567104
+  },
+  {
+   "id": "c044",
+   "paper": "2511.15162v1",
+   "claim": "On RF signal classification the multimodal WFM outperforms WavesFM under linear probing.",
+   "label": "FALSE",
+   "evidence": "On image-like tasks, WavesFM leads on RFS, while HAS is\nclose, and the multimodal WFM leads on POS.",
+   "kind": "finding",
+   "pTrue": 0.007577241435942037
+  },
+  {
+   "id": "c045",
+   "paper": "2511.15162v1",
+   "claim": "LoRA fine-tuning uses rank 32 and scaling 32, totaling about 0.3M task-specific parameters versus 1.65M for FT2.",
+   "label": "TRUE",
+   "evidence": "We fine-tune with LoRA rank 𝑅 = 32\nand scaling 𝛼 = 32, totaling ∼ 0.3M task-specific parameters,\nversus ∼ 1.65M for FT2.",
+   "kind": "method",
+   "pTrue": 0.022977367359293347
+  },
+  {
+   "id": "c046",
+   "paper": "2511.15162v1",
+   "claim": "Compared to partial fine-tuning of two blocks, LoRA improves performance on four of six tasks.",
+   "label": "TRUE",
+   "evidence": "it improves over\nFT2 on four of six tasks, with only small declines on HAS and\nINTD.",
+   "kind": "finding",
+   "pTrue": 0.06008664428307651
+  },
+  {
+   "id": "c047",
+   "paper": "2511.15162v1",
+   "claim": "On RF fingerprinting, IQFM outperforms the multimodal WFM under linear probing.",
+   "label": "FALSE",
+   "evidence": "On IQ-centric tasks, the multimodal WFM consistently outperforms IQFM under both LP and FT2",
+   "kind": "finding",
+   "pTrue": 0.014063625312827045
+  },
+  {
+   "id": "c048",
+   "paper": "2511.15162v1",
+   "claim": "The 5G NR positioning task takes raw IQ traces as input to predict the UE location.",
+   "label": "FALSE",
+   "evidence": "CSI measurements collected\nusing sounding reference signals in a 5G NR setup. The target\nis to predict UE location from the CSI observations",
+   "kind": "dataset",
+   "pTrue": 0.0015978452459001508
+  },
+  {
+   "id": "c049",
+   "paper": "2606.06373v1",
+   "claim": "In LatentWave's JEPA pretraining, the target encoder's parameters are updated as an exponential moving average of the context encoder weights.",
+   "label": "TRUE",
+   "evidence": "its\nparameters are updated as an Exponential Moving Average\n(EMA) of the context encoder weights",
+   "kind": "method",
+   "pTrue": 0.9947798737188381
+  },
+  {
+   "id": "c050",
+   "paper": "2606.06373v1",
+   "claim": "The context and target encoders are ViTs with 8 layers, 8 attention heads, embedding dimension 256, and about 6.4M parameters.",
+   "label": "TRUE",
+   "evidence": "The context and target encoders are ViT models with 8\ntransformer layers, 8 attention heads, embedding dimension 𝐷=256,\nand patch size 16×16, totaling approximately 6.4M\nparameters.",
+   "kind": "numeric",
+   "pTrue": 0.9525741273273218
+  },
+  {
+   "id": "c051",
+   "paper": "2606.06373v1",
+   "claim": "Frequency masking preserves discriminability for signal classification better than region masking.",
+   "label": "FALSE",
+   "evidence": "frequency\nmasking strongly favors channel-related tasks such as positioning and\nbeam prediction, while region masking better preserves discriminability for signal classification",
+   "kind": "finding",
+   "pTrue": 0.002631674110553629
+  },
+  {
+   "id": "c052",
+   "paper": "2606.06373v1",
+   "claim": "Switching from region to frequency masking improves beam prediction by more than 11 percentage points and reduces positioning error from 2.54 m to 2.32 m.",
+   "label": "TRUE",
+   "evidence": "beam prediction improves by over 11 percentage points\nand positioning error decreases from 2.54 m to 2.32 m",
+   "kind": "finding",
+   "pTrue": 0.7772998611746911
+  },
+  {
+   "id": "c053",
+   "paper": "2606.06373v1",
+   "claim": "Under frequency masking, RF signal classification accuracy rises from 80.9 percent to 86.1 percent.",
+   "label": "FALSE",
+   "evidence": "but RF\nsignal classification drops substantially from 80.9% to 66.1%.",
+   "kind": "numeric",
+   "pTrue": 0.004609573138709895
+  },
+  {
+   "id": "c054",
+   "paper": "2606.06373v1",
+   "claim": "Stochastic channel sampling draws the retained channel count uniformly from 1 up to the available channel count.",
+   "label": "TRUE",
+   "evidence": "we uniformly draw a random integer 𝐶 ′ ∼ U{1, 𝐶} and\nretain a randomly selected subset of 𝐶 ′ channels, discarding\nthe rest.",
+   "kind": "method",
+   "pTrue": 0.990291525183959
+  },
+  {
+   "id": "c055",
+   "paper": "2606.06373v1",
+   "claim": "The pretraining corpus includes a WiFi CSI dataset with 484 three-channel samples.",
+   "label": "FALSE",
+   "evidence": "The fourth is a WiFi CSI dataset with 840 threechannel\nsamples [14]",
+   "kind": "dataset",
+   "pTrue": 0.015906392411575272
+  },
+  {
+   "id": "c056",
+   "paper": "2606.06373v1",
+   "claim": "LatentWave is evaluated on six downstream tasks, including modulation classification and interference detection.",
+   "label": "FALSE",
+   "evidence": "We evaluate LatentWave\non four downstream tasks: RF signal classification, 5G NR positioning, beam prediction, and LoS/NLoS classification",
+   "kind": "finding",
+   "pTrue": 0.0009110512444155092
+  },
+  {
+   "id": "c057",
+   "paper": "2606.06373v1",
+   "claim": "After pretraining, the target encoder is the component extracted for downstream use.",
+   "label": "TRUE",
+   "evidence": "After pretraining, the target encoder is extracted as the foundation model for downstream tasks.",
+   "kind": "method",
+   "pTrue": 0.9978172833031362
+  },
+  {
+   "id": "c058",
+   "paper": "2606.06373v1",
+   "claim": "LatentWave pretraining runs for 800 epochs with a batch size of 256.",
+   "label": "FALSE",
+   "evidence": "Pretraining runs for 240 epochs with batch\nsize 256",
+   "kind": "numeric",
+   "pTrue": 0.00490540571936035
+  },
+  {
+   "id": "c059",
+   "paper": "2609.04707v1",
+   "claim": "The survey organizes the WFM literature into five physical-layer task families, including beam management and spectrum sensing and monitoring.",
+   "label": "TRUE",
+   "evidence": "We then organize the literature into five physical-layer task families: signal recognition and demodulation, channel representation learning, RF sensing and localization, beam management, and spectrum sensing and monitoring",
+   "kind": "finding",
+   "pTrue": 0.9924227581298481
+  },
+  {
+   "id": "c060",
+   "paper": "2609.04707v1",
+   "claim": "RF sensing and localization is the most frequently covered major category, appearing in 30 of 49 models (61.2 percent).",
+   "label": "TRUE",
+   "evidence": "the\nmost frequently covered major categories are\nRF Sensing and Localization and Channel Rep. Learning,\nappearing in 30/49 (61.2%) and 28/49 (57.1%) models, respectively.",
+   "kind": "finding",
+   "pTrue": 0.1645164608483867
+  },
+  {
+   "id": "c061",
+   "paper": "2609.04707v1",
+   "claim": "Spectrum sensing and monitoring is the most commonly covered task category among the surveyed WFMs.",
+   "label": "FALSE",
+   "evidence": "Beam Management, Signal Recognition, and Spectrum Sensing and Monitoring appear less often, with 16/49 (32.7%), 12/49 (24.5%), and 6/49 (12.2%)\nmodels, respectively.",
+   "kind": "finding",
+   "pTrue": 0.09534946875514017
+  },
+  {
+   "id": "c062",
+   "paper": "2609.04707v1",
+   "claim": "The number of identified WFM papers grew from 6 in 2024 to 23 in 2025, an increase of roughly 283 percent.",
+   "label": "TRUE",
+   "evidence": "the\nnumber of identified works grows markedly from only 6\npapers in 2024 to 23 in 2025, corresponding to an increase of\napproximately 283%",
+   "kind": "finding",
+   "pTrue": 0.06754669536304464
+  },
+  {
+   "id": "c063",
+   "paper": "2609.04707v1",
+   "claim": "Among channel representation WFMs, masked reconstruction is the dominant pretraining objective, used by 15 of 30 models.",
+   "label": "TRUE",
+   "evidence": "Masked reconstruction is the dominant pretraining\nobjective, appearing in 15 of the 30 models",
+   "kind": "finding",
+   "pTrue": 0.3208213138121609
+  },
+  {
+   "id": "c064",
+   "paper": "2609.04707v1",
+   "claim": "The survey includes papers on generic LLM-based wireless applications regardless of physical-layer scope.",
+   "label": "FALSE",
+   "evidence": "Papers were excluded when they were outside the physicallayer wireless scope, focused mainly on generic LLM-based\nwireless applications",
+   "kind": "finding",
+   "pTrue": 0.0009110513679691887
+  },
+  {
+   "id": "c065",
+   "paper": "2609.04707v1",
+   "claim": "LatentWave is a JEPA-based model that tests latent prediction against direct masked reconstruction on spectrogram and CSI inputs.",
+   "label": "TRUE",
+   "evidence": "LatentWave [116] extends this\nidea to spectrogram and CSI inputs, testing whether the\nsame latent-prediction principle can also compete with direct\nmasked reconstruction.",
+   "kind": "method",
+   "pTrue": 0.32082130082460697
+  },
+  {
+   "id": "c066",
+   "paper": "2609.04707v1",
+   "claim": "The literature search covered papers published from 2020 until June 2026.",
+   "label": "FALSE",
+   "evidence": "focusing on papers published from 2024 until\nJune 2026.",
+   "kind": "dataset",
+   "pTrue": 0.00192673499420628
+  },
+  {
+   "id": "c067",
+   "paper": "2609.04707v1",
+   "claim": "WiMamba uses a Mamba-based state-space model as its main CSI encoder.",
+   "label": "TRUE",
+   "evidence": "WiMamba adapts Mamba\nas the main CSI encoder.",
+   "kind": "method",
+   "pTrue": 0.6513548782017746
+  },
+  {
+   "id": "c068",
+   "paper": "Tiny_Federated_Wireless_Foundation_Model",
+   "claim": "The pruned ViT-based WFMs achieve up to 93 percent MACs reduction and 85 percent lower CPU inference time.",
+   "label": "TRUE",
+   "evidence": "the pruned\nViT-based WFMs achieve up to 93% multiply-accumulate operations (MACs) reduction, 85% lower CPU inference time",
+   "kind": "numeric",
+   "pTrue": 0.9964063976753577
+  },
+  {
+   "id": "c069",
+   "paper": "Tiny_Federated_Wireless_Foundation_Model",
+   "claim": "The pruning plus frozen-head FL design cuts communication overhead by 90 percent.",
+   "label": "FALSE",
+   "evidence": "and 49% reduction in communication overhead, all while maintaining\nhigh task accuracy.",
+   "kind": "numeric",
+   "pTrue": 0.004331502498533731
+  },
+  {
+   "id": "c070",
+   "paper": "Tiny_Federated_Wireless_Foundation_Model",
+   "claim": "The base model is a ViT small with 12 encoder blocks and eight attention heads.",
+   "label": "TRUE",
+   "evidence": "we employ a ViT small model with 12 encoder blocks\nand eight attention heads.",
+   "kind": "method",
+   "pTrue": 0.3208212878370535
+  },
+  {
+   "id": "c071",
+   "paper": "Tiny_Federated_Wireless_Foundation_Model",
+   "claim": "The three generated pruned models use pruning ratios of 55 percent, 78 percent, and 90 percent.",
+   "label": "FALSE",
+   "evidence": "The resulting models\nare pruned at 58%, 80%, and 92%, covering a broad spectrum\nof compression levels.",
+   "kind": "numeric",
+   "pTrue": 0.29421497216298875
+  },
+  {
+   "id": "c072",
+   "paper": "Tiny_Federated_Wireless_Foundation_Model",
+   "claim": "Pruning encoder block 0 causes only a negligible loss increase of about 0.0005.",
+   "label": "FALSE",
+   "evidence": "pruning Block 0 leads to a severe increase\nin loss, roughly 3.1338, significantly degrading the model’s\nperformance.",
+   "kind": "finding",
+   "pTrue": 0.8175744828610095
+  },
+  {
+   "id": "c073",
+   "paper": "Tiny_Federated_Wireless_Foundation_Model",
+   "claim": "The pruning implementation relies on the DepGraph framework for dependency-aware pruning.",
+   "label": "TRUE",
+   "evidence": "we used the DepGraph\nframework [24], which enables dependency-aware pruning\nby constructing a dependency graph",
+   "kind": "method",
+   "pTrue": 0.0035936020128408044
+  },
+  {
+   "id": "c074",
+   "paper": "Tiny_Federated_Wireless_Foundation_Model",
+   "claim": "The block-wise pruning procedure requires access to each client's labeled local dataset.",
+   "label": "FALSE",
+   "evidence": "the pruning process does not require\naccess to any local dataset or labeled samples; it is performed\nentirely using the pretraining dataset.",
+   "kind": "method",
+   "pTrue": 0.001810211181023804
+  },
+  {
+   "id": "c075",
+   "paper": "Tiny_Federated_Wireless_Foundation_Model",
+   "claim": "For the radio signal identification task, the evaluation was restricted to the ten most representative classes.",
+   "label": "TRUE",
+   "evidence": "we limited our evaluation to the ten most representative classes",
+   "kind": "dataset",
+   "pTrue": 0.017986213712618302
+  },
+  {
+   "id": "c076",
+   "paper": "Tiny_Federated_Wireless_Foundation_Model",
+   "claim": "The federated system uses twenty clients, all of which participate in every round.",
+   "label": "FALSE",
+   "evidence": "The system\nconsists of ten clients, out of which five clients are randomly\nselected in each round",
+   "kind": "dataset",
+   "pTrue": 0.6224593312018546
+  },
+  {
+   "id": "c077",
+   "paper": "Tiny_Federated_Wireless_Foundation_Model",
+   "claim": "For human activity recognition, pruning shrinks model size from 148.22 MB to 13.24 MB.",
+   "label": "TRUE",
+   "evidence": "MACs are reduced by up to\n93%, and model size drops from 148.22 to 13.24 MB.",
+   "kind": "numeric",
+   "pTrue": 0.2689414213699951
+  },
+  {
+   "id": "c078",
+   "paper": "http_thesai.org_Downloads_Volume12No2_Pa",
+   "claim": "The Homergy Box provides sixteen relay channels using four four-channel relay boards.",
+   "label": "TRUE",
+   "evidence": "There are four of these relay modules in the Homergy Box, totalling sixteen (16) relay channels.",
+   "kind": "dataset",
+   "pTrue": 0.9940889297674044
+  },
+  {
+   "id": "c079",
+   "paper": "http_thesai.org_Downloads_Volume12No2_Pa",
+   "claim": "The NodeMCU directly drives the appliance-connected relays without a separate microcontroller.",
+   "label": "FALSE",
+   "evidence": "The Arduino Mega microcontroller executes instructions for controlling the appliance-connected relays.",
+   "kind": "method",
+   "pTrue": 0.003824483538191038
+  },
+  {
+   "id": "c080",
+   "paper": "http_thesai.org_Downloads_Volume12No2_Pa",
+   "claim": "Homergy delivered weekly savings of 0.5 kWh for the lifeline consumer and 18 kWh for the non-lifeline consumer.",
+   "label": "TRUE",
+   "evidence": "weekly energy savings of 0.5 kWh for the lifeline consumer, 0.35 kWh\nfor the single-user office, and 18 kWh for the non-lifeline\nconsumer",
+   "kind": "numeric",
+   "pTrue": 0.03732688747799252
+  },
+  {
+   "id": "c081",
+   "paper": "http_thesai.org_Downloads_Volume12No2_Pa",
+   "claim": "In the high-consuming house, Homergy improved on existing smart-devices-only systems by 13 kWh per week.",
+   "label": "TRUE",
+   "evidence": "and a 13-kWh improvement over existing smart-devices-only systems\nin the high-consuming house.",
+   "kind": "finding",
+   "pTrue": 0.9902915251212815
+  },
+  {
+   "id": "c082",
+   "paper": "http_thesai.org_Downloads_Volume12No2_Pa",
+   "claim": "Homergy produced weekly energy savings of 5 kWh for the low-consuming house.",
+   "label": "FALSE",
+   "evidence": "Homergy produced weekly energy savings of 0.5 kWh for\nthe low-consuming house",
+   "kind": "numeric",
+   "pTrue": 0.007577242815608909
+  },
+  {
+   "id": "c083",
+   "paper": "http_thesai.org_Downloads_Volume12No2_Pa",
+   "claim": "The normally closed relay port is wired between source and load so current still flows when the Homergy Box is off.",
+   "label": "TRUE",
+   "evidence": "The Normally Closed (NC) port of the relay is placed between the source and the load.",
+   "kind": "method",
+   "pTrue": 0.9924227596005588
+  },
+  {
+   "id": "c084",
+   "paper": "http_thesai.org_Downloads_Volume12No2_Pa",
+   "claim": "The Homergy mobile application was written as a native Java Android app.",
+   "label": "FALSE",
+   "evidence": "The Homergy Mobile App was developed using the crossplatform\napp development framework Flutter, making it available for major mobile platforms (Web, iOS and Android).",
+   "kind": "method",
+   "pTrue": 0.0013250224911564538
+  },
+  {
+   "id": "c085",
+   "paper": "http_thesai.org_Downloads_Volume12No2_Pa",
+   "claim": "Each Homergy Box's Access Code is embedded in an encrypted QR code on the device.",
+   "label": "TRUE",
+   "evidence": "The QR Code is an encrypted version\nof the Homergy Box’s unique Access Code.",
+   "kind": "method",
+   "pTrue": 0.9796676481785204
+  },
+  {
+   "id": "c086",
+   "paper": "http_thesai.org_Downloads_Volume12No2_Pa",
+   "claim": "About 69 percent of households in Africa own at least one smart device.",
+   "label": "FALSE",
+   "evidence": "only\n0.6% of households in Africa own at least one smart device,\ncompared to 69% in the United States.",
+   "kind": "finding",
+   "pTrue": 0.007577241842138348
+  },
+  {
+   "id": "c087",
+   "paper": "http_thesai.org_Downloads_Volume12No2_Pa",
+   "claim": "I2C serial communication links the Arduino microcontroller with the NodeMCU Wi-Fi module.",
+   "label": "TRUE",
+   "evidence": "I2 C is implemented between the microcontroller (Arduino) and the Wi-Fi\nmodule (NodeMCU)",
+   "kind": "method",
+   "pTrue": 0.9770226292536686
+  },
+  {
+   "id": "c088",
+   "paper": "https_www.mdpi.com_2071-1050_14_21_14556",
+   "claim": "Across the studied scenarios the wind-driven optimization algorithm beats differential evolution on energy cost, peak load, and PAR.",
+   "label": "TRUE",
+   "evidence": "The outcomes show that the wind-driven optimization algorithm method minimizes energy\ncosts, peak load demand, and peak-to-average ratios over differential evolution",
+   "kind": "finding",
+   "pTrue": 0.04742587755326745
+  },
+  {
+   "id": "c089",
+   "paper": "https_www.mdpi.com_2071-1050_14_21_14556",
+   "claim": "The study integrates a 5 kW rooftop solar PV on-grid system.",
+   "label": "TRUE",
+   "evidence": "The study integrates a 5 kW rooftop\nsolar PV on-grid system.",
+   "kind": "dataset",
+   "pTrue": 0.9933071485742049
+  },
+  {
+   "id": "c090",
+   "paper": "https_www.mdpi.com_2071-1050_14_21_14556",
+   "claim": "Without PV, WDOA achieves a daily PAR of 3.94.",
+   "label": "FALSE",
+   "evidence": "A PAR of 3.91 can be achieved by WDOA and a PAR of 4.71 can be achieved by DE.",
+   "kind": "numeric",
+   "pTrue": 0.24508502416032488
+  },
+  {
+   "id": "c091",
+   "paper": "https_www.mdpi.com_2071-1050_14_21_14556",
+   "claim": "Off-peak households pay 0.00517 USD per kWh for the first 50 kWh consumed.",
+   "label": "TRUE",
+   "evidence": "On average, household users pay 0.00517 USD per kWh for the 1st 50 kWh of energy\nthey consume.",
+   "kind": "numeric",
+   "pTrue": 0.9820137870111676
+  },
+  {
+   "id": "c092",
+   "paper": "https_www.mdpi.com_2071-1050_14_21_14556",
+   "claim": "The TOUP scheme assumes peak energy costs are 100 percent greater than off-peak costs.",
+   "label": "FALSE",
+   "evidence": "Using the assumption that peak energy costs are 50% greater compared to\noff-peak energy costs",
+   "kind": "numeric",
+   "pTrue": 0.003593602663122106
+  },
+  {
+   "id": "c093",
+   "paper": "https_www.mdpi.com_2071-1050_14_21_14556",
+   "claim": "The day is divided into 120 time slots, each lasting 12 minutes.",
+   "label": "TRUE",
+   "evidence": "In a day, there are 120 time\nslots, every one of which lasts 12 min",
+   "kind": "numeric",
+   "pTrue": 0.9859363745063829
+  },
+  {
+   "id": "c094",
+   "paper": "https_www.mdpi.com_2071-1050_14_21_14556",
+   "claim": "With variable time planning and PV, WDOA achieves a minimal PAR of 3.46.",
+   "label": "FALSE",
+   "evidence": "WDOA has a minimal PAR\nof 1 with PV, whereas DE has a minimal PAR of 2.88.",
+   "kind": "numeric",
+   "pTrue": 0.18242551713899047
+  },
+  {
+   "id": "c095",
+   "paper": "https_www.mdpi.com_2071-1050_14_21_14556",
+   "claim": "The overall daily energy demand of the devices equals 29.79 kWh.",
+   "label": "FALSE",
+   "evidence": "The minimal overall energy demand daily for devices equals 19.79 kWh.",
+   "kind": "numeric",
+   "pTrue": 0.4378234991142019
+  },
+  {
+   "id": "c096",
+   "paper": "https_www.mdpi.com_2071-1050_14_21_14556",
+   "claim": "Constant time-range planning without PV cuts the power price by 15.78 percent relative to unplanned loads.",
+   "label": "TRUE",
+   "evidence": "the power price for a system without PV production with constant time-range planning equals 15.78% less compared to the power price of the unplanned loads.",
+   "kind": "finding",
+   "pTrue": 0.24508501313237172
+  },
+  {
+   "id": "c097",
+   "paper": "https_www.mdpi.com_2071-1050_14_21_14556",
+   "claim": "The paper benchmarks WDOA against a genetic algorithm as the comparison optimizer.",
+   "label": "FALSE",
+   "evidence": "A PAR of 3.91 can be achieved by WDOA and a PAR of 4.71 can be achieved by DE.",
+   "kind": "method",
+   "pTrue": 0.0019267342164844708
+  },
+  {
+   "id": "c098",
+   "paper": "https_www.mdpi.com_2079-9292_12_19_4041_",
+   "claim": "The smart plug measures RMS current, frequency, power factor, and active and reactive power, and sends readings to the smart meter over Zigbee.",
+   "label": "TRUE",
+   "evidence": "The smart plug measures in real-time the root mean square (RMS)\nvalue of the current, frequency,\npower factor, active power, and reactive power. These readings are subsequently transmitted to the smart\nmeter through the Zigbee network.",
+   "kind": "method",
+   "pTrue": 0.9953904287970542
+  },
+  {
+   "id": "c099",
+   "paper": "https_www.mdpi.com_2079-9292_12_19_4041_",
+   "claim": "The decision tree classifier's inference latency measured on the Raspberry Pi was 1.59 microseconds.",
+   "label": "TRUE",
+   "evidence": "The measured latency for the decision tree classifier’s\ninference was 1.59 microseconds.",
+   "kind": "numeric",
+   "pTrue": 0.9924227580948312
+  },
+  {
+   "id": "c100",
+   "paper": "https_www.mdpi.com_2079-9292_12_19_4041_",
+   "claim": "The time-of-use based demand-response program can cut the power cost by roughly 30 percent in a practical case.",
+   "label": "TRUE",
+   "evidence": "In a practical situation, the time-of-use-based demand-response\nprogram can reduce the power cost by about 30%.",
+   "kind": "finding",
+   "pTrue": 0.9924227596845995
+  },
+  {
+   "id": "c101",
+   "paper": "https_www.mdpi.com_2079-9292_12_19_4041_",
+   "claim": "The smart meter was prototyped with Arduino and the smart plug with Raspberry Pi.",
+   "label": "FALSE",
+   "evidence": "The smart meter and smart plug were prototyped by using\nRaspberry Pi and Arduino, respectively.",
+   "kind": "method",
+   "pTrue": 0.0023231628350868115
+  },
+  {
+   "id": "c102",
+   "paper": "https_www.mdpi.com_2079-9292_12_19_4041_",
+   "claim": "The accuracy of the smart meter exceeds 97 percent and that of the smart plug exceeds 99 percent.",
+   "label": "TRUE",
+   "evidence": "the accuracy of both the\nsmart meter and the smart plug exceeds 97% and 99%, respectively.",
+   "kind": "finding",
+   "pTrue": 0.9940889300574509
+  },
+  {
+   "id": "c103",
+   "paper": "https_www.mdpi.com_2079-9292_12_19_4041_",
+   "claim": "The Gaussian naive Bayes classifier reached 97 percent accuracy in the algorithm comparison.",
+   "label": "FALSE",
+   "evidence": "Gaussian naive Bayes\n\nNo prior probabilities\n\n80%",
+   "kind": "numeric",
+   "pTrue": 0.08509904732734556
+  },
+  {
+   "id": "c104",
+   "paper": "https_www.mdpi.com_2079-9292_12_19_4041_",
+   "claim": "In the worked TOU example, the daily energy bill falls from about 9.22 USD without DR to 6.43 USD with TOU scheduling.",
+   "label": "TRUE",
+   "evidence": "The energy bill for the first case is approximately 9.22 USD/day, whereas\nfor the second case, the estimated bill is\n6.43 USD",
+   "kind": "numeric",
+   "pTrue": 0.22270014398423357
+  },
+  {
+   "id": "c105",
+   "paper": "https_www.mdpi.com_2079-9292_12_19_4041_",
+   "claim": "The smart plug communicates with the smart meter over Bluetooth.",
+   "label": "FALSE",
+   "evidence": "These readings are subsequently transmitted to the smart\nmeter through the Zigbee network.",
+   "kind": "method",
+   "pTrue": 0.0006263343006416374
+  },
+  {
+   "id": "c106",
+   "paper": "https_www.mdpi.com_2079-9292_12_19_4041_",
+   "claim": "The proposed grid-frequency estimation algorithm runs in linear time, unlike the FFT-based approach.",
+   "label": "TRUE",
+   "evidence": "it is based on a time-domain\nalgorithm and has a complexity of Θ( N ), whereas the FFT algorithm has a complexity of\nΘ( N log( N )).",
+   "kind": "method",
+   "pTrue": 0.2942149845400438
+  },
+  {
+   "id": "c107",
+   "paper": "https_www.mdpi.com_2079-9292_12_19_4041_",
+   "claim": "In the Peco TOU tariff, the weekday peak time runs from 6 a.m. to 10 a.m.",
+   "label": "FALSE",
+   "evidence": "the peak time is from\n2 p.m. to 6 p.m. during weekdays",
+   "kind": "dataset",
+   "pTrue": 0.20181322226037882
+  },
+  {
+   "id": "c108",
+   "paper": "https_www.mdpi.com_2079-9292_12_21_4453_",
+   "claim": "The proposed HEMS uses WI-SUN HAN between the control unit and smart outlets, and WI-SUN FAN for smart metering.",
+   "label": "TRUE",
+   "evidence": "The system comprises a control unit that communicates with smart outlets using the\nWireless Smart Ubiquitous Network (WI-SUN) Home Area Network (HAN) specification,\nwhile smart metering is achieved using the WI-SUN Field Area Network (FAN)\nspecification.",
+   "kind": "method",
+   "pTrue": 0.9959298631693841
+  },
+  {
+   "id": "c109",
+   "paper": "https_www.mdpi.com_2079-9292_12_21_4453_",
+   "claim": "The middleware database uses SQLite, implemented as a circular buffer with a maximum size.",
+   "label": "TRUE",
+   "evidence": "We chose SQLite for the middleware database because it\noffers adequate performance for embedded systems and represents a well established\nsolution. We implemented the database as a circular buffer, controlling its growth and\ndefining its maximum size.",
+   "kind": "method",
+   "pTrue": 0.04208772461143651
+  },
+  {
+   "id": "c110",
+   "paper": "https_www.mdpi.com_2079-9292_12_21_4453_",
+   "claim": "The collected data were split 80 percent for training and 20 percent for testing.",
+   "label": "FALSE",
+   "evidence": "The split between the data used in the training and test phases was 60% and 40%,\nrespectively.",
+   "kind": "numeric",
+   "pTrue": 0.042087729117139754
+  },
+  {
+   "id": "c111",
+   "paper": "https_www.mdpi.com_2079-9292_12_21_4453_",
+   "claim": "The smart outlets collected measurements every 5 seconds, i.e., at 1/5 Hz.",
+   "label": "TRUE",
+   "evidence": "the smart\noutlets gathered data for 5 s each, i.e., at a measurement frequency of 1/5 Hz.",
+   "kind": "dataset",
+   "pTrue": 0.18242553047372242
+  },
+  {
+   "id": "c112",
+   "paper": "https_www.mdpi.com_2079-9292_12_21_4453_",
+   "claim": "The load disaggregation pipeline applies PCA both to identify loads and to extract features for disaggregation.",
+   "label": "TRUE",
+   "evidence": "we used PCA to identify the loads; in the second\nstage, responsible for disaggregation, we applied PCA to extract the attributes.",
+   "kind": "method",
+   "pTrue": 0.07585817949893016
+  },
+  {
+   "id": "c113",
+   "paper": "https_www.mdpi.com_2079-9292_12_21_4453_",
+   "claim": "The proof-of-concept outlets monitored a washing machine, an electric oven, and a water heater.",
+   "label": "FALSE",
+   "evidence": "the smart outlets gathered data from three household appliances: a\nrefrigerator, a microwave, and a monitor.",
+   "kind": "dataset",
+   "pTrue": 0.060086648070103596
+  },
+  {
+   "id": "c114",
+   "paper": "https_www.mdpi.com_2079-9292_12_21_4453_",
+   "claim": "The middleware periodically sends information to the cloud using the MQTT protocol.",
+   "label": "TRUE",
+   "evidence": "the MQTT protocol was utilized to periodically send\ninformation to the cloud.",
+   "kind": "method",
+   "pTrue": 0.16451646904109268
+  },
+  {
+   "id": "c115",
+   "paper": "https_www.mdpi.com_2079-9292_12_21_4453_",
+   "claim": "In field trials, Wi-SUN HAN proved more robust than WiFi even for outlets behind stainless steel appliances.",
+   "label": "TRUE",
+   "evidence": "the Wi-SUN HAN standard demonstrated significant\nrobustness in wireless communication in the conducted field trials, particularly when compared to WiFi. This was observed even when using smart outlets behind stainless steel\nappliances such as refrigerators and dishwashing machines.",
+   "kind": "finding",
+   "pTrue": 0.015906389466749785
+  },
+  {
+   "id": "c116",
+   "paper": "https_www.mdpi.com_2079-9292_12_21_4453_",
+   "claim": "The middleware was developed in Java due to its portability on embedded systems.",
+   "label": "FALSE",
+   "evidence": "Python was the programming language used in developing\nthe proposed middleware.",
+   "kind": "method",
+   "pTrue": 0.022977368613751804
+  },
+  {
+   "id": "c117",
+   "paper": "https_www.mdpi.com_2079-9292_12_21_4453_",
+   "claim": "The system applies machine learning to estimate individual appliance consumption when only aggregate household consumption is available.",
+   "label": "TRUE",
+   "evidence": "machine learning techniques are utilized to\nidentify energy consumption of individual appliances when only the aggregate energy consumption\nof the house is available.",
+   "kind": "method",
+   "pTrue": 0.9978172837245314
+  },
+  {
+   "id": "c118",
+   "paper": "https_www.mdpi.com_2624-6511_5_3_53_pdf_",
+   "claim": "The proposed SHEMS architecture is centred on a Knowledge Base communicated through the NGSI-LD standard.",
+   "label": "TRUE",
+   "evidence": "European Telecommunications Standards Institute (ETSI) NGSI-LD",
+   "kind": "method",
+   "pTrue": 0.03308597660105118
+  },
+  {
+   "id": "c119",
+   "paper": "https_www.mdpi.com_2624-6511_5_3_53_pdf_",
+   "claim": "The test-bed's rooftop PV array provides up to 16 kW of electric power.",
+   "label": "FALSE",
+   "evidence": "an array of PV panels (Figure\n13), connected to an inverter, provides up to\n6 kW of electric power.",
+   "kind": "numeric",
+   "pTrue": 0.11920292358664389
+  },
+  {
+   "id": "c120",
+   "paper": "https_www.mdpi.com_2624-6511_5_3_53_pdf_",
+   "claim": "The test-bed's 28 kWh battery storage system is fully installed and operational.",
+   "label": "FALSE",
+   "evidence": "An accumulation system is currently in development, with 28 kWh\nof planned storage capacity, protected by a Battery Management System (BMS)",
+   "kind": "dataset",
+   "pTrue": 0.16451646904109268
+  },
+  {
+   "id": "c121",
+   "paper": "https_www.mdpi.com_2624-6511_5_3_53_pdf_",
+   "claim": "DABGEO is selected as the main ontology for the information model.",
+   "label": "TRUE",
+   "evidence": "we have selected DABGEO as the main ontology",
+   "kind": "method",
+   "pTrue": 0.06008664638698042
+  },
+  {
+   "id": "c122",
+   "paper": "https_www.mdpi.com_2624-6511_5_3_53_pdf_",
+   "claim": "The existing home automation system runs Home Assistant on a Raspberry Pi 4 with 4 GB of RAM.",
+   "label": "TRUE",
+   "evidence": "Home Assistant, running in a Raspberry Pi 4, 4 GB RAM",
+   "kind": "dataset",
+   "pTrue": 0.4073334000459302
+  },
+  {
+   "id": "c123",
+   "paper": "https_www.mdpi.com_2624-6511_5_3_53_pdf_",
+   "claim": "Access to context information is controlled by role-based access control with server-side session cookies.",
+   "label": "FALSE",
+   "evidence": "our proposal introduces\nthe use of DCapBAC (Distributed Capability-Based Access Control)",
+   "kind": "method",
+   "pTrue": 0.025957355125646668
+  },
+  {
+   "id": "c124",
+   "paper": "https_www.mdpi.com_2624-6511_5_3_53_pdf_",
+   "claim": "The espresso machine connected to the smart plug has a peak power consumption of 1.6 kW.",
+   "label": "TRUE",
+   "evidence": "An espresso machine (ECM Synchronika), with 1.6 kW peak power consumption is connected to this smart plug.",
+   "kind": "dataset",
+   "pTrue": 0.16451646494473965
+  },
+  {
+   "id": "c125",
+   "paper": "https_www.mdpi.com_2624-6511_5_3_53_pdf_",
+   "claim": "The pool filtration system is deliberately scheduled outside PV production hours to avoid breaker trips.",
+   "label": "FALSE",
+   "evidence": "resulting in an allocation during PV production.",
+   "kind": "finding",
+   "pTrue": 0.37754066879814546
+  },
+  {
+   "id": "c126",
+   "paper": "https_www.mdpi.com_2624-6511_5_3_53_pdf_",
+   "claim": "The HEC notifies users when the grid energy import reaches 80 percent.",
+   "label": "TRUE",
+   "evidence": "when: (a) the grid energy import reaches 80%, (b) when high-consumption devices are active and the home is not occupied",
+   "kind": "finding",
+   "pTrue": 0.13296424535145931
+  },
+  {
+   "id": "c127",
+   "paper": "https_www.mdpi.com_2624-6511_5_3_53_pdf_",
+   "claim": "The implementation uses the Orion-LD context broker and the Keyrock identity management component from FIWARE.",
+   "label": "TRUE",
+   "evidence": "the CB implementation of choice is the Orion-LD [52] broker and on\nthe IdM, Keyrock Identity Management Generic Enabler is being used.",
+   "kind": "method",
+   "pTrue": 0.03732688854889699
+  },
+  {
+   "id": "c128",
+   "paper": "Papaers_overview",
+   "claim": "IQ-based foundational models reached 99.67 percent modulation classification accuracy with one labeled sample per class, a 7x improvement over supervised baselines.",
+   "label": "TRUE",
+   "evidence": "Achieving up to 99.67% accuracy in\nmodulation classification with only one labeled sample per class—a 7x improvement\nover supervised baselines.",
+   "kind": "finding",
+   "pTrue": 0.9796676443199194
+  },
+  {
+   "id": "c129",
+   "paper": "Papaers_overview",
+   "claim": "Lightweight backbones such as ShuffleNetV2 (0.5x) are preferred for edge deployment of these models.",
+   "label": "TRUE",
+   "evidence": "Backbone Encoders: Lightweight architectures such as ShuffleNetV2 (0.5×) are\nprioritized for resource-constrained edge deployment",
+   "kind": "method",
+   "pTrue": 0.9947798747078498
+  },
+  {
+   "id": "c130",
+   "paper": "Papaers_overview",
+   "claim": "The LoRA adaptation described introduces about 84 million trainable parameters.",
+   "label": "FALSE",
+   "evidence": "Low-Rank Adaptation (LoRA): Introducing minimal trainable parameters (e.g., ~84K)\ninto convolutional layers for out-of-distribution (OOD) tasks.",
+   "kind": "numeric",
+   "pTrue": 0.001597845376273102
+  },
+  {
+   "id": "c131",
+   "paper": "Papaers_overview",
+   "claim": "In one-shot scenarios, the models outperform supervised counterparts by up to 145x on AoA tasks.",
+   "label": "TRUE",
+   "evidence": "In one-shot scenarios, these models outperform\nsupervised counterparts by up to 145x for complex spatial tasks like AoA.",
+   "kind": "finding",
+   "pTrue": 0.9875683504731518
+  },
+  {
+   "id": "c132",
+   "paper": "Papaers_overview",
+   "claim": "For out-of-distribution beam prediction, the adapted model achieved 89.15 percent accuracy versus a supervised baseline of 94.15 percent.",
+   "label": "FALSE",
+   "evidence": "Beam Prediction: Achieved 94.15% accuracy (vs. 89.53% supervised).",
+   "kind": "numeric",
+   "pTrue": 0.008577485191955198
+  },
+  {
+   "id": "c133",
+   "paper": "Papaers_overview",
+   "claim": "With 10 labeled samples per class, the joint SSL model achieved 95.71 percent modulation accuracy and 89.35 percent AoA accuracy.",
+   "label": "TRUE",
+   "evidence": "The joint SSL model achieved 95.71% (modulation)\nand 89.35% (AoA), outperforming supervised baselines by over 2.3x and 1.3x\nrespectively.",
+   "kind": "numeric",
+   "pTrue": 0.9953904287906442
+  },
+  {
+   "id": "c134",
+   "paper": "Papaers_overview",
+   "claim": "Time rolling (cyclic time shifting) alters the magnitude spectrum of the signal, which harms modulation features.",
+   "label": "FALSE",
+   "evidence": "According to the Fourier shift theorem, a time-domain shift\nresults in a linear phase shift but leaves the magnitude spectrum unchanged, preserving\ncritical features for modulation classification.",
+   "kind": "finding",
+   "pTrue": 0.0012448433017988975
+  },
+  {
+   "id": "c135",
+   "paper": "Papaers_overview",
+   "claim": "Using only 0.1 percent of labeled data (about 1,784 samples), SSL improved AoA MAE by 51.90 percent over supervised training.",
+   "label": "FALSE",
+   "evidence": "Using only 0.1% of available labeled data (approx. 1,784 samples), the\nSSL approach improved AoA MAE by 41.90% compared to supervised training.",
+   "kind": "numeric",
+   "pTrue": 0.004609572149461741
+  }
+ ],
+ "wallMs": 469487,
+ "bar": 0.99,
+ "auc": 0.903
+}

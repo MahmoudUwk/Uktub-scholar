@@ -16,7 +16,7 @@ import { readFileSync, writeFileSync, readdirSync, existsSync, mkdirSync } from 
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 
-import { juliaEngine, k2Engine, layaEngine, mapVerdict, DEFAULT_MIN_CONFIDENCE } from "../src/core/verify/claim.ts";
+import { juliaEngine, k2Engine, layaEngine, openrouterChatEngine, openrouterDecisionsEngine, mapVerdict, DEFAULT_MIN_CONFIDENCE } from "../src/core/verify/claim.ts";
 import { loadChunkConfig } from "../src/core/config.ts";
 import { replaceChunks, cachedVerdicts, saveVerdicts, claimHashOf, chunksOf } from "../src/core/verify/store.ts";
 import { verifyPairsParallel, mapParallel, mapChunkVerdict } from "../src/core/verify/pipeline.ts";
@@ -39,15 +39,26 @@ const claims: { id: string; paper: string; claim: string; label: string; kind?: 
 const texts: Record<string, string> = {};
 for (const f of readdirSync(textDir)) if (f.endsWith(".txt")) texts[f.slice(0, -4)] = readFileSync(join(textDir, f), "utf8").replace(/\s+/g, " ");
 
-if (engineName !== "julia" && engineName !== "k2" && engineName !== "laya") {
-  console.error(`engine "${engineName}" has no adapter yet (implemented: julia, k2, laya)`);
+if (engineName !== "julia" && engineName !== "k2" && engineName !== "laya" && engineName !== "openrouter" && engineName !== "openrouter-chat") {
+  console.error(`engine "${engineName}" has no adapter yet (implemented: julia, k2, laya, openrouter, openrouter-chat)`);
   process.exit(2);
 }
+if ((engineName === "openrouter" && !process.env.UKTUB_OPENROUTER_MODEL) || (engineName === "openrouter-chat" && !process.env.UKTUB_OPENROUTER_CHAT_MODEL)) {
+  console.error(`engine "${engineName}" needs UKTUB_OPENROUTER${engineName === "openrouter" ? "_MODEL" : "_CHAT_MODEL"}`);
+  process.exit(2);
+}
+const openrouterModel = process.env.UKTUB_OPENROUTER_MODEL ?? "";
+const openrouterChatModel = process.env.UKTUB_OPENROUTER_CHAT_MODEL ?? "";
 const engineFactory =
   engineName === "k2" ? () => k2Engine({ env: process.env })
   : engineName === "laya" ? () => layaEngine({ env: process.env })
+  : engineName === "openrouter" ? () => openrouterDecisionsEngine({ env: process.env, model: openrouterModel })
+  : engineName === "openrouter-chat" ? () => openrouterChatEngine({ env: process.env, model: openrouterChatModel })
   : () => juliaEngine({ env: process.env });
 const engine = engineFactory();
+const engineKey = engineName === "openrouter" ? `openrouter:${openrouterModel}`
+  : engineName === "openrouter-chat" ? `openrouter-chat:${openrouterChatModel}`
+  : engineName;
 
 if (chunked) {
   // Chunked like-for-like: each claim is verified against EVERY chunk of its
@@ -57,6 +68,7 @@ if (chunked) {
   const bar = Number(process.env.UKTUB_VERIFY_MIN_CONFIDENCE ?? cfg.verification.min_confidence);
   const model = engineName === "k2" ? "k2:IFM/K2-Type-0.9B"
     : engineName === "laya" ? "laya:convaiinnovations/laya-multilingual"
+    : engineName === "openrouter" || engineName === "openrouter-chat" ? engineKey
     : `julia:${process.env.UKTUB_JULIA_MODEL ?? "SupersonicLabs/Julia-1"}`;
   const papers = [...new Set(claims.map((c) => c.paper))];
   const scratch = new DatabaseSync(":memory:");
@@ -74,7 +86,7 @@ if (chunked) {
     const cached = cachedVerdicts(scratch, c.claim, model, bar, chunks.map((ch) => ch.content_hash));
     const missing = chunks.filter((ch) => !cached.has(ch.content_hash));
     const freshRows = missing.map((ch) => ({ state: ch.text, instructions: c.claim }));
-    const workers = engineName === "laya" ? 1 : cfg.verification.workers; // one resident Router: N workers would multiply checkpoint VRAM
+    const workers = engineName === "laya" ? 1 : cfg.verification.workers; // one resident Router: N workers would multiply checkpoint VRAM (hosted HTTP engines parallelize fine)
   // One shared engine for the whole run: process-based adapters stay
   // resident (model load paid once); per-claim factories would spawn 135
   // GPU workers and orphan each on GC.
@@ -109,7 +121,7 @@ if (chunked) {
   let rankSum = 0; all.forEach((x, i) => { rankSum += x.y ? i + 1 : 0; });
   const n1 = trues.length, n0 = falses.length;
   console.log(`mean P(true): TRUE=${mean(trues).toFixed(3)} FALSE=${mean(falses).toFixed(3)}  AUC=${((rankSum - (n1 * (n1 + 1)) / 2) / (n1 * n0)).toFixed(3)}`);
-  writeFileSync(join(outDirSafe(), `${engineName}+chunks-claim-verification-v1-${date}.results.json`), JSON.stringify({ results, wallMs: wall, bar }, null, 1));
+  writeFileSync(join(outDirSafe(), `${engineKey.replace(/[\/~:]/g, "-")}+chunks-claim-verification-v1-${date}.results.json`), JSON.stringify({ results, wallMs: wall, bar }, null, 1));
   process.exit(0);
 }
 
@@ -154,7 +166,7 @@ console.log("sweep:");
 for (const b of [0.5, 0.6, 0.7, 0.8, 0.85, 0.9, 0.95, 0.99]) console.log(JSON.stringify(evalAt(b)));
 const outDir = join("docs", "benchmarks");
 mkdirSync(outDir, { recursive: true });
-writeFileSync(join(outDir, `${engineName}-claim-verification-v1-${date}.results.json`), JSON.stringify({ results, wallMs: wall, bar, auc }, null, 1));
+writeFileSync(join(outDir, `${engineKey.replace(/[\/~:]/g, "-")}-claim-verification-v1-${date}.results.json`), JSON.stringify({ results, wallMs: wall, bar, auc }, null, 1));
 
 const md = [
   `# ${engineName} on ${ds.dataset} — ${date}`,
@@ -184,6 +196,6 @@ function forSweep(): string {
     .join("\n");
 }
 
-const reportPath = join(outDir, `${engineName}-claim-verification-v1-${date}.md`);
+const reportPath = join(outDir, `${engineKey.replace(/[\/~:]/g, "-")}-claim-verification-v1-${date}.md`);
 writeFileSync(reportPath, md);
 console.log(`report: ${reportPath}`);

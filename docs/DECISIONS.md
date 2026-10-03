@@ -5,6 +5,20 @@ re-proposed without new evidence (RRSI discipline: the edit history exists so
 dead hypotheses are not redrawn). Entries record the verdict, the reason, and
 the evidence that would reopen the question.
 
+## 2026-10-03 (OpenRouter hosted decision models)
+
+- **Mercury Decide (inception/mercury-decide:free, System One decisions
+  API) is the new primary verification engine**: chunked AUC 0.998, and at
+  the owner's 0.99 bar it decides 109/135 claims with 108 correct,
+  ZERO false positives (99.1% decided accuracy) — fixes the numeric-
+  fabrication blind spot all local models share. Free tier, 20 req/min
+  (client-policy throttle in the adapter). ~typesafe/jev-latest (jev-1.13)
+  is the precision specialist (0 FP everywhere, AUC 0.998 chunked, sparse
+  at 0.99); span-01(-lite) is a refuter, not a verifier; K2 stays the
+  local offline fallback. Chunking lifts every serious decision model —
+  substrate validated. Full table: docs/benchmarks/openrouter-decision-
+  models-2026-10-03.md.
+
 ## 2026-10-03 (Laya engine)
 
 - **Laya-multilingual REJECTED for claim verification** (zero-shot, model-card

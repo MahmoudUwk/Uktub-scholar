@@ -277,6 +277,156 @@ export function k2Engine(opts: { env: Record<string, string | undefined>; fetchI
   };
 }
 
+/** Shared OpenRouter client behavior: per-call throttle (labelled client
+ * policy — free tier is 20 req/min) and one retry on 429, sleeping until the
+ * rate-limit window resets (bounded at 70 s). */
+function openrouterThrottleMs(env: Record<string, string | undefined>): number {
+  const raw = env.UKTUB_OPENROUTER_MIN_INTERVAL_MS;
+  if (raw === undefined || raw === "") return 0;
+  const v = Number(raw);
+  return Number.isFinite(v) && v >= 0 && v <= 60_000 ? v : 0;
+}
+
+async function openrouterFetchWithRetry(
+  doFetch: typeof fetch,
+  url: string,
+  init: RequestInit,
+  label: string,
+  throttleMs: number,
+  lastCallAt: { value: number },
+): Promise<Response> {
+  const send = async (): Promise<Response> => {
+    const wait = lastCallAt.value + throttleMs - Date.now();
+    if (wait > 0) await new Promise((r) => setTimeout(r, wait));
+    lastCallAt.value = Date.now();
+    return doFetch(url, init);
+  };
+  let res = await send().catch((e: unknown) => {
+    throw new Error(`unreachable: ${e instanceof Error ? e.message : String(e)}`);
+  });
+  // Free tiers use fixed per-minute windows: retry 429s up to three times,
+  // sleeping to the window reset (bounded) before each attempt.
+  for (let attempt = 0; res.status === 429 && attempt < 3; attempt++) {
+    const resetHeader = res.headers.get("x-ratelimit-reset");
+    const resetAt = resetHeader ? Number(resetHeader) : 0;
+    const sleepMs = Math.min(Math.max(resetAt - Date.now() + 250, 1_000), 70_000); // client policy: bounded retry window
+    await new Promise((r) => setTimeout(r, sleepMs));
+    res = await send().catch((e: unknown) => {
+      throw new Error(`unreachable: ${e instanceof Error ? e.message : String(e)}`);
+    });
+  }
+  if (!res.ok) throw new Error(`HTTP ${res.status}: ${(await res.text()).slice(-300)}`);
+  return res;
+}
+
+/**
+ * OpenRouter decisions-endpoint adapter (`/api/alpha/decisions`): the
+ * TypeSafe `/v1/systemone` wire shape served by hosted decision models
+ * (e.g. inception/mercury-decide, respan/span-01) — one `noul` question per
+ * row, `answers.c.noul` = P(true). Key: `OPENROUTER_API_KEY`; model:
+ * `UKTUB_OPENROUTER_MODEL`. Stateless client, worker-safe.
+ */
+export function openrouterDecisionsEngine(opts: {
+  env: Record<string, string | undefined>;
+  fetchImpl?: typeof fetch;
+  model: string;
+}): ClaimEngine {
+  const key = opts.env.OPENROUTER_API_KEY;
+  if (!key) throw new EngineError("openrouter decisions engine: OPENROUTER_API_KEY is not set");
+  const doFetch = opts.fetchImpl ?? fetch;
+  const throttleMs = openrouterThrottleMs(opts.env);
+  const lastCallAt = { value: 0 };
+  return {
+    async run(rows) {
+      if (rows.length === 0) return [];
+      const pTrues: number[] = [];
+      for (const row of rows) {
+        const res = await openrouterFetchWithRetry(
+          doFetch,
+          "https://openrouter.ai/api/alpha/decisions",
+          {
+            method: "POST",
+            headers: { authorization: `Bearer ${key}`, "content-type": "application/json" },
+            body: JSON.stringify({ model: opts.model, state: row.state, questions: { c: { type: "noul", instructions: row.instructions } } }),
+            signal: AbortSignal.timeout(120_000), // client policy: hosted cold-start outliers
+          },
+          `openrouter decisions (${opts.model})`,
+          throttleMs,
+          lastCallAt,
+        ).catch((e: unknown) => {
+          throw new EngineError(`openrouter decisions (${opts.model}): ${e instanceof Error ? e.message : String(e)}`);
+        });
+        const parsed = (await res.json()) as { answers?: Record<string, { noul?: number }> };
+        const p = parsed.answers?.c?.noul;
+        if (typeof p !== "number") throw new EngineError(`openrouter decisions (${opts.model}): response missing answers.c.noul`);
+        pTrues.push(p);
+      }
+      return pTrues;
+    },
+  };
+}
+
+/**
+ * OpenRouter chat adapter for text models that answer entailment yes/no
+ * (e.g. typesafe/jev-router — the router fronts the jev decision family but
+ * exposes no probabilities). Scores are binary: yes → 1, no → 0. AUC and
+ * verdicts remain well-defined; treat confidence as a hard label, not a
+ * calibrated probability. Key: `OPENROUTER_API_KEY`; model:
+ * `UKTUB_OPENROUTER_CHAT_MODEL`.
+ */
+export function openrouterChatEngine(opts: {
+  env: Record<string, string | undefined>;
+  fetchImpl?: typeof fetch;
+  model: string;
+}): ClaimEngine {
+  const key = opts.env.OPENROUTER_API_KEY;
+  if (!key) throw new EngineError("openrouter chat engine: OPENROUTER_API_KEY is not set");
+  const doFetch = opts.fetchImpl ?? fetch;
+  const throttleMs = openrouterThrottleMs(opts.env);
+  const lastCallAt = { value: 0 };
+  return {
+    async run(rows) {
+      if (rows.length === 0) return [];
+      const pTrues: number[] = [];
+      for (const row of rows) {
+        const res = await openrouterFetchWithRetry(
+          doFetch,
+          "https://openrouter.ai/api/v1/chat/completions",
+          {
+            method: "POST",
+            headers: { authorization: `Bearer ${key}`, "content-type": "application/json" },
+            body: JSON.stringify({
+              model: opts.model,
+              messages: [
+                {
+                  role: "user",
+                  content:
+                    `Passage: ${row.state}\n\nClaim: ${row.instructions}\n\n` +
+                    "Does the passage state or directly entail the claim? Answer with exactly one word: yes or no.",
+                },
+              ],
+              max_tokens: 2000, // the router's reasoning backend emits chain-of-thought before the one-word answer
+              temperature: 0,
+            }),
+            signal: AbortSignal.timeout(120_000),
+          },
+          `openrouter chat (${opts.model})`,
+          throttleMs,
+          lastCallAt,
+        ).catch((e: unknown) => {
+          throw new EngineError(`openrouter chat (${opts.model}): ${e instanceof Error ? e.message : String(e)}`);
+        });
+        const parsed = (await res.json()) as { choices?: { message?: { content?: string } }[] };
+        const content = (parsed.choices?.[0]?.message?.content ?? "").trim().toLowerCase();
+        if (content.startsWith("yes")) pTrues.push(1);
+        else if (content.startsWith("no")) pTrues.push(0);
+        else throw new EngineError(`openrouter chat (${opts.model}): unparseable answer ${JSON.stringify(content.slice(0, 60))}`);
+      }
+      return pTrues;
+    },
+  };
+}
+
 /** Typed engine failure (R7-shaped): callers map it to a refusal result. */
 export class EngineError extends Error {
   constructor(message: string) {
