@@ -73,6 +73,7 @@ export interface VerdictCacheRow {
   model: string;
   min_confidence: number;
   verdict: "supported" | "refuted" | "unverified";
+  /** RAW engine P(true) at judgment time — NOT confidence-in-verdict; derive via mapChunkVerdict(confidence, min_confidence). */
   confidence: number;
   evidence_quote: string | null;
 }

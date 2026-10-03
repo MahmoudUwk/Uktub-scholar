@@ -21,7 +21,7 @@ const storeDeps = {
   cachedVerdicts,
   saveVerdicts,
 };
-import { chunksOf, saveVerdicts } from "../src/core/verify/store.ts";
+import { chunksOf, saveVerdicts, claimHashOf } from "../src/core/verify/store.ts";
 
 beforeEach(() => {
   root = mkdtempSync(join(tmpdir(), "uktub-pipe-"));
@@ -47,6 +47,47 @@ function fakeEngine(pTrueFor: (state: string, claim: string) => number, log?: { 
     },
   });
 }
+
+
+describe("verifyClaimInPaper regression (gemini review)", () => {
+  it("congruent chunk_index misses never leave an engine bucket undefined", async () => {
+    const db = openRegistry(root);
+    // Four 20-char paragraphs at a 32-char chunk target yield exactly three
+    // chunks (probe-verified): caching the middle one leaves misses
+    // {chunk_index 0, 2} — congruent mod 2 engines, the exact condition that
+    // crashed the old chunk_index-keyed bucketing (undefined bucket).
+    const CFG3 = { chunk_tokens: 8, overlap_tokens: 0, chars_per_token: 4.0, boundary: "hard" as const };
+    const text = Array.from({ length: 4 }, (_, i) => String(i).repeat(10) + "x".repeat(10)).join("\n\n");
+    replaceChunks(db, "10.1234/x", text, CFG3);
+    const all = chunksOf(db, "10.1234/x");
+    const middle = all.find((c) => c.chunk_index === 1)!;
+    const ch = claimHashOf("The tower is in Paris.");
+    saveVerdicts(db, [{ claim_hash: ch, chunk_hash: middle.content_hash, model: "m", min_confidence: 0.99, verdict: "unverified", confidence: 0.5, evidence_quote: null }]);
+    const log = { calls: 0, rows: 0 };
+    const r = await verifyClaimInPaper(
+      db,
+      storeDeps,
+      { createEngine: fakeEngine(() => 0.2, log), doi: "10.1234/x", claim: "The tower is in Paris.", model: "m", minConfidence: 0.99, workers: 2 },
+    );
+    assert.equal(log.rows, 2, "both misses verified");
+    assert.equal(r.chunks.length, all.length);
+    assert.equal(log.calls, 2, "two engines, one row each");
+  });
+
+  it("refuted fresh chunk reports confidence-in-verdict (1 - p), not raw p", async () => {
+    const db = openRegistry(root);
+    replaceChunks(db, "10.1234/x", "only chunk.", CFG);
+    const r = await verifyClaimInPaper(
+      db,
+      storeDeps,
+      { createEngine: fakeEngine(() => 0.001), doi: "10.1234/x", claim: "The tower is in Paris.", model: "m", minConfidence: 0.99, workers: 1 },
+    );
+    assert.equal(r.verdict, "refuted");
+    assert.equal(r.confidence > 0.99, true, `confidence should be 1 - p = 0.999, got ${r.confidence}`);
+    assert.equal(r.chunks[0].confidence > 0.99, true);
+    assert.equal(r.chunks[0].p_true, 0.001);
+  });
+});
 
 describe("verifyClaimInPaper", () => {
   it("any-supported aggregation: one supporting chunk out of many → paper verdict supported", async () => {

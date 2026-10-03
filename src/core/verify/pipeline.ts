@@ -113,10 +113,11 @@ export async function verifyClaimInPaper(
   if (misses.length > 0) {
     const rows = misses.map((c) => ({ state: c.text, instructions: opts.claim }));
     const engines = Array.from({ length: Math.max(1, Math.min(opts.workers, misses.length)) }, () => opts.createEngine());
-    const buckets = misses.reduce<Record<number, typeof misses>>((acc, c) => {
-      (acc[c.chunk_index % engines.length] ??= []).push(c);
-      return acc;
-    }, {});
+    // Bucket by position in `misses`, not chunk_index: congruent absolute
+    // indices (e.g. misses {0, 2} over 2 engines) would leave a bucket
+    // undefined and crash the run.
+    const buckets: (typeof misses)[] = Array.from({ length: engines.length }, () => []);
+    misses.forEach((c, j) => buckets[j % engines.length].push(c));
     const parts = await Promise.all(
       engines.map((eng, w) => eng.run(buckets[w].map((c) => ({ state: c.text, instructions: opts.claim }))).then((ps) => ({ w, ps }))),
     );
@@ -134,7 +135,7 @@ export async function verifyClaimInPaper(
           model: opts.model,
           min_confidence: opts.minConfidence,
           verdict: mapped.verdict,
-          confidence: mapped.confidence,
+          confidence: f.p_true, // cache stores the RAW engine P(true); verdict-confidence is derived on read
           evidence_quote: null as string | null,
         } satisfies VerdictCacheRow;
       }),
@@ -144,9 +145,10 @@ export async function verifyClaimInPaper(
   const chunkVerdicts: ChunkVerdict[] = chunks.map((c) => {
     const hit = cached.get(c.content_hash);
     const freshHit = fresh.find((f) => f.chunk_hash === c.content_hash);
-    const pTrue = hit ? hit.confidence : freshHit ? freshHit.p_true : 0;
-    const verdict = hit ? hit.verdict : mapChunkVerdict(pTrue, opts.minConfidence).verdict;
-    return { chunk_index: c.chunk_index, chunk_hash: c.content_hash, p_true: pTrue, verdict, confidence: pTrue, cached: Boolean(hit) };
+    const raw = hit ? hit.confidence : freshHit ? freshHit.p_true : 0;
+    const mapped = mapChunkVerdict(raw, opts.minConfidence);
+    const verdict = hit ? hit.verdict : mapped.verdict;
+    return { chunk_index: c.chunk_index, chunk_hash: c.content_hash, p_true: raw, verdict, confidence: mapped.confidence, cached: Boolean(hit) };
   });
 
   const supported = chunkVerdicts.find((c) => c.verdict === "supported");
