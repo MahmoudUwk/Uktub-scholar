@@ -10,7 +10,7 @@
  * next candidate (docs/DECISIONS.md, docs/BACKLOG.md).
  */
 
-import { spawn } from "node:child_process";
+import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -77,50 +77,164 @@ export function juliaEngine(opts: {
   pythonBin?: string;
   spawnImpl?: typeof spawn;
 }): ClaimEngine {
-  const pythonBin = opts.pythonBin ?? opts.env.UKTUB_JULIA_PYTHON ?? "python3";
-  const script = join(dirname(fileURLToPath(import.meta.url)), "../../../scripts/julia_decide.py");
+  return workerEngine({ ...opts, script: "julia_decide.py", envName: "UKTUB_JULIA_PYTHON", label: "julia" });
+}
+
+/**
+ * Laya engine adapter: resident Router-mode worker (`scripts/laya_decide.py`)
+ * — the model card's recommended Router usage, pinned to
+ * `model="multilingual"` + `max_len=8192` (the card's long-document
+ * prescription; the English checkpoint reads only 512 tokens). Same JSONL
+ * protocol as the julia worker. Python: `UKTUB_LAYA_PYTHON`.
+ */
+export function layaEngine(opts: {
+  env: Record<string, string | undefined>;
+  pythonBin?: string;
+  spawnImpl?: typeof spawn;
+}): ClaimEngine {
+  return workerEngine({ ...opts, script: "laya_decide.py", envName: "UKTUB_LAYA_PYTHON", label: "laya", respawnEveryRows: 60 });
+}
+
+/** Shared resident-python JSONL worker: spawn once per run, stream rows, map replies. */
+function workerEngine(opts: {
+  env: Record<string, string | undefined>;
+  pythonBin?: string;
+  spawnImpl?: typeof spawn;
+  script: string;
+  envName: string;
+  label: string;
+  /** Recycle the resident child after N answered rows: long-context GPU
+   * runs accumulate allocator fragmentation that eventually aborts the
+   * process natively; a fresh child resets the CUDA context. */
+  respawnEveryRows?: number;
+}): ClaimEngine {
+  const pythonBin = opts.pythonBin ?? opts.env[opts.envName] ?? "python3";
+  const script = join(dirname(fileURLToPath(import.meta.url)), "../../../scripts", opts.script);
   const doSpawn = opts.spawnImpl ?? spawn;
+  // One resident child across run() calls: model load is paid once. run()
+  // calls are serialized so rows and replies never interleave. A crashed
+  // child marks the session dead; the next run() respawns it.
+  let child: ChildProcessWithoutNullStreams | null = null;
+  let buffer = "";
+  let ready = false;
+  let answeredSinceSpawn = 0;
+  let chain: Promise<unknown> = Promise.resolve();
+  let draining: Promise<void> | null = null; // retired child exiting; its CUDA context must be gone before the next spawn
+  let pending: {
+    rows: { state: string; instructions: string }[];
+    resolve: (pTrues: number[]) => void;
+    reject: (e: EngineError) => void;
+    answers: number[];
+  } | null = null;
+
+  const fail = (message: string) => {
+    const current = pending;
+    pending = null;
+    child?.kill("SIGKILL");
+    child = null;
+    ready = false;
+    buffer = "";
+    current?.reject(new EngineError(message));
+  };
+
+  const spawnWorker = () => {
+    ready = false;
+    buffer = "";
+    child = doSpawn(pythonBin, [script], {
+      env: { ...opts.env, PYTORCH_CUDA_ALLOC_CONF: opts.env.PYTORCH_CUDA_ALLOC_CONF ?? "expandable_segments:True" } as NodeJS.ProcessEnv,
+      stdio: ["pipe", "pipe", "pipe"],
+    });
+    const current = child;
+    const timer = setTimeout(() => fail(`${opts.label} engine exceeded the 600 s load+batch limit`), 600_000); // client policy: load + one batch
+    const finish = () => {
+      clearTimeout(timer);
+      if (!pending) return;
+      if (!ready) {
+        const lines = buffer.split("\n").filter((l) => l.trim().length > 0);
+        const errText = lines.find((l) => l.includes("error")) ?? lines[0] ?? "no output";
+        fail(`${opts.label} engine failed to load: ${errText.slice(-400)}`);
+        return;
+      }
+      fail(`${opts.label} engine exited before answering ${pending.rows.length - pending.answers.length} remaining rows`);
+    };
+    current.stdout!.on("data", (d: Buffer) => {
+      if (child !== current) return; // retired child's stragglers are ignored
+      buffer += d.toString();
+      if (!ready) {
+        const readyIdx = buffer.indexOf('"ready"');
+        if (readyIdx === -1) return;
+        const lineEnd = buffer.indexOf("\n", readyIdx);
+        if (lineEnd === -1) return; // wait for the ready line's newline
+        ready = true;
+        buffer = buffer.slice(lineEnd + 1);
+      }
+      let idx: number;
+      while (pending && (idx = buffer.indexOf("\n")) !== -1) {
+        const line = buffer.slice(0, idx).trim();
+        buffer = buffer.slice(idx + 1);
+        if (!line) continue;
+        let parsed: { p_true?: number; error?: string };
+        try {
+          parsed = JSON.parse(line) as { p_true?: number; error?: string };
+        } catch {
+          fail(`${opts.label} engine emitted a non-JSON line: ${line.slice(-200)}`);
+          return;
+        }
+        if (typeof parsed.p_true !== "number") {
+          fail(`${opts.label} engine row ${pending.answers.length + 1}: ${parsed.error ?? "no p_true"}`);
+          return;
+        }
+        pending.answers.push(parsed.p_true);
+        if (pending.answers.length === pending.rows.length) {
+          clearTimeout(timer);
+          const done = pending;
+          pending = null;
+          done.resolve(done.answers);
+          if (opts.respawnEveryRows && ++answeredSinceSpawn >= opts.respawnEveryRows) {
+            // Clean retirement: sentinel lets the worker exit between rows —
+            // killing mid-forward-pass orphans CUDA state and races pipes.
+            answeredSinceSpawn = 0;
+            ready = false;
+            const retiring = child;
+            child = null;
+            draining = new Promise<void>((res) => retiring?.once("close", () => res()));
+            retiring?.stdin!.write(JSON.stringify({ exit: true }) + "\n");
+          }
+        }
+      }
+    });
+    current.stderr!.on("data", (d: Buffer) => {
+      /* diagnostics only — laya/torch print benign warnings mentioning CUDA
+         here; real failures surface as row-level {"error": …} lines, close,
+         or timeout */
+      void d;
+    });
+    current.on("error", (e) => fail(`${opts.label} engine not startable (${pythonBin}): ${e.message}`));
+    current.on("close", () => {
+      if (child !== current) return; // retired child: only its drain promise watches this close
+      finish();
+    });
+    return current;
+  };
+
   return {
     run(rows) {
-      return new Promise((resolveRun, rejectRun) => {
-        const child = doSpawn(pythonBin, [script], {
-          env: { ...opts.env } as NodeJS.ProcessEnv,
-          stdio: ["pipe", "pipe", "pipe"],
+      if (rows.length === 0) return Promise.resolve([]);
+      const attempt = async (): Promise<number[]> => {
+        if (draining) {
+          const wait = draining;
+          draining = null;
+          await wait; // retiring worker released its CUDA context — safe to spawn now
+        }
+        return new Promise((resolveRun, rejectRun) => {
+          pending = { rows, resolve: resolveRun, reject: rejectRun, answers: [] };
+          child ??= spawnWorker();
+          // The child answers one line per row; a respawn on the previous
+          // failure path may still be loading — replies are matched by count.
+          for (const row of rows) child.stdin!.write(JSON.stringify(row) + "\n");
         });
-        let out = "";
-        let err = "";
-        const timer = setTimeout(() => child.kill("SIGKILL"), 300_000); // client policy: 5 min incl. model load
-        child.stdout!.on("data", (d: Buffer) => (out += d.toString()));
-        child.stderr!.on("data", (d: Buffer) => (err += d.toString()));
-        child.on("error", (e) => {
-          clearTimeout(timer);
-          rejectRun(new EngineError(`julia engine not startable (${pythonBin}): ${e.message}`));
-        });
-        child.on("close", () => {
-          clearTimeout(timer);
-          const lines = out.split("\n").filter((l) => l.trim().length > 0);
-          const readyIdx = lines.findIndex((l) => l.includes('"ready"'));
-          if (readyIdx === -1) {
-            return rejectRun(new EngineError(`julia engine failed to load: ${err.slice(-400) || lines[0] || "no output"}`));
-          }
-          const answers = lines.slice(readyIdx + 1);
-          if (answers.length < rows.length) {
-            return rejectRun(new EngineError(`julia engine returned ${answers.length} answers for ${rows.length} rows`));
-          }
-          const pTrues: number[] = [];
-          for (let i = 0; i < rows.length; i++) {
-            const parsed = JSON.parse(answers[i]) as { p_true?: number; error?: string };
-            if (typeof parsed.p_true !== "number") return rejectRun(new EngineError(`julia engine row ${i + 1}: ${parsed.error ?? "no p_true"}`));
-            pTrues.push(parsed.p_true);
-          }
-          resolveRun(pTrues);
-        });
-        child.stdin!.on("error", () => {
-          /* closed below; close handler surfaces the failure */
-        });
-        for (const row of rows) child.stdin!.write(JSON.stringify(row) + "\n");
-        child.stdin!.end();
-      });
+      };
+      return (chain = chain.then(attempt, attempt));
     },
   };
 }

@@ -5,6 +5,17 @@ re-proposed without new evidence (RRSI discipline: the edit history exists so
 dead hypotheses are not redrawn). Entries record the verdict, the reason, and
 the evidence that would reopen the question.
 
+## 2026-10-03 (Laya engine)
+
+- **Laya-multilingual REJECTED for claim verification** (zero-shot, model-card
+  usage: Router mode, max_len=8192): chunked AUC 0.528, over-confident
+  (TRUE .858 / FALSE .850), dangerous verdicts at every reachable bar, max
+  best-p 0.9745. Matches the checkpoint's own invalid-calibration-temperatures
+  warning. Adapter kept (scripts/laya_decide.py, resident Router worker with
+  clean sentinel retirement + drain); engine remains selectable for
+  re-benchmarking fine-tuned checkpoints (laya-typed-decisions is the
+  documented candidate).
+
 ## 2026-10-03 (K2-Type engine)
 
 - **K2-Type-0.9B (jev decision server, GPU) ADOPTED as primary verification
