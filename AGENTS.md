@@ -67,8 +67,8 @@ Do not duplicate these ledgers or treat historical plans as current contracts.
   No branches or PRs. Still stage reviewed paths only — never blanket-stage, reset or clean —
   and never stage `.mcp.json` or `opencode.json`. Run the checks below before pushing; a push
   does not deploy anything.
-- Never read credentials from retired repositories. Live provider calls require
-  explicit authorization; offline tests must not spend provider quota.
+- Never read credentials from retired repositories. Offline tests must not spend provider
+  quota; live provider calls belong in dated experiments and smokes, recorded in the handoff.
 - Verification defaults to the local Decision 2.0 Eos engine (owner decision 2026-10-04;
   needs a Python env with torch/transformers — README); OpenRouter Mercury and the other
   engines remain selectable.

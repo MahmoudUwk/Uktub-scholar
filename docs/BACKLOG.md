@@ -4,7 +4,37 @@ Open correctness risks and deferred work; current behavior is in [README](../REA
 Each item names its trigger and source/template. Historical rationale lives in
 [DECISIONS.md](DECISIONS.md); attribution rules in [NOTICE.md](../NOTICE.md).
 
-## Owner-directed items (2026-10-04)
+## Roadmap — owner-directed, in build order (2026-10-04)
+
+Every step is behavior-first: tests written and run red, implemented, then green, then verified on the
+real corpus and recorded. Status is updated in place.
+
+1. **Section-aware chunking (in progress).** One structure-aware splitter shared by retrieval and claim
+   verification: whole sections when they fit the window, merged when tiny, split at paragraph then
+   sentence boundaries when too large, every chunk labelled with its section. Structure from GROBID TEI
+   heads and from PDF text items (font size plus numbering), paragraphs as the fallback. Must be provably
+   reliable: every character in exactly one chunk, exact offsets, deterministic, size-capped, no orphaned
+   headings, golden sections on the real papers. Adopt as the default only if held-out claim recall is not
+   worse than the fixed 1,024-token baseline.
+2. **Local model runtime: llama.cpp for embeddings (and any GGUF decision model).** Choice among bundling,
+   first-use pinned download, an npm binding, or a user install is being researched; embedding model is
+   EmbeddingGemma-300m QAT Q8_0 (GGUF, Gemma licence — terms apply). Decision-2.0 Eos is a custom
+   Qwen-backbone-plus-head model, not a stock llama.cpp architecture; it stays on its Python worker unless
+   a conversion is shown to reproduce its scores.
+3. **RAG (exploratory retrieval) for the writing agent.** A passage-search tool over registered papers:
+   hybrid FTS5/BM25 plus vector search fused with Reciprocal Rank Fusion (k = 60), lexical fallback when no
+   embedder is available, results as bounded passages with section labels and `doi@revision#start-end`
+   pointers under the same containment rules as evidence. Vectors in a plain SQLite BLOB table with an exact
+   scan (per-project corpora are small) unless measurement shows an index is needed. Measured on held-out
+   papers (recall of the gold passage, latency) before it ships.
+4. **OCR fallback for scanned PDFs** (optional; LiteParse was reviewed and not adopted as the primary parser).
+5. **Full-text download for open-access papers** (deferred by the owner): Content API with the existing key,
+   other lawful routes.
+6. **Citation node-like system — the very end.** Working reading, to confirm with the owner: a graph whose
+   nodes are claims, supporting passages (pointers) and registered papers (citekeys), edges "supported by" /
+   "cites", so each manuscript sentence is traceable to exact evidence.
+
+## Owner-directed notes (2026-10-04)
 
 - **Full-text download for open-access papers — deferred.** The working corpus is the owner's
   local library (`../test_papers`, attached with `paper_registry` `attach_source`). Complicated
