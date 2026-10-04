@@ -96,10 +96,25 @@ Method as before (test first, red then green, mutation checks on the splitter, r
 - Findings that would have bitten silently: the owner-named EmbeddingGemma GGUF lacks the dense modules
   (cosine ≈ 0.01 vs the reference); `llama-server` needs `-b/-ub` ≥ the chunk size.
 
+## Managed embedding runtime and independent review (2026-10-04, third pass)
+
+- Owner decisions taken: a pinned `llama-server` fetched on first use and supervised (not bundled, not in-process);
+  the cduk dense-modules GGUF, sha256-pinned.
+- Built test-first: lock-file validation, verified streaming downloads with a size gate, safe extraction (`tar` strict
+  mode plus validated same-directory symlinks), health-checked supervised child (log capture, retry on port races,
+  killed on parent exit), resident per cache directory, `embed status` and `embed install --yes` (consent before any
+  download), `embedderFromEnv` choosing explicit URL, then the installed runtime, then keyword only.
+- **Live install found a defect the unit tests missed** (the real archive's symlink chains); fixed with a test that
+  mirrors the real layout. Real run: install (17 MB + 334 MB, hashes verified), cold managed hybrid search in 14 s
+  (server start plus embedding 77 passages), no server process left after the CLI exited.
+- An independent review of the whole session's diff verified 12 findings (one high: section labels bypassed output
+  containment); all are fixed with regression tests — listed in [DECISIONS](DECISIONS.md). The reviewer's own fuzzers
+  (200k cases each) pass on the final splitter.
+
 ## Open for the owner
 
-1. **Embedding runtime packaging (BACKLOG item 2).** Recommended: a pinned `llama-server` release asset fetched on
-   first use with a checked sha256 and supervised as a child process, the GGUF fetched from a lock file with stated
-   provenance; a user-installed server stays an override. Needs your decision before it is built.
-2. The "citation node-like system" is logged for the very end; please confirm the intended scope (BACKLOG).
-3. The workspace-root `AGENTS.md` push rule was changed in the previous session; confirm the wording suits you.
+1. The managed runtime is pinned for **linux-x64 only** (BACKLOG item 2): tell me which other platforms matter.
+2. The pinned embedding GGUF is a third-party conversion (hash-pinned, parity-gated). A first-party conversion needs
+   your Hugging Face licence acceptance for Google's gated weights.
+3. The "citation node-like system" is logged for the very end; please confirm the intended scope (BACKLOG).
+4. The workspace-root `AGENTS.md` push rule was changed in the first session; confirm the wording suits you.

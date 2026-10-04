@@ -57,7 +57,30 @@ EmbeddingGemma was asked about.
   `--sentence-transformers-dense-modules` (`cduk/embeddinggemma-300m-GGUF-with-dense-modules`) matches the
   reference (mean cosine 0.990). llama-server also needs `-b/-ub` ≥ the chunk size (default 512 rejects a
   570-token chunk). Both are in the README; the embedder fails closed (typed error, lexical fallback).
-- **Runtime packaging** — not decided; see BACKLOG item 2 for the researched options and the open question.
+- **Runtime packaging (owner decision, 2026-10-04)** — a pinned official `llama-server` build fetched on first use
+  and supervised as a child process (not bundled in the package: a CUDA build is ≈ 370 MB; not an in-process
+  binding: a native crash or a CPU-bound batch must not take the agent host down), plus the cduk dense-modules
+  EmbeddingGemma GGUF pinned by sha256. Facts found while building it: the research report's advice to pin the
+  semver tag `v0.5.0` does not hold — that release has **no binary assets**; binaries exist only under the `b…`
+  build tags, so `b11160` is pinned (the upstream build the parity test ran on; digest published by GitHub equals
+  the downloaded file's). The pinned pair was re-measured end to end (mean cosine 0.990 against sentence-transformers).
+  Install is an explicit CLI step with the Gemma terms shown and `--yes` required; a search never downloads. The
+  live install found a defect the unit tests could not: the real archive carries chains of same-directory library
+  symlinks that node-tar's strict mode rejects in some orders, so symlinks are validated (plain sibling names,
+  nothing absolute or `..`) and recreated by the package while files and directories still go through `tar`'s strict
+  extraction. Only linux-x64 is pinned and tested; the CPU build is used (700 passages embed in ≈ 20 s).
+- **Independent review (fresh agent, 12 verified findings, all fixed with regression tests)** — high: a TEI `<head>`
+  with no length cap left the source through the `section` label past output containment (labels are now clipped to
+  200 characters in the splitter and the tool, and over-long TEI heads are text, not marks); medium: the error-echo guard
+  failed when a passage had runs of whitespace; search hydrated ranked hits by `chunk_index` after awaits (now by
+  content-addressed chunk id, one retry when the corpus changed mid-call); a heading-only section dangled as the trailing
+  line of the previous chunk (now goes forward with its section); stale PDF heading marks survived a detector change
+  (PDF marks are re-derived at every rechunk); the splitter could cut a surrogate pair at a forced cut (and a tiny-cap
+  fuzz exposed an empty and an oversize piece introduced by the first fix); a busy-database error and a dimension
+  mismatch were mislabelled as embedding failures (now propagated and self-healed); low: orphan vectors were never
+  pruned, an embedder's identity fingerprint came from the first model a multi-model server listed, extreme float
+  components overflowed to NaN/Infinity and dimensions were unbounded, a cold index embedded without bound and twice under
+  concurrency, and overlapping hits were mislabelled `whole_source`.
 - Bug found by the live work: `containEvidence` spends the release budget in reading order (right for paged
   verification); search needs it spent on the best-ranked passages, so it takes an explicit `releaseOrder`.
 

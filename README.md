@@ -134,27 +134,39 @@ text in one call, is withheld with its reason (the pointer is always kept), spen
 best-ranked passages first. At most 10 passages per call (default 5). Results are retrieval, not
 verification — check a claim with `verify_claim` before citing it.
 
-Search is BM25 over an FTS5 index, and **hybrid when an embedding server is configured**: BM25 and an
-exact-cosine vector ranking fused with Reciprocal Rank Fusion (k = 60). Any OpenAI-compatible
-`/v1/embeddings` server works; the measured one is
-[EmbeddingGemma-300m](https://huggingface.co/google/embeddinggemma-300m) (QAT Q8_0 GGUF, Gemma terms) on `llama-server`:
+Search is BM25 over an FTS5 index, and **hybrid when an embedding server is available**: BM25 and an exact-cosine
+vector ranking fused with Reciprocal Rank Fusion (k = 60). Two ways to have a server:
+
+- **Managed runtime (Linux x64):** `uktub-scholar embed install --yes` downloads two pinned artifacts once into a shared
+  cache (`UKTUB_CACHE_DIR`, default `~/.cache/uktub-scholar`; not project state, safe to delete) and verifies each against
+  the sha256 and size in [`models.lock.json`](src/core/embed/models.lock.json): the official
+  [llama.cpp](https://github.com/ggml-org/llama.cpp) `b11160` CPU build (17 MB, MIT) and
+  [EmbeddingGemma-300m](https://huggingface.co/google/embeddinggemma-300m) QAT Q8_0 with the sentence-transformers dense
+  modules (334 MB, **Gemma terms of use — `install` shows them and requires `--yes`**). The archive is extracted safely
+  (`..`, absolute paths and escaping links are refused). After that, `search_passages` starts `llama-server` on loopback as a
+  supervised child process (resident for the session, restarted if it dies, killed when the host exits) — a search never
+  downloads anything. `uktub-scholar embed status` shows what is installed. Other platforms are refused with the
+  instruction to run their own server.
+- **Your own server:** any OpenAI-compatible `/v1/embeddings` endpoint, which wins over the managed runtime:
 
 | Variable | Meaning |
 |---|---|
-| `UKTUB_EMBED_URL` | base URL of the embedding server; unset = keyword search only (not a degradation) |
-| `UKTUB_EMBED_MODEL` | optional declared model name; by default the model the server reports on `/v1/models` |
+| `UKTUB_EMBED_URL` | base URL of your embedding server; unset = the managed runtime if installed, else keyword search only (not a degradation) |
+| `UKTUB_EMBED_MODEL` | optional declared model name; matched against the server's `/v1/models` entry (by id or file name) |
 | `UKTUB_EMBED_PROFILE` | prompt profile: `embeddinggemma` (default; adds the model's query/document task prefixes) or `none` |
+| `UKTUB_CACHE_DIR` | where the managed runtime and model live |
 
-Vectors are cached in the registry keyed by passage content and the served model (its size and
-quantisation are part of the identity), so they are embedded once, survive rechunking that keeps a
-passage, and are never read for a different model. If the server is down or answers badly the call returns
-keyword results and states `vector search unavailable (…)`. **Server requirements** (found by running it):
-start `llama-server` with `--embeddings --pooling mean -c 2048 -b 2048 -ub 2048` — the default physical
-batch of 512 tokens rejects a chunk of ≈ 570 tokens — and use a GGUF **converted with the sentence-transformers
-dense modules**: the `ggml-org/embeddinggemma-300m-qat-q8_0-GGUF` file omits them and its vectors have cosine
-≈ 0.01 with the reference model (measured). `cduk/embeddinggemma-300m-GGUF-with-dense-modules`
-(`embeddinggemma-300M-QAT-Q8.gguf`) reproduces the reference (mean cosine 0.990, pairwise-similarity
-correlation 0.995, on 20 sentences). Measured value: [passage search benchmark](docs/benchmarks/rag-search-section-512-2026-10-04.md).
+Vectors are cached in the registry keyed by passage content and the served model (the managed runtime's identity is the
+pinned model hash; for your own server its size and quantisation), so they are embedded once, survive rechunking that keeps
+a passage, and are never read for a different model. A cold index is built at most 256 passages per call (the result says
+how far it got; repeat the search to extend it). If the server is down or answers badly the call returns keyword results and
+states `vector search unavailable (…)`. **Requirements for your own server** (found by running it): start `llama-server` with
+`--embeddings --pooling mean -c 2048 -b 2048 -ub 2048` — the default physical batch of 512 tokens rejects a chunk of ≈ 570
+tokens — and use a GGUF **converted with the sentence-transformers dense modules**: the
+`ggml-org/embeddinggemma-300m-qat-q8_0-GGUF` file omits them and its vectors have cosine ≈ 0.01 with the reference model
+(measured). The pinned file (`cduk/embeddinggemma-300m-GGUF-with-dense-modules`, a third-party conversion) reproduces the
+reference (mean cosine 0.990, pairwise-similarity correlation 0.995, on 20 sentences, with the pinned runtime build).
+Measured value: [passage search benchmark](docs/benchmarks/rag-search-section-512-2026-10-04.md).
 
 ### Sources
 
@@ -182,7 +194,7 @@ PeerJ paper and an arXiv preprint did), which are not scraped — attach a file 
 
 `uktub-scholar` exposes `init`, `register <id>...`, `attach <doi|citekey> <file>`,
 `verify <claim> [--papers all|<handle>,… ] [--query <words>] [--continuation <token>]`,
-`search <query> [--papers all|<handle>,… ] [--limit <n>]`,
+`search <query> [--papers all|<handle>,… ] [--limit <n>]`, `embed status`, `embed install --yes`,
 `deregister <doi|citekey>...`, `sync-bib`, `list`, and `compile [entry.tex]`.
 `register`, `attach`, `verify` and `search` call the same tool functions the agent uses and print
 exactly what the agent reads.

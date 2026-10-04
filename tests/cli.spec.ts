@@ -361,3 +361,84 @@ describe("uktub-scholar register / attach / verify (same tools as the agent)", (
     assert.doesNotMatch(usage, /trace|<doi> <claim>/);
   });
 });
+
+describe("uktub-scholar embed install / status (managed embedding runtime)", async () => {
+  const { createHash } = await import("node:crypto");
+  const { makeTarGz } = await import("./helpers/tar.ts");
+  const sha = (b: Uint8Array): string => createHash("sha256").update(b).digest("hex");
+  const MODEL = Buffer.from("tiny model bytes ".repeat(30));
+  const archive = makeTarGz([{ name: "llama-test/llama-server", data: "#!/bin/sh\nexit 0\n", mode: 0o755 }]);
+  const lock = {
+    schema: 1 as const,
+    runtime: { name: "llama.cpp", version: "btest", license: "MIT", assets: { "linux-x64": { name: "llama-test.tar.gz", url: "https://example.test/rt.tar.gz", sha256: sha(archive), size: archive.length, dir: "llama-test", binary: "llama-server" } } },
+    embedding: { id: "test-embed", file: "model.gguf", url: "https://example.test/m.gguf", sha256: sha(MODEL), size: MODEL.length, license: "gemma", terms: "https://ai.google.dev/gemma/terms", profile: "none", serverArgs: ["--embeddings"] },
+  };
+  const bodies: Record<string, Uint8Array> = { [lock.runtime.assets["linux-x64"].url]: archive, [lock.embedding.url]: MODEL };
+  let fetched: string[] = [];
+  const embedFetch = (async (url: string | URL | Request) => {
+    fetched.push(String(url));
+    return new Response(Buffer.from(bodies[String(url)]) as unknown as ConstructorParameters<typeof Response>[0], { status: 200 });
+  }) as typeof fetch;
+  let cacheDir: string;
+  beforeEach(() => {
+    fetched = [];
+    cacheDir = mkdtempSync(join(tmpdir(), "uktub-cli-cache-"));
+  });
+  afterEach(() => rmSync(cacheDir, { recursive: true, force: true }));
+  const embedIo = (): ReturnType<typeof io> => io({ env: { UKTUB_CACHE_DIR: cacheDir }, embedLock: lock, embedFetch, embedPlatform: "linux-x64" } as never);
+
+  it("status before install: says it is not installed, and names the cache, the pinned model, its size and its terms", async () => {
+    const c = embedIo();
+    assert.equal(await runCli(["embed", "status"], c), 0);
+    const out = c.lines.out.join("\n");
+    assert.match(out, /not installed/i);
+    assert.ok(out.includes(cacheDir));
+    assert.match(out, /test-embed/);
+    assert.match(out, /gemma/i);
+    assert.deepEqual(fetched, []);
+  });
+
+  it("install without --yes only shows the plan (sizes, source, terms) and downloads nothing", async () => {
+    const c = embedIo();
+    assert.equal(await runCli(["embed", "install"], c), 1);
+    const text = [...c.lines.out, ...c.lines.err].join("\n");
+    assert.match(text, /--yes/);
+    assert.match(text, /ai\.google\.dev\/gemma\/terms/);
+    assert.match(text, /example\.test/);
+    assert.deepEqual(fetched, [], "consent comes before any download");
+  });
+
+  it("install --yes downloads, verifies and installs; status then says installed; a second install fetches nothing", async () => {
+    const c = embedIo();
+    assert.equal(await runCli(["embed", "install", "--yes"], c), 0);
+    assert.match(c.lines.out.join("\n"), /installed/i);
+    assert.equal(fetched.length, 2);
+    const s = embedIo();
+    assert.equal(await runCli(["embed", "status"], s), 0);
+    assert.match(s.lines.out.join("\n"), /installed/);
+    assert.doesNotMatch(s.lines.out.join("\n"), /not installed/);
+    fetched = [];
+    assert.equal(await runCli(["embed", "install", "--yes"], embedIo()), 0);
+    assert.deepEqual(fetched, []);
+  });
+
+  it("an unsupported platform refuses with the bring-your-own-server alternative", async () => {
+    const c = io({ env: { UKTUB_CACHE_DIR: cacheDir }, embedLock: lock, embedFetch, embedPlatform: "sunos-sparc" } as never);
+    assert.equal(await runCli(["embed", "install", "--yes"], c), 1);
+    assert.match(c.lines.err.join("\n"), /no llama\.cpp btest build is pinned for sunos-sparc.*UKTUB_EMBED_URL/);
+    assert.deepEqual(fetched, []);
+  });
+
+  it("a failed verification is reported and exits 1", async () => {
+    const tampered = (async () => new Response("wrong bytes", { status: 200 })) as unknown as typeof fetch;
+    const c = io({ env: { UKTUB_CACHE_DIR: cacheDir }, embedLock: lock, embedFetch: tampered, embedPlatform: "linux-x64" } as never);
+    assert.equal(await runCli(["embed", "install", "--yes"], c), 1);
+    assert.match(c.lines.err.join("\n"), /checksum_mismatch|size_mismatch|pinned/);
+  });
+
+  it("an unknown embed subcommand is a usage error", async () => {
+    const c = embedIo();
+    assert.equal(await runCli(["embed", "frobnicate"], c), 1);
+    assert.match(c.lines.err.join("\n"), /embed (install|status)/);
+  });
+});

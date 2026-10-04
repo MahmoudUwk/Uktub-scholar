@@ -1,0 +1,30 @@
+{
+  "schema": 1,
+  "comment": "Pinned artifacts for the managed embedding runtime. Every download is verified against its sha256 and size before use; a changed pin is a reviewed change to this file. Parity of this exact pair (runtime build + model file) against sentence-transformers was measured on 2026-10-04: mean cosine 0.990, pairwise-similarity correlation 0.995 (docs/benchmarks/rag-search-section-512-2026-10-04.md, docs/DECISIONS.md).",
+  "runtime": {
+    "name": "llama.cpp",
+    "version": "b11160",
+    "license": "MIT",
+    "assets": {
+      "linux-x64": {
+        "name": "llama-b11160-bin-ubuntu-x64.tar.gz",
+        "url": "https://github.com/ggml-org/llama.cpp/releases/download/b11160/llama-b11160-bin-ubuntu-x64.tar.gz",
+        "sha256": "48ece24283876fc3401b737724008c03cbc4c7ba335b6c1aa2a7b6ce2d49e435",
+        "size": 17002550,
+        "dir": "llama-b11160",
+        "binary": "llama-server"
+      }
+    }
+  },
+  "embedding": {
+    "id": "embeddinggemma-300m-qat-q8_0-dense",
+    "file": "embeddinggemma-300M-QAT-Q8.gguf",
+    "url": "https://huggingface.co/cduk/embeddinggemma-300m-GGUF-with-dense-modules/resolve/16eaef07700282e488368e27b992b8fe5a40c423/embeddinggemma-300M-QAT-Q8.gguf",
+    "sha256": "f6e8134a50d04402e1df9e388bec90b001637b58a0dc20a8bee0b2a78dbaff42",
+    "size": 333590816,
+    "license": "gemma",
+    "terms": "https://ai.google.dev/gemma/terms",
+    "profile": "embeddinggemma",
+    "serverArgs": ["--embeddings", "--pooling", "mean", "-c", "2048", "-b", "2048", "-ub", "2048", "--parallel", "1"]
+  }
+}

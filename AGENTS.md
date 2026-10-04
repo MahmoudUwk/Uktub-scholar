@@ -79,8 +79,10 @@ Do not duplicate these ledgers or treat historical plans as current contracts.
   `search_passages`, so a hit is always a unit the engine can read whole. The splitter (`src/core/sections.ts`)
   and heading detector (`src/core/source/headings.ts`) are property- and golden-tested; change them test
   first, and bump `SECTION_CHUNKING_VERSION` when their behavior changes so stored chunks rebuild. Passage
-  search is keyword (FTS5) plus an optional embedding server (`UKTUB_EMBED_URL`); a missing or failing
-  server degrades to keyword results and says so. Do not edit `src/` or the schema while a benchmark
+  search is keyword (FTS5) plus an optional embedding server (your own via `UKTUB_EMBED_URL`, or the managed
+  pinned runtime installed with `uktub-scholar embed install --yes`; `models.lock.json` is the reviewed pin — change
+  a digest only with a re-run parity gate); a missing or failing server degrades to keyword results and says so.
+  A search never downloads anything. Do not edit `src/` or the schema while a benchmark
   that starts fresh processes is running (it once read a newer schema than its code).
 - After behavioral changes, run `pnpm exec tsc --noEmit`, `pnpm test`, and an
   actual CLI/tool smoke. Record evidence once in the handoff, not fixed test

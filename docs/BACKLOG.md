@@ -21,24 +21,24 @@ real corpus and recorded. Status is updated in place.
    - Scanned/multi-column layouts: a heading split across lines is not detected; headings are lost, text is not.
    - Exhaustive verification at 512 costs ≈ 1.7× the judgments of a 1,024 window; pass a `query` (5.0
      judgments per claim measured) for large corpora. Consider defaulting the locator to the claim.
-2. **Local model runtime: llama.cpp for embeddings (and any GGUF decision model) — decision open.**
-   The retrieval code is runtime-agnostic (any OpenAI-compatible `/v1/embeddings` server, configured with
-   `UKTUB_EMBED_URL`); what is undecided is who provides the server. Researched (Hermes, 2026-10-04):
-   (A) bundling a binary in the package is only viable for a CPU build (≈ 5 MB) — a CUDA build is ≈ 370 MB;
-   (B) a pinned official `llama-server` release asset, fetched on first use with a checked sha256 into the user's
-   data directory, supervised as a child process (crash isolation from the agent host), with the GGUF fetched
-   the same way from a lock file (recommended); (C) the `node-llama-cpp` npm binding (single maintainer, install
-   scripts, source-build fallback; opt-in in-process path for the CLI only); (D) a user-installed llama.cpp or
-   Ollama as an explicit override. Decision-2.0 Eos is a custom Qwen backbone plus a trained head and is not a
-   stock llama.cpp architecture; it stays on its Python worker (a logprob-of-"true" hack on the backbone GGUF is
-   not the trained head and was not adopted). Model terms: EmbeddingGemma is under the Gemma terms (carry the
-   terms and notice if redistributed), so the package should fetch rather than bundle the 334 MB file; the
-   file named by the owner lacks the dense modules (see DECISIONS), so the pinned file needs a stated provenance
-   (third-party conversion with a measured parity gate, or our own conversion from the gated Google weights).
+2. **Local model runtime: llama.cpp for embeddings — done for Linux x64 (2026-10-04).** Owner decision: a pinned
+   official `llama-server` fetched on first use (sha256-verified, safe extraction) and supervised as a child process;
+   EmbeddingGemma from the cduk dense-modules GGUF pinned by sha256; explicit `embed install --yes` (Gemma terms
+   shown), never downloaded by a search; your own server via `UKTUB_EMBED_URL` always wins
+   ([decision](DECISIONS.md)). Open items:
+   - Only `linux-x64` is pinned and tested; macOS/Windows/arm64 need their release assets pinned with their digests
+     (archive formats differ: `.zip` on Windows needs another extractor) and a live run on each platform.
+   - CPU build only. A Vulkan/CUDA asset would speed a large first index; not needed at the measured 20 s for 700
+     passages.
+   - The pinned GGUF is a third-party conversion (hash-pinned, parity-gated); a first-party conversion from the
+     gated Google weights would remove that trust step (needs the owner's Hugging Face licence acceptance).
+   - A child killed with SIGKILL cannot clean itself up (Node cannot set a parent-death signal): the next session
+     starts a fresh one; a stale one holds a port and ≈ 400 MB until the OS or the user ends it.
+   - Decision-2.0 Eos stays on its Python worker (a custom Qwen backbone plus a trained head is not a stock llama.cpp
+     architecture; a logprob-of-"true" hack on the backbone GGUF is not the trained head and was not adopted).
 3. **RAG (exploratory retrieval) — done at the code level (2026-10-04).** `search_passages` (Pi tool and CLI
    `search`), hybrid FTS5 + vector + RRF k = 60, lexical fallback, containment, schema v5 vector cache;
-   measured ([report](benchmarks/rag-search-section-512-2026-10-04.md)). Open items: runtime packaging (item 2);
-   weighted or reranked fusion if a later measurement shows it pays (equal-weight RRF trails the better single
+   measured ([report](benchmarks/rag-search-section-512-2026-10-04.md)). Open items: weighted or reranked fusion if a later measurement shows it pays (equal-weight RRF trails the better single
    leg on the extremes); the Pi TUI widget is not launched; the vector leg has not been measured on a corpus
    larger than 14 papers (the exact scan is O(passages), 3 ms at 700 passages).
 4. **OCR fallback for scanned PDFs** (optional; LiteParse was reviewed and not adopted as the primary parser).

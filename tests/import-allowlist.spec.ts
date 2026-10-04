@@ -5,8 +5,9 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 /**
- * Core stays host-independent: built-ins, internal modules, TypeBox, YAML and the
- * two document parsers (unpdf for PDF, fast-xml-parser for GROBID TEI).
+ * Core stays host-independent: built-ins, internal modules, TypeBox, YAML, the
+ * two document parsers (unpdf for PDF, fast-xml-parser for GROBID TEI) and `tar`
+ * (safe extraction of the pinned llama.cpp release archive).
  * Only src/pi may import the Pi peer package.
  */
 
@@ -22,7 +23,7 @@ function listTsFiles(dir: string): string[] {
   return out;
 }
 
-const CORE_ALLOW_PREFIXES = ["node:", ".", "/", "typebox", "yaml", "unpdf", "fast-xml-parser"];
+const CORE_ALLOW_PREFIXES = ["node:", ".", "/", "typebox", "yaml", "unpdf", "fast-xml-parser", "tar"];
 const CORE_DENY = ["@earendil-works"];
 
 test("src/core imports nothing Pi-specific", () => {

@@ -19,6 +19,8 @@ import { paperRegistryTool, type PaperRegistryArgs } from "../core/tools/registr
 import type { ToolContext, ToolResult } from "../core/tools/context.ts";
 import { verifyClaimTool, type VerifyClaimArgs, type VerifyHooks } from "../core/tools/verify.ts";
 import { searchPassagesTool, type SearchPassagesArgs } from "../core/tools/passages.ts";
+import { managedCacheDir } from "../core/embed/config.ts";
+import { RuntimeError, installRuntime, installedPaths, platformKey, readLock, type RuntimeLock } from "../core/embed/runtime.ts";
 
 /** Injected I/O: the bin passes console writers; tests capture arrays. */
 export interface CliIo {
@@ -31,6 +33,10 @@ export interface CliIo {
   download?: ToolContext["download"];
   env?: Record<string, string | undefined>;
   verifyHooks?: VerifyHooks;
+  /** Test seams for `embed`: the pin, the download transport and the platform. */
+  embedLock?: RuntimeLock;
+  embedFetch?: typeof fetch;
+  embedPlatform?: string;
 }
 
 const USAGE = `usage: uktub-scholar <command>
@@ -48,7 +54,11 @@ commands:
                                 find supporting passages for ONE claim (default: all papers)
   search <query> [--papers all|<doi|citekey>,...] [--limit <n>]
                                 find the passages that best match a topic or question (keyword,
-                                plus semantic when UKTUB_EMBED_URL names an embedding server)`;
+                                plus semantic when an embedding server is available)
+  embed status | embed install --yes
+                                the managed embedding runtime: a pinned llama.cpp server and
+                                EmbeddingGemma, downloaded once (sha256-verified) into a shared cache;
+                                or run your own server and set UKTUB_EMBED_URL`;
 
 /** The same context the Pi adapter builds: real network, env and clock unless a test injects them. */
 function toolContext(io: CliIo, root: string): ToolContext {
@@ -105,6 +115,57 @@ function parseSearchArgs(args: string[]): SearchPassagesArgs | null {
   }
   if (words.length === 0) return null;
   return { query: words.join(" "), ...(papers !== undefined ? { papers } : {}), ...(limit !== undefined ? { limit } : {}) } as SearchPassagesArgs;
+}
+
+const megabytes = (bytes: number): string => `${(bytes / 1e6).toFixed(1)} MB`;
+
+async function embedCommand(args: string[], io: CliIo): Promise<number> {
+  const sub = args[0];
+  if (sub !== "status" && sub !== "install") {
+    io.err(`error: unknown embed command; use embed status or embed install --yes\n${USAGE}`);
+    return 1;
+  }
+  const lock = io.embedLock ?? readLock();
+  const env = io.env ?? (process.env as Record<string, string | undefined>);
+  const cacheDir = managedCacheDir(env);
+  const platform = io.embedPlatform ?? platformKey();
+  const asset = lock.runtime.assets[platform];
+  const em = lock.embedding;
+  const installed = installedPaths(lock, cacheDir, platform) !== null;
+
+  if (sub === "status") {
+    io.out(`Managed embedding runtime`);
+    io.out(`  cache:    ${cacheDir}`);
+    io.out(asset === undefined ? `  platform: ${platform} — no build pinned; run your own embedding server and set UKTUB_EMBED_URL` : `  platform: ${platform} — ${lock.runtime.name} ${lock.runtime.version} (${lock.runtime.license}), ${megabytes(asset.size)}`);
+    io.out(`  model:    ${em.id} (${em.license} terms: ${em.terms}), ${megabytes(em.size)}`);
+    io.out(installed ? `  state:    installed` : `  state:    not installed${asset === undefined ? "" : " — run: uktub-scholar embed install --yes"}`);
+    return 0;
+  }
+
+  if (asset === undefined) {
+    io.err(`error: no ${lock.runtime.name} ${lock.runtime.version} build is pinned for ${platform}; run your own embedding server and set UKTUB_EMBED_URL instead`);
+    return 1;
+  }
+  if (!args.includes("--yes")) {
+    io.err(`embed install will download, verify (sha256 pinned in models.lock.json) and unpack into ${cacheDir}:`);
+    io.err(`  ${lock.runtime.name} ${lock.runtime.version} (llama-server, ${lock.runtime.license}): ${megabytes(asset.size)} from ${asset.url}`);
+    io.err(`  embedding model ${em.id}: ${megabytes(em.size)} from ${em.url}`);
+    io.err(`The model is provided under the ${em.license} terms of use (${em.terms}); installing it means you accept them.`);
+    io.err(`Re-run with --yes to download.`);
+    return 1;
+  }
+  try {
+    const r = await installRuntime({ lock, cacheDir, platform, fetch: io.embedFetch ?? ((...a) => globalThis.fetch(...a)) });
+    io.out(r.downloaded.length === 0 ? `Already installed in ${cacheDir}; nothing to download.` : `Installed (${r.downloaded.join(" and ")} downloaded and verified) in ${cacheDir}.`);
+    io.out(`Searches now use it automatically (or set UKTUB_EMBED_URL to use your own server).`);
+    return 0;
+  } catch (caught) {
+    if (caught instanceof RuntimeError) {
+      io.err(`error: ${caught.code}: ${caught.message}`);
+      return 1;
+    }
+    throw caught;
+  }
 }
 
 /** One CLI run: returns the process exit code (0 success, 1 refusal/error).
@@ -240,6 +301,8 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
         }
         return reportTool(await searchPassagesTool(toolContext(io, root), parsed), io);
       }
+      case "embed":
+        return await embedCommand(args, io);
       default:
         err(command === undefined ? USAGE : `error: unknown command "${command}"\n${USAGE}`);
         return 1;
