@@ -1,0 +1,2388 @@
+{
+ "schema": "bench-evidence/1",
+ "phase": "endtoend",
+ "date": "2026-10-04",
+ "chunkTokens": 512,
+ "k": 5,
+ "engineUrl": "http://127.0.0.1:8099",
+ "policy": "b5276b541ef5",
+ "records": [
+  {
+   "id": "c001",
+   "paper": "2411.09996v1",
+   "part": "tuning",
+   "kind": "dataset",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 7526,
+    "end": 7661
+   },
+   "evidence": [
+    {
+     "start": 6880,
+     "end": 8294,
+     "doi": "10.9999/p01",
+     "excerpt": "We create spectrograms from\nIQ recordings through the following steps: 1) Divide each\nrecording into non-overlapping 16 ms segments; 2) Compute\nthe spectrogram …",
+     "withheld": null,
+     "score": 0.9972804298836608
+    }
+   ],
+   "fresh": 23,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 6542,
+   "limitations": [],
+   "chars": 1414
+  },
+  {
+   "id": "c002",
+   "paper": "2411.09996v1",
+   "part": "tuning",
+   "kind": "numeric",
+   "mode": "exhaustive",
+   "label": "FALSE",
+   "gold": {
+    "start": 7781,
+    "end": 7906
+   },
+   "evidence": [],
+   "fresh": 23,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 1523,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c007",
+   "paper": "2411.09996v1",
+   "part": "tuning",
+   "kind": "dataset",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 9026,
+    "end": 9128
+   },
+   "evidence": [
+    {
+     "start": 8294,
+     "end": 9649,
+     "doi": "10.9999/p01",
+     "excerpt": "NR-LTE Segmentation Dataset (SD)\nThe SD dataset is created by generating NR and LTE signals,\neach transmitted through its respective wireless channel in\nTABLE I…",
+     "withheld": null,
+     "score": 0.9976968681687008
+    }
+   ],
+   "fresh": 23,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 1568,
+   "limitations": [],
+   "chars": 1355
+  },
+  {
+   "id": "c008",
+   "paper": "2411.09996v1",
+   "part": "tuning",
+   "kind": "finding",
+   "mode": "exhaustive",
+   "label": "FALSE",
+   "gold": {
+    "start": 1315,
+    "end": 1443
+   },
+   "evidence": [
+    {
+     "start": 1306,
+     "end": 2577,
+     "doi": "10.9999/p01",
+     "excerpt": "Notably, the pretrained ViT model outperforms a four-times\nlarger model that is trained from scratch on the spectrogram\nsegmentation task, while requiring signi…",
+     "withheld": null,
+     "score": 0.9989085736807121
+    },
+    {
+     "start": 23755,
+     "end": 25089,
+     "doi": "10.9999/p01",
+     "excerpt": "We also introduce a Masked Spec-\ntrogram Modeling (MSM) approach to pretrain the ViT in a\nself-supervised fashion, and thoroughly evaluate the effects of\nmaskin…",
+     "withheld": null,
+     "score": 0.9944972828989626
+    }
+   ],
+   "fresh": 23,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 1534,
+   "limitations": [],
+   "chars": 2605
+  },
+  {
+   "id": "c013",
+   "paper": "2504.14100v1",
+   "part": "held-out",
+   "kind": "dataset",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 15208,
+    "end": 15255
+   },
+   "evidence": [],
+   "fresh": 48,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 3232,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c014",
+   "paper": "2504.14100v1",
+   "part": "held-out",
+   "kind": "numeric",
+   "mode": "exhaustive",
+   "label": "FALSE",
+   "gold": {
+    "start": 14574,
+    "end": 14621
+   },
+   "evidence": [],
+   "fresh": 48,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 3145,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c019",
+   "paper": "2504.14100v1",
+   "part": "held-out",
+   "kind": "numeric",
+   "mode": "exhaustive",
+   "label": "FALSE",
+   "gold": {
+    "start": 14044,
+    "end": 14097
+   },
+   "evidence": [],
+   "fresh": 48,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 3152,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c020",
+   "paper": "2504.14100v1",
+   "part": "held-out",
+   "kind": "finding",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 47961,
+    "end": 48047
+   },
+   "evidence": [
+    {
+     "start": 47560,
+     "end": 48897,
+     "doi": "10.9999/p02",
+     "excerpt": "12\nthe performance on the test set for every downstream task, as\na function of epochs during fine-tuning.\nOur evaluation reveals that fine-tuning performance is…",
+     "withheld": null,
+     "score": 0.9998606091678773
+    }
+   ],
+   "fresh": 48,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 3240,
+   "limitations": [],
+   "chars": 1337
+  },
+  {
+   "id": "c024",
+   "paper": "2506.06718v2",
+   "part": "tuning",
+   "kind": "finding",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 40619,
+    "end": 40728
+   },
+   "evidence": [
+    {
+     "start": 7268,
+     "end": 8677,
+     "doi": "10.9999/p03",
+     "excerpt": "• We introduce a principled augmentation strategy for\nraw MIMO IQ data that separates core augmentations,\nsuch as cyclic time shifting, which preserve features\n…",
+     "withheld": null,
+     "score": 0.9917876272605245
+    }
+   ],
+   "fresh": 55,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 3754,
+   "limitations": [],
+   "chars": 1409
+  },
+  {
+   "id": "c026",
+   "paper": "2506.06718v2",
+   "part": "tuning",
+   "kind": "numeric",
+   "mode": "exhaustive",
+   "label": "FALSE",
+   "gold": {
+    "start": 42612,
+    "end": 42718
+   },
+   "evidence": [],
+   "fresh": 55,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 3685,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c031",
+   "paper": "2509.03077v1",
+   "part": "held-out",
+   "kind": "dataset",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 17258,
+    "end": 17331
+   },
+   "evidence": [
+    {
+     "start": 16058,
+     "end": 17428,
+     "doi": "10.9999/p04",
+     "excerpt": "Each of the X300 USRPs have 2 Tx\nand 2 Rx channels and they were equipped with 5.88 GHz\npatch antennas. There is a total of 4 Rx receiver antennas\nand the IQ si…",
+     "withheld": null,
+     "score": 0.9965446372344426
+    }
+   ],
+   "fresh": 28,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 1761,
+   "limitations": [],
+   "chars": 1370
+  },
+  {
+   "id": "c032",
+   "paper": "2509.03077v1",
+   "part": "held-out",
+   "kind": "dataset",
+   "mode": "exhaustive",
+   "label": "FALSE",
+   "gold": {
+    "start": 17333,
+    "end": 17426
+   },
+   "evidence": [],
+   "fresh": 28,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 1729,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c036",
+   "paper": "2509.03077v1",
+   "part": "held-out",
+   "kind": "dataset",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 9502,
+    "end": 9584
+   },
+   "evidence": [
+    {
+     "start": 8294,
+     "end": 9586,
+     "doi": "10.9999/p04",
+     "excerpt": "These studies show the benefits of using self-supervised\nlearning and highlight some challenges, particularly with con-\ntrastive learning. Unlike existing works…",
+     "withheld": null,
+     "score": 0.9996190207323923
+    }
+   ],
+   "fresh": 28,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 1813,
+   "limitations": [],
+   "chars": 1292
+  },
+  {
+   "id": "c038",
+   "paper": "2509.03077v1",
+   "part": "held-out",
+   "kind": "numeric",
+   "mode": "exhaustive",
+   "label": "FALSE",
+   "gold": {
+    "start": 19071,
+    "end": 19155
+   },
+   "evidence": [],
+   "fresh": 28,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 1753,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c041",
+   "paper": "2511.15162v1",
+   "part": "tuning",
+   "kind": "dataset",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 17241,
+    "end": 17285
+   },
+   "evidence": [
+    {
+     "start": 15911,
+     "end": 17329,
+     "doi": "10.9999/p05",
+     "excerpt": ", ˆxG\np, 𝑁\n\u0003 where ˆxG\np,𝑛 ∈ R𝑃2 ·𝐶 is a single\nreconstructed patch; and ˆXQ\ns = \u0002 ˆxQ\ns,1, . . . , ˆxQ\ns,𝐾\n\u0003 where ˆxQ\ns,𝑘 ∈ R𝑆\nis a single reconstructe…",
+     "withheld": null,
+     "score": 0.9994514253448189
+    },
+    {
+     "start": 17329,
+     "end": 18660,
+     "doi": "10.9999/p05",
+     "excerpt": "(b) Samples from the IQ dataset. Each sample contains four streams\n(one per antenna) shown stacked vertically.\nFig. 2: Pretraining Datasets.\nIQ Dataset. The dat…",
+     "withheld": null,
+     "score": 0.9975243211573763
+    }
+   ],
+   "fresh": 25,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 1738,
+   "limitations": [],
+   "chars": 2749
+  },
+  {
+   "id": "c044",
+   "paper": "2511.15162v1",
+   "part": "tuning",
+   "kind": "finding",
+   "mode": "exhaustive",
+   "label": "FALSE",
+   "gold": {
+    "start": 23276,
+    "end": 23374
+   },
+   "evidence": [],
+   "fresh": 25,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 1724,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c049",
+   "paper": "2606.06373v1",
+   "part": "held-out",
+   "kind": "method",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 11277,
+    "end": 11373
+   },
+   "evidence": [
+    {
+     "start": 10187,
+     "end": 11610,
+     "doi": "10.9999/p06",
+     "excerpt": "This encourages the model to\nlearn high-level semantic structure in order to predict the\nmissing regions, as local interpolation alone is insufficient. The\nmask…",
+     "withheld": null,
+     "score": 0.9984102921968646
+    }
+   ],
+   "fresh": 25,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 1744,
+   "limitations": [],
+   "chars": 1423
+  },
+  {
+   "id": "c051",
+   "paper": "2606.06373v1",
+   "part": "held-out",
+   "kind": "finding",
+   "mode": "exhaustive",
+   "label": "FALSE",
+   "gold": {
+    "start": 1365,
+    "end": 1544
+   },
+   "evidence": [],
+   "fresh": 25,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 1692,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c054",
+   "paper": "2606.06373v1",
+   "part": "held-out",
+   "kind": "method",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 9707,
+    "end": 9831
+   },
+   "evidence": [
+    {
+     "start": 8842,
+     "end": 10187,
+     "doi": "10.9999/p06",
+     "excerpt": "into a grid of 𝐻\n𝑝ℎ × 𝑊\n𝑝𝑤 non-overlapping patches of size\n𝑝ℎ × 𝑝𝑤 . A shared linear projection maps each single-channel\npatch to a 𝐷-dimensional embed…",
+     "withheld": null,
+     "score": 0.9949820144730425
+    }
+   ],
+   "fresh": 25,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 1729,
+   "limitations": [],
+   "chars": 1345
+  },
+  {
+   "id": "c056",
+   "paper": "2606.06373v1",
+   "part": "held-out",
+   "kind": "finding",
+   "mode": "exhaustive",
+   "label": "FALSE",
+   "gold": {
+    "start": 1047,
+    "end": 1187
+   },
+   "evidence": [],
+   "fresh": 25,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 1722,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c060",
+   "paper": "2609.04707v1",
+   "part": "tuning",
+   "kind": "finding",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 51920,
+    "end": 52141
+   },
+   "evidence": [],
+   "fresh": 142,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 9715,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c064",
+   "paper": "2609.04707v1",
+   "part": "tuning",
+   "kind": "finding",
+   "mode": "exhaustive",
+   "label": "FALSE",
+   "gold": {
+    "start": 8304,
+    "end": 8441
+   },
+   "evidence": [],
+   "fresh": 142,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 9502,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c065",
+   "paper": "2609.04707v1",
+   "part": "tuning",
+   "kind": "method",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 62313,
+    "end": 62482
+   },
+   "evidence": [],
+   "fresh": 142,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 9626,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c070",
+   "paper": "Tiny_Federated_Wireless_Foundation_Model",
+   "part": "tuning",
+   "kind": "method",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 44020,
+    "end": 44096
+   },
+   "evidence": [
+    {
+     "start": 43946,
+     "end": 45196,
+     "doi": "10.9999/p09",
+     "excerpt": "Experimental Setup\n1) Tiny Wireless Foundation Model: In our experiments,\nwe employ a ViT small model with 12 encoder blocks\nand eight attention heads. Pruning …",
+     "withheld": null,
+     "score": 0.9997783070984843
+    }
+   ],
+   "fresh": 54,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 3535,
+   "limitations": [],
+   "chars": 1250
+  },
+  {
+   "id": "c071",
+   "paper": "Tiny_Federated_Wireless_Foundation_Model",
+   "part": "tuning",
+   "kind": "numeric",
+   "mode": "exhaustive",
+   "label": "FALSE",
+   "gold": {
+    "start": 44586,
+    "end": 44764
+   },
+   "evidence": [],
+   "fresh": 54,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 3577,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c076",
+   "paper": "Tiny_Federated_Wireless_Foundation_Model",
+   "part": "tuning",
+   "kind": "dataset",
+   "mode": "exhaustive",
+   "label": "FALSE",
+   "gold": {
+    "start": 48134,
+    "end": 48272
+   },
+   "evidence": [],
+   "fresh": 54,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 3483,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c077",
+   "paper": "Tiny_Federated_Wireless_Foundation_Model",
+   "part": "tuning",
+   "kind": "numeric",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 50848,
+    "end": 50923
+   },
+   "evidence": [
+    {
+     "start": 50564,
+     "end": 51296,
+     "doi": "10.9999/p09",
+     "excerpt": "Beyond this threshold, more\naggressive pruning levels (e.g., 80% and 92%) lead to a more\nnoticeable, yet still acceptable, drop in accuracy.\nTable I summarizes …",
+     "withheld": null,
+     "score": 0.9993130212999723
+    }
+   ],
+   "fresh": 54,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 3578,
+   "limitations": [],
+   "chars": 732
+  },
+  {
+   "id": "c081",
+   "paper": "http_thesai.org_Downloads_Volume12No2_Pa",
+   "part": "held-out",
+   "kind": "finding",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 2235,
+    "end": 2328
+   },
+   "evidence": [
+    {
+     "start": 1319,
+     "end": 2513,
+     "doi": "10.9999/p10",
+     "excerpt": "In this paper, we establish the need to\npay attention to non-smart appliances, and propose a solution for\nincorporating such devices into the energy-efficient I…",
+     "withheld": null,
+     "score": 0.9996004279498926
+    }
+   ],
+   "fresh": 26,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 1702,
+   "limitations": [],
+   "chars": 1194
+  },
+  {
+   "id": "c084",
+   "paper": "http_thesai.org_Downloads_Volume12No2_Pa",
+   "part": "held-out",
+   "kind": "method",
+   "mode": "exhaustive",
+   "label": "FALSE",
+   "gold": {
+    "start": 20784,
+    "end": 21021
+   },
+   "evidence": [],
+   "fresh": 26,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 1664,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c087",
+   "paper": "http_thesai.org_Downloads_Volume12No2_Pa",
+   "part": "held-out",
+   "kind": "method",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 13334,
+    "end": 13418
+   },
+   "evidence": [
+    {
+     "start": 12834,
+     "end": 14236,
+     "doi": "10.9999/p10",
+     "excerpt": "Although\nthe NodeMCU alone could have been used as microcontroller,\nit does not have enough I/O pins and output power to control\nthe Homergy Box’s sixteen (16) …",
+     "withheld": null,
+     "score": 0.9988633544453822
+    }
+   ],
+   "fresh": 26,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 1698,
+   "limitations": [],
+   "chars": 1402
+  },
+  {
+   "id": "c091",
+   "paper": "https_www.mdpi.com_2071-1050_14_21_14556",
+   "part": "tuning",
+   "kind": "numeric",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 12298,
+    "end": 12391
+   },
+   "evidence": [
+    {
+     "start": 10363,
+     "end": 11776,
+     "doi": "10.9999/p11",
+     "excerpt": "Domestic Devices Applied\nThe present study analyzes the suggested problem using a medium-sized house, and\nTable 1 presents load profiles for all appliances. The…",
+     "withheld": null,
+     "score": 0.9985231733650406
+    },
+    {
+     "start": 12015,
+     "end": 13361,
+     "doi": "10.9999/p11",
+     "excerpt": "Sustainability 2022, 14, 14556 4 of 20\n(TOUP) and feed-in tariff (FIP) are set at equal levels for this paper as a demonstration\nof the scheme’s efficiency. A l…",
+     "withheld": null,
+     "score": 0.9983003891954296
+    }
+   ],
+   "fresh": 53,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 3689,
+   "limitations": [],
+   "chars": 2759
+  },
+  {
+   "id": "c092",
+   "paper": "https_www.mdpi.com_2071-1050_14_21_14556",
+   "part": "tuning",
+   "kind": "numeric",
+   "mode": "exhaustive",
+   "label": "FALSE",
+   "gold": {
+    "start": 12393,
+    "end": 12486
+   },
+   "evidence": [],
+   "fresh": 53,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 3666,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c097",
+   "paper": "https_www.mdpi.com_2071-1050_14_21_14556",
+   "part": "tuning",
+   "kind": "method",
+   "mode": "exhaustive",
+   "label": "FALSE",
+   "gold": {
+    "start": 30075,
+    "end": 30152
+   },
+   "evidence": [],
+   "fresh": 53,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 3619,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c098",
+   "paper": "https_www.mdpi.com_2079-9292_12_19_4041_",
+   "part": "held-out",
+   "kind": "method",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 1529,
+    "end": 1852
+   },
+   "evidence": [
+    {
+     "start": 1314,
+     "end": 2640,
+     "doi": "10.9999/p12",
+     "excerpt": "Implementing\ndemand-response programs in residential and commercial buildings requires the use of smart meters\nand smart plugs. In this paper, we propose an arc…",
+     "withheld": null,
+     "score": 0.9998028697717961
+    },
+    {
+     "start": 14552,
+     "end": 15909,
+     "doi": "10.9999/p12",
+     "excerpt": "Electronics 2023, 12, 4041 5 of 20\nand the root mean square (RMS) value of the current are crucial capabilities of the Plugwise\nsystem. The system’s communicati…",
+     "withheld": null,
+     "score": 0.9955031947142229
+    }
+   ],
+   "fresh": 51,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 3296,
+   "limitations": [],
+   "chars": 2683
+  },
+  {
+   "id": "c102",
+   "paper": "https_www.mdpi.com_2079-9292_12_19_4041_",
+   "part": "held-out",
+   "kind": "finding",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 2253,
+    "end": 2377
+   },
+   "evidence": [
+    {
+     "start": 1314,
+     "end": 2640,
+     "doi": "10.9999/p12",
+     "excerpt": "Implementing\ndemand-response programs in residential and commercial buildings requires the use of smart meters\nand smart plugs. In this paper, we propose an arc…",
+     "withheld": null,
+     "score": 0.9993672816051519
+    }
+   ],
+   "fresh": 51,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 3230,
+   "limitations": [],
+   "chars": 1326
+  },
+  {
+   "id": "c105",
+   "paper": "https_www.mdpi.com_2079-9292_12_19_4041_",
+   "part": "held-out",
+   "kind": "method",
+   "mode": "exhaustive",
+   "label": "FALSE",
+   "gold": {
+    "start": 1763,
+    "end": 1852
+   },
+   "evidence": [],
+   "fresh": 51,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 3182,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c108",
+   "paper": "https_www.mdpi.com_2079-9292_12_21_4453_",
+   "part": "tuning",
+   "kind": "method",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 1967,
+    "end": 2297
+   },
+   "evidence": [
+    {
+     "start": 1073,
+     "end": 2369,
+     "doi": "10.9999/p13",
+     "excerpt": "Meloni 1,*\n1 Department of Communications, School of Electrical and Computer Engineering, University of Campinas,\nCampinas 13083-852, Brazil; l192701@dac.unicam…",
+     "withheld": null,
+     "score": 0.999827084067698
+    },
+    {
+     "start": 5758,
+     "end": 7171,
+     "doi": "10.9999/p13",
+     "excerpt": "The middleware can be required to mediate interactions between applications and\nhardware as well as among systems. Without these solutions, programmers would ha…",
+     "withheld": null,
+     "score": 0.9984518242615141
+    }
+   ],
+   "fresh": 62,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 3746,
+   "limitations": [],
+   "chars": 2709
+  },
+  {
+   "id": "c112",
+   "paper": "https_www.mdpi.com_2079-9292_12_21_4453_",
+   "part": "tuning",
+   "kind": "method",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 50039,
+    "end": 50167
+   },
+   "evidence": [
+    {
+     "start": 49047,
+     "end": 50416,
+     "doi": "10.9999/p13",
+     "excerpt": "As a result, the disaggregation process run as a middleware\napplication, providing the user with information regarding the appliances in operation and\nmaking it…",
+     "withheld": null,
+     "score": 0.9998014697312146
+    },
+    {
+     "start": 50528,
+     "end": 51632,
+     "doi": "10.9999/p13",
+     "excerpt": "Electronics 2023, 12, 4453 16 of 23\nappliance. In this step, the Accumulative Contribution Ratio (ACR) criteria sets the number\nof principal components consider…",
+     "withheld": null,
+     "score": 0.9962030506831895
+    }
+   ],
+   "fresh": 62,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 3658,
+   "limitations": [],
+   "chars": 2473
+  },
+  {
+   "id": "c113",
+   "paper": "https_www.mdpi.com_2079-9292_12_21_4453_",
+   "part": "tuning",
+   "kind": "dataset",
+   "mode": "exhaustive",
+   "label": "FALSE",
+   "gold": {
+    "start": 52508,
+    "end": 52654
+   },
+   "evidence": [],
+   "fresh": 62,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 3662,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c117",
+   "paper": "https_www.mdpi.com_2079-9292_12_21_4453_",
+   "part": "tuning",
+   "kind": "method",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 2383,
+    "end": 2548
+   },
+   "evidence": [
+    {
+     "start": 2369,
+     "end": 3646,
+     "doi": "10.9999/p13",
+     "excerpt": "Additionally, machine learning techniques are utilized to\nidentify energy consumption of individual appliances when only the aggregate energy consumption\nof the…",
+     "withheld": null,
+     "score": 0.9998858808519998
+    },
+    {
+     "start": 7171,
+     "end": 8517,
+     "doi": "10.9999/p13",
+     "excerpt": "In the proposed sys-\ntem, users can visualize the energy consumption data and statistics of different appliances.\nIn situations where only aggregated energy mea…",
+     "withheld": null,
+     "score": 0.9990517803544635
+    }
+   ],
+   "fresh": 62,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 3664,
+   "limitations": [],
+   "chars": 2623
+  },
+  {
+   "id": "c120",
+   "paper": "https_www.mdpi.com_2624-6511_5_3_53_pdf_",
+   "part": "held-out",
+   "kind": "dataset",
+   "mode": "exhaustive",
+   "label": "FALSE",
+   "gold": {
+    "start": 38132,
+    "end": 38322
+   },
+   "evidence": [],
+   "fresh": 66,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 3875,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c122",
+   "paper": "https_www.mdpi.com_2624-6511_5_3_53_pdf_",
+   "part": "held-out",
+   "kind": "dataset",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 36656,
+    "end": 36732
+   },
+   "evidence": [
+    {
+     "start": 36636,
+     "end": 38045,
+     "doi": "10.9999/p14",
+     "excerpt": "Element Description\nHome automation system Home Assistant, running in a Raspberry Pi 4, 4 GB RAM\nPhoto voltaic array 14 panels, 480 W rated\nInverter Ingecon Sun…",
+     "withheld": null,
+     "score": 0.9999423889215551
+    }
+   ],
+   "fresh": 66,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 3892,
+   "limitations": [],
+   "chars": 1409
+  },
+  {
+   "id": "c127",
+   "paper": "https_www.mdpi.com_2624-6511_5_3_53_pdf_",
+   "part": "held-out",
+   "kind": "method",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 40464,
+    "end": 40617
+   },
+   "evidence": [
+    {
+     "start": 40314,
+     "end": 41609,
+     "doi": "10.9999/p14",
+     "excerpt": "Smart Cities 2022, 5 1068\n4.3. Knowledge Base and Security Components\nFor the KB and security components, we have selected some Generic Enablers from\nthe FIWARE…",
+     "withheld": null,
+     "score": 0.9994601399753354
+    }
+   ],
+   "fresh": 66,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 3886,
+   "limitations": [],
+   "chars": 1295
+  },
+  {
+   "id": "c130",
+   "paper": "Papaers_overview",
+   "part": "held-out",
+   "kind": "numeric",
+   "mode": "exhaustive",
+   "label": "FALSE",
+   "gold": {
+    "start": 3436,
+    "end": 3579
+   },
+   "evidence": [
+    {
+     "start": 2531,
+     "end": 3763,
+     "doi": "10.9999/p08",
+     "excerpt": "Methodology and Framework Architecture\nThe research highlights two primary SSL frameworks for radio representation: IQFM (based on\nSimCLR) and MoCo-v3 (based on…",
+     "withheld": null,
+     "score": 0.9991054670487004
+    }
+   ],
+   "fresh": 7,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 411,
+   "limitations": [],
+   "chars": 1232
+  },
+  {
+   "id": "c131",
+   "paper": "Papaers_overview",
+   "part": "held-out",
+   "kind": "finding",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 1269,
+    "end": 1410
+   },
+   "evidence": [
+    {
+     "start": 0,
+     "end": 1412,
+     "doi": "10.9999/p08",
+     "excerpt": "Foundational Models for Raw I/Q Streams in AI-Native 6G\nExecutive Summary\nThe transition toward sixth-generation (6G) wireless architectures necessitates a shif…",
+     "withheld": null,
+     "score": 0.9990063826342528
+    }
+   ],
+   "fresh": 7,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 424,
+   "limitations": [],
+   "chars": 1412
+  },
+  {
+   "id": "c135",
+   "paper": "Papaers_overview",
+   "part": "held-out",
+   "kind": "numeric",
+   "mode": "exhaustive",
+   "label": "FALSE",
+   "gold": {
+    "start": 5840,
+    "end": 5982
+   },
+   "evidence": [],
+   "fresh": 7,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 424,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c001",
+   "paper": "2411.09996v1",
+   "part": "tuning",
+   "kind": "dataset",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 7526,
+    "end": 7661
+   },
+   "evidence": [
+    {
+     "start": 6880,
+     "end": 8294,
+     "doi": "10.9999/p01",
+     "excerpt": "We create spectrograms from\nIQ recordings through the following steps: 1) Divide each\nrecording into non-overlapping 16 ms segments; 2) Compute\nthe spectrogram …",
+     "withheld": null,
+     "score": 0.9972804298836608
+    }
+   ],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 5243,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 1414
+  },
+  {
+   "id": "c002",
+   "paper": "2411.09996v1",
+   "part": "tuning",
+   "kind": "numeric",
+   "mode": "guided",
+   "label": "FALSE",
+   "gold": {
+    "start": 7781,
+    "end": 7906
+   },
+   "evidence": [],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 358,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 0
+  },
+  {
+   "id": "c007",
+   "paper": "2411.09996v1",
+   "part": "tuning",
+   "kind": "dataset",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 9026,
+    "end": 9128
+   },
+   "evidence": [
+    {
+     "start": 8294,
+     "end": 9649,
+     "doi": "10.9999/p01",
+     "excerpt": "NR-LTE Segmentation Dataset (SD)\nThe SD dataset is created by generating NR and LTE signals,\neach transmitted through its respective wireless channel in\nTABLE I…",
+     "withheld": null,
+     "score": 0.9976968681687008
+    }
+   ],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 412,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 1355
+  },
+  {
+   "id": "c008",
+   "paper": "2411.09996v1",
+   "part": "tuning",
+   "kind": "finding",
+   "mode": "guided",
+   "label": "FALSE",
+   "gold": {
+    "start": 1315,
+    "end": 1443
+   },
+   "evidence": [
+    {
+     "start": 1306,
+     "end": 2577,
+     "doi": "10.9999/p01",
+     "excerpt": "Notably, the pretrained ViT model outperforms a four-times\nlarger model that is trained from scratch on the spectrogram\nsegmentation task, while requiring signi…",
+     "withheld": null,
+     "score": 0.9989085736807121
+    },
+    {
+     "start": 23755,
+     "end": 25089,
+     "doi": "10.9999/p01",
+     "excerpt": "We also introduce a Masked Spec-\ntrogram Modeling (MSM) approach to pretrain the ViT in a\nself-supervised fashion, and thoroughly evaluate the effects of\nmaskin…",
+     "withheld": null,
+     "score": 0.9944972828989626
+    }
+   ],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 337,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 2605
+  },
+  {
+   "id": "c013",
+   "paper": "2504.14100v1",
+   "part": "held-out",
+   "kind": "dataset",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 15208,
+    "end": 15255
+   },
+   "evidence": [],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 324,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 0
+  },
+  {
+   "id": "c014",
+   "paper": "2504.14100v1",
+   "part": "held-out",
+   "kind": "numeric",
+   "mode": "guided",
+   "label": "FALSE",
+   "gold": {
+    "start": 14574,
+    "end": 14621
+   },
+   "evidence": [],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 321,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 0
+  },
+  {
+   "id": "c019",
+   "paper": "2504.14100v1",
+   "part": "held-out",
+   "kind": "numeric",
+   "mode": "guided",
+   "label": "FALSE",
+   "gold": {
+    "start": 14044,
+    "end": 14097
+   },
+   "evidence": [],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 330,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 0
+  },
+  {
+   "id": "c020",
+   "paper": "2504.14100v1",
+   "part": "held-out",
+   "kind": "finding",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 47961,
+    "end": 48047
+   },
+   "evidence": [
+    {
+     "start": 47560,
+     "end": 48897,
+     "doi": "10.9999/p02",
+     "excerpt": "12\nthe performance on the test set for every downstream task, as\na function of epochs during fine-tuning.\nOur evaluation reveals that fine-tuning performance is…",
+     "withheld": null,
+     "score": 0.9998606091678773
+    }
+   ],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 381,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 1337
+  },
+  {
+   "id": "c024",
+   "paper": "2506.06718v2",
+   "part": "tuning",
+   "kind": "finding",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 40619,
+    "end": 40728
+   },
+   "evidence": [
+    {
+     "start": 7268,
+     "end": 8677,
+     "doi": "10.9999/p03",
+     "excerpt": "• We introduce a principled augmentation strategy for\nraw MIMO IQ data that separates core augmentations,\nsuch as cyclic time shifting, which preserve features\n…",
+     "withheld": null,
+     "score": 0.9917876272605245
+    }
+   ],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 403,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 1409
+  },
+  {
+   "id": "c026",
+   "paper": "2506.06718v2",
+   "part": "tuning",
+   "kind": "numeric",
+   "mode": "guided",
+   "label": "FALSE",
+   "gold": {
+    "start": 42612,
+    "end": 42718
+   },
+   "evidence": [],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 313,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 0
+  },
+  {
+   "id": "c031",
+   "paper": "2509.03077v1",
+   "part": "held-out",
+   "kind": "dataset",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 17258,
+    "end": 17331
+   },
+   "evidence": [
+    {
+     "start": 16058,
+     "end": 17428,
+     "doi": "10.9999/p04",
+     "excerpt": "Each of the X300 USRPs have 2 Tx\nand 2 Rx channels and they were equipped with 5.88 GHz\npatch antennas. There is a total of 4 Rx receiver antennas\nand the IQ si…",
+     "withheld": null,
+     "score": 0.9965446372344426
+    }
+   ],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 373,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 1370
+  },
+  {
+   "id": "c032",
+   "paper": "2509.03077v1",
+   "part": "held-out",
+   "kind": "dataset",
+   "mode": "guided",
+   "label": "FALSE",
+   "gold": {
+    "start": 17333,
+    "end": 17426
+   },
+   "evidence": [],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 344,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 0
+  },
+  {
+   "id": "c036",
+   "paper": "2509.03077v1",
+   "part": "held-out",
+   "kind": "dataset",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 9502,
+    "end": 9584
+   },
+   "evidence": [
+    {
+     "start": 8294,
+     "end": 9586,
+     "doi": "10.9999/p04",
+     "excerpt": "These studies show the benefits of using self-supervised\nlearning and highlight some challenges, particularly with con-\ntrastive learning. Unlike existing works…",
+     "withheld": null,
+     "score": 0.9996190207323923
+    }
+   ],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 307,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 1292
+  },
+  {
+   "id": "c038",
+   "paper": "2509.03077v1",
+   "part": "held-out",
+   "kind": "numeric",
+   "mode": "guided",
+   "label": "FALSE",
+   "gold": {
+    "start": 19071,
+    "end": 19155
+   },
+   "evidence": [],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 332,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 0
+  },
+  {
+   "id": "c041",
+   "paper": "2511.15162v1",
+   "part": "tuning",
+   "kind": "dataset",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 17241,
+    "end": 17285
+   },
+   "evidence": [
+    {
+     "start": 15911,
+     "end": 17329,
+     "doi": "10.9999/p05",
+     "excerpt": ", ˆxG\np, 𝑁\n\u0003 where ˆxG\np,𝑛 ∈ R𝑃2 ·𝐶 is a single\nreconstructed patch; and ˆXQ\ns = \u0002 ˆxQ\ns,1, . . . , ˆxQ\ns,𝐾\n\u0003 where ˆxQ\ns,𝑘 ∈ R𝑆\nis a single reconstructe…",
+     "withheld": null,
+     "score": 0.9994514253448189
+    },
+    {
+     "start": 17329,
+     "end": 18660,
+     "doi": "10.9999/p05",
+     "excerpt": "(b) Samples from the IQ dataset. Each sample contains four streams\n(one per antenna) shown stacked vertically.\nFig. 2: Pretraining Datasets.\nIQ Dataset. The dat…",
+     "withheld": null,
+     "score": 0.9975243211573763
+    }
+   ],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 350,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 2749
+  },
+  {
+   "id": "c044",
+   "paper": "2511.15162v1",
+   "part": "tuning",
+   "kind": "finding",
+   "mode": "guided",
+   "label": "FALSE",
+   "gold": {
+    "start": 23276,
+    "end": 23374
+   },
+   "evidence": [],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 373,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 0
+  },
+  {
+   "id": "c049",
+   "paper": "2606.06373v1",
+   "part": "held-out",
+   "kind": "method",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 11277,
+    "end": 11373
+   },
+   "evidence": [
+    {
+     "start": 10187,
+     "end": 11610,
+     "doi": "10.9999/p06",
+     "excerpt": "This encourages the model to\nlearn high-level semantic structure in order to predict the\nmissing regions, as local interpolation alone is insufficient. The\nmask…",
+     "withheld": null,
+     "score": 0.9984102921968646
+    }
+   ],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 411,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 1423
+  },
+  {
+   "id": "c051",
+   "paper": "2606.06373v1",
+   "part": "held-out",
+   "kind": "finding",
+   "mode": "guided",
+   "label": "FALSE",
+   "gold": {
+    "start": 1365,
+    "end": 1544
+   },
+   "evidence": [],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 344,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 0
+  },
+  {
+   "id": "c054",
+   "paper": "2606.06373v1",
+   "part": "held-out",
+   "kind": "method",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 9707,
+    "end": 9831
+   },
+   "evidence": [
+    {
+     "start": 8842,
+     "end": 10187,
+     "doi": "10.9999/p06",
+     "excerpt": "into a grid of 𝐻\n𝑝ℎ × 𝑊\n𝑝𝑤 non-overlapping patches of size\n𝑝ℎ × 𝑝𝑤 . A shared linear projection maps each single-channel\npatch to a 𝐷-dimensional embed…",
+     "withheld": null,
+     "score": 0.9949820144730425
+    }
+   ],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 327,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 1345
+  },
+  {
+   "id": "c056",
+   "paper": "2606.06373v1",
+   "part": "held-out",
+   "kind": "finding",
+   "mode": "guided",
+   "label": "FALSE",
+   "gold": {
+    "start": 1047,
+    "end": 1187
+   },
+   "evidence": [],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 336,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 0
+  },
+  {
+   "id": "c060",
+   "paper": "2609.04707v1",
+   "part": "tuning",
+   "kind": "finding",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 51920,
+    "end": 52141
+   },
+   "evidence": [],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 351,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 0
+  },
+  {
+   "id": "c064",
+   "paper": "2609.04707v1",
+   "part": "tuning",
+   "kind": "finding",
+   "mode": "guided",
+   "label": "FALSE",
+   "gold": {
+    "start": 8304,
+    "end": 8441
+   },
+   "evidence": [],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 307,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 0
+  },
+  {
+   "id": "c065",
+   "paper": "2609.04707v1",
+   "part": "tuning",
+   "kind": "method",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 62313,
+    "end": 62482
+   },
+   "evidence": [],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 350,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 0
+  },
+  {
+   "id": "c070",
+   "paper": "Tiny_Federated_Wireless_Foundation_Model",
+   "part": "tuning",
+   "kind": "method",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 44020,
+    "end": 44096
+   },
+   "evidence": [
+    {
+     "start": 43946,
+     "end": 45196,
+     "doi": "10.9999/p09",
+     "excerpt": "Experimental Setup\n1) Tiny Wireless Foundation Model: In our experiments,\nwe employ a ViT small model with 12 encoder blocks\nand eight attention heads. Pruning …",
+     "withheld": null,
+     "score": 0.9997783070984843
+    }
+   ],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 327,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 1250
+  },
+  {
+   "id": "c071",
+   "paper": "Tiny_Federated_Wireless_Foundation_Model",
+   "part": "tuning",
+   "kind": "numeric",
+   "mode": "guided",
+   "label": "FALSE",
+   "gold": {
+    "start": 44586,
+    "end": 44764
+   },
+   "evidence": [],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 352,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 0
+  },
+  {
+   "id": "c076",
+   "paper": "Tiny_Federated_Wireless_Foundation_Model",
+   "part": "tuning",
+   "kind": "dataset",
+   "mode": "guided",
+   "label": "FALSE",
+   "gold": {
+    "start": 48134,
+    "end": 48272
+   },
+   "evidence": [],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 344,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 0
+  },
+  {
+   "id": "c077",
+   "paper": "Tiny_Federated_Wireless_Foundation_Model",
+   "part": "tuning",
+   "kind": "numeric",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 50848,
+    "end": 50923
+   },
+   "evidence": [
+    {
+     "start": 50564,
+     "end": 51296,
+     "doi": "10.9999/p09",
+     "excerpt": "Beyond this threshold, more\naggressive pruning levels (e.g., 80% and 92%) lead to a more\nnoticeable, yet still acceptable, drop in accuracy.\nTable I summarizes …",
+     "withheld": null,
+     "score": 0.9993130212999723
+    }
+   ],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 374,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 732
+  },
+  {
+   "id": "c081",
+   "paper": "http_thesai.org_Downloads_Volume12No2_Pa",
+   "part": "held-out",
+   "kind": "finding",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 2235,
+    "end": 2328
+   },
+   "evidence": [
+    {
+     "start": 1319,
+     "end": 2513,
+     "doi": "10.9999/p10",
+     "excerpt": "In this paper, we establish the need to\npay attention to non-smart appliances, and propose a solution for\nincorporating such devices into the energy-efficient I…",
+     "withheld": null,
+     "score": 0.9996004279498926
+    }
+   ],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 338,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 1194
+  },
+  {
+   "id": "c084",
+   "paper": "http_thesai.org_Downloads_Volume12No2_Pa",
+   "part": "held-out",
+   "kind": "method",
+   "mode": "guided",
+   "label": "FALSE",
+   "gold": {
+    "start": 20784,
+    "end": 21021
+   },
+   "evidence": [],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 307,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 0
+  },
+  {
+   "id": "c087",
+   "paper": "http_thesai.org_Downloads_Volume12No2_Pa",
+   "part": "held-out",
+   "kind": "method",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 13334,
+    "end": 13418
+   },
+   "evidence": [
+    {
+     "start": 12834,
+     "end": 14236,
+     "doi": "10.9999/p10",
+     "excerpt": "Although\nthe NodeMCU alone could have been used as microcontroller,\nit does not have enough I/O pins and output power to control\nthe Homergy Box’s sixteen (16) …",
+     "withheld": null,
+     "score": 0.9988633544453822
+    }
+   ],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 373,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 1402
+  },
+  {
+   "id": "c091",
+   "paper": "https_www.mdpi.com_2071-1050_14_21_14556",
+   "part": "tuning",
+   "kind": "numeric",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 12298,
+    "end": 12391
+   },
+   "evidence": [
+    {
+     "start": 10363,
+     "end": 11776,
+     "doi": "10.9999/p11",
+     "excerpt": "Domestic Devices Applied\nThe present study analyzes the suggested problem using a medium-sized house, and\nTable 1 presents load profiles for all appliances. The…",
+     "withheld": null,
+     "score": 0.9985231733650406
+    },
+    {
+     "start": 12015,
+     "end": 13361,
+     "doi": "10.9999/p11",
+     "excerpt": "Sustainability 2022, 14, 14556 4 of 20\n(TOUP) and feed-in tariff (FIP) are set at equal levels for this paper as a demonstration\nof the scheme’s efficiency. A l…",
+     "withheld": null,
+     "score": 0.9983003891954296
+    }
+   ],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 400,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 2759
+  },
+  {
+   "id": "c092",
+   "paper": "https_www.mdpi.com_2071-1050_14_21_14556",
+   "part": "tuning",
+   "kind": "numeric",
+   "mode": "guided",
+   "label": "FALSE",
+   "gold": {
+    "start": 12393,
+    "end": 12486
+   },
+   "evidence": [],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 353,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 0
+  },
+  {
+   "id": "c097",
+   "paper": "https_www.mdpi.com_2071-1050_14_21_14556",
+   "part": "tuning",
+   "kind": "method",
+   "mode": "guided",
+   "label": "FALSE",
+   "gold": {
+    "start": 30075,
+    "end": 30152
+   },
+   "evidence": [],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 325,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 0
+  },
+  {
+   "id": "c098",
+   "paper": "https_www.mdpi.com_2079-9292_12_19_4041_",
+   "part": "held-out",
+   "kind": "method",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 1529,
+    "end": 1852
+   },
+   "evidence": [
+    {
+     "start": 1314,
+     "end": 2640,
+     "doi": "10.9999/p12",
+     "excerpt": "Implementing\ndemand-response programs in residential and commercial buildings requires the use of smart meters\nand smart plugs. In this paper, we propose an arc…",
+     "withheld": null,
+     "score": 0.9998028697717961
+    }
+   ],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 335,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 1326
+  },
+  {
+   "id": "c102",
+   "paper": "https_www.mdpi.com_2079-9292_12_19_4041_",
+   "part": "held-out",
+   "kind": "finding",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 2253,
+    "end": 2377
+   },
+   "evidence": [
+    {
+     "start": 1314,
+     "end": 2640,
+     "doi": "10.9999/p12",
+     "excerpt": "Implementing\ndemand-response programs in residential and commercial buildings requires the use of smart meters\nand smart plugs. In this paper, we propose an arc…",
+     "withheld": null,
+     "score": 0.9993672816051519
+    }
+   ],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 324,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 1326
+  },
+  {
+   "id": "c105",
+   "paper": "https_www.mdpi.com_2079-9292_12_19_4041_",
+   "part": "held-out",
+   "kind": "method",
+   "mode": "guided",
+   "label": "FALSE",
+   "gold": {
+    "start": 1763,
+    "end": 1852
+   },
+   "evidence": [],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 298,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 0
+  },
+  {
+   "id": "c108",
+   "paper": "https_www.mdpi.com_2079-9292_12_21_4453_",
+   "part": "tuning",
+   "kind": "method",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 1967,
+    "end": 2297
+   },
+   "evidence": [
+    {
+     "start": 1073,
+     "end": 2369,
+     "doi": "10.9999/p13",
+     "excerpt": "Meloni 1,*\n1 Department of Communications, School of Electrical and Computer Engineering, University of Campinas,\nCampinas 13083-852, Brazil; l192701@dac.unicam…",
+     "withheld": null,
+     "score": 0.999827084067698
+    },
+    {
+     "start": 5758,
+     "end": 7171,
+     "doi": "10.9999/p13",
+     "excerpt": "The middleware can be required to mediate interactions between applications and\nhardware as well as among systems. Without these solutions, programmers would ha…",
+     "withheld": null,
+     "score": 0.9984518242615141
+    }
+   ],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 374,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 2709
+  },
+  {
+   "id": "c112",
+   "paper": "https_www.mdpi.com_2079-9292_12_21_4453_",
+   "part": "tuning",
+   "kind": "method",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 50039,
+    "end": 50167
+   },
+   "evidence": [
+    {
+     "start": 49047,
+     "end": 50416,
+     "doi": "10.9999/p13",
+     "excerpt": "As a result, the disaggregation process run as a middleware\napplication, providing the user with information regarding the appliances in operation and\nmaking it…",
+     "withheld": null,
+     "score": 0.9998014697312146
+    },
+    {
+     "start": 50528,
+     "end": 51632,
+     "doi": "10.9999/p13",
+     "excerpt": "Electronics 2023, 12, 4453 16 of 23\nappliance. In this step, the Accumulative Contribution Ratio (ACR) criteria sets the number\nof principal components consider…",
+     "withheld": null,
+     "score": 0.9962030506831895
+    }
+   ],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 302,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 2473
+  },
+  {
+   "id": "c113",
+   "paper": "https_www.mdpi.com_2079-9292_12_21_4453_",
+   "part": "tuning",
+   "kind": "dataset",
+   "mode": "guided",
+   "label": "FALSE",
+   "gold": {
+    "start": 52508,
+    "end": 52654
+   },
+   "evidence": [],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 318,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 0
+  },
+  {
+   "id": "c117",
+   "paper": "https_www.mdpi.com_2079-9292_12_21_4453_",
+   "part": "tuning",
+   "kind": "method",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 2383,
+    "end": 2548
+   },
+   "evidence": [
+    {
+     "start": 2369,
+     "end": 3646,
+     "doi": "10.9999/p13",
+     "excerpt": "Additionally, machine learning techniques are utilized to\nidentify energy consumption of individual appliances when only the aggregate energy consumption\nof the…",
+     "withheld": null,
+     "score": 0.9998858808519998
+    },
+    {
+     "start": 7171,
+     "end": 8517,
+     "doi": "10.9999/p13",
+     "excerpt": "In the proposed sys-\ntem, users can visualize the energy consumption data and statistics of different appliances.\nIn situations where only aggregated energy mea…",
+     "withheld": null,
+     "score": 0.9990517803544635
+    }
+   ],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 288,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 2623
+  },
+  {
+   "id": "c120",
+   "paper": "https_www.mdpi.com_2624-6511_5_3_53_pdf_",
+   "part": "held-out",
+   "kind": "dataset",
+   "mode": "guided",
+   "label": "FALSE",
+   "gold": {
+    "start": 38132,
+    "end": 38322
+   },
+   "evidence": [],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 319,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 0
+  },
+  {
+   "id": "c122",
+   "paper": "https_www.mdpi.com_2624-6511_5_3_53_pdf_",
+   "part": "held-out",
+   "kind": "dataset",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 36656,
+    "end": 36732
+   },
+   "evidence": [
+    {
+     "start": 36636,
+     "end": 38045,
+     "doi": "10.9999/p14",
+     "excerpt": "Element Description\nHome automation system Home Assistant, running in a Raspberry Pi 4, 4 GB RAM\nPhoto voltaic array 14 panels, 480 W rated\nInverter Ingecon Sun…",
+     "withheld": null,
+     "score": 0.9999423889215551
+    }
+   ],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 308,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 1409
+  },
+  {
+   "id": "c127",
+   "paper": "https_www.mdpi.com_2624-6511_5_3_53_pdf_",
+   "part": "held-out",
+   "kind": "method",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 40464,
+    "end": 40617
+   },
+   "evidence": [
+    {
+     "start": 40314,
+     "end": 41609,
+     "doi": "10.9999/p14",
+     "excerpt": "Smart Cities 2022, 5 1068\n4.3. Knowledge Base and Security Components\nFor the KB and security components, we have selected some Generic Enablers from\nthe FIWARE…",
+     "withheld": null,
+     "score": 0.9994601399753354
+    }
+   ],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 353,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 1295
+  },
+  {
+   "id": "c130",
+   "paper": "Papaers_overview",
+   "part": "held-out",
+   "kind": "numeric",
+   "mode": "guided",
+   "label": "FALSE",
+   "gold": {
+    "start": 3436,
+    "end": 3579
+   },
+   "evidence": [
+    {
+     "start": 2531,
+     "end": 3763,
+     "doi": "10.9999/p08",
+     "excerpt": "Methodology and Framework Architecture\nThe research highlights two primary SSL frameworks for radio representation: IQFM (based on\nSimCLR) and MoCo-v3 (based on…",
+     "withheld": null,
+     "score": 0.9991054670487004
+    }
+   ],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 314,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 1232
+  },
+  {
+   "id": "c131",
+   "paper": "Papaers_overview",
+   "part": "held-out",
+   "kind": "finding",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 1269,
+    "end": 1410
+   },
+   "evidence": [
+    {
+     "start": 0,
+     "end": 1412,
+     "doi": "10.9999/p08",
+     "excerpt": "Foundational Models for Raw I/Q Streams in AI-Native 6G\nExecutive Summary\nThe transition toward sixth-generation (6G) wireless architectures necessitates a shif…",
+     "withheld": null,
+     "score": 0.9990063826342528
+    }
+   ],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 337,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 1412
+  },
+  {
+   "id": "c135",
+   "paper": "Papaers_overview",
+   "part": "held-out",
+   "kind": "numeric",
+   "mode": "guided",
+   "label": "FALSE",
+   "gold": {
+    "start": 5840,
+    "end": 5982
+   },
+   "evidence": [],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 303,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 0
+  }
+ ],
+ "redacted": true
+}

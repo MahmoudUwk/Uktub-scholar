@@ -1,0 +1,277 @@
+{
+ "schema": "bench-evidence/1",
+ "phase": "retrieval",
+ "date": "2026-10-04",
+ "rows": [
+  {
+   "chunkTokens": 1024,
+   "k": 1,
+   "part": "tuning",
+   "claims": 37,
+   "goldLocated": 37,
+   "candidateRecall": 0.8108108108108109,
+   "meanCandidateShare": 0.03907298520757918
+  },
+  {
+   "chunkTokens": 1024,
+   "k": 1,
+   "part": "held-out",
+   "claims": 37,
+   "goldLocated": 37,
+   "candidateRecall": 0.8648648648648649,
+   "meanCandidateShare": 0.08273108273108272
+  },
+  {
+   "chunkTokens": 1024,
+   "k": 3,
+   "part": "tuning",
+   "claims": 37,
+   "goldLocated": 37,
+   "candidateRecall": 0.918918918918919,
+   "meanCandidateShare": 0.11721895562273761
+  },
+  {
+   "chunkTokens": 1024,
+   "k": 3,
+   "part": "held-out",
+   "claims": 37,
+   "goldLocated": 37,
+   "candidateRecall": 0.972972972972973,
+   "meanCandidateShare": 0.2481932481932481
+  },
+  {
+   "chunkTokens": 1024,
+   "k": 5,
+   "part": "tuning",
+   "claims": 37,
+   "goldLocated": 37,
+   "candidateRecall": 0.972972972972973,
+   "meanCandidateShare": 0.19536492603789612
+  },
+  {
+   "chunkTokens": 1024,
+   "k": 5,
+   "part": "held-out",
+   "claims": 37,
+   "goldLocated": 37,
+   "candidateRecall": 0.972972972972973,
+   "meanCandidateShare": 0.34158334158334147
+  },
+  {
+   "chunkTokens": 1024,
+   "k": 8,
+   "part": "tuning",
+   "claims": 37,
+   "goldLocated": 37,
+   "candidateRecall": 1,
+   "meanCandidateShare": 0.31258388166063344
+  },
+  {
+   "chunkTokens": 1024,
+   "k": 8,
+   "part": "held-out",
+   "claims": 37,
+   "goldLocated": 37,
+   "candidateRecall": 1,
+   "meanCandidateShare": 0.4816684816684814
+  },
+  {
+   "chunkTokens": 1024,
+   "k": 12,
+   "part": "tuning",
+   "claims": 37,
+   "goldLocated": 37,
+   "candidateRecall": 1,
+   "meanCandidateShare": 0.46887582249095044
+  },
+  {
+   "chunkTokens": 1024,
+   "k": 12,
+   "part": "held-out",
+   "claims": 37,
+   "goldLocated": 37,
+   "candidateRecall": 1,
+   "meanCandidateShare": 0.6684486684486681
+  },
+  {
+   "chunkTokens": 2048,
+   "k": 1,
+   "part": "tuning",
+   "claims": 37,
+   "goldLocated": 37,
+   "candidateRecall": 0.8108108108108109,
+   "meanCandidateShare": 0.07953968777139507
+  },
+  {
+   "chunkTokens": 2048,
+   "k": 1,
+   "part": "held-out",
+   "claims": 37,
+   "goldLocated": 37,
+   "candidateRecall": 0.7837837837837838,
+   "meanCandidateShare": 0.1448123948123948
+  },
+  {
+   "chunkTokens": 2048,
+   "k": 3,
+   "part": "tuning",
+   "claims": 37,
+   "goldLocated": 37,
+   "candidateRecall": 0.9459459459459459,
+   "meanCandidateShare": 0.23861906331418528
+  },
+  {
+   "chunkTokens": 2048,
+   "k": 3,
+   "part": "held-out",
+   "claims": 37,
+   "goldLocated": 37,
+   "candidateRecall": 1,
+   "meanCandidateShare": 0.3803831303831302
+  },
+  {
+   "chunkTokens": 2048,
+   "k": 5,
+   "part": "tuning",
+   "claims": 37,
+   "goldLocated": 37,
+   "candidateRecall": 0.972972972972973,
+   "meanCandidateShare": 0.39769843885697553
+  },
+  {
+   "chunkTokens": 2048,
+   "k": 5,
+   "part": "held-out",
+   "claims": 37,
+   "goldLocated": 37,
+   "candidateRecall": 1,
+   "meanCandidateShare": 0.5618998118998121
+  },
+  {
+   "chunkTokens": 2048,
+   "k": 8,
+   "part": "tuning",
+   "claims": 37,
+   "goldLocated": 37,
+   "candidateRecall": 1,
+   "meanCandidateShare": 0.5603844262380846
+  },
+  {
+   "chunkTokens": 2048,
+   "k": 8,
+   "part": "held-out",
+   "claims": 37,
+   "goldLocated": 37,
+   "candidateRecall": 1,
+   "meanCandidateShare": 0.7955647955647955
+  },
+  {
+   "chunkTokens": 2048,
+   "k": 12,
+   "part": "tuning",
+   "claims": 37,
+   "goldLocated": 37,
+   "candidateRecall": 1,
+   "meanCandidateShare": 0.7266770254575137
+  },
+  {
+   "chunkTokens": 2048,
+   "k": 12,
+   "part": "held-out",
+   "claims": 37,
+   "goldLocated": 37,
+   "candidateRecall": 1,
+   "meanCandidateShare": 0.9230769230769232
+  },
+  {
+   "chunkTokens": 8192,
+   "k": 1,
+   "part": "tuning",
+   "claims": 37,
+   "goldLocated": 37,
+   "candidateRecall": 0.8108108108108109,
+   "meanCandidateShare": 0.29954954954954954
+  },
+  {
+   "chunkTokens": 8192,
+   "k": 1,
+   "part": "held-out",
+   "claims": 37,
+   "goldLocated": 37,
+   "candidateRecall": 0.8918918918918919,
+   "meanCandidateShare": 0.4639639639639641
+  },
+  {
+   "chunkTokens": 8192,
+   "k": 3,
+   "part": "tuning",
+   "claims": 37,
+   "goldLocated": 37,
+   "candidateRecall": 1,
+   "meanCandidateShare": 0.7770270270270271
+  },
+  {
+   "chunkTokens": 8192,
+   "k": 3,
+   "part": "held-out",
+   "claims": 37,
+   "goldLocated": 37,
+   "candidateRecall": 1,
+   "meanCandidateShare": 0.9594594594594594
+  },
+  {
+   "chunkTokens": 8192,
+   "k": 5,
+   "part": "tuning",
+   "claims": 37,
+   "goldLocated": 37,
+   "candidateRecall": 1,
+   "meanCandidateShare": 0.927927927927928
+  },
+  {
+   "chunkTokens": 8192,
+   "k": 5,
+   "part": "held-out",
+   "claims": 37,
+   "goldLocated": 37,
+   "candidateRecall": 1,
+   "meanCandidateShare": 1
+  },
+  {
+   "chunkTokens": 8192,
+   "k": 8,
+   "part": "tuning",
+   "claims": 37,
+   "goldLocated": 37,
+   "candidateRecall": 1,
+   "meanCandidateShare": 0.981981981981982
+  },
+  {
+   "chunkTokens": 8192,
+   "k": 8,
+   "part": "held-out",
+   "claims": 37,
+   "goldLocated": 37,
+   "candidateRecall": 1,
+   "meanCandidateShare": 1
+  },
+  {
+   "chunkTokens": 8192,
+   "k": 12,
+   "part": "tuning",
+   "claims": 37,
+   "goldLocated": 37,
+   "candidateRecall": 1,
+   "meanCandidateShare": 1
+  },
+  {
+   "chunkTokens": 8192,
+   "k": 12,
+   "part": "held-out",
+   "claims": 37,
+   "goldLocated": 37,
+   "candidateRecall": 1,
+   "meanCandidateShare": 1
+  }
+ ]
+}

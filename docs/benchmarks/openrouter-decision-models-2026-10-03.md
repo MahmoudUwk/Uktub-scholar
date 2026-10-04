@@ -53,6 +53,6 @@ client policy) — their wall times reflect the throttle, not model latency.
 **Recommendation update:** verification chain = mercury-decide:free
 (chunked, bar 0.99) as primary hosted engine; K2 chunked stays the local
 offline fallback; jev-latest for precision-critical spot checks. The 0.95
-K2 knee is superseded by mercury@0.99 (more decisions, same zero-FP
-guarantee on this set). Raw per-claim results in the per-model
-`*.results.json` files alongside this report.
+K2 knee is superseded by mercury@0.99 (more decisions, zero observed false
+positives on this set, not a guarantee for unseen claims). Raw per-claim results
+remain in the per-model `*.results.json` files alongside this report.

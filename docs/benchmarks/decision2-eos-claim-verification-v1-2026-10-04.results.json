@@ -1,0 +1,3035 @@
+{
+ "schema": "bench-claim-verify/2",
+ "date": "2026-10-04",
+ "partial": false,
+ "dataset": {
+  "name": "claim-verification-v1",
+  "claims": 135,
+  "TRUE": 74,
+  "FALSE": 61,
+  "papers": 14
+ },
+ "engine": {
+  "name": "decision2-eos",
+  "id": "decision2-eos:claim-noul-criteria-v1",
+  "revision": "3594047d69f476f1d01cf84c593e213fc3a4dfe0",
+  "ready": {
+   "ready": true,
+   "model": "Decision-2.0-Eos-0.8B",
+   "model_ref": "/home/mahmoud/.cache/uktub-bench/decision2/models/eos",
+   "revision": "3594047d69f476f1d01cf84c593e213fc3a4dfe0",
+   "model_sha256": "d97127991870ae202017a99eb496bdc56a62afd038594a67febfab0aea9d76fe",
+   "max_input_tokens": 16384,
+   "device": "cuda:0",
+   "load_s": 3.248,
+   "vram_after_load_mib": 1925.1,
+   "versions": {
+    "torch": "2.11.0+cu128",
+    "cuda": "12.8",
+    "transformers": "5.18.0",
+    "python": "3.12.13"
+   },
+   "gpu": "NVIDIA GeForce RTX 4060 Laptop GPU"
+  }
+ },
+ "mode": "prefix",
+ "textMode": "normalized",
+ "policy": {
+  "prefix_chars": 24000,
+  "minConfidence": 0.99,
+  "defaultMinConfidence": 0.99
+ },
+ "papers": {
+  "2411.09996v1": {
+   "chars": 27690,
+   "chunks": [
+    {
+     "index": 0,
+     "char_start": 0,
+     "char_end": 24000,
+     "hash": "d13fa016277e8bdf644bf3831e6c46de56d5db04133c65d614a0038d5ac4e36a"
+    }
+   ]
+  },
+  "2504.14100v1": {
+   "chars": 57691,
+   "chunks": [
+    {
+     "index": 0,
+     "char_start": 0,
+     "char_end": 24000,
+     "hash": "baafdac2f12ff4780cc3148cad4ab68d5f2ecd3c2fae0d00e602133b6acaf331"
+    }
+   ]
+  },
+  "2506.06718v2": {
+   "chars": 65791,
+   "chunks": [
+    {
+     "index": 0,
+     "char_start": 0,
+     "char_end": 24000,
+     "hash": "2d42bf46349c92b6d009b69ec67272db6d72c43d30b3241b574ae44cfacced3e"
+    }
+   ]
+  },
+  "2509.03077v1": {
+   "chars": 32136,
+   "chunks": [
+    {
+     "index": 0,
+     "char_start": 0,
+     "char_end": 24000,
+     "hash": "5feb50286aea6d87033e924a1daac69fdc9448b5c980713637945e9f709e1f8c"
+    }
+   ]
+  },
+  "2511.15162v1": {
+   "chars": 29992,
+   "chunks": [
+    {
+     "index": 0,
+     "char_start": 0,
+     "char_end": 24000,
+     "hash": "677508565fd8af6a494448284de4e33b4ab393e7dd17324807967c92f63e022f"
+    }
+   ]
+  },
+  "2606.06373v1": {
+   "chars": 29211,
+   "chunks": [
+    {
+     "index": 0,
+     "char_start": 0,
+     "char_end": 24000,
+     "hash": "edea65ceb096d259556c13926a9344616d295b24e1a3b702082c1513cf94709a"
+    }
+   ]
+  },
+  "2609.04707v1": {
+   "chars": 173897,
+   "chunks": [
+    {
+     "index": 0,
+     "char_start": 0,
+     "char_end": 24000,
+     "hash": "ccb129e6beea3de7a8de34e5765b773e87a14c53d588b2a24563a671a3d63ae7"
+    }
+   ]
+  },
+  "Tiny_Federated_Wireless_Foundation_Model": {
+   "chars": 68285,
+   "chunks": [
+    {
+     "index": 0,
+     "char_start": 0,
+     "char_end": 24000,
+     "hash": "a8d45316ad8d47ad78cc6e472d97636e9f8a2230fe29f2271d162b356bee9e0a"
+    }
+   ]
+  },
+  "http_thesai.org_Downloads_Volume12No2_Pa": {
+   "chars": 32005,
+   "chunks": [
+    {
+     "index": 0,
+     "char_start": 0,
+     "char_end": 24000,
+     "hash": "790f55ca1d0d8109be33fb4707d24fae93e71c0a6f49cbe945fb54a2b1f8fbd2"
+    }
+   ]
+  },
+  "https_www.mdpi.com_2071-1050_14_21_14556": {
+   "chars": 59084,
+   "chunks": [
+    {
+     "index": 0,
+     "char_start": 0,
+     "char_end": 24000,
+     "hash": "bd4d2138a0cc7c3b4b56c1e5bfda58a517e6598dae5325d47770b68a881dc9ad"
+    }
+   ]
+  },
+  "https_www.mdpi.com_2079-9292_12_19_4041_": {
+   "chars": 57024,
+   "chunks": [
+    {
+     "index": 0,
+     "char_start": 0,
+     "char_end": 24000,
+     "hash": "13e2b2d7edc7041d09cf9178b7077f24b701af09396f31da424f497c37111a2d"
+    }
+   ]
+  },
+  "https_www.mdpi.com_2079-9292_12_21_4453_": {
+   "chars": 70969,
+   "chunks": [
+    {
+     "index": 0,
+     "char_start": 0,
+     "char_end": 24000,
+     "hash": "34b45cd38203b32b276439ad4b576f506064d2278678c2d1b230f86c3628817e"
+    }
+   ]
+  },
+  "https_www.mdpi.com_2624-6511_5_3_53_pdf_": {
+   "chars": 71614,
+   "chunks": [
+    {
+     "index": 0,
+     "char_start": 0,
+     "char_end": 24000,
+     "hash": "bd2079542eacb6ccca759a2015989aab882ed779558ef7c07ce54f693d9b8288"
+    }
+   ]
+  },
+  "Papaers_overview": {
+   "chars": 7928,
+   "chunks": [
+    {
+     "index": 0,
+     "char_start": 0,
+     "char_end": 7928,
+     "hash": "28cdadfcc5a59bda38e1eab407d9812e6d0da75442917ee77fcc46727e57b5fd"
+    }
+   ]
+  }
+ },
+ "results": [
+  {
+   "id": "c001",
+   "paper": "2411.09996v1",
+   "label": "TRUE",
+   "kind": "dataset",
+   "claim": "The HSD dataset provides CSI measurements for six distinct human activities, including running and boxing.",
+   "claim_hash": "ada4f731aff7128b448170edea31d229f9a964fdb2eee89448cfa1ac9c139919",
+   "chunkP": [
+    0.9497460115304293
+   ],
+   "chunkTokens": [
+    5522
+   ],
+   "issues": [],
+   "goldChunks": [
+    0
+   ]
+  },
+  {
+   "id": "c002",
+   "paper": "2411.09996v1",
+   "label": "FALSE",
+   "kind": "numeric",
+   "claim": "CSI in the HSD dataset is measured over 5,000 subcarriers for each activity.",
+   "claim_hash": "951b8f38aaa3134aa1f1e60a10dd6c1521801b8154632de297e7d5925a2bd8d2",
+   "chunkP": [
+    0.13282702122737503
+   ],
+   "chunkTokens": [
+    5526
+   ],
+   "issues": [],
+   "goldChunks": [
+    0
+   ]
+  },
+  {
+   "id": "c003",
+   "paper": "2411.09996v1",
+   "label": "TRUE",
+   "kind": "method",
+   "claim": "Masked Spectrogram Modeling pretraining uses high masking ratios of roughly 80 percent to make reconstruction harder.",
+   "claim_hash": "7e4dfb66a8f34c180b4d346c1f0956bfd1df8d68788e6e2008553da93ce93f2b",
+   "chunkP": [
+    0.9456292751235452
+   ],
+   "chunkTokens": [
+    5526
+   ],
+   "issues": [],
+   "goldChunks": [
+    0
+   ]
+  },
+  {
+   "id": "c004",
+   "paper": "2411.09996v1",
+   "label": "FALSE",
+   "kind": "method",
+   "claim": "For the human activity sensing task, the entire ViT encoder is unfrozen and finetuned together with the classifier head.",
+   "claim_hash": "74218d015bfcdd9ae1bdcc5097561f8ee064a3f2aa48204c94b13d411937f33f",
+   "chunkP": [
+    0.5442548615990181
+   ],
+   "chunkTokens": [
+    5529
+   ],
+   "issues": [],
+   "goldChunks": [
+    0
+   ]
+  },
+  {
+   "id": "c005",
+   "paper": "2411.09996v1",
+   "label": "TRUE",
+   "kind": "finding",
+   "claim": "On the segmentation dataset, the best model is a pretrained ViT-M with a 70 percent masking ratio, which beats the best scratch-trained model despite being four times smaller.",
+   "claim_hash": "425d9e18c430958c69428e6f4fc3e3676f8801d89243e225e3a4dc0a4bfce738",
+   "chunkP": [
+    0.9935977258862241
+   ],
+   "chunkTokens": [
+    5540
+   ],
+   "issues": [],
+   "goldChunks": [
+    0
+   ]
+  },
+  {
+   "id": "c006",
+   "paper": "2411.09996v1",
+   "label": "FALSE",
+   "kind": "numeric",
+   "claim": "The RRD dataset consists of 2,400 over-the-air recordings collected in downtown Toronto.",
+   "claim_hash": "d341f7a443367f7f96feca51db9d94f39e02b586a2fc98455c1e37b1919f0065",
+   "chunkP": [
+    0.081655225755214
+   ],
+   "chunkTokens": [
+    5525
+   ],
+   "issues": [],
+   "goldChunks": [
+    0
+   ]
+  },
+  {
+   "id": "c007",
+   "paper": "2411.09996v1",
+   "label": "TRUE",
+   "kind": "dataset",
+   "claim": "In the segmentation dataset label images, NR signals are marked as 1, LTE signals as 2, and noise as 0.",
+   "claim_hash": "30a2a215b9d522d7cd2420d9a2d0417d489fc2ddab8c256dc5945a2861cc7e4a",
+   "chunkP": [
+    0.8885686169258947
+   ],
+   "chunkTokens": [
+    5531
+   ],
+   "issues": [],
+   "goldChunks": [
+    0
+   ]
+  },
+  {
+   "id": "c008",
+   "paper": "2411.09996v1",
+   "label": "FALSE",
+   "kind": "finding",
+   "claim": "The pretrained ViT model is outperformed by a four-times larger model trained from scratch on spectrogram segmentation.",
+   "claim_hash": "27b13f21d7f72977efb21ae39df0e3214c9084be05566d6185dba28281e86360",
+   "chunkP": [
+    0.9715062815208634
+   ],
+   "chunkTokens": [
+    5527
+   ],
+   "issues": [],
+   "goldChunks": [
+    0
+   ]
+  },
+  {
+   "id": "c009",
+   "paper": "2411.09996v1",
+   "label": "TRUE",
+   "kind": "finding",
+   "claim": "The ideal masking ratio for pretraining lies between roughly 70 and 80 percent.",
+   "claim_hash": "ededf56faadf710ec8faee762853f19ffadb147fbe237d2f2023bd443aff9255",
+   "chunkP": [
+    0.997925484063927
+   ],
+   "chunkTokens": [
+    5523
+   ],
+   "issues": [],
+   "goldChunks": [
+    0
+   ]
+  },
+  {
+   "id": "c010",
+   "paper": "2411.09996v1",
+   "label": "FALSE",
+   "kind": "numeric",
+   "claim": "HSD recordings are kept at their original 3 x 114 x 2000 shape when fed to the model.",
+   "claim_hash": "56169df09b1b7eee37475299fbd5b18decdb7344a99418966aa0d2e22e072f99",
+   "chunkP": [
+    0.73582365759534
+   ],
+   "chunkTokens": [
+    5532
+   ],
+   "issues": [],
+   "goldChunks": [
+    0
+   ]
+  },
+  {
+   "id": "c011",
+   "paper": "2504.14100v1",
+   "label": "TRUE",
+   "kind": "numeric",
+   "claim": "The best LoRA configuration for RF signal classification uses alpha = 8 and rank = 50, adding about 1.5 million task-specific parameters.",
+   "claim_hash": "af13672c04339936eea2a357694bdd6217e47409c06462cfbeeae9be53cd3c44",
+   "chunkP": [
+    0.6300797409539906
+   ],
+   "chunkTokens": [
+    5065
+   ],
+   "issues": [],
+   "goldChunks": []
+  },
+  {
+   "id": "c012",
+   "paper": "2504.14100v1",
+   "label": "FALSE",
+   "kind": "finding",
+   "claim": "WavesFM roughly doubles the 5G NR positioning error compared to the supervised baseline.",
+   "claim_hash": "bb5d23a02b78925874e80c96a174a2152131226c903d549d0cf390c0d1668539",
+   "chunkP": [
+    0.006277152946171976
+   ],
+   "chunkTokens": [
+    5051
+   ],
+   "issues": [],
+   "goldChunks": [
+    0
+   ]
+  },
+  {
+   "id": "c013",
+   "paper": "2504.14100v1",
+   "label": "TRUE",
+   "kind": "dataset",
+   "claim": "The 5G CSI pre-training dataset was gathered with the user terminal at 476 distinct locations and contains 476 samples.",
+   "claim_hash": "8d8ae44956e66a4d4927c6587da087b62dd37ba90cf3cd4539405eb7f146a0b2",
+   "chunkP": [
+    0.9635076882399487
+   ],
+   "chunkTokens": [
+    5062
+   ],
+   "issues": [],
+   "goldChunks": [
+    0
+   ]
+  },
+  {
+   "id": "c014",
+   "paper": "2504.14100v1",
+   "label": "FALSE",
+   "kind": "numeric",
+   "claim": "The WiFi CSI pre-training dataset contains a total of 8,400 samples.",
+   "claim_hash": "e398a8f2673951b464c78014ac2bff242da563dd569fe1f986b93cde5053e19b",
+   "chunkP": [
+    0.28203269349285415
+   ],
+   "chunkTokens": [
+    5051
+   ],
+   "issues": [],
+   "goldChunks": [
+    0
+   ]
+  },
+  {
+   "id": "c015",
+   "paper": "2504.14100v1",
+   "label": "TRUE",
+   "kind": "method",
+   "claim": "During evaluation, the last two of the twelve ViT blocks are unfrozen for the positioning, channel estimation, and RF classification tasks.",
+   "claim_hash": "77f920d4de8204e0b90e428f604f99d6472616f29b54226880ad0eb0d2f41e07",
+   "chunkP": [
+    0.498785051114412
+   ],
+   "chunkTokens": [
+    5060
+   ],
+   "issues": [],
+   "goldChunks": []
+  },
+  {
+   "id": "c016",
+   "paper": "2504.14100v1",
+   "label": "TRUE",
+   "kind": "finding",
+   "claim": "The least-squares estimator surpasses both learned models for SNRs above 13 dB.",
+   "claim_hash": "9e3ad06293ce7bbd205bc18802f59ec091021cf656a7915cddb3943352d29c46",
+   "chunkP": [
+    0.010814851749358664
+   ],
+   "chunkTokens": [
+    5052
+   ],
+   "issues": [],
+   "goldChunks": []
+  },
+  {
+   "id": "c017",
+   "paper": "2504.14100v1",
+   "label": "FALSE",
+   "kind": "numeric",
+   "claim": "In the simulated MIMO-OFDM system, the base station is equipped with 64 antennas.",
+   "claim_hash": "7e756576d91c514a29c47abe23700fd105fd2319ca6e10f45714b0584d2646c1",
+   "chunkP": [
+    0.02847278128828948
+   ],
+   "chunkTokens": [
+    5054
+   ],
+   "issues": [],
+   "goldChunks": [
+    0
+   ]
+  },
+  {
+   "id": "c018",
+   "paper": "2504.14100v1",
+   "label": "FALSE",
+   "kind": "dataset",
+   "claim": "The RF signal classification dataset spans 45 different signal type classes.",
+   "claim_hash": "701e55613ed6e7de7f6996144c3a8d0671379657de3e3eb50ef9ab84101b8115",
+   "chunkP": [
+    0.8043341359537522
+   ],
+   "chunkTokens": [
+    5047
+   ],
+   "issues": [],
+   "goldChunks": [
+    0
+   ]
+  },
+  {
+   "id": "c019",
+   "paper": "2504.14100v1",
+   "label": "FALSE",
+   "kind": "numeric",
+   "claim": "The RF-S pre-training dataset contains more than 5,000 spectrogram samples.",
+   "claim_hash": "bed9d8bfda891ec26f7675df362d3db26a14276c6b5a16db86cb12c315837df3",
+   "chunkP": [
+    0.20906434999119947
+   ],
+   "chunkTokens": [
+    5052
+   ],
+   "issues": [],
+   "goldChunks": [
+    0
+   ]
+  },
+  {
+   "id": "c020",
+   "paper": "2504.14100v1",
+   "label": "TRUE",
+   "kind": "finding",
+   "claim": "ViT-WiFi, whose pre-training data closely matches the human activity task, converges in about 20 fine-tuning epochs.",
+   "claim_hash": "3ca1f2bb44dc6a5de65db1d5eb08653c2bae6df69fc2546a4a6fbba8a7a7f9fb",
+   "chunkP": [
+    0.21190981184212285
+   ],
+   "chunkTokens": [
+    5062
+   ],
+   "issues": [],
+   "goldChunks": []
+  },
+  {
+   "id": "c021",
+   "paper": "2506.06718v2",
+   "label": "TRUE",
+   "kind": "method",
+   "claim": "The IQFM encoder uses a ShuffleNetV2 (0.5x) backbone with roughly 341k trainable parameters.",
+   "claim_hash": "2ca97a5c9dcc35cc32dd6fd98857b42d76b641ef6a608ead765467506fc7b06d",
+   "chunkP": [
+    0.05579582826867449
+   ],
+   "chunkTokens": [
+    5101
+   ],
+   "issues": [],
+   "goldChunks": []
+  },
+  {
+   "id": "c022",
+   "paper": "2506.06718v2",
+   "label": "TRUE",
+   "kind": "dataset",
+   "claim": "The over-the-air testbed dataset contains 1,115,378 labeled samples split 70/30 into train and test sets.",
+   "claim_hash": "5915baba04ee3d08493597fda494a04289407781c755af277f8802a0c668a25f",
+   "chunkP": [
+    0.0050837642874348036
+   ],
+   "chunkTokens": [
+    5107
+   ],
+   "issues": [],
+   "goldChunks": []
+  },
+  {
+   "id": "c023",
+   "paper": "2506.06718v2",
+   "label": "FALSE",
+   "kind": "numeric",
+   "claim": "The mechanical rotation of the transmitter produced 500 distinct AoA classes.",
+   "claim_hash": "2591ce1bfc7653d20e0ff28a0f4ebba5c8c5b36e604c2fa8a1077c4a45c232e0",
+   "chunkP": [
+    0.011346017982777498
+   ],
+   "chunkTokens": [
+    5090
+   ],
+   "issues": [],
+   "goldChunks": []
+  },
+  {
+   "id": "c024",
+   "paper": "2506.06718v2",
+   "label": "TRUE",
+   "kind": "finding",
+   "claim": "With a single labeled sample per class, task-specific SSL reaches 99.67 percent modulation accuracy versus 14.27 percent for the supervised baseline.",
+   "claim_hash": "3cf0a0d81aa8a25e7d636de4bde22951cf29c06b0d30f14e783cf8e2ed3632f5",
+   "chunkP": [
+    0.9647761291159935
+   ],
+   "chunkTokens": [
+    5108
+   ],
+   "issues": [],
+   "goldChunks": []
+  },
+  {
+   "id": "c025",
+   "paper": "2506.06718v2",
+   "label": "FALSE",
+   "kind": "finding",
+   "claim": "Channel masking augmentation improves modulation classification accuracy.",
+   "claim_hash": "9c5089c00a9d07258653b67eaea0d70abc7c64f24b5423f0c1e104fa5ab6096f",
+   "chunkP": [
+    0.5423308828710017
+   ],
+   "chunkTokens": [
+    5082
+   ],
+   "issues": [],
+   "goldChunks": []
+  },
+  {
+   "id": "c026",
+   "paper": "2506.06718v2",
+   "label": "FALSE",
+   "kind": "numeric",
+   "claim": "The LoRA adaptation used for out-of-distribution tasks adds roughly 840,000 trainable parameters.",
+   "claim_hash": "03735258ba32f5a8bdaa0a984ec46f6f21f96e3676d99d892e6452ede9cb0817",
+   "chunkP": [
+    0.0011240646787689698
+   ],
+   "chunkTokens": [
+    5098
+   ],
+   "issues": [],
+   "goldChunks": []
+  },
+  {
+   "id": "c027",
+   "paper": "2506.06718v2",
+   "label": "FALSE",
+   "kind": "dataset",
+   "claim": "RML2016.10a covers 24 digital and analog modulation schemes.",
+   "claim_hash": "251789361eb3076d60f5fbfcd10233fef379cbc8d23d5b4cbf5c41557f8a0a28",
+   "chunkP": [
+    0.0109071928168224
+   ],
+   "chunkTokens": [
+    5094
+   ],
+   "issues": [],
+   "goldChunks": []
+  },
+  {
+   "id": "c028",
+   "paper": "2506.06718v2",
+   "label": "TRUE",
+   "kind": "finding",
+   "claim": "KNN-based pseudo-labeling on the modulation-specific encoder attains 99.99 percent accuracy.",
+   "claim_hash": "fa1700139a516074251084c5fa09b87685f5cae56e3f8fc8eca2d119f30ec4ee",
+   "chunkP": [
+    0.0023959728157779137
+   ],
+   "chunkTokens": [
+    5096
+   ],
+   "issues": [],
+   "goldChunks": []
+  },
+  {
+   "id": "c029",
+   "paper": "2506.06718v2",
+   "label": "TRUE",
+   "kind": "finding",
+   "claim": "In the ablation study, removing both cyclic time shifting and channel masking collapses AoA accuracy to 0.95 percent.",
+   "claim_hash": "06d3cfcf76360cf9d85bff0d36b38a0bc88cf637d59a4a6fca5690be4383a6ab",
+   "chunkP": [
+    0.061868083802630806
+   ],
+   "chunkTokens": [
+    5100
+   ],
+   "issues": [],
+   "goldChunks": []
+  },
+  {
+   "id": "c030",
+   "paper": "2506.06718v2",
+   "label": "FALSE",
+   "kind": "finding",
+   "claim": "The joint-task model beats the task-specific SSL model on AoA classification in the one-shot setting.",
+   "claim_hash": "5a4fde209d2d1404bf4b2254dcb3577523d70b18829989d5da74e8648b184ee6",
+   "chunkP": [
+    0.19526609935733194
+   ],
+   "chunkTokens": [
+    5094
+   ],
+   "issues": [],
+   "goldChunks": []
+  },
+  {
+   "id": "c031",
+   "paper": "2509.03077v1",
+   "label": "TRUE",
+   "kind": "dataset",
+   "claim": "The captured dataset comprises 68 GB across 4,609 recording files.",
+   "claim_hash": "473744ef80282c686b71f456b553015d1c5466f3544ded939512017769bac3d9",
+   "chunkP": [
+    0.9917072174713226
+   ],
+   "chunkTokens": [
+    5352
+   ],
+   "issues": [],
+   "goldChunks": [
+    0
+   ]
+  },
+  {
+   "id": "c032",
+   "paper": "2509.03077v1",
+   "label": "FALSE",
+   "kind": "dataset",
+   "claim": "The development set of the dataset contains 922 files.",
+   "claim_hash": "d4dba542f5c91f03d52749610cbbdaff4ddc861becdb03f3aa594f0f0d3d4b6a",
+   "chunkP": [
+    0.8860120471427839
+   ],
+   "chunkTokens": [
+    5347
+   ],
+   "issues": [],
+   "goldChunks": [
+    0
+   ]
+  },
+  {
+   "id": "c033",
+   "paper": "2509.03077v1",
+   "label": "TRUE",
+   "kind": "method",
+   "claim": "The two selected augmentations are antenna dropout and zero masking, each applied with probability 0.2.",
+   "claim_hash": "569cb61c1e9b9edf23712a31db12f033fd70440a916060d2f88d8dd063e773e4",
+   "chunkP": [
+    0.9908203318029206
+   ],
+   "chunkTokens": [
+    5355
+   ],
+   "issues": [],
+   "goldChunks": [
+    0
+   ]
+  },
+  {
+   "id": "c034",
+   "paper": "2509.03077v1",
+   "label": "TRUE",
+   "kind": "finding",
+   "claim": "Doubling the number of linear classifier layers improves frozen-encoder AoA error by 46 percent, from 7.92 to 4.28 degrees.",
+   "claim_hash": "2e7c8fedfd0092c065a6d812791b2d1669b1801aa1fbb45c36403d731d76def3",
+   "chunkP": [
+    0.7075769535890951
+   ],
+   "chunkTokens": [
+    5369
+   ],
+   "issues": [],
+   "goldChunks": []
+  },
+  {
+   "id": "c035",
+   "paper": "2509.03077v1",
+   "label": "FALSE",
+   "kind": "finding",
+   "claim": "With frozen encoder weights the proposed method attains an AoA MAE of 8.93 degrees, worse than random initialization.",
+   "claim_hash": "0314d491f42ceb427d305790b9fe148cbe789e9e490994955ec70a5e2db7292b",
+   "chunkP": [
+    0.8190792646292725
+   ],
+   "chunkTokens": [
+    5361
+   ],
+   "issues": [],
+   "goldChunks": [
+    0
+   ]
+  },
+  {
+   "id": "c036",
+   "paper": "2509.03077v1",
+   "label": "TRUE",
+   "kind": "dataset",
+   "claim": "The dataset covers modulation schemes including 16-QAM, 64-QAM, BPSK, QPSK, PAM4, and continuous wave.",
+   "claim_hash": "a5639712e683a7169c73c4ba550b540661265ea459ce3c9bd2edb7977884bcaf",
+   "chunkP": [
+    0.9981308800913005
+   ],
+   "chunkTokens": [
+    5368
+   ],
+   "issues": [],
+   "goldChunks": [
+    0
+   ]
+  },
+  {
+   "id": "c037",
+   "paper": "2509.03077v1",
+   "label": "FALSE",
+   "kind": "method",
+   "claim": "Antenna dropout was borrowed into this work from prior augmentation techniques for image classification.",
+   "claim_hash": "e08c79f3a41e60c984375d9e61979e8c96379ccaf8086a27950daaa39553cde4",
+   "chunkP": [
+    0.5302804441935849
+   ],
+   "chunkTokens": [
+    5350
+   ],
+   "issues": [],
+   "goldChunks": [
+    0
+   ]
+  },
+  {
+   "id": "c038",
+   "paper": "2509.03077v1",
+   "label": "FALSE",
+   "kind": "numeric",
+   "claim": "Self-supervised pretraining ran for 200 epochs on the MoCo framework.",
+   "claim_hash": "b5aad48a77691c11712271fc6e64f3f8c414ca2d4093640b8adc8736917694d2",
+   "chunkP": [
+    0.007181519516740173
+   ],
+   "chunkTokens": [
+    5352
+   ],
+   "issues": [],
+   "goldChunks": [
+    0
+   ]
+  },
+  {
+   "id": "c039",
+   "paper": "2509.03077v1",
+   "label": "TRUE",
+   "kind": "finding",
+   "claim": "In low-label regimes the SSL approach improves over fully supervised baselines by up to about 41 percent.",
+   "claim_hash": "5c74dbb83434c81020e118ddf4eeda48796401d162ab234032e8635b2835ff4d",
+   "chunkP": [
+    0.9167701785671624
+   ],
+   "chunkTokens": [
+    5356
+   ],
+   "issues": [],
+   "goldChunks": [
+    0
+   ]
+  },
+  {
+   "id": "c040",
+   "paper": "2511.15162v1",
+   "label": "TRUE",
+   "kind": "method",
+   "claim": "The paper builds the first multimodal wireless foundation model that processes both raw IQ streams and image-like modalities.",
+   "claim_hash": "d8efd7887c15b461d6b39d73b55459d2e63700d95e1ebf2d185abe38472b5bb7",
+   "chunkP": [
+    0.9993304209597432
+   ],
+   "chunkTokens": [
+    5913
+   ],
+   "issues": [],
+   "goldChunks": [
+    0
+   ]
+  },
+  {
+   "id": "c041",
+   "paper": "2511.15162v1",
+   "label": "TRUE",
+   "kind": "dataset",
+   "claim": "The spectrogram pretraining dataset contains a total of 3,200 samples.",
+   "claim_hash": "5f442685de7b3e8711a630ad1d372ed0e8a0e10a40222d619a60eea72b428686",
+   "chunkP": [
+    0.9715397633094828
+   ],
+   "chunkTokens": [
+    5909
+   ],
+   "issues": [],
+   "goldChunks": [
+    0
+   ]
+  },
+  {
+   "id": "c042",
+   "paper": "2511.15162v1",
+   "label": "FALSE",
+   "kind": "numeric",
+   "claim": "Pretraining applies a fixed 90 percent masking ratio to both modalities.",
+   "claim_hash": "773450ea0c4aef5138c482f2c258b5a4564a092264a829b04f371d3513abc446",
+   "chunkP": [
+    0.04108066013371745
+   ],
+   "chunkTokens": [
+    5907
+   ],
+   "issues": [],
+   "goldChunks": [
+    0
+   ]
+  },
+  {
+   "id": "c043",
+   "paper": "2511.15162v1",
+   "label": "FALSE",
+   "kind": "numeric",
+   "claim": "The multimodal WFM has roughly 70 million parameters.",
+   "claim_hash": "53378f3193b6adf053e736edadf73d1d5fe39b056676d81a09ee986495d6fcc9",
+   "chunkP": [
+    0.49134332025785094
+   ],
+   "chunkTokens": [
+    5904
+   ],
+   "issues": [],
+   "goldChunks": [
+    0
+   ]
+  },
+  {
+   "id": "c044",
+   "paper": "2511.15162v1",
+   "label": "FALSE",
+   "kind": "finding",
+   "claim": "On RF signal classification the multimodal WFM outperforms WavesFM under linear probing.",
+   "claim_hash": "df1f4aaf8a6e0aba03358656e92ed98fb48287809c6945ff13ac76cf48bfe2d0",
+   "chunkP": [
+    0.10696529796114913
+   ],
+   "chunkTokens": [
+    5909
+   ],
+   "issues": [],
+   "goldChunks": [
+    0
+   ]
+  },
+  {
+   "id": "c045",
+   "paper": "2511.15162v1",
+   "label": "TRUE",
+   "kind": "method",
+   "claim": "LoRA fine-tuning uses rank 32 and scaling 32, totaling about 0.3M task-specific parameters versus 1.65M for FT2.",
+   "claim_hash": "aa089ddf6b9c37bb2d8d9f6ae224e1132c183d753f9925e59d66e6418be0c0d0",
+   "chunkP": [
+    0.09081526194949431
+   ],
+   "chunkTokens": [
+    5928
+   ],
+   "issues": [],
+   "goldChunks": []
+  },
+  {
+   "id": "c046",
+   "paper": "2511.15162v1",
+   "label": "TRUE",
+   "kind": "finding",
+   "claim": "Compared to partial fine-tuning of two blocks, LoRA improves performance on four of six tasks.",
+   "claim_hash": "8a10ea6c3c14fdd8ba6620b7255c57e17ec840709517200ef5b7ff2b89dcaab8",
+   "chunkP": [
+    0.8672187581207285
+   ],
+   "chunkTokens": [
+    5912
+   ],
+   "issues": [],
+   "goldChunks": []
+  },
+  {
+   "id": "c047",
+   "paper": "2511.15162v1",
+   "label": "FALSE",
+   "kind": "finding",
+   "claim": "On RF fingerprinting, IQFM outperforms the multimodal WFM under linear probing.",
+   "claim_hash": "14611a1d309be90e3e1634f2b7173bfb60deff2570b01570d71be68bdfc6eee4",
+   "chunkP": [
+    0.1719896296718338
+   ],
+   "chunkTokens": [
+    5910
+   ],
+   "issues": [],
+   "goldChunks": [
+    0
+   ]
+  },
+  {
+   "id": "c048",
+   "paper": "2511.15162v1",
+   "label": "FALSE",
+   "kind": "dataset",
+   "claim": "The 5G NR positioning task takes raw IQ traces as input to predict the UE location.",
+   "claim_hash": "11bc85abdb30182a133b02e205b52516a47e781c336bb7a24cb6e58ba59ff7f3",
+   "chunkP": [
+    0.899798719768402
+   ],
+   "chunkTokens": [
+    5910
+   ],
+   "issues": [],
+   "goldChunks": [
+    0
+   ]
+  },
+  {
+   "id": "c049",
+   "paper": "2606.06373v1",
+   "label": "TRUE",
+   "kind": "method",
+   "claim": "In LatentWave's JEPA pretraining, the target encoder's parameters are updated as an exponential moving average of the context encoder weights.",
+   "claim_hash": "96a3be0bfeb24aa167fc9b068aec4358f99e1a015b431075702ea06b08b3df2e",
+   "chunkP": [
+    0.9754655485810749
+   ],
+   "chunkTokens": [
+    6240
+   ],
+   "issues": [],
+   "goldChunks": [
+    0
+   ]
+  },
+  {
+   "id": "c050",
+   "paper": "2606.06373v1",
+   "label": "TRUE",
+   "kind": "numeric",
+   "claim": "The context and target encoders are ViTs with 8 layers, 8 attention heads, embedding dimension 256, and about 6.4M parameters.",
+   "claim_hash": "abb2ffa4443155b9050d75d88e159dc7d12cabfdf8eac4d3420620789ca66380",
+   "chunkP": [
+    0.9942455223719876
+   ],
+   "chunkTokens": [
+    6247
+   ],
+   "issues": [],
+   "goldChunks": [
+    0
+   ]
+  },
+  {
+   "id": "c051",
+   "paper": "2606.06373v1",
+   "label": "FALSE",
+   "kind": "finding",
+   "claim": "Frequency masking preserves discriminability for signal classification better than region masking.",
+   "claim_hash": "4d4c2c779f64574a6475b07674bc886a0be56924473bdcad71c67b59b7ee7a36",
+   "chunkP": [
+    0.2827573225245378
+   ],
+   "chunkTokens": [
+    6225
+   ],
+   "issues": [],
+   "goldChunks": [
+    0
+   ]
+  },
+  {
+   "id": "c052",
+   "paper": "2606.06373v1",
+   "label": "TRUE",
+   "kind": "finding",
+   "claim": "Switching from region to frequency masking improves beam prediction by more than 11 percentage points and reduces positioning error from 2.54 m to 2.32 m.",
+   "claim_hash": "d6ba11d6957024630f37e6a2f3c96fa390a0f79157a821e7ac05cb6acd3706b2",
+   "chunkP": [
+    0.99563093460791
+   ],
+   "chunkTokens": [
+    6249
+   ],
+   "issues": [],
+   "goldChunks": [
+    0
+   ]
+  },
+  {
+   "id": "c053",
+   "paper": "2606.06373v1",
+   "label": "FALSE",
+   "kind": "numeric",
+   "claim": "Under frequency masking, RF signal classification accuracy rises from 80.9 percent to 86.1 percent.",
+   "claim_hash": "f48782941c76f39257b3d6df0fbd8788ef9d9040d66c822daba7e5455262287e",
+   "chunkP": [
+    0.029014332670915754
+   ],
+   "chunkTokens": [
+    6236
+   ],
+   "issues": [],
+   "goldChunks": [
+    0
+   ]
+  },
+  {
+   "id": "c054",
+   "paper": "2606.06373v1",
+   "label": "TRUE",
+   "kind": "method",
+   "claim": "Stochastic channel sampling draws the retained channel count uniformly from 1 up to the available channel count.",
+   "claim_hash": "1607d7989a4db6ab11a9c0d7240171e4d849298586e38d1f6aef0e9c2514abd4",
+   "chunkP": [
+    0.906701376390765
+   ],
+   "chunkTokens": [
+    6232
+   ],
+   "issues": [],
+   "goldChunks": [
+    0
+   ]
+  },
+  {
+   "id": "c055",
+   "paper": "2606.06373v1",
+   "label": "FALSE",
+   "kind": "dataset",
+   "claim": "The pretraining corpus includes a WiFi CSI dataset with 484 three-channel samples.",
+   "claim_hash": "3af0206d3e25cdd8551f40d79cd75c35f7f56b6ab9b5e04ddcd0ca4f617a0ae5",
+   "chunkP": [
+    0.5871488983333945
+   ],
+   "chunkTokens": [
+    6230
+   ],
+   "issues": [],
+   "goldChunks": [
+    0
+   ]
+  },
+  {
+   "id": "c056",
+   "paper": "2606.06373v1",
+   "label": "FALSE",
+   "kind": "finding",
+   "claim": "LatentWave is evaluated on six downstream tasks, including modulation classification and interference detection.",
+   "claim_hash": "57c2c7b9158ce8d17175db6e21100a2d8394e1888eea9f4793b622c4c6fafccf",
+   "chunkP": [
+    0.004807312476385886
+   ],
+   "chunkTokens": [
+    6229
+   ],
+   "issues": [],
+   "goldChunks": [
+    0
+   ]
+  },
+  {
+   "id": "c057",
+   "paper": "2606.06373v1",
+   "label": "TRUE",
+   "kind": "method",
+   "claim": "After pretraining, the target encoder is the component extracted for downstream use.",
+   "claim_hash": "e38800d71a67392197438788789136cc8b027e82ddd26fab7fa59339dc85fe48",
+   "chunkP": [
+    0.9792487898331165
+   ],
+   "chunkTokens": [
+    6227
+   ],
+   "issues": [],
+   "goldChunks": [
+    0
+   ]
+  },
+  {
+   "id": "c058",
+   "paper": "2606.06373v1",
+   "label": "FALSE",
+   "kind": "numeric",
+   "claim": "LatentWave pretraining runs for 800 epochs with a batch size of 256.",
+   "claim_hash": "576965ad76fb41ddc949d220ad81045ef95c448763138ce16a31e430b1b6183f",
+   "chunkP": [
+    0.0451637753823616
+   ],
+   "chunkTokens": [
+    6234
+   ],
+   "issues": [],
+   "goldChunks": [
+    0
+   ]
+  },
+  {
+   "id": "c059",
+   "paper": "2609.04707v1",
+   "label": "TRUE",
+   "kind": "finding",
+   "claim": "The survey organizes the WFM literature into five physical-layer task families, including beam management and spectrum sensing and monitoring.",
+   "claim_hash": "167b7def5e7d7fc5fbcc5b1e7f683b32f3c6653d536385526d7f9b443770ccab",
+   "chunkP": [
+    0.9891697140355658
+   ],
+   "chunkTokens": [
+    4871
+   ],
+   "issues": [],
+   "goldChunks": [
+    0
+   ]
+  },
+  {
+   "id": "c060",
+   "paper": "2609.04707v1",
+   "label": "TRUE",
+   "kind": "finding",
+   "claim": "RF sensing and localization is the most frequently covered major category, appearing in 30 of 49 models (61.2 percent).",
+   "claim_hash": "8eb817cf622f4617bf4f63e3e9206eee8e4071436f3206f33b7a241c1581eca4",
+   "chunkP": [
+    0.358806003910488
+   ],
+   "chunkTokens": [
+    4876
+   ],
+   "issues": [],
+   "goldChunks": []
+  },
+  {
+   "id": "c061",
+   "paper": "2609.04707v1",
+   "label": "FALSE",
+   "kind": "finding",
+   "claim": "Spectrum sensing and monitoring is the most commonly covered task category among the surveyed WFMs.",
+   "claim_hash": "9ffcb4d3b5cbcab057e87d04024ea5936f3245c313d4e00ba141b77cf2868eb4",
+   "chunkP": [
+    0.7934578263261757
+   ],
+   "chunkTokens": [
+    4865
+   ],
+   "issues": [],
+   "goldChunks": []
+  },
+  {
+   "id": "c062",
+   "paper": "2609.04707v1",
+   "label": "TRUE",
+   "kind": "finding",
+   "claim": "The number of identified WFM papers grew from 6 in 2024 to 23 in 2025, an increase of roughly 283 percent.",
+   "claim_hash": "416d679be06154e0cf8dbf23324593de39e675cf8e721b15c54807ed87440cb2",
+   "chunkP": [
+    0.5146967740250105
+   ],
+   "chunkTokens": [
+    4885
+   ],
+   "issues": [],
+   "goldChunks": []
+  },
+  {
+   "id": "c063",
+   "paper": "2609.04707v1",
+   "label": "TRUE",
+   "kind": "finding",
+   "claim": "Among channel representation WFMs, masked reconstruction is the dominant pretraining objective, used by 15 of 30 models.",
+   "claim_hash": "e19c197832b8ad1553f30d051772a134a0a6c1bf9e5996befc4c1aa91d37d44b",
+   "chunkP": [
+    0.16354910045836252
+   ],
+   "chunkTokens": [
+    4873
+   ],
+   "issues": [],
+   "goldChunks": []
+  },
+  {
+   "id": "c064",
+   "paper": "2609.04707v1",
+   "label": "FALSE",
+   "kind": "finding",
+   "claim": "The survey includes papers on generic LLM-based wireless applications regardless of physical-layer scope.",
+   "claim_hash": "30f4de05060b67e706f90b898b6495f09d0c0ff038eceb7320490c9d0d207fcd",
+   "chunkP": [
+    0.03502522272069138
+   ],
+   "chunkTokens": [
+    4864
+   ],
+   "issues": [],
+   "goldChunks": [
+    0
+   ]
+  },
+  {
+   "id": "c065",
+   "paper": "2609.04707v1",
+   "label": "TRUE",
+   "kind": "method",
+   "claim": "LatentWave is a JEPA-based model that tests latent prediction against direct masked reconstruction on spectrogram and CSI inputs.",
+   "claim_hash": "f8dc7d8f68d57bf692d33301a6daa5f1b7b220d45cad3e8e2b81c5594077c890",
+   "chunkP": [
+    0.010957923180641099
+   ],
+   "chunkTokens": [
+    4871
+   ],
+   "issues": [],
+   "goldChunks": []
+  },
+  {
+   "id": "c066",
+   "paper": "2609.04707v1",
+   "label": "FALSE",
+   "kind": "dataset",
+   "claim": "The literature search covered papers published from 2020 until June 2026.",
+   "claim_hash": "bfbea30d4246823c287d782a0bb8c26acf11de1f555155777fda68d430e262c6",
+   "chunkP": [
+    0.850187050820745
+   ],
+   "chunkTokens": [
+    4867
+   ],
+   "issues": [],
+   "goldChunks": [
+    0
+   ]
+  },
+  {
+   "id": "c067",
+   "paper": "2609.04707v1",
+   "label": "TRUE",
+   "kind": "method",
+   "claim": "WiMamba uses a Mamba-based state-space model as its main CSI encoder.",
+   "claim_hash": "ecd36e4d84eb94800234d49d4591e91b35fd0e00e258646e80b86b4bf9a07b13",
+   "chunkP": [
+    0.00824673589633536
+   ],
+   "chunkTokens": [
+    4864
+   ],
+   "issues": [],
+   "goldChunks": []
+  },
+  {
+   "id": "c068",
+   "paper": "Tiny_Federated_Wireless_Foundation_Model",
+   "label": "TRUE",
+   "kind": "numeric",
+   "claim": "The pruned ViT-based WFMs achieve up to 93 percent MACs reduction and 85 percent lower CPU inference time.",
+   "claim_hash": "e4b3279d4a96ffe3a39f91efb9f44c79d4b944a444a5005f1e094690c6afcb91",
+   "chunkP": [
+    0.9646849995082605
+   ],
+   "chunkTokens": [
+    5155
+   ],
+   "issues": [],
+   "goldChunks": [
+    0
+   ]
+  },
+  {
+   "id": "c069",
+   "paper": "Tiny_Federated_Wireless_Foundation_Model",
+   "label": "FALSE",
+   "kind": "numeric",
+   "claim": "The pruning plus frozen-head FL design cuts communication overhead by 90 percent.",
+   "claim_hash": "db2043954510b1591f8d7d08b698bad1d3b775628fd1db9b3889f6ac04eafa6a",
+   "chunkP": [
+    0.31702281657261094
+   ],
+   "chunkTokens": [
+    5143
+   ],
+   "issues": [],
+   "goldChunks": [
+    0
+   ]
+  },
+  {
+   "id": "c070",
+   "paper": "Tiny_Federated_Wireless_Foundation_Model",
+   "label": "TRUE",
+   "kind": "method",
+   "claim": "The base model is a ViT small with 12 encoder blocks and eight attention heads.",
+   "claim_hash": "cd7edc9676ab2a948fcd014266362e9dea75174310ccff9201004a84d81592cd",
+   "chunkP": [
+    0.2746280847741436
+   ],
+   "chunkTokens": [
+    5146
+   ],
+   "issues": [],
+   "goldChunks": []
+  },
+  {
+   "id": "c071",
+   "paper": "Tiny_Federated_Wireless_Foundation_Model",
+   "label": "FALSE",
+   "kind": "numeric",
+   "claim": "The three generated pruned models use pruning ratios of 55 percent, 78 percent, and 90 percent.",
+   "claim_hash": "ff42037486c973c2be6c56634c9d4f54fc726f963f06e92d200e7b1115806bd8",
+   "chunkP": [
+    0.09648905808597621
+   ],
+   "chunkTokens": [
+    5153
+   ],
+   "issues": [],
+   "goldChunks": []
+  },
+  {
+   "id": "c072",
+   "paper": "Tiny_Federated_Wireless_Foundation_Model",
+   "label": "FALSE",
+   "kind": "finding",
+   "claim": "Pruning encoder block 0 causes only a negligible loss increase of about 0.0005.",
+   "claim_hash": "1de87d50049cd8959bca4e2bd8e1d800dc8f47e2e426eb93cc5006619df82682",
+   "chunkP": [
+    0.08011578429492912
+   ],
+   "chunkTokens": [
+    5149
+   ],
+   "issues": [],
+   "goldChunks": []
+  },
+  {
+   "id": "c073",
+   "paper": "Tiny_Federated_Wireless_Foundation_Model",
+   "label": "TRUE",
+   "kind": "method",
+   "claim": "The pruning implementation relies on the DepGraph framework for dependency-aware pruning.",
+   "claim_hash": "e2da2f4335cdac8f2df6114aaccfe7acd63286b57364a8cc117bc835cb0546fa",
+   "chunkP": [
+    0.0010931132161651068
+   ],
+   "chunkTokens": [
+    5141
+   ],
+   "issues": [],
+   "goldChunks": []
+  },
+  {
+   "id": "c074",
+   "paper": "Tiny_Federated_Wireless_Foundation_Model",
+   "label": "FALSE",
+   "kind": "method",
+   "claim": "The block-wise pruning procedure requires access to each client's labeled local dataset.",
+   "claim_hash": "2713173496d77a9ba2fbd7a76e312e6796a1d78fe23fc70ea5bd3eda40729158",
+   "chunkP": [
+    0.005017826316472234
+   ],
+   "chunkTokens": [
+    5142
+   ],
+   "issues": [],
+   "goldChunks": [
+    0
+   ]
+  },
+  {
+   "id": "c075",
+   "paper": "Tiny_Federated_Wireless_Foundation_Model",
+   "label": "TRUE",
+   "kind": "dataset",
+   "claim": "For the radio signal identification task, the evaluation was restricted to the ten most representative classes.",
+   "claim_hash": "14c3ab69f4dc411a91e68cd8e660b2c457c76fdca767daac7dcfd8bc69f35aec",
+   "chunkP": [
+    0.11760983594778165
+   ],
+   "chunkTokens": [
+    5145
+   ],
+   "issues": [],
+   "goldChunks": []
+  },
+  {
+   "id": "c076",
+   "paper": "Tiny_Federated_Wireless_Foundation_Model",
+   "label": "FALSE",
+   "kind": "dataset",
+   "claim": "The federated system uses twenty clients, all of which participate in every round.",
+   "claim_hash": "0c4c681f4729f0bba3513b8579e4dc6550f8b5c3d331cfb5d57658e7df533410",
+   "chunkP": [
+    0.031484378578756175
+   ],
+   "chunkTokens": [
+    5143
+   ],
+   "issues": [],
+   "goldChunks": []
+  },
+  {
+   "id": "c077",
+   "paper": "Tiny_Federated_Wireless_Foundation_Model",
+   "label": "TRUE",
+   "kind": "numeric",
+   "claim": "For human activity recognition, pruning shrinks model size from 148.22 MB to 13.24 MB.",
+   "claim_hash": "fafc81b8f0baf758702bb9e46b5f152208cee7404be44ab4094495e86da1ffee",
+   "chunkP": [
+    0.7588004278586858
+   ],
+   "chunkTokens": [
+    5155
+   ],
+   "issues": [],
+   "goldChunks": []
+  },
+  {
+   "id": "c078",
+   "paper": "http_thesai.org_Downloads_Volume12No2_Pa",
+   "label": "TRUE",
+   "kind": "dataset",
+   "claim": "The Homergy Box provides sixteen relay channels using four four-channel relay boards.",
+   "claim_hash": "6e8e4c75b57fefb9783c94659aafc23a1e6776fe91ab2b068e93ff1a7083770b",
+   "chunkP": [
+    0.9758613850218227
+   ],
+   "chunkTokens": [
+    5327
+   ],
+   "issues": [],
+   "goldChunks": [
+    0
+   ]
+  },
+  {
+   "id": "c079",
+   "paper": "http_thesai.org_Downloads_Volume12No2_Pa",
+   "label": "FALSE",
+   "kind": "method",
+   "claim": "The NodeMCU directly drives the appliance-connected relays without a separate microcontroller.",
+   "claim_hash": "af1b6a4c226d6232759a6fe80a093a1379424723830650558f62960732e6aacc",
+   "chunkP": [
+    0.06118093455313069
+   ],
+   "chunkTokens": [
+    5329
+   ],
+   "issues": [],
+   "goldChunks": [
+    0
+   ]
+  },
+  {
+   "id": "c080",
+   "paper": "http_thesai.org_Downloads_Volume12No2_Pa",
+   "label": "TRUE",
+   "kind": "numeric",
+   "claim": "Homergy delivered weekly savings of 0.5 kWh for the lifeline consumer and 18 kWh for the non-lifeline consumer.",
+   "claim_hash": "825d0f7a7d2536b67101791a813c8408c75511947e1d9dc783fe26edcf4bc577",
+   "chunkP": [
+    0.7359710621180883
+   ],
+   "chunkTokens": [
+    5341
+   ],
+   "issues": [],
+   "goldChunks": []
+  },
+  {
+   "id": "c081",
+   "paper": "http_thesai.org_Downloads_Volume12No2_Pa",
+   "label": "TRUE",
+   "kind": "finding",
+   "claim": "In the high-consuming house, Homergy improved on existing smart-devices-only systems by 13 kWh per week.",
+   "claim_hash": "2149547657c51dacb437634330bc6da2bf2ecae355ae943bbbf2d9069ce4c108",
+   "chunkP": [
+    0.9990901212269925
+   ],
+   "chunkTokens": [
+    5336
+   ],
+   "issues": [],
+   "goldChunks": [
+    0
+   ]
+  },
+  {
+   "id": "c082",
+   "paper": "http_thesai.org_Downloads_Volume12No2_Pa",
+   "label": "FALSE",
+   "kind": "numeric",
+   "claim": "Homergy produced weekly energy savings of 5 kWh for the low-consuming house.",
+   "claim_hash": "b7fad4c65bf64c308d3b0f6a6fc2e3b003158c311f6a999afe86afda4349b1d7",
+   "chunkP": [
+    0.8078110238349987
+   ],
+   "chunkTokens": [
+    5328
+   ],
+   "issues": [],
+   "goldChunks": [
+    0
+   ]
+  },
+  {
+   "id": "c083",
+   "paper": "http_thesai.org_Downloads_Volume12No2_Pa",
+   "label": "TRUE",
+   "kind": "method",
+   "claim": "The normally closed relay port is wired between source and load so current still flows when the Homergy Box is off.",
+   "claim_hash": "47ebdbc9ed8e9845375efd0c7d171279f4d43e6e32200854db9ea551739431dc",
+   "chunkP": [
+    0.962382574487876
+   ],
+   "chunkTokens": [
+    5335
+   ],
+   "issues": [],
+   "goldChunks": [
+    0
+   ]
+  },
+  {
+   "id": "c084",
+   "paper": "http_thesai.org_Downloads_Volume12No2_Pa",
+   "label": "FALSE",
+   "kind": "method",
+   "claim": "The Homergy mobile application was written as a native Java Android app.",
+   "claim_hash": "fb7586de6e98d2a1eb42a046861e675376336be213d930bee7b59f65644586c6",
+   "chunkP": [
+    0.08402330635845236
+   ],
+   "chunkTokens": [
+    5326
+   ],
+   "issues": [],
+   "goldChunks": [
+    0
+   ]
+  },
+  {
+   "id": "c085",
+   "paper": "http_thesai.org_Downloads_Volume12No2_Pa",
+   "label": "TRUE",
+   "kind": "method",
+   "claim": "Each Homergy Box's Access Code is embedded in an encrypted QR code on the device.",
+   "claim_hash": "c33954f9f6073d626ed2f937dbef17829ffab89873982e1d27fc192615c87662",
+   "chunkP": [
+    0.9992216184529453
+   ],
+   "chunkTokens": [
+    5330
+   ],
+   "issues": [],
+   "goldChunks": [
+    0
+   ]
+  },
+  {
+   "id": "c086",
+   "paper": "http_thesai.org_Downloads_Volume12No2_Pa",
+   "label": "FALSE",
+   "kind": "finding",
+   "claim": "About 69 percent of households in Africa own at least one smart device.",
+   "claim_hash": "c66b084fb4565a1ad63a5b6ff2f1e431d11a7fd1c75f52fa1bb7da9cbdd601c7",
+   "chunkP": [
+    0.9287771709279175
+   ],
+   "chunkTokens": [
+    5328
+   ],
+   "issues": [],
+   "goldChunks": [
+    0
+   ]
+  },
+  {
+   "id": "c087",
+   "paper": "http_thesai.org_Downloads_Volume12No2_Pa",
+   "label": "TRUE",
+   "kind": "method",
+   "claim": "I2C serial communication links the Arduino microcontroller with the NodeMCU Wi-Fi module.",
+   "claim_hash": "b8b66694e4d4cfb3c9b77495ef512809d3950b111a95651c59852c23c7a01bf0",
+   "chunkP": [
+    0.9936630167102914
+   ],
+   "chunkTokens": [
+    5331
+   ],
+   "issues": [],
+   "goldChunks": [
+    0
+   ]
+  },
+  {
+   "id": "c088",
+   "paper": "https_www.mdpi.com_2071-1050_14_21_14556",
+   "label": "TRUE",
+   "kind": "finding",
+   "claim": "Across the studied scenarios the wind-driven optimization algorithm beats differential evolution on energy cost, peak load, and PAR.",
+   "claim_hash": "8a354ed0a4cb5ab73d1434b46afdc218b65593fcefaaf806be1ba5f7df133fe0",
+   "chunkP": [
+    0.9754282668117167
+   ],
+   "chunkTokens": [
+    6141
+   ],
+   "issues": [],
+   "goldChunks": []
+  },
+  {
+   "id": "c089",
+   "paper": "https_www.mdpi.com_2071-1050_14_21_14556",
+   "label": "TRUE",
+   "kind": "dataset",
+   "claim": "The study integrates a 5 kW rooftop solar PV on-grid system.",
+   "claim_hash": "b13ddd81b269ca9dd48a01f7e4f25089b8592a263ecb95d841dc0809d961d90f",
+   "chunkP": [
+    0.9983201370066221
+   ],
+   "chunkTokens": [
+    6133
+   ],
+   "issues": [],
+   "goldChunks": [
+    0
+   ]
+  },
+  {
+   "id": "c090",
+   "paper": "https_www.mdpi.com_2071-1050_14_21_14556",
+   "label": "FALSE",
+   "kind": "numeric",
+   "claim": "Without PV, WDOA achieves a daily PAR of 3.94.",
+   "claim_hash": "ce0f233ea019738a87ffa4762d9b0ceb2885eacacf06617205efae8ab101b3b7",
+   "chunkP": [
+    0.3786878784888265
+   ],
+   "chunkTokens": [
+    6136
+   ],
+   "issues": [],
+   "goldChunks": []
+  },
+  {
+   "id": "c091",
+   "paper": "https_www.mdpi.com_2071-1050_14_21_14556",
+   "label": "TRUE",
+   "kind": "numeric",
+   "claim": "Off-peak households pay 0.00517 USD per kWh for the first 50 kWh consumed.",
+   "claim_hash": "d39ad028cc71bda593cbc086675c0bed82fd0a72a18fa6c435b8d9507aa0bdc9",
+   "chunkP": [
+    0.9902607068678606
+   ],
+   "chunkTokens": [
+    6144
+   ],
+   "issues": [],
+   "goldChunks": [
+    0
+   ]
+  },
+  {
+   "id": "c092",
+   "paper": "https_www.mdpi.com_2071-1050_14_21_14556",
+   "label": "FALSE",
+   "kind": "numeric",
+   "claim": "The TOUP scheme assumes peak energy costs are 100 percent greater than off-peak costs.",
+   "claim_hash": "43f802d1c3b981679679e060b85c5a9f4590ab3768819f500c056987776ca875",
+   "chunkP": [
+    0.13773731721320306
+   ],
+   "chunkTokens": [
+    6140
+   ],
+   "issues": [],
+   "goldChunks": [
+    0
+   ]
+  },
+  {
+   "id": "c093",
+   "paper": "https_www.mdpi.com_2071-1050_14_21_14556",
+   "label": "TRUE",
+   "kind": "numeric",
+   "claim": "The day is divided into 120 time slots, each lasting 12 minutes.",
+   "claim_hash": "91ff3eee468f1e62425ae0a10ee38896f365b70ee8bb859ce9b19345e408f34b",
+   "chunkP": [
+    0.97730140067797
+   ],
+   "chunkTokens": [
+    6138
+   ],
+   "issues": [],
+   "goldChunks": [
+    0
+   ]
+  },
+  {
+   "id": "c094",
+   "paper": "https_www.mdpi.com_2071-1050_14_21_14556",
+   "label": "FALSE",
+   "kind": "numeric",
+   "claim": "With variable time planning and PV, WDOA achieves a minimal PAR of 3.46.",
+   "claim_hash": "b10ef8124f5f265ac299b998ecc3a57f563ed0aa2a28ef4e0d9906e4132b5743",
+   "chunkP": [
+    0.2805322991779824
+   ],
+   "chunkTokens": [
+    6140
+   ],
+   "issues": [],
+   "goldChunks": []
+  },
+  {
+   "id": "c095",
+   "paper": "https_www.mdpi.com_2071-1050_14_21_14556",
+   "label": "FALSE",
+   "kind": "numeric",
+   "claim": "The overall daily energy demand of the devices equals 29.79 kWh.",
+   "claim_hash": "40a73e1e014684f89a082bfaa9546a07ada5013af16fb393e5550501e039d0f6",
+   "chunkP": [
+    0.3541702771544524
+   ],
+   "chunkTokens": [
+    6136
+   ],
+   "issues": [],
+   "goldChunks": []
+  },
+  {
+   "id": "c096",
+   "paper": "https_www.mdpi.com_2071-1050_14_21_14556",
+   "label": "TRUE",
+   "kind": "finding",
+   "claim": "Constant time-range planning without PV cuts the power price by 15.78 percent relative to unplanned loads.",
+   "claim_hash": "a393ae8f453cd805a5776c31c45c5ed4a30c033186d848e25a8cd53bb373846e",
+   "chunkP": [
+    0.16758400301659873
+   ],
+   "chunkTokens": [
+    6143
+   ],
+   "issues": [],
+   "goldChunks": []
+  },
+  {
+   "id": "c097",
+   "paper": "https_www.mdpi.com_2071-1050_14_21_14556",
+   "label": "FALSE",
+   "kind": "method",
+   "claim": "The paper benchmarks WDOA against a genetic algorithm as the comparison optimizer.",
+   "claim_hash": "5b2c6f35a057bb5769d0f237216dcb1de1c5d1141477b00f0a28a23ce23e2481",
+   "chunkP": [
+    0.6622991958527094
+   ],
+   "chunkTokens": [
+    6134
+   ],
+   "issues": [],
+   "goldChunks": []
+  },
+  {
+   "id": "c098",
+   "paper": "https_www.mdpi.com_2079-9292_12_19_4041_",
+   "label": "TRUE",
+   "kind": "method",
+   "claim": "The smart plug measures RMS current, frequency, power factor, and active and reactive power, and sends readings to the smart meter over Zigbee.",
+   "claim_hash": "66b5182963c146c9c835bc54b86934a53e411b6db46b486eea7c5ac0c474ca5b",
+   "chunkP": [
+    0.9991314158948721
+   ],
+   "chunkTokens": [
+    5042
+   ],
+   "issues": [],
+   "goldChunks": [
+    0
+   ]
+  },
+  {
+   "id": "c099",
+   "paper": "https_www.mdpi.com_2079-9292_12_19_4041_",
+   "label": "TRUE",
+   "kind": "numeric",
+   "claim": "The decision tree classifier's inference latency measured on the Raspberry Pi was 1.59 microseconds.",
+   "claim_hash": "f5bd7b17fbb8b6c595ff085918133fce8d5197670e758543f69ec662eaf47258",
+   "chunkP": [
+    0.9984579111070818
+   ],
+   "chunkTokens": [
+    5033
+   ],
+   "issues": [],
+   "goldChunks": [
+    0
+   ]
+  },
+  {
+   "id": "c100",
+   "paper": "https_www.mdpi.com_2079-9292_12_19_4041_",
+   "label": "TRUE",
+   "kind": "finding",
+   "claim": "The time-of-use based demand-response program can cut the power cost by roughly 30 percent in a practical case.",
+   "claim_hash": "a64d7f4cbf9de02f2a3faf67fba6803cda00418eb402368e3d0c26f4781bf927",
+   "chunkP": [
+    0.971890496128553
+   ],
+   "chunkTokens": [
+    5037
+   ],
+   "issues": [],
+   "goldChunks": [
+    0
+   ]
+  },
+  {
+   "id": "c101",
+   "paper": "https_www.mdpi.com_2079-9292_12_19_4041_",
+   "label": "FALSE",
+   "kind": "method",
+   "claim": "The smart meter was prototyped with Arduino and the smart plug with Raspberry Pi.",
+   "claim_hash": "664de9f0d4976ffceb0ed957f6121e65253a29c023beeb6b6a8204f3eb95b868",
+   "chunkP": [
+    0.9847252106609656
+   ],
+   "chunkTokens": [
+    5030
+   ],
+   "issues": [],
+   "goldChunks": [
+    0
+   ]
+  },
+  {
+   "id": "c102",
+   "paper": "https_www.mdpi.com_2079-9292_12_19_4041_",
+   "label": "TRUE",
+   "kind": "finding",
+   "claim": "The accuracy of the smart meter exceeds 97 percent and that of the smart plug exceeds 99 percent.",
+   "claim_hash": "f9a07620b09d3982a4aec8a5f3381ad1827cb432bcbfaffe39ecbcb0969a2100",
+   "chunkP": [
+    0.969730345646404
+   ],
+   "chunkTokens": [
+    5036
+   ],
+   "issues": [],
+   "goldChunks": [
+    0
+   ]
+  },
+  {
+   "id": "c103",
+   "paper": "https_www.mdpi.com_2079-9292_12_19_4041_",
+   "label": "FALSE",
+   "kind": "numeric",
+   "claim": "The Gaussian naive Bayes classifier reached 97 percent accuracy in the algorithm comparison.",
+   "claim_hash": "c42b71b1527917950397ff0469353262de8c47ebf9d20f959155ae94dc9a97b2",
+   "chunkP": [
+    0.3538331092159845
+   ],
+   "chunkTokens": [
+    5030
+   ],
+   "issues": [],
+   "goldChunks": []
+  },
+  {
+   "id": "c104",
+   "paper": "https_www.mdpi.com_2079-9292_12_19_4041_",
+   "label": "TRUE",
+   "kind": "numeric",
+   "claim": "In the worked TOU example, the daily energy bill falls from about 9.22 USD without DR to 6.43 USD with TOU scheduling.",
+   "claim_hash": "8528a6a8431c1c724fb909cce8ee5f613d7f2f2cef946f8a1e6aee2d163a08f3",
+   "chunkP": [
+    0.01145659783326018
+   ],
+   "chunkTokens": [
+    5047
+   ],
+   "issues": [],
+   "goldChunks": []
+  },
+  {
+   "id": "c105",
+   "paper": "https_www.mdpi.com_2079-9292_12_19_4041_",
+   "label": "FALSE",
+   "kind": "method",
+   "claim": "The smart plug communicates with the smart meter over Bluetooth.",
+   "claim_hash": "48970e6f0078e101edbff744fedf7ca04589dec2041ba108b7a434ebf088305f",
+   "chunkP": [
+    0.0010844723497937026
+   ],
+   "chunkTokens": [
+    5024
+   ],
+   "issues": [],
+   "goldChunks": [
+    0
+   ]
+  },
+  {
+   "id": "c106",
+   "paper": "https_www.mdpi.com_2079-9292_12_19_4041_",
+   "label": "TRUE",
+   "kind": "method",
+   "claim": "The proposed grid-frequency estimation algorithm runs in linear time, unlike the FFT-based approach.",
+   "claim_hash": "817f2081b9435b4a470b95963efca04eae4e3a76e7f0ce6cbed9142cdbbf4a02",
+   "chunkP": [
+    0.12232011594377762
+   ],
+   "chunkTokens": [
+    5030
+   ],
+   "issues": [],
+   "goldChunks": []
+  },
+  {
+   "id": "c107",
+   "paper": "https_www.mdpi.com_2079-9292_12_19_4041_",
+   "label": "FALSE",
+   "kind": "dataset",
+   "claim": "In the Peco TOU tariff, the weekday peak time runs from 6 a.m. to 10 a.m.",
+   "claim_hash": "d713b5ded900af2c0ba4f8f116565efb9794d68162f10350eb8f4d8e29928bea",
+   "chunkP": [
+    0.0138116117959761
+   ],
+   "chunkTokens": [
+    5039
+   ],
+   "issues": [],
+   "goldChunks": []
+  },
+  {
+   "id": "c108",
+   "paper": "https_www.mdpi.com_2079-9292_12_21_4453_",
+   "label": "TRUE",
+   "kind": "method",
+   "claim": "The proposed HEMS uses WI-SUN HAN between the control unit and smart outlets, and WI-SUN FAN for smart metering.",
+   "claim_hash": "798b15ea73363e598d62e638a555366f7b4df01f61cd4422eedf9e35eeab8bb8",
+   "chunkP": [
+    0.9992521769528494
+   ],
+   "chunkTokens": [
+    4952
+   ],
+   "issues": [],
+   "goldChunks": [
+    0
+   ]
+  },
+  {
+   "id": "c109",
+   "paper": "https_www.mdpi.com_2079-9292_12_21_4453_",
+   "label": "TRUE",
+   "kind": "method",
+   "claim": "The middleware database uses SQLite, implemented as a circular buffer with a maximum size.",
+   "claim_hash": "1c03c30736fae41dc5bcd62c68f58fa149efd860abe1e6ffbf666a8419de8507",
+   "chunkP": [
+    0.0007663693435994821
+   ],
+   "chunkTokens": [
+    4939
+   ],
+   "issues": [],
+   "goldChunks": []
+  },
+  {
+   "id": "c110",
+   "paper": "https_www.mdpi.com_2079-9292_12_21_4453_",
+   "label": "FALSE",
+   "kind": "numeric",
+   "claim": "The collected data were split 80 percent for training and 20 percent for testing.",
+   "claim_hash": "621219595ea5b1d5d5ac090da14e46a953fa65fe805bb4ce51f49d2ba3a0b349",
+   "chunkP": [
+    0.021751577580190643
+   ],
+   "chunkTokens": [
+    4942
+   ],
+   "issues": [],
+   "goldChunks": []
+  },
+  {
+   "id": "c111",
+   "paper": "https_www.mdpi.com_2079-9292_12_21_4453_",
+   "label": "TRUE",
+   "kind": "dataset",
+   "claim": "The smart outlets collected measurements every 5 seconds, i.e., at 1/5 Hz.",
+   "claim_hash": "a027c0f2b07b9ccfc2a164e281fe3232d661b2192e1e38e64781710d22219ea3",
+   "chunkP": [
+    0.04993157628483848
+   ],
+   "chunkTokens": [
+    4943
+   ],
+   "issues": [],
+   "goldChunks": []
+  },
+  {
+   "id": "c112",
+   "paper": "https_www.mdpi.com_2079-9292_12_21_4453_",
+   "label": "TRUE",
+   "kind": "method",
+   "claim": "The load disaggregation pipeline applies PCA both to identify loads and to extract features for disaggregation.",
+   "claim_hash": "55a4999eca81be078d04b96577df0b512841e822d6e3fa3253f23b68f23bb31b",
+   "chunkP": [
+    0.002230188210315189
+   ],
+   "chunkTokens": [
+    4942
+   ],
+   "issues": [],
+   "goldChunks": []
+  },
+  {
+   "id": "c113",
+   "paper": "https_www.mdpi.com_2079-9292_12_21_4453_",
+   "label": "FALSE",
+   "kind": "dataset",
+   "claim": "The proof-of-concept outlets monitored a washing machine, an electric oven, and a water heater.",
+   "claim_hash": "84ac44beafa6441dbb3052172d0b83d77aed8c485cd2af9e5fc7dafbf7b73774",
+   "chunkP": [
+    0.27328818312062936
+   ],
+   "chunkTokens": [
+    4943
+   ],
+   "issues": [],
+   "goldChunks": []
+  },
+  {
+   "id": "c114",
+   "paper": "https_www.mdpi.com_2079-9292_12_21_4453_",
+   "label": "TRUE",
+   "kind": "method",
+   "claim": "The middleware periodically sends information to the cloud using the MQTT protocol.",
+   "claim_hash": "8d1214018e59788a4cea94781112759928c68865e7949327f901b7e5aa3c2eb2",
+   "chunkP": [
+    0.1261305104853909
+   ],
+   "chunkTokens": [
+    4936
+   ],
+   "issues": [],
+   "goldChunks": []
+  },
+  {
+   "id": "c115",
+   "paper": "https_www.mdpi.com_2079-9292_12_21_4453_",
+   "label": "TRUE",
+   "kind": "finding",
+   "claim": "In field trials, Wi-SUN HAN proved more robust than WiFi even for outlets behind stainless steel appliances.",
+   "claim_hash": "c0f09a876883c61ebc6b688692c604cba6d4f0e08f531e01da5452fbf2b4f437",
+   "chunkP": [
+    0.35430318865218474
+   ],
+   "chunkTokens": [
+    4945
+   ],
+   "issues": [],
+   "goldChunks": []
+  },
+  {
+   "id": "c116",
+   "paper": "https_www.mdpi.com_2079-9292_12_21_4453_",
+   "label": "FALSE",
+   "kind": "method",
+   "claim": "The middleware was developed in Java due to its portability on embedded systems.",
+   "claim_hash": "0d5eba48910526fc2d62655c6b94c09d2af06fb908095805fef82a075b0d7cb2",
+   "chunkP": [
+    0.0016672824823970019
+   ],
+   "chunkTokens": [
+    4938
+   ],
+   "issues": [],
+   "goldChunks": []
+  },
+  {
+   "id": "c117",
+   "paper": "https_www.mdpi.com_2079-9292_12_21_4453_",
+   "label": "TRUE",
+   "kind": "method",
+   "claim": "The system applies machine learning to estimate individual appliance consumption when only aggregate household consumption is available.",
+   "claim_hash": "098e9354a0cdf4d2b55ea096009f7cbee4133cb487b0a87b576c0cae6650389f",
+   "chunkP": [
+    0.9961004913859001
+   ],
+   "chunkTokens": [
+    4941
+   ],
+   "issues": [],
+   "goldChunks": [
+    0
+   ]
+  },
+  {
+   "id": "c118",
+   "paper": "https_www.mdpi.com_2624-6511_5_3_53_pdf_",
+   "label": "TRUE",
+   "kind": "method",
+   "claim": "The proposed SHEMS architecture is centred on a Knowledge Base communicated through the NGSI-LD standard.",
+   "claim_hash": "fdab21d24bbf468d084941ea4b6b843ba7b94188ff08faee89ae3462d881898b",
+   "chunkP": [
+    0.004121829496013435
+   ],
+   "chunkTokens": [
+    4926
+   ],
+   "issues": [],
+   "goldChunks": []
+  },
+  {
+   "id": "c119",
+   "paper": "https_www.mdpi.com_2624-6511_5_3_53_pdf_",
+   "label": "FALSE",
+   "kind": "numeric",
+   "claim": "The test-bed's rooftop PV array provides up to 16 kW of electric power.",
+   "claim_hash": "3d66dd36c8ec920c7f1c2331282dd043c08f45e1197b2945823e5bf2829e24d9",
+   "chunkP": [
+    0.051847693507279684
+   ],
+   "chunkTokens": [
+    4923
+   ],
+   "issues": [],
+   "goldChunks": []
+  },
+  {
+   "id": "c120",
+   "paper": "https_www.mdpi.com_2624-6511_5_3_53_pdf_",
+   "label": "FALSE",
+   "kind": "dataset",
+   "claim": "The test-bed's 28 kWh battery storage system is fully installed and operational.",
+   "claim_hash": "f363ebd8679cd8206d6dd17ab3f6a70d0063af0d25cbb36d5a048a198d76bc69",
+   "chunkP": [
+    0.03446736019989587
+   ],
+   "chunkTokens": [
+    4922
+   ],
+   "issues": [],
+   "goldChunks": []
+  },
+  {
+   "id": "c121",
+   "paper": "https_www.mdpi.com_2624-6511_5_3_53_pdf_",
+   "label": "TRUE",
+   "kind": "method",
+   "claim": "DABGEO is selected as the main ontology for the information model.",
+   "claim_hash": "23be1ecc552ad7927a9a53d664d7b7522e36a42d5d39b2a873903f95baba9fce",
+   "chunkP": [
+    0.524821395027223
+   ],
+   "chunkTokens": [
+    4920
+   ],
+   "issues": [],
+   "goldChunks": []
+  },
+  {
+   "id": "c122",
+   "paper": "https_www.mdpi.com_2624-6511_5_3_53_pdf_",
+   "label": "TRUE",
+   "kind": "dataset",
+   "claim": "The existing home automation system runs Home Assistant on a Raspberry Pi 4 with 4 GB of RAM.",
+   "claim_hash": "01d70d535742e60949aa3f314d510d9e372ede0089ab10ca4d5c28b811219ab5",
+   "chunkP": [
+    0.01807702805911678
+   ],
+   "chunkTokens": [
+    4926
+   ],
+   "issues": [],
+   "goldChunks": []
+  },
+  {
+   "id": "c123",
+   "paper": "https_www.mdpi.com_2624-6511_5_3_53_pdf_",
+   "label": "FALSE",
+   "kind": "method",
+   "claim": "Access to context information is controlled by role-based access control with server-side session cookies.",
+   "claim_hash": "5112bbd92fbb67734d16e618ee5e305c64317af845e393e7dc1df059ec974f6a",
+   "chunkP": [
+    0.011578437689499938
+   ],
+   "chunkTokens": [
+    4922
+   ],
+   "issues": [],
+   "goldChunks": []
+  },
+  {
+   "id": "c124",
+   "paper": "https_www.mdpi.com_2624-6511_5_3_53_pdf_",
+   "label": "TRUE",
+   "kind": "dataset",
+   "claim": "The espresso machine connected to the smart plug has a peak power consumption of 1.6 kW.",
+   "claim_hash": "57335cc1acce690e0b0e98c023ca1152adc5ac69e55813c906394ed75b289db1",
+   "chunkP": [
+    0.011193273043569608
+   ],
+   "chunkTokens": [
+    4925
+   ],
+   "issues": [],
+   "goldChunks": []
+  },
+  {
+   "id": "c125",
+   "paper": "https_www.mdpi.com_2624-6511_5_3_53_pdf_",
+   "label": "FALSE",
+   "kind": "finding",
+   "claim": "The pool filtration system is deliberately scheduled outside PV production hours to avoid breaker trips.",
+   "claim_hash": "d7e206e302d863edad9d26c6afbfaea33f4a1647572861103d43f7a281e17b35",
+   "chunkP": [
+    0.03725204764915396
+   ],
+   "chunkTokens": [
+    4921
+   ],
+   "issues": [],
+   "goldChunks": []
+  },
+  {
+   "id": "c126",
+   "paper": "https_www.mdpi.com_2624-6511_5_3_53_pdf_",
+   "label": "TRUE",
+   "kind": "finding",
+   "claim": "The HEC notifies users when the grid energy import reaches 80 percent.",
+   "claim_hash": "828eaa56396f2ba2527658b1a37e3dfd975156da40424b24f5b092ce9007ccc6",
+   "chunkP": [
+    0.048353752645233186
+   ],
+   "chunkTokens": [
+    4921
+   ],
+   "issues": [],
+   "goldChunks": []
+  },
+  {
+   "id": "c127",
+   "paper": "https_www.mdpi.com_2624-6511_5_3_53_pdf_",
+   "label": "TRUE",
+   "kind": "method",
+   "claim": "The implementation uses the Orion-LD context broker and the Keyrock identity management component from FIWARE.",
+   "claim_hash": "a982ef46dd19946b3695b3cc2f5d272c6571337efa3cc7e4d6f38253678e90a6",
+   "chunkP": [
+    0.003750571514756011
+   ],
+   "chunkTokens": [
+    4925
+   ],
+   "issues": [],
+   "goldChunks": []
+  },
+  {
+   "id": "c128",
+   "paper": "Papaers_overview",
+   "label": "TRUE",
+   "kind": "finding",
+   "claim": "IQ-based foundational models reached 99.67 percent modulation classification accuracy with one labeled sample per class, a 7x improvement over supervised baselines.",
+   "claim_hash": "e4c4ecee02b56671db01d10521074d245022d2c3c68910c0603819e02cd38336",
+   "chunkP": [
+    0.9995792470494906
+   ],
+   "chunkTokens": [
+    1836
+   ],
+   "issues": [],
+   "goldChunks": [
+    0
+   ]
+  },
+  {
+   "id": "c129",
+   "paper": "Papaers_overview",
+   "label": "TRUE",
+   "kind": "method",
+   "claim": "Lightweight backbones such as ShuffleNetV2 (0.5x) are preferred for edge deployment of these models.",
+   "claim_hash": "4e60687f26ee51d1dd3498a8fcf5bdee97626fa38d67fcdd1f862a377e0b0bca",
+   "chunkP": [
+    0.9970967345471885
+   ],
+   "chunkTokens": [
+    1829
+   ],
+   "issues": [],
+   "goldChunks": [
+    0
+   ]
+  },
+  {
+   "id": "c130",
+   "paper": "Papaers_overview",
+   "label": "FALSE",
+   "kind": "numeric",
+   "claim": "The LoRA adaptation described introduces about 84 million trainable parameters.",
+   "claim_hash": "e5f74bf77dd7c3d1565752ece80fe654ef78393995768cb94aec9c46c50b5432",
+   "chunkP": [
+    0.9707383470716051
+   ],
+   "chunkTokens": [
+    1818
+   ],
+   "issues": [],
+   "goldChunks": [
+    0
+   ]
+  },
+  {
+   "id": "c131",
+   "paper": "Papaers_overview",
+   "label": "TRUE",
+   "kind": "finding",
+   "claim": "In one-shot scenarios, the models outperform supervised counterparts by up to 145x on AoA tasks.",
+   "claim_hash": "f2bff5b47e7a405f04a7e469a8052d023b54c48b08f9c914042de5ae18b4a563",
+   "chunkP": [
+    0.9903063589219041
+   ],
+   "chunkTokens": [
+    1828
+   ],
+   "issues": [],
+   "goldChunks": [
+    0
+   ]
+  },
+  {
+   "id": "c132",
+   "paper": "Papaers_overview",
+   "label": "FALSE",
+   "kind": "numeric",
+   "claim": "For out-of-distribution beam prediction, the adapted model achieved 89.15 percent accuracy versus a supervised baseline of 94.15 percent.",
+   "claim_hash": "02e5653f69da740c1a3106f63a9ef4353e606de9e2fd7df0fb29fe7e53cdb750",
+   "chunkP": [
+    0.45702530825109094
+   ],
+   "chunkTokens": [
+    1837
+   ],
+   "issues": [],
+   "goldChunks": [
+    0
+   ]
+  },
+  {
+   "id": "c133",
+   "paper": "Papaers_overview",
+   "label": "TRUE",
+   "kind": "numeric",
+   "claim": "With 10 labeled samples per class, the joint SSL model achieved 95.71 percent modulation accuracy and 89.35 percent AoA accuracy.",
+   "claim_hash": "a40d76191b6cc588b8d885dd7cc98f8620fc04c913b596ee52b7ba51d859b031",
+   "chunkP": [
+    0.8786438459795408
+   ],
+   "chunkTokens": [
+    1839
+   ],
+   "issues": [],
+   "goldChunks": [
+    0
+   ]
+  },
+  {
+   "id": "c134",
+   "paper": "Papaers_overview",
+   "label": "FALSE",
+   "kind": "finding",
+   "claim": "Time rolling (cyclic time shifting) alters the magnitude spectrum of the signal, which harms modulation features.",
+   "claim_hash": "cf6c7a67f23fb807b9cc78b37e405e9be098c3009e29f60aeae9f9254dd98021",
+   "chunkP": [
+    0.04968018945993602
+   ],
+   "chunkTokens": [
+    1825
+   ],
+   "issues": [],
+   "goldChunks": [
+    0
+   ]
+  },
+  {
+   "id": "c135",
+   "paper": "Papaers_overview",
+   "label": "FALSE",
+   "kind": "numeric",
+   "claim": "Using only 0.1 percent of labeled data (about 1,784 samples), SSL improved AoA MAE by 51.90 percent over supervised training.",
+   "claim_hash": "4df7180d9c9e9f1b5a20d06b0d1be73e0c4de995c83a774a415f5a250d97e3d2",
+   "chunkP": [
+    0.25233114502673565
+   ],
+   "chunkTokens": [
+    1842
+   ],
+   "issues": [],
+   "goldChunks": [
+    0
+   ]
+  }
+ ],
+ "metrics": {
+  "scoreDefinition": "claim score = max probability over CHECKED chunks; claims with no checked chunk are excluded from AUC and counted as unchecked",
+  "auc": 0.7066902968542312,
+  "aucClaims": 135,
+  "aucExcludedUnchecked": 0,
+  "aucCompatibilityScoreAtPolicyBar": 0.7066902968542312,
+  "meanPTrue": {
+   "TRUE": 0.6159548432260779,
+   "FALSE": 0.30949092306686676
+  },
+  "policyBar": 0.99,
+  "atPolicyBar": {
+   "bar": 0.99,
+   "support": {
+    "bar": 0.99,
+    "claims": 135,
+    "supported": 20,
+    "truePositives": 20,
+    "falseSupports": 0,
+    "supportPrecision": 1,
+    "supportRecall": 0.2702702702702703,
+    "abstained": 115,
+    "abstentionRate": 0.8518518518518519,
+    "unchecked": 0,
+    "fullyCheckedClaims": 135,
+    "checkedCoverage": 1,
+    "checkedChunks": 135,
+    "totalChunks": 135,
+    "chunkCoverage": 1
+   },
+   "compatibility": {
+    "metric": "compatibility-decided-accuracy",
+    "bar": 0.99,
+    "tp": 20,
+    "fp": 0,
+    "tn": 7,
+    "fn": 8,
+    "unverified": 100,
+    "dangerous": 8,
+    "decided": 35,
+    "decidedAccuracy": 0.7714285714285715
+   }
+  },
+  "sweep": [
+   {
+    "bar": 0.5,
+    "support": {
+     "bar": 0.5,
+     "claims": 135,
+     "supported": 63,
+     "truePositives": 46,
+     "falseSupports": 17,
+     "supportPrecision": 0.7301587301587301,
+     "supportRecall": 0.6216216216216216,
+     "abstained": 72,
+     "abstentionRate": 0.5333333333333333,
+     "unchecked": 0,
+     "fullyCheckedClaims": 135,
+     "checkedCoverage": 1,
+     "checkedChunks": 135,
+     "totalChunks": 135,
+     "chunkCoverage": 1
+    },
+    "compatibility": {
+     "metric": "compatibility-decided-accuracy",
+     "bar": 0.5,
+     "tp": 46,
+     "fp": 17,
+     "tn": 44,
+     "fn": 28,
+     "unverified": 0,
+     "dangerous": 45,
+     "decided": 135,
+     "decidedAccuracy": 0.6666666666666666
+    }
+   },
+   {
+    "bar": 0.6,
+    "support": {
+     "bar": 0.6,
+     "claims": 135,
+     "supported": 57,
+     "truePositives": 44,
+     "falseSupports": 13,
+     "supportPrecision": 0.7719298245614035,
+     "supportRecall": 0.5945945945945946,
+     "abstained": 78,
+     "abstentionRate": 0.5777777777777777,
+     "unchecked": 0,
+     "fullyCheckedClaims": 135,
+     "checkedCoverage": 1,
+     "checkedChunks": 135,
+     "totalChunks": 135,
+     "chunkCoverage": 1
+    },
+    "compatibility": {
+     "metric": "compatibility-decided-accuracy",
+     "bar": 0.6,
+     "tp": 44,
+     "fp": 13,
+     "tn": 42,
+     "fn": 27,
+     "unverified": 9,
+     "dangerous": 40,
+     "decided": 126,
+     "decidedAccuracy": 0.6825396825396826
+    }
+   },
+   {
+    "bar": 0.7,
+    "support": {
+     "bar": 0.7,
+     "claims": 135,
+     "supported": 55,
+     "truePositives": 43,
+     "falseSupports": 12,
+     "supportPrecision": 0.7818181818181819,
+     "supportRecall": 0.581081081081081,
+     "abstained": 80,
+     "abstentionRate": 0.5925925925925926,
+     "unchecked": 0,
+     "fullyCheckedClaims": 135,
+     "checkedCoverage": 1,
+     "checkedChunks": 135,
+     "totalChunks": 135,
+     "chunkCoverage": 1
+    },
+    "compatibility": {
+     "metric": "compatibility-decided-accuracy",
+     "bar": 0.7,
+     "tp": 43,
+     "fp": 12,
+     "tn": 38,
+     "fn": 25,
+     "unverified": 17,
+     "dangerous": 37,
+     "decided": 118,
+     "decidedAccuracy": 0.6864406779661016
+    }
+   },
+   {
+    "bar": 0.8,
+    "support": {
+     "bar": 0.8,
+     "claims": 135,
+     "supported": 50,
+     "truePositives": 40,
+     "falseSupports": 10,
+     "supportPrecision": 0.8,
+     "supportRecall": 0.5405405405405406,
+     "abstained": 85,
+     "abstentionRate": 0.6296296296296297,
+     "unchecked": 0,
+     "fullyCheckedClaims": 135,
+     "checkedCoverage": 1,
+     "checkedChunks": 135,
+     "totalChunks": 135,
+     "chunkCoverage": 1
+    },
+    "compatibility": {
+     "metric": "compatibility-decided-accuracy",
+     "bar": 0.8,
+     "tp": 40,
+     "fp": 10,
+     "tn": 32,
+     "fn": 23,
+     "unverified": 30,
+     "dangerous": 33,
+     "decided": 105,
+     "decidedAccuracy": 0.6857142857142857
+    }
+   },
+   {
+    "bar": 0.85,
+    "support": {
+     "bar": 0.85,
+     "claims": 135,
+     "supported": 47,
+     "truePositives": 40,
+     "falseSupports": 7,
+     "supportPrecision": 0.851063829787234,
+     "supportRecall": 0.5405405405405406,
+     "abstained": 88,
+     "abstentionRate": 0.6518518518518519,
+     "unchecked": 0,
+     "fullyCheckedClaims": 135,
+     "checkedCoverage": 1,
+     "checkedChunks": 135,
+     "totalChunks": 135,
+     "chunkCoverage": 1
+    },
+    "compatibility": {
+     "metric": "compatibility-decided-accuracy",
+     "bar": 0.85,
+     "tp": 40,
+     "fp": 7,
+     "tn": 30,
+     "fn": 21,
+     "unverified": 37,
+     "dangerous": 28,
+     "decided": 98,
+     "decidedAccuracy": 0.7142857142857143
+    }
+   },
+   {
+    "bar": 0.9,
+    "support": {
+     "bar": 0.9,
+     "claims": 135,
+     "supported": 41,
+     "truePositives": 37,
+     "falseSupports": 4,
+     "supportPrecision": 0.9024390243902439,
+     "supportRecall": 0.5,
+     "abstained": 94,
+     "abstentionRate": 0.6962962962962963,
+     "unchecked": 0,
+     "fullyCheckedClaims": 135,
+     "checkedCoverage": 1,
+     "checkedChunks": 135,
+     "totalChunks": 135,
+     "chunkCoverage": 1
+    },
+    "compatibility": {
+     "metric": "compatibility-decided-accuracy",
+     "bar": 0.9,
+     "tp": 37,
+     "fp": 4,
+     "tn": 27,
+     "fn": 18,
+     "unverified": 49,
+     "dangerous": 22,
+     "decided": 86,
+     "decidedAccuracy": 0.7441860465116279
+    }
+   },
+   {
+    "bar": 0.95,
+    "support": {
+     "bar": 0.95,
+     "claims": 135,
+     "supported": 36,
+     "truePositives": 33,
+     "falseSupports": 3,
+     "supportPrecision": 0.9166666666666666,
+     "supportRecall": 0.44594594594594594,
+     "abstained": 99,
+     "abstentionRate": 0.7333333333333333,
+     "unchecked": 0,
+     "fullyCheckedClaims": 135,
+     "checkedCoverage": 1,
+     "checkedChunks": 135,
+     "totalChunks": 135,
+     "chunkCoverage": 1
+    },
+    "compatibility": {
+     "metric": "compatibility-decided-accuracy",
+     "bar": 0.95,
+     "tp": 33,
+     "fp": 3,
+     "tn": 21,
+     "fn": 15,
+     "unverified": 63,
+     "dangerous": 18,
+     "decided": 72,
+     "decidedAccuracy": 0.75
+    }
+   },
+   {
+    "bar": 0.99,
+    "support": {
+     "bar": 0.99,
+     "claims": 135,
+     "supported": 20,
+     "truePositives": 20,
+     "falseSupports": 0,
+     "supportPrecision": 1,
+     "supportRecall": 0.2702702702702703,
+     "abstained": 115,
+     "abstentionRate": 0.8518518518518519,
+     "unchecked": 0,
+     "fullyCheckedClaims": 135,
+     "checkedCoverage": 1,
+     "checkedChunks": 135,
+     "totalChunks": 135,
+     "chunkCoverage": 1
+    },
+    "compatibility": {
+     "metric": "compatibility-decided-accuracy",
+     "bar": 0.99,
+     "tp": 20,
+     "fp": 0,
+     "tn": 7,
+     "fn": 8,
+     "unverified": 100,
+     "dangerous": 8,
+     "decided": 35,
+     "decidedAccuracy": 0.7714285714285715
+    }
+   },
+   {
+    "bar": 0.995,
+    "support": {
+     "bar": 0.995,
+     "claims": 135,
+     "supported": 13,
+     "truePositives": 13,
+     "falseSupports": 0,
+     "supportPrecision": 1,
+     "supportRecall": 0.17567567567567569,
+     "abstained": 122,
+     "abstentionRate": 0.9037037037037037,
+     "unchecked": 0,
+     "fullyCheckedClaims": 135,
+     "checkedCoverage": 1,
+     "checkedChunks": 135,
+     "totalChunks": 135,
+     "chunkCoverage": 1
+    },
+    "compatibility": {
+     "metric": "compatibility-decided-accuracy",
+     "bar": 0.995,
+     "tp": 13,
+     "fp": 0,
+     "tn": 4,
+     "fn": 6,
+     "unverified": 112,
+     "dangerous": 6,
+     "decided": 23,
+     "decidedAccuracy": 0.7391304347826086
+    }
+   },
+   {
+    "bar": 0.999,
+    "support": {
+     "bar": 0.999,
+     "claims": 135,
+     "supported": 6,
+     "truePositives": 6,
+     "falseSupports": 0,
+     "supportPrecision": 1,
+     "supportRecall": 0.08108108108108109,
+     "abstained": 129,
+     "abstentionRate": 0.9555555555555556,
+     "unchecked": 0,
+     "fullyCheckedClaims": 135,
+     "checkedCoverage": 1,
+     "checkedChunks": 135,
+     "totalChunks": 135,
+     "chunkCoverage": 1
+    },
+    "compatibility": {
+     "metric": "compatibility-decided-accuracy",
+     "bar": 0.999,
+     "tp": 6,
+     "fp": 0,
+     "tn": 0,
+     "fn": 1,
+     "unverified": 128,
+     "dangerous": 1,
+     "decided": 7,
+     "decidedAccuracy": 0.8571428571428571
+    }
+   }
+  ],
+  "byKind": {
+   "dataset": {
+    "claims": 23,
+    "auc": 0.6923076923076923,
+    "support": {
+     "bar": 0.99,
+     "claims": 23,
+     "supported": 3,
+     "truePositives": 3,
+     "falseSupports": 0,
+     "supportPrecision": 1,
+     "supportRecall": 0.23076923076923078,
+     "abstained": 20,
+     "abstentionRate": 0.8695652173913043,
+     "unchecked": 0,
+     "fullyCheckedClaims": 23,
+     "checkedCoverage": 1,
+     "checkedChunks": 23,
+     "totalChunks": 23,
+     "chunkCoverage": 1
+    }
+   },
+   "finding": {
+    "claims": 39,
+    "auc": 0.7333333333333333,
+    "support": {
+     "bar": 0.99,
+     "claims": 39,
+     "supported": 6,
+     "truePositives": 6,
+     "falseSupports": 0,
+     "supportPrecision": 1,
+     "supportRecall": 0.25,
+     "abstained": 33,
+     "abstentionRate": 0.8461538461538461,
+     "unchecked": 0,
+     "fullyCheckedClaims": 39,
+     "checkedCoverage": 1,
+     "checkedChunks": 39,
+     "totalChunks": 39,
+     "chunkCoverage": 1
+    }
+   },
+   "method": {
+    "claims": 37,
+    "auc": 0.6592592592592592,
+    "support": {
+     "bar": 0.99,
+     "claims": 37,
+     "supported": 8,
+     "truePositives": 8,
+     "falseSupports": 0,
+     "supportPrecision": 1,
+     "supportRecall": 0.2962962962962963,
+     "abstained": 29,
+     "abstentionRate": 0.7837837837837838,
+     "unchecked": 0,
+     "fullyCheckedClaims": 37,
+     "checkedCoverage": 1,
+     "checkedChunks": 37,
+     "totalChunks": 37,
+     "chunkCoverage": 1
+    }
+   },
+   "numeric": {
+    "claims": 36,
+    "auc": 0.8769230769230769,
+    "support": {
+     "bar": 0.99,
+     "claims": 36,
+     "supported": 3,
+     "truePositives": 3,
+     "falseSupports": 0,
+     "supportPrecision": 1,
+     "supportRecall": 0.3,
+     "abstained": 33,
+     "abstentionRate": 0.9166666666666666,
+     "unchecked": 0,
+     "fullyCheckedClaims": 36,
+     "checkedCoverage": 1,
+     "checkedChunks": 36,
+     "totalChunks": 36,
+     "chunkCoverage": 1
+    }
+   }
+  }
+ },
+ "diagnostics": {
+  "note": "gold evidence quotes are an evaluation reference only; they were never part of any input",
+  "trueClaimsWithGoldQuoteInSomeChunk": 37,
+  "trueClaims": 74,
+  "trueSupportedAtPolicyBarWithGoldChunk": 20,
+  "topFalseSupports": [
+   {
+    "id": "c101",
+    "kind": "method",
+    "claim": "The smart meter was prototyped with Arduino and the smart plug with Raspberry Pi.",
+    "p": 0.9847252106609656
+   },
+   {
+    "id": "c008",
+    "kind": "finding",
+    "claim": "The pretrained ViT model is outperformed by a four-times larger model trained from scratch on spectrogram segmentation.",
+    "p": 0.9715062815208634
+   },
+   {
+    "id": "c130",
+    "kind": "numeric",
+    "claim": "The LoRA adaptation described introduces about 84 million trainable parameters.",
+    "p": 0.9707383470716051
+   },
+   {
+    "id": "c086",
+    "kind": "finding",
+    "claim": "About 69 percent of households in Africa own at least one smart device.",
+    "p": 0.9287771709279175
+   },
+   {
+    "id": "c048",
+    "kind": "dataset",
+    "claim": "The 5G NR positioning task takes raw IQ traces as input to predict the UE location.",
+    "p": 0.899798719768402
+   }
+  ]
+ },
+ "cost": {
+  "wallMs": 132189,
+  "lanes": 1,
+  "verifierCallsFresh": 135,
+  "checksFromCache": 0,
+  "tokensFresh": 694226,
+  "tokensTotal": 694226,
+  "refusedOverLimit": 0,
+  "errorRows": 0,
+  "errorSamples": [],
+  "worker": {
+   "rows_scored": 135,
+   "tokens_scored": 694226,
+   "infer_s": 126.538,
+   "peak_vram_mib": 2737.2,
+   "peak_vram_reserved_mib": 2830
+  }
+ },
+ "provenance": {
+  "git": {
+   "commit": "8b6db8d067c14bd9b476ceb16b9747d704b5bef6",
+   "dirty": true
+  },
+  "node": "v26.3.1",
+  "argv": [
+   "--text-dir",
+   "/tmp/claude-1000/-home-mahmoud-Desktop-AI-Projects-UktubAI/5c413b28-b472-456f-ac35-fef7ae831925/scratchpad/text",
+   "--no-cache",
+   "--engine",
+   "decision2-eos"
+  ],
+  "cache": null
+ }
+}

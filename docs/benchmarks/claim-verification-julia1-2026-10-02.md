@@ -1,5 +1,8 @@
 # Claim verification benchmark — Julia-1 vs 135 ground-truthed claims
 
+Historical measurements and audit addenda. Candidate/default-engine statements
+reflect their dates, not current configuration; see [README](../../README.md).
+
 Date: 2026-10-02 · Corpus: 14 real papers (`test_papers/RF` + `test_papers/smarthome`, ~85k words) · 
 Claims: 135 authored by an independent subagent (74 TRUE / 61 FALSE), evidence-verified verbatim against the papers, reworded (not copied) · 
 Chunk: full paper text (24k chars) · Engine: Julia-1 144M encoder, 6 resident CPU processes · Wall: 272s · Bar: `VERIFY_MIN_CONFIDENCE=0.99`

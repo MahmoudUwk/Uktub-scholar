@@ -1,0 +1,2551 @@
+{
+ "schema": "bench-evidence/1",
+ "phase": "endtoend",
+ "date": "2026-10-04",
+ "chunkTokens": 8192,
+ "k": 5,
+ "engineUrl": "http://127.0.0.1:8099",
+ "policy": "3e3c7e8a25dd",
+ "records": [
+  {
+   "id": "c011",
+   "paper": "2504.14100v1",
+   "part": "held-out",
+   "kind": "numeric",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 50411,
+    "end": 50522
+   },
+   "evidence": [
+    {
+     "start": 49609,
+     "end": 50738,
+     "doi": "10.9999/p02",
+     "excerpt": "LoRA Fine-tuning\nGiven the performance gap between ViT-SL and conven-\ntional fine-tuning on RF signal classification, which requires\nfine-tuning two full ViT bl…",
+     "withheld": null,
+     "score": 0.9998568379759885
+    }
+   ],
+   "fresh": 16,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 3783,
+   "limitations": [],
+   "chars": 1129
+  },
+  {
+   "id": "c012",
+   "paper": "2504.14100v1",
+   "part": "held-out",
+   "kind": "finding",
+   "mode": "all-papers",
+   "label": "FALSE",
+   "gold": {
+    "start": 7270,
+    "end": 7391
+   },
+   "evidence": [],
+   "fresh": 45,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 38578,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c013",
+   "paper": "2504.14100v1",
+   "part": "held-out",
+   "kind": "dataset",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 15208,
+    "end": 15255
+   },
+   "evidence": [],
+   "fresh": 3,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 2824,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c014",
+   "paper": "2504.14100v1",
+   "part": "held-out",
+   "kind": "numeric",
+   "mode": "all-papers",
+   "label": "FALSE",
+   "gold": {
+    "start": 14574,
+    "end": 14621
+   },
+   "evidence": [],
+   "fresh": 45,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 38567,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c015",
+   "paper": "2504.14100v1",
+   "part": "held-out",
+   "kind": "method",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 42702,
+    "end": 42801
+   },
+   "evidence": [],
+   "fresh": 3,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 2978,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c016",
+   "paper": "2504.14100v1",
+   "part": "held-out",
+   "kind": "finding",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 44356,
+    "end": 44400
+   },
+   "evidence": [],
+   "fresh": 3,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 2981,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c017",
+   "paper": "2504.14100v1",
+   "part": "held-out",
+   "kind": "numeric",
+   "mode": "all-papers",
+   "label": "FALSE",
+   "gold": {
+    "start": 17794,
+    "end": 17860
+   },
+   "evidence": [],
+   "fresh": 45,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 38299,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c018",
+   "paper": "2504.14100v1",
+   "part": "held-out",
+   "kind": "dataset",
+   "mode": "all-papers",
+   "label": "FALSE",
+   "gold": {
+    "start": 17089,
+    "end": 17207
+   },
+   "evidence": [],
+   "fresh": 45,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 38251,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c019",
+   "paper": "2504.14100v1",
+   "part": "held-out",
+   "kind": "numeric",
+   "mode": "all-papers",
+   "label": "FALSE",
+   "gold": {
+    "start": 14044,
+    "end": 14097
+   },
+   "evidence": [],
+   "fresh": 45,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 38730,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c020",
+   "paper": "2504.14100v1",
+   "part": "held-out",
+   "kind": "finding",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 47961,
+    "end": 48047
+   },
+   "evidence": [
+    {
+     "start": 47560,
+     "end": 48556,
+     "doi": "10.9999/p02",
+     "excerpt": "12\nthe performance on the test set for every downstream task, as\na function of epochs during fine-tuning.\nOur evaluation reveals that fine-tuning performance is…",
+     "withheld": null,
+     "score": 0.9998745994848869
+    }
+   ],
+   "fresh": 16,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 3683,
+   "limitations": [],
+   "chars": 996
+  },
+  {
+   "id": "c031",
+   "paper": "2509.03077v1",
+   "part": "held-out",
+   "kind": "dataset",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 17258,
+    "end": 17331
+   },
+   "evidence": [
+    {
+     "start": 17053,
+     "end": 18172,
+     "doi": "10.9999/p04",
+     "excerpt": "By rotating the receiver antenna, this configuration\neffectively simulates different transmitter locations within the\nreceiver’s reference frame, offering a com…",
+     "withheld": null,
+     "score": 0.9996203371121385
+    }
+   ],
+   "fresh": 21,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 2638,
+   "limitations": [],
+   "chars": 1119
+  },
+  {
+   "id": "c032",
+   "paper": "2509.03077v1",
+   "part": "held-out",
+   "kind": "dataset",
+   "mode": "all-papers",
+   "label": "FALSE",
+   "gold": {
+    "start": 17333,
+    "end": 17426
+   },
+   "evidence": [],
+   "fresh": 45,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 38214,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c033",
+   "paper": "2509.03077v1",
+   "part": "held-out",
+   "kind": "method",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 13826,
+    "end": 13885
+   },
+   "evidence": [],
+   "fresh": 2,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 1553,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c034",
+   "paper": "2509.03077v1",
+   "part": "held-out",
+   "kind": "finding",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 23987,
+    "end": 24096
+   },
+   "evidence": [
+    {
+     "start": 23017,
+     "end": 24098,
+     "doi": "10.9999/p04",
+     "excerpt": "For good representations, the performance in this\nscenario is expected to be close to the trained from scratch\nsupervised solution [11] and our results presente…",
+     "withheld": null,
+     "score": 0.9998499578237012
+    }
+   ],
+   "fresh": 14,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 2238,
+   "limitations": [],
+   "chars": 1081
+  },
+  {
+   "id": "c035",
+   "paper": "2509.03077v1",
+   "part": "held-out",
+   "kind": "finding",
+   "mode": "all-papers",
+   "label": "FALSE",
+   "gold": {
+    "start": 22618,
+    "end": 22701
+   },
+   "evidence": [],
+   "fresh": 45,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 38792,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c036",
+   "paper": "2509.03077v1",
+   "part": "held-out",
+   "kind": "dataset",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 9502,
+    "end": 9584
+   },
+   "evidence": [
+    {
+     "start": 8964,
+     "end": 9947,
+     "doi": "10.9999/p04",
+     "excerpt": "Problem Statement\nWe consider a MIMO setup with Nt transmit antennas and\nNr receive antennas as show in 1. The transmitter sends a\nvariety of modulation signals…",
+     "withheld": null,
+     "score": 0.9997077321271854
+    }
+   ],
+   "fresh": 21,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 2687,
+   "limitations": [],
+   "chars": 983
+  },
+  {
+   "id": "c037",
+   "paper": "2509.03077v1",
+   "part": "held-out",
+   "kind": "method",
+   "mode": "all-papers",
+   "label": "FALSE",
+   "gold": {
+    "start": 6162,
+    "end": 6316
+   },
+   "evidence": [],
+   "fresh": 45,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 38677,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c038",
+   "paper": "2509.03077v1",
+   "part": "held-out",
+   "kind": "numeric",
+   "mode": "all-papers",
+   "label": "FALSE",
+   "gold": {
+    "start": 19071,
+    "end": 19155
+   },
+   "evidence": [],
+   "fresh": 45,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 38567,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c039",
+   "paper": "2509.03077v1",
+   "part": "held-out",
+   "kind": "finding",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 5892,
+    "end": 6009
+   },
+   "evidence": [],
+   "fresh": 2,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 1551,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c049",
+   "paper": "2606.06373v1",
+   "part": "held-out",
+   "kind": "method",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 11277,
+    "end": 11373
+   },
+   "evidence": [
+    {
+     "start": 10967,
+     "end": 12093,
+     "doi": "10.9999/p06",
+     "excerpt": "The target encoder 𝐸tgt ( · ; ¯𝜃) shares the\nsame ViT architecture as the context encoder but processes\nthe complete sequence of patch tokens (over the 𝐶′ sa…",
+     "withheld": null,
+     "score": 0.9989443241243399
+    }
+   ],
+   "fresh": 20,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 2701,
+   "limitations": [],
+   "chars": 1126
+  },
+  {
+   "id": "c050",
+   "paper": "2606.06373v1",
+   "part": "held-out",
+   "kind": "numeric",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 12709,
+    "end": 13021
+   },
+   "evidence": [
+    {
+     "start": 12093,
+     "end": 13148,
+     "doi": "10.9999/p06",
+     "excerpt": "The model is trained end-to-end to minimize the mean\nsquared error between the predicted and target representations\nover the masked positions:\nL = 1\n|M|∑︁ 𝑖∈ M…",
+     "withheld": null,
+     "score": 0.9981696014182385
+    }
+   ],
+   "fresh": 20,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 2576,
+   "limitations": [],
+   "chars": 1055
+  },
+  {
+   "id": "c051",
+   "paper": "2606.06373v1",
+   "part": "held-out",
+   "kind": "finding",
+   "mode": "all-papers",
+   "label": "FALSE",
+   "gold": {
+    "start": 1365,
+    "end": 1544
+   },
+   "evidence": [],
+   "fresh": 45,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 38205,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c052",
+   "paper": "2606.06373v1",
+   "part": "held-out",
+   "kind": "finding",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 22553,
+    "end": 22660
+   },
+   "evidence": [
+    {
+     "start": 22015,
+     "end": 23024,
+     "doi": "10.9999/p06",
+     "excerpt": "Main results are reported as the mean and standard\ndeviation over three random seeds, controlling the train/test\nsplit.\nB. Main Results\nTable II compares the do…",
+     "withheld": null,
+     "score": 0.9999334494334311
+    }
+   ],
+   "fresh": 13,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 2343,
+   "limitations": [],
+   "chars": 1009
+  },
+  {
+   "id": "c053",
+   "paper": "2606.06373v1",
+   "part": "held-out",
+   "kind": "numeric",
+   "mode": "all-papers",
+   "label": "FALSE",
+   "gold": {
+    "start": 22662,
+    "end": 22729
+   },
+   "evidence": [],
+   "fresh": 45,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 38758,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c054",
+   "paper": "2606.06373v1",
+   "part": "held-out",
+   "kind": "method",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 9707,
+    "end": 9831
+   },
+   "evidence": [],
+   "fresh": 2,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 1597,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c055",
+   "paper": "2606.06373v1",
+   "part": "held-out",
+   "kind": "dataset",
+   "mode": "all-papers",
+   "label": "FALSE",
+   "gold": {
+    "start": 19178,
+    "end": 19246
+   },
+   "evidence": [],
+   "fresh": 45,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 38561,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c056",
+   "paper": "2606.06373v1",
+   "part": "held-out",
+   "kind": "finding",
+   "mode": "all-papers",
+   "label": "FALSE",
+   "gold": {
+    "start": 1047,
+    "end": 1187
+   },
+   "evidence": [],
+   "fresh": 45,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 38572,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c057",
+   "paper": "2606.06373v1",
+   "part": "held-out",
+   "kind": "method",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 12475,
+    "end": 12574
+   },
+   "evidence": [
+    {
+     "start": 12093,
+     "end": 13148,
+     "doi": "10.9999/p06",
+     "excerpt": "The model is trained end-to-end to minimize the mean\nsquared error between the predicted and target representations\nover the masked positions:\nL = 1\n|M|∑︁ 𝑖∈ M…",
+     "withheld": null,
+     "score": 0.9981694406739666
+    }
+   ],
+   "fresh": 20,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 2686,
+   "limitations": [],
+   "chars": 1055
+  },
+  {
+   "id": "c058",
+   "paper": "2606.06373v1",
+   "part": "held-out",
+   "kind": "numeric",
+   "mode": "all-papers",
+   "label": "FALSE",
+   "gold": {
+    "start": 13148,
+    "end": 13199
+   },
+   "evidence": [],
+   "fresh": 45,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 38336,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c078",
+   "paper": "http_thesai.org_Downloads_Volume12No2_Pa",
+   "part": "held-out",
+   "kind": "dataset",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 17115,
+    "end": 17210
+   },
+   "evidence": [],
+   "fresh": 2,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 1532,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c079",
+   "paper": "http_thesai.org_Downloads_Volume12No2_Pa",
+   "part": "held-out",
+   "kind": "method",
+   "mode": "all-papers",
+   "label": "FALSE",
+   "gold": {
+    "start": 12711,
+    "end": 12832
+   },
+   "evidence": [],
+   "fresh": 45,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 38564,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c080",
+   "paper": "http_thesai.org_Downloads_Volume12No2_Pa",
+   "part": "held-out",
+   "kind": "numeric",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 26724,
+    "end": 26863
+   },
+   "evidence": [
+    {
+     "start": 25844,
+     "end": 26908,
+     "doi": "10.9999/p10",
+     "excerpt": "(IJACSA) International Journal of Advanced Computer Science and Applications,\nVol. 12, No. 2, 2021\nFig. 15. Homergy Box Hardware.\nNon-lifeline consumer had an e…",
+     "withheld": null,
+     "score": 0.9996674018318962
+    }
+   ],
+   "fresh": 11,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 1991,
+   "limitations": [],
+   "chars": 1064
+  },
+  {
+   "id": "c081",
+   "paper": "http_thesai.org_Downloads_Volume12No2_Pa",
+   "part": "held-out",
+   "kind": "finding",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 2235,
+    "end": 2328
+   },
+   "evidence": [
+    {
+     "start": 1159,
+     "end": 2330,
+     "doi": "10.9999/p10",
+     "excerpt": "However,\nthese systems apply only to already-smart devices and are not\nappropriate for the many locales where a majority of appliances\nare not yet IoT-capable. …",
+     "withheld": null,
+     "score": 0.9997641352718564
+    }
+   ],
+   "fresh": 25,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 2814,
+   "limitations": [],
+   "chars": 1171
+  },
+  {
+   "id": "c082",
+   "paper": "http_thesai.org_Downloads_Volume12No2_Pa",
+   "part": "held-out",
+   "kind": "numeric",
+   "mode": "all-papers",
+   "label": "FALSE",
+   "gold": {
+    "start": 2119,
+    "end": 2196
+   },
+   "evidence": [],
+   "fresh": 45,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 38659,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c083",
+   "paper": "http_thesai.org_Downloads_Volume12No2_Pa",
+   "part": "held-out",
+   "kind": "method",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 17718,
+    "end": 17837
+   },
+   "evidence": [],
+   "fresh": 2,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 1526,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c084",
+   "paper": "http_thesai.org_Downloads_Volume12No2_Pa",
+   "part": "held-out",
+   "kind": "method",
+   "mode": "all-papers",
+   "label": "FALSE",
+   "gold": {
+    "start": 20784,
+    "end": 21021
+   },
+   "evidence": [],
+   "fresh": 45,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 38237,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c085",
+   "paper": "http_thesai.org_Downloads_Volume12No2_Pa",
+   "part": "held-out",
+   "kind": "method",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 23322,
+    "end": 23427
+   },
+   "evidence": [
+    {
+     "start": 22674,
+     "end": 23539,
+     "doi": "10.9999/p10",
+     "excerpt": "(IJACSA) International Journal of Advanced Computer Science and Applications,\nVol. 12, No. 2, 2021\nFig. 8. Home Screen.\nFig. 9. Box Configuration Page.\nFig. 10.…",
+     "withheld": null,
+     "score": 0.9990436921870908
+    }
+   ],
+   "fresh": 11,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 2120,
+   "limitations": [],
+   "chars": 865
+  },
+  {
+   "id": "c086",
+   "paper": "http_thesai.org_Downloads_Volume12No2_Pa",
+   "part": "held-out",
+   "kind": "finding",
+   "mode": "all-papers",
+   "label": "FALSE",
+   "gold": {
+    "start": 10252,
+    "end": 10353
+   },
+   "evidence": [],
+   "fresh": 45,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 38648,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c087",
+   "paper": "http_thesai.org_Downloads_Volume12No2_Pa",
+   "part": "held-out",
+   "kind": "method",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 13334,
+    "end": 13418
+   },
+   "evidence": [
+    {
+     "start": 12729,
+     "end": 13883,
+     "doi": "10.9999/p10",
+     "excerpt": "The Arduino Mega microcontroller executes instruc-\ntions for controlling the appliance-connected relays. Although\nthe NodeMCU alone could have been used as micr…",
+     "withheld": null,
+     "score": 0.9995420352704246
+    }
+   ],
+   "fresh": 25,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 2795,
+   "limitations": [],
+   "chars": 1154
+  },
+  {
+   "id": "c098",
+   "paper": "https_www.mdpi.com_2079-9292_12_19_4041_",
+   "part": "held-out",
+   "kind": "method",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 1529,
+    "end": 1852
+   },
+   "evidence": [
+    {
+     "start": 1201,
+     "end": 2379,
+     "doi": "10.9999/p12",
+     "excerpt": "smart grid. It attempts to\nreduce peak demand, improve the smart grid efficiency, and ensure system reliability. Implementing\ndemand-response programs in reside…",
+     "withheld": null,
+     "score": 0.9998218152841677
+    },
+    {
+     "start": 14552,
+     "end": 15726,
+     "doi": "10.9999/p12",
+     "excerpt": "Electronics 2023, 12, 4041 5 of 20\nand the root mean square (RMS) value of the current are crucial capabilities of the Plugwise\nsystem. The system’s communicati…",
+     "withheld": null,
+     "score": 0.9933559769533694
+    },
+    {
+     "start": 22605,
+     "end": 43120,
+     "doi": "10.9999/p12",
+     "excerpt": null,
+     "withheld": "excerpt_cap",
+     "score": 0.995209139733906
+    }
+   ],
+   "fresh": 48,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 5325,
+   "limitations": [],
+   "chars": 2352
+  },
+  {
+   "id": "c099",
+   "paper": "https_www.mdpi.com_2079-9292_12_19_4041_",
+   "part": "held-out",
+   "kind": "numeric",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 2551,
+    "end": 2638
+   },
+   "evidence": [
+    {
+     "start": 2379,
+     "end": 3573,
+     "doi": "10.9999/p12",
+     "excerpt": "The execution of the trained\ndecision tree and support vector machine algorithms was verified on the Raspberry Pi 3 Model B Rev\n1.2, operating at a clock speed …",
+     "withheld": null,
+     "score": 0.9999725307566684
+    },
+    {
+     "start": 22605,
+     "end": 43120,
+     "doi": "10.9999/p12",
+     "excerpt": null,
+     "withheld": "excerpt_cap",
+     "score": 0.9988534864210362
+    }
+   ],
+   "fresh": 48,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 5373,
+   "limitations": [],
+   "chars": 1194
+  },
+  {
+   "id": "c100",
+   "paper": "https_www.mdpi.com_2079-9292_12_19_4041_",
+   "part": "held-out",
+   "kind": "finding",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 2640,
+    "end": 2749
+   },
+   "evidence": [],
+   "fresh": 3,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 2846,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c101",
+   "paper": "https_www.mdpi.com_2079-9292_12_19_4041_",
+   "part": "held-out",
+   "kind": "method",
+   "mode": "all-papers",
+   "label": "FALSE",
+   "gold": {
+    "start": 1953,
+    "end": 2047
+   },
+   "evidence": [
+    {
+     "start": 1201,
+     "end": 2379,
+     "doi": "10.9999/p12",
+     "excerpt": "smart grid. It attempts to\nreduce peak demand, improve the smart grid efficiency, and ensure system reliability. Implementing\ndemand-response programs in reside…",
+     "withheld": null,
+     "score": 0.9952023280133737
+    }
+   ],
+   "fresh": 67,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 39758,
+   "limitations": [],
+   "chars": 1178
+  },
+  {
+   "id": "c102",
+   "paper": "https_www.mdpi.com_2079-9292_12_19_4041_",
+   "part": "held-out",
+   "kind": "finding",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 2253,
+    "end": 2377
+   },
+   "evidence": [],
+   "fresh": 3,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 2927,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c103",
+   "paper": "https_www.mdpi.com_2079-9292_12_19_4041_",
+   "part": "held-out",
+   "kind": "numeric",
+   "mode": "all-papers",
+   "label": "FALSE",
+   "gold": {
+    "start": 38503,
+    "end": 38549
+   },
+   "evidence": [],
+   "fresh": 45,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 38564,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c104",
+   "paper": "https_www.mdpi.com_2079-9292_12_19_4041_",
+   "part": "held-out",
+   "kind": "numeric",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 41634,
+    "end": 41816
+   },
+   "evidence": [
+    {
+     "start": 41182,
+     "end": 41913,
+     "doi": "10.9999/p12",
+     "excerpt": "A consumer enrolled in the TOU program has the following major appliances: an\nelectric shower, kettle, grill, iron, air conditioner (AC), washing machine, elect…",
+     "withheld": null,
+     "score": 0.9979771036412446
+    }
+   ],
+   "fresh": 26,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 4252,
+   "limitations": [],
+   "chars": 731
+  },
+  {
+   "id": "c105",
+   "paper": "https_www.mdpi.com_2079-9292_12_19_4041_",
+   "part": "held-out",
+   "kind": "method",
+   "mode": "all-papers",
+   "label": "FALSE",
+   "gold": {
+    "start": 1763,
+    "end": 1852
+   },
+   "evidence": [],
+   "fresh": 45,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 38619,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c106",
+   "paper": "https_www.mdpi.com_2079-9292_12_19_4041_",
+   "part": "held-out",
+   "kind": "method",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 39980,
+    "end": 40104
+   },
+   "evidence": [],
+   "fresh": 3,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 2929,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c107",
+   "paper": "https_www.mdpi.com_2079-9292_12_19_4041_",
+   "part": "held-out",
+   "kind": "dataset",
+   "mode": "all-papers",
+   "label": "FALSE",
+   "gold": {
+    "start": 40902,
+    "end": 40956
+   },
+   "evidence": [],
+   "fresh": 45,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 38598,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c118",
+   "paper": "https_www.mdpi.com_2624-6511_5_3_53_pdf_",
+   "part": "held-out",
+   "kind": "method",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 24058,
+    "end": 24120
+   },
+   "evidence": [
+    {
+     "start": 20934,
+     "end": 42458,
+     "doi": "10.9999/p14",
+     "excerpt": null,
+     "withheld": "excerpt_cap",
+     "score": 0.9936127217137911
+    }
+   ],
+   "fresh": 27,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 4330,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c119",
+   "paper": "https_www.mdpi.com_2624-6511_5_3_53_pdf_",
+   "part": "held-out",
+   "kind": "numeric",
+   "mode": "all-papers",
+   "label": "FALSE",
+   "gold": {
+    "start": 38084,
+    "end": 38182
+   },
+   "evidence": [],
+   "fresh": 45,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 38560,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c120",
+   "paper": "https_www.mdpi.com_2624-6511_5_3_53_pdf_",
+   "part": "held-out",
+   "kind": "dataset",
+   "mode": "all-papers",
+   "label": "FALSE",
+   "gold": {
+    "start": 38132,
+    "end": 38322
+   },
+   "evidence": [],
+   "fresh": 45,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 38576,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c121",
+   "paper": "https_www.mdpi.com_2624-6511_5_3_53_pdf_",
+   "part": "held-out",
+   "kind": "method",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 27412,
+    "end": 27456
+   },
+   "evidence": [],
+   "fresh": 4,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 3261,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c122",
+   "paper": "https_www.mdpi.com_2624-6511_5_3_53_pdf_",
+   "part": "held-out",
+   "kind": "dataset",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 36656,
+    "end": 36732
+   },
+   "evidence": [
+    {
+     "start": 36636,
+     "end": 37815,
+     "doi": "10.9999/p14",
+     "excerpt": "Element Description\nHome automation system Home Assistant, running in a Raspberry Pi 4, 4 GB RAM\nPhoto voltaic array 14 panels, 480 W rated\nInverter Ingecon Sun…",
+     "withheld": null,
+     "score": 0.9999518282120948
+    }
+   ],
+   "fresh": 27,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 4329,
+   "limitations": [],
+   "chars": 1179
+  },
+  {
+   "id": "c123",
+   "paper": "https_www.mdpi.com_2624-6511_5_3_53_pdf_",
+   "part": "held-out",
+   "kind": "method",
+   "mode": "all-papers",
+   "label": "FALSE",
+   "gold": {
+    "start": 30524,
+    "end": 30611
+   },
+   "evidence": [],
+   "fresh": 45,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 38591,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c124",
+   "paper": "https_www.mdpi.com_2624-6511_5_3_53_pdf_",
+   "part": "held-out",
+   "kind": "dataset",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 37339,
+    "end": 37444
+   },
+   "evidence": [
+    {
+     "start": 36636,
+     "end": 37815,
+     "doi": "10.9999/p14",
+     "excerpt": "Element Description\nHome automation system Home Assistant, running in a Raspberry Pi 4, 4 GB RAM\nPhoto voltaic array 14 panels, 480 W rated\nInverter Ingecon Sun…",
+     "withheld": null,
+     "score": 0.9998423089264085
+    }
+   ],
+   "fresh": 27,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 4423,
+   "limitations": [],
+   "chars": 1179
+  },
+  {
+   "id": "c125",
+   "paper": "https_www.mdpi.com_2624-6511_5_3_53_pdf_",
+   "part": "held-out",
+   "kind": "finding",
+   "mode": "all-papers",
+   "label": "FALSE",
+   "gold": {
+    "start": 51702,
+    "end": 51749
+   },
+   "evidence": [],
+   "fresh": 45,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 38680,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c126",
+   "paper": "https_www.mdpi.com_2624-6511_5_3_53_pdf_",
+   "part": "held-out",
+   "kind": "finding",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 49273,
+    "end": 49392
+   },
+   "evidence": [
+    {
+     "start": 48680,
+     "end": 49567,
+     "doi": "10.9999/p14",
+     "excerpt": "HEC: the current implementation of this component is capable of generating schedules\nfor electricity consumption upon request, trying to maximise PV-generated e…",
+     "withheld": null,
+     "score": 0.9989223318788407
+    }
+   ],
+   "fresh": 22,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 4209,
+   "limitations": [],
+   "chars": 887
+  },
+  {
+   "id": "c127",
+   "paper": "https_www.mdpi.com_2624-6511_5_3_53_pdf_",
+   "part": "held-out",
+   "kind": "method",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 40464,
+    "end": 40617
+   },
+   "evidence": [
+    {
+     "start": 40314,
+     "end": 41456,
+     "doi": "10.9999/p14",
+     "excerpt": "Smart Cities 2022, 5 1068\n4.3. Knowledge Base and Security Components\nFor the KB and security components, we have selected some Generic Enablers from\nthe FIWARE…",
+     "withheld": null,
+     "score": 0.9991141415322287
+    }
+   ],
+   "fresh": 27,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 4418,
+   "limitations": [],
+   "chars": 1142
+  },
+  {
+   "id": "c128",
+   "paper": "Papaers_overview",
+   "part": "held-out",
+   "kind": "finding",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 921,
+    "end": 1063
+   },
+   "evidence": [
+    {
+     "start": 0,
+     "end": 1065,
+     "doi": "10.9999/p08",
+     "excerpt": "Foundational Models for Raw I/Q Streams in AI-Native 6G\nExecutive Summary\nThe transition toward sixth-generation (6G) wireless architectures necessitates a shif…",
+     "withheld": null,
+     "score": 0.9998617559337629
+    }
+   ],
+   "fresh": 10,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 803,
+   "limitations": [],
+   "chars": 1065
+  },
+  {
+   "id": "c129",
+   "paper": "Papaers_overview",
+   "part": "held-out",
+   "kind": "method",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 2848,
+    "end": 2977
+   },
+   "evidence": [
+    {
+     "start": 2531,
+     "end": 3581,
+     "doi": "10.9999/p08",
+     "excerpt": "Methodology and Framework Architecture\nThe research highlights two primary SSL frameworks for radio representation: IQFM (based on\nSimCLR) and MoCo-v3 (based on…",
+     "withheld": null,
+     "score": 0.9998642762436365
+    }
+   ],
+   "fresh": 10,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 788,
+   "limitations": [],
+   "chars": 1050
+  },
+  {
+   "id": "c130",
+   "paper": "Papaers_overview",
+   "part": "held-out",
+   "kind": "numeric",
+   "mode": "all-papers",
+   "label": "FALSE",
+   "gold": {
+    "start": 3436,
+    "end": 3579
+   },
+   "evidence": [],
+   "fresh": 45,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 38245,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c131",
+   "paper": "Papaers_overview",
+   "part": "held-out",
+   "kind": "finding",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 1269,
+    "end": 1410
+   },
+   "evidence": [
+    {
+     "start": 1065,
+     "end": 2182,
+     "doi": "10.9999/p08",
+     "excerpt": "● Enable Multi-Task Versatility: A single frozen encoder can support diverse tasks,\nincluding modulation classification, angle-of-arrival (AoA) estimation, beam…",
+     "withheld": null,
+     "score": 0.9992948167429464
+    }
+   ],
+   "fresh": 10,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 788,
+   "limitations": [],
+   "chars": 1117
+  },
+  {
+   "id": "c132",
+   "paper": "Papaers_overview",
+   "part": "held-out",
+   "kind": "numeric",
+   "mode": "all-papers",
+   "label": "FALSE",
+   "gold": {
+    "start": 6144,
+    "end": 6208
+   },
+   "evidence": [],
+   "fresh": 45,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 38680,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c133",
+   "paper": "Papaers_overview",
+   "part": "held-out",
+   "kind": "numeric",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 5687,
+    "end": 5823
+   },
+   "evidence": [],
+   "fresh": 1,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 319,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c134",
+   "paper": "Papaers_overview",
+   "part": "held-out",
+   "kind": "finding",
+   "mode": "all-papers",
+   "label": "FALSE",
+   "gold": {
+    "start": 4935,
+    "end": 5130
+   },
+   "evidence": [],
+   "fresh": 45,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 38301,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c135",
+   "paper": "Papaers_overview",
+   "part": "held-out",
+   "kind": "numeric",
+   "mode": "all-papers",
+   "label": "FALSE",
+   "gold": {
+    "start": 5840,
+    "end": 5982
+   },
+   "evidence": [],
+   "fresh": 45,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 38491,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c011",
+   "paper": "2504.14100v1",
+   "part": "held-out",
+   "kind": "numeric",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 50411,
+    "end": 50522
+   },
+   "evidence": [
+    {
+     "start": 49609,
+     "end": 50738,
+     "doi": "10.9999/p02",
+     "excerpt": "LoRA Fine-tuning\nGiven the performance gap between ViT-SL and conven-\ntional fine-tuning on RF signal classification, which requires\nfine-tuning two full ViT bl…",
+     "withheld": null,
+     "score": 0.9998568379759885
+    }
+   ],
+   "fresh": 16,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 3743,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 1129
+  },
+  {
+   "id": "c013",
+   "paper": "2504.14100v1",
+   "part": "held-out",
+   "kind": "dataset",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 15208,
+    "end": 15255
+   },
+   "evidence": [],
+   "fresh": 3,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 2819,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 0
+  },
+  {
+   "id": "c015",
+   "paper": "2504.14100v1",
+   "part": "held-out",
+   "kind": "method",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 42702,
+    "end": 42801
+   },
+   "evidence": [],
+   "fresh": 3,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 2978,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 0
+  },
+  {
+   "id": "c016",
+   "paper": "2504.14100v1",
+   "part": "held-out",
+   "kind": "finding",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 44356,
+    "end": 44400
+   },
+   "evidence": [],
+   "fresh": 3,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 2978,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 0
+  },
+  {
+   "id": "c020",
+   "paper": "2504.14100v1",
+   "part": "held-out",
+   "kind": "finding",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 47961,
+    "end": 48047
+   },
+   "evidence": [
+    {
+     "start": 47560,
+     "end": 48556,
+     "doi": "10.9999/p02",
+     "excerpt": "12\nthe performance on the test set for every downstream task, as\na function of epochs during fine-tuning.\nOur evaluation reveals that fine-tuning performance is…",
+     "withheld": null,
+     "score": 0.9998745994848869
+    }
+   ],
+   "fresh": 16,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 3697,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 996
+  },
+  {
+   "id": "c031",
+   "paper": "2509.03077v1",
+   "part": "held-out",
+   "kind": "dataset",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 17258,
+    "end": 17331
+   },
+   "evidence": [
+    {
+     "start": 17053,
+     "end": 18172,
+     "doi": "10.9999/p04",
+     "excerpt": "By rotating the receiver antenna, this configuration\neffectively simulates different transmitter locations within the\nreceiver’s reference frame, offering a com…",
+     "withheld": null,
+     "score": 0.9996203371121385
+    }
+   ],
+   "fresh": 21,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 2628,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 1119
+  },
+  {
+   "id": "c033",
+   "paper": "2509.03077v1",
+   "part": "held-out",
+   "kind": "method",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 13826,
+    "end": 13885
+   },
+   "evidence": [],
+   "fresh": 2,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 1551,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 0
+  },
+  {
+   "id": "c034",
+   "paper": "2509.03077v1",
+   "part": "held-out",
+   "kind": "finding",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 23987,
+    "end": 24096
+   },
+   "evidence": [
+    {
+     "start": 23017,
+     "end": 24098,
+     "doi": "10.9999/p04",
+     "excerpt": "For good representations, the performance in this\nscenario is expected to be close to the trained from scratch\nsupervised solution [11] and our results presente…",
+     "withheld": null,
+     "score": 0.9998499578237012
+    }
+   ],
+   "fresh": 14,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 2245,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 1081
+  },
+  {
+   "id": "c036",
+   "paper": "2509.03077v1",
+   "part": "held-out",
+   "kind": "dataset",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 9502,
+    "end": 9584
+   },
+   "evidence": [
+    {
+     "start": 8964,
+     "end": 9947,
+     "doi": "10.9999/p04",
+     "excerpt": "Problem Statement\nWe consider a MIMO setup with Nt transmit antennas and\nNr receive antennas as show in 1. The transmitter sends a\nvariety of modulation signals…",
+     "withheld": null,
+     "score": 0.9997077321271854
+    }
+   ],
+   "fresh": 21,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 2687,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 983
+  },
+  {
+   "id": "c039",
+   "paper": "2509.03077v1",
+   "part": "held-out",
+   "kind": "finding",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 5892,
+    "end": 6009
+   },
+   "evidence": [],
+   "fresh": 2,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 1547,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 0
+  },
+  {
+   "id": "c049",
+   "paper": "2606.06373v1",
+   "part": "held-out",
+   "kind": "method",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 11277,
+    "end": 11373
+   },
+   "evidence": [
+    {
+     "start": 10967,
+     "end": 12093,
+     "doi": "10.9999/p06",
+     "excerpt": "The target encoder 𝐸tgt ( · ; ¯𝜃) shares the\nsame ViT architecture as the context encoder but processes\nthe complete sequence of patch tokens (over the 𝐶′ sa…",
+     "withheld": null,
+     "score": 0.9989443241243399
+    }
+   ],
+   "fresh": 20,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 2700,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 1126
+  },
+  {
+   "id": "c050",
+   "paper": "2606.06373v1",
+   "part": "held-out",
+   "kind": "numeric",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 12709,
+    "end": 13021
+   },
+   "evidence": [
+    {
+     "start": 12093,
+     "end": 13148,
+     "doi": "10.9999/p06",
+     "excerpt": "The model is trained end-to-end to minimize the mean\nsquared error between the predicted and target representations\nover the masked positions:\nL = 1\n|M|∑︁ 𝑖∈ M…",
+     "withheld": null,
+     "score": 0.9981696014182385
+    }
+   ],
+   "fresh": 20,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 2574,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 1055
+  },
+  {
+   "id": "c052",
+   "paper": "2606.06373v1",
+   "part": "held-out",
+   "kind": "finding",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 22553,
+    "end": 22660
+   },
+   "evidence": [
+    {
+     "start": 22015,
+     "end": 23024,
+     "doi": "10.9999/p06",
+     "excerpt": "Main results are reported as the mean and standard\ndeviation over three random seeds, controlling the train/test\nsplit.\nB. Main Results\nTable II compares the do…",
+     "withheld": null,
+     "score": 0.9999334494334311
+    }
+   ],
+   "fresh": 13,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 2341,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 1009
+  },
+  {
+   "id": "c054",
+   "paper": "2606.06373v1",
+   "part": "held-out",
+   "kind": "method",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 9707,
+    "end": 9831
+   },
+   "evidence": [],
+   "fresh": 2,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 1594,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 0
+  },
+  {
+   "id": "c057",
+   "paper": "2606.06373v1",
+   "part": "held-out",
+   "kind": "method",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 12475,
+    "end": 12574
+   },
+   "evidence": [
+    {
+     "start": 12093,
+     "end": 13148,
+     "doi": "10.9999/p06",
+     "excerpt": "The model is trained end-to-end to minimize the mean\nsquared error between the predicted and target representations\nover the masked positions:\nL = 1\n|M|∑︁ 𝑖∈ M…",
+     "withheld": null,
+     "score": 0.9981694406739666
+    }
+   ],
+   "fresh": 20,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 2675,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 1055
+  },
+  {
+   "id": "c078",
+   "paper": "http_thesai.org_Downloads_Volume12No2_Pa",
+   "part": "held-out",
+   "kind": "dataset",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 17115,
+    "end": 17210
+   },
+   "evidence": [],
+   "fresh": 2,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 1522,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 0
+  },
+  {
+   "id": "c080",
+   "paper": "http_thesai.org_Downloads_Volume12No2_Pa",
+   "part": "held-out",
+   "kind": "numeric",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 26724,
+    "end": 26863
+   },
+   "evidence": [
+    {
+     "start": 25844,
+     "end": 26908,
+     "doi": "10.9999/p10",
+     "excerpt": "(IJACSA) International Journal of Advanced Computer Science and Applications,\nVol. 12, No. 2, 2021\nFig. 15. Homergy Box Hardware.\nNon-lifeline consumer had an e…",
+     "withheld": null,
+     "score": 0.9996674018318962
+    }
+   ],
+   "fresh": 11,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 1994,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 1064
+  },
+  {
+   "id": "c081",
+   "paper": "http_thesai.org_Downloads_Volume12No2_Pa",
+   "part": "held-out",
+   "kind": "finding",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 2235,
+    "end": 2328
+   },
+   "evidence": [
+    {
+     "start": 1159,
+     "end": 2330,
+     "doi": "10.9999/p10",
+     "excerpt": "However,\nthese systems apply only to already-smart devices and are not\nappropriate for the many locales where a majority of appliances\nare not yet IoT-capable. …",
+     "withheld": null,
+     "score": 0.9997641352718564
+    }
+   ],
+   "fresh": 25,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 2820,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 1171
+  },
+  {
+   "id": "c083",
+   "paper": "http_thesai.org_Downloads_Volume12No2_Pa",
+   "part": "held-out",
+   "kind": "method",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 17718,
+    "end": 17837
+   },
+   "evidence": [],
+   "fresh": 2,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 1524,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 0
+  },
+  {
+   "id": "c085",
+   "paper": "http_thesai.org_Downloads_Volume12No2_Pa",
+   "part": "held-out",
+   "kind": "method",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 23322,
+    "end": 23427
+   },
+   "evidence": [
+    {
+     "start": 22674,
+     "end": 23539,
+     "doi": "10.9999/p10",
+     "excerpt": "(IJACSA) International Journal of Advanced Computer Science and Applications,\nVol. 12, No. 2, 2021\nFig. 8. Home Screen.\nFig. 9. Box Configuration Page.\nFig. 10.…",
+     "withheld": null,
+     "score": 0.9990436921870908
+    }
+   ],
+   "fresh": 11,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 2126,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 865
+  },
+  {
+   "id": "c087",
+   "paper": "http_thesai.org_Downloads_Volume12No2_Pa",
+   "part": "held-out",
+   "kind": "method",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 13334,
+    "end": 13418
+   },
+   "evidence": [
+    {
+     "start": 12729,
+     "end": 13883,
+     "doi": "10.9999/p10",
+     "excerpt": "The Arduino Mega microcontroller executes instruc-\ntions for controlling the appliance-connected relays. Although\nthe NodeMCU alone could have been used as micr…",
+     "withheld": null,
+     "score": 0.9995420352704246
+    }
+   ],
+   "fresh": 25,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 2786,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 1154
+  },
+  {
+   "id": "c098",
+   "paper": "https_www.mdpi.com_2079-9292_12_19_4041_",
+   "part": "held-out",
+   "kind": "method",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 1529,
+    "end": 1852
+   },
+   "evidence": [
+    {
+     "start": 1201,
+     "end": 2379,
+     "doi": "10.9999/p12",
+     "excerpt": "smart grid. It attempts to\nreduce peak demand, improve the smart grid efficiency, and ensure system reliability. Implementing\ndemand-response programs in reside…",
+     "withheld": null,
+     "score": 0.9998218152841677
+    },
+    {
+     "start": 14552,
+     "end": 15726,
+     "doi": "10.9999/p12",
+     "excerpt": "Electronics 2023, 12, 4041 5 of 20\nand the root mean square (RMS) value of the current are crucial capabilities of the Plugwise\nsystem. The system’s communicati…",
+     "withheld": null,
+     "score": 0.9933559769533694
+    },
+    {
+     "start": 22605,
+     "end": 43120,
+     "doi": "10.9999/p12",
+     "excerpt": null,
+     "withheld": "excerpt_cap",
+     "score": 0.995209139733906
+    }
+   ],
+   "fresh": 48,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 5317,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 2352
+  },
+  {
+   "id": "c099",
+   "paper": "https_www.mdpi.com_2079-9292_12_19_4041_",
+   "part": "held-out",
+   "kind": "numeric",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 2551,
+    "end": 2638
+   },
+   "evidence": [
+    {
+     "start": 2379,
+     "end": 3573,
+     "doi": "10.9999/p12",
+     "excerpt": "The execution of the trained\ndecision tree and support vector machine algorithms was verified on the Raspberry Pi 3 Model B Rev\n1.2, operating at a clock speed …",
+     "withheld": null,
+     "score": 0.9999725307566684
+    },
+    {
+     "start": 22605,
+     "end": 43120,
+     "doi": "10.9999/p12",
+     "excerpt": null,
+     "withheld": "excerpt_cap",
+     "score": 0.9988534864210362
+    }
+   ],
+   "fresh": 48,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 5376,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 1194
+  },
+  {
+   "id": "c100",
+   "paper": "https_www.mdpi.com_2079-9292_12_19_4041_",
+   "part": "held-out",
+   "kind": "finding",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 2640,
+    "end": 2749
+   },
+   "evidence": [],
+   "fresh": 3,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 2845,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 0
+  },
+  {
+   "id": "c102",
+   "paper": "https_www.mdpi.com_2079-9292_12_19_4041_",
+   "part": "held-out",
+   "kind": "finding",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 2253,
+    "end": 2377
+   },
+   "evidence": [],
+   "fresh": 3,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 2926,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 0
+  },
+  {
+   "id": "c104",
+   "paper": "https_www.mdpi.com_2079-9292_12_19_4041_",
+   "part": "held-out",
+   "kind": "numeric",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 41634,
+    "end": 41816
+   },
+   "evidence": [
+    {
+     "start": 41182,
+     "end": 41913,
+     "doi": "10.9999/p12",
+     "excerpt": "A consumer enrolled in the TOU program has the following major appliances: an\nelectric shower, kettle, grill, iron, air conditioner (AC), washing machine, elect…",
+     "withheld": null,
+     "score": 0.9979771036412446
+    }
+   ],
+   "fresh": 26,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 4248,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 731
+  },
+  {
+   "id": "c106",
+   "paper": "https_www.mdpi.com_2079-9292_12_19_4041_",
+   "part": "held-out",
+   "kind": "method",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 39980,
+    "end": 40104
+   },
+   "evidence": [],
+   "fresh": 3,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 2924,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 0
+  },
+  {
+   "id": "c118",
+   "paper": "https_www.mdpi.com_2624-6511_5_3_53_pdf_",
+   "part": "held-out",
+   "kind": "method",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 24058,
+    "end": 24120
+   },
+   "evidence": [
+    {
+     "start": 20934,
+     "end": 42458,
+     "doi": "10.9999/p14",
+     "excerpt": null,
+     "withheld": "excerpt_cap",
+     "score": 0.9936127217137911
+    }
+   ],
+   "fresh": 27,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 4327,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 0
+  },
+  {
+   "id": "c121",
+   "paper": "https_www.mdpi.com_2624-6511_5_3_53_pdf_",
+   "part": "held-out",
+   "kind": "method",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 27412,
+    "end": 27456
+   },
+   "evidence": [],
+   "fresh": 4,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 3260,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 0
+  },
+  {
+   "id": "c122",
+   "paper": "https_www.mdpi.com_2624-6511_5_3_53_pdf_",
+   "part": "held-out",
+   "kind": "dataset",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 36656,
+    "end": 36732
+   },
+   "evidence": [
+    {
+     "start": 36636,
+     "end": 37815,
+     "doi": "10.9999/p14",
+     "excerpt": "Element Description\nHome automation system Home Assistant, running in a Raspberry Pi 4, 4 GB RAM\nPhoto voltaic array 14 panels, 480 W rated\nInverter Ingecon Sun…",
+     "withheld": null,
+     "score": 0.9999518282120948
+    }
+   ],
+   "fresh": 27,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 4331,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 1179
+  },
+  {
+   "id": "c124",
+   "paper": "https_www.mdpi.com_2624-6511_5_3_53_pdf_",
+   "part": "held-out",
+   "kind": "dataset",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 37339,
+    "end": 37444
+   },
+   "evidence": [
+    {
+     "start": 36636,
+     "end": 37815,
+     "doi": "10.9999/p14",
+     "excerpt": "Element Description\nHome automation system Home Assistant, running in a Raspberry Pi 4, 4 GB RAM\nPhoto voltaic array 14 panels, 480 W rated\nInverter Ingecon Sun…",
+     "withheld": null,
+     "score": 0.9998423089264085
+    }
+   ],
+   "fresh": 27,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 4419,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 1179
+  },
+  {
+   "id": "c126",
+   "paper": "https_www.mdpi.com_2624-6511_5_3_53_pdf_",
+   "part": "held-out",
+   "kind": "finding",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 49273,
+    "end": 49392
+   },
+   "evidence": [
+    {
+     "start": 48680,
+     "end": 49567,
+     "doi": "10.9999/p14",
+     "excerpt": "HEC: the current implementation of this component is capable of generating schedules\nfor electricity consumption upon request, trying to maximise PV-generated e…",
+     "withheld": null,
+     "score": 0.9989223318788407
+    }
+   ],
+   "fresh": 22,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 4202,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 887
+  },
+  {
+   "id": "c127",
+   "paper": "https_www.mdpi.com_2624-6511_5_3_53_pdf_",
+   "part": "held-out",
+   "kind": "method",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 40464,
+    "end": 40617
+   },
+   "evidence": [
+    {
+     "start": 40314,
+     "end": 41456,
+     "doi": "10.9999/p14",
+     "excerpt": "Smart Cities 2022, 5 1068\n4.3. Knowledge Base and Security Components\nFor the KB and security components, we have selected some Generic Enablers from\nthe FIWARE…",
+     "withheld": null,
+     "score": 0.9991141415322287
+    }
+   ],
+   "fresh": 27,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 4422,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 1142
+  },
+  {
+   "id": "c128",
+   "paper": "Papaers_overview",
+   "part": "held-out",
+   "kind": "finding",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 921,
+    "end": 1063
+   },
+   "evidence": [
+    {
+     "start": 0,
+     "end": 1065,
+     "doi": "10.9999/p08",
+     "excerpt": "Foundational Models for Raw I/Q Streams in AI-Native 6G\nExecutive Summary\nThe transition toward sixth-generation (6G) wireless architectures necessitates a shif…",
+     "withheld": null,
+     "score": 0.9998617559337629
+    }
+   ],
+   "fresh": 10,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 803,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 1065
+  },
+  {
+   "id": "c129",
+   "paper": "Papaers_overview",
+   "part": "held-out",
+   "kind": "method",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 2848,
+    "end": 2977
+   },
+   "evidence": [
+    {
+     "start": 2531,
+     "end": 3581,
+     "doi": "10.9999/p08",
+     "excerpt": "Methodology and Framework Architecture\nThe research highlights two primary SSL frameworks for radio representation: IQFM (based on\nSimCLR) and MoCo-v3 (based on…",
+     "withheld": null,
+     "score": 0.9998642762436365
+    }
+   ],
+   "fresh": 10,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 792,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 1050
+  },
+  {
+   "id": "c131",
+   "paper": "Papaers_overview",
+   "part": "held-out",
+   "kind": "finding",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 1269,
+    "end": 1410
+   },
+   "evidence": [
+    {
+     "start": 1065,
+     "end": 2182,
+     "doi": "10.9999/p08",
+     "excerpt": "● Enable Multi-Task Versatility: A single frozen encoder can support diverse tasks,\nincluding modulation classification, angle-of-arrival (AoA) estimation, beam…",
+     "withheld": null,
+     "score": 0.9992948167429464
+    }
+   ],
+   "fresh": 10,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 796,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 1117
+  },
+  {
+   "id": "c133",
+   "paper": "Papaers_overview",
+   "part": "held-out",
+   "kind": "numeric",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 5687,
+    "end": 5823
+   },
+   "evidence": [],
+   "fresh": 1,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 321,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 0
+  }
+ ],
+ "redacted": true
+}

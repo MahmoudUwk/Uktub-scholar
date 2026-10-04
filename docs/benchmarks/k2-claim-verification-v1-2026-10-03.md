@@ -1,5 +1,8 @@
 # k2 on claim-verification-v1 — 2026-10-03
 
+Historical measurement and adoption decision. Mercury later superseded K2 as
+the package default; K2 remains selectable. Current setup: [README](../../README.md).
+
 135 claims (74 TRUE / 61 FALSE), paper context capped at 24000 chars, wall 152 s.
 
 | Metric | Value |

@@ -1,0 +1,124 @@
+{
+ "ready": {
+  "ready": true,
+  "model": "Decision-2.0-Eos-0.8B",
+  "model_ref": "/home/mahmoud/.cache/uktub-bench/decision2/models/eos",
+  "revision": "3594047d69f476f1d01cf84c593e213fc3a4dfe0",
+  "model_sha256": "d97127991870ae202017a99eb496bdc56a62afd038594a67febfab0aea9d76fe",
+  "max_input_tokens": 16384,
+  "device": "cuda:0",
+  "load_s": 3.205,
+  "vram_after_load_mib": 1925.1,
+  "versions": {
+   "torch": "2.11.0+cu128",
+   "cuda": "12.8",
+   "transformers": "5.18.0",
+   "python": "3.12.13"
+  },
+  "gpu": "NVIDIA GeForce RTX 4060 Laptop GPU"
+ },
+ "cases": [
+  {
+   "case": "explicit support",
+   "expected": "support",
+   "claim": "The classifier achieves 94.2% accuracy on the held-out test set.",
+   "p_true": 0.9999877757227768,
+   "tokens": 200,
+   "mapped_ok": true
+  },
+  {
+   "case": "paraphrase support",
+   "expected": "support",
+   "claim": "The dataset consists of 2,400 recordings gathered from twelve volunteers.",
+   "p_true": 0.9999517573121172,
+   "tokens": 199,
+   "mapped_ok": true
+  },
+  {
+   "case": "unrelated claim",
+   "expected": "not-support",
+   "claim": "The Eiffel Tower is located in Berlin.",
+   "p_true": 0.00212002861240617,
+   "tokens": 192,
+   "mapped_ok": true
+  },
+  {
+   "case": "contradiction",
+   "expected": "not-support",
+   "claim": "The classifier reaches only 71% accuracy on the held-out test set.",
+   "p_true": 0.0005195539353469794,
+   "tokens": 199,
+   "mapped_ok": true
+  },
+  {
+   "case": "numeric mismatch",
+   "expected": "not-support",
+   "claim": "The study collected 240 recordings from 12 volunteers.",
+   "p_true": 0.8834877483272532,
+   "tokens": 197,
+   "mapped_ok": false
+  },
+  {
+   "case": "negated claim, false",
+   "expected": "not-support",
+   "claim": "Camera data was used in the experiments.",
+   "p_true": 2.2005629719305184e-05,
+   "tokens": 191,
+   "mapped_ok": true
+  },
+  {
+   "case": "negated claim, true",
+   "expected": "support",
+   "claim": "The experiments did not use camera data.",
+   "p_true": 0.9995306129280923,
+   "tokens": 191,
+   "mapped_ok": true
+  },
+  {
+   "case": "negated claim 2, true",
+   "expected": "support",
+   "claim": "The model is not trained with federated learning.",
+   "p_true": 0.9989533881965663,
+   "tokens": 193,
+   "mapped_ok": true
+  },
+  {
+   "case": "negated claim 2, false",
+   "expected": "not-support",
+   "claim": "The model is trained with federated learning.",
+   "p_true": 0.00021900837493753062,
+   "tokens": 192,
+   "mapped_ok": true
+  }
+ ],
+ "worker_checks": {
+  "count_op": {
+   "tokens": 200,
+   "limit": 16384
+  },
+  "over_limit_refusal": {
+   "error": "context_limit: 20130 tokens exceeds the 16384-token window; refused, not truncated",
+   "refused": true,
+   "tokens": 20130,
+   "limit": 16384
+  },
+  "empty_state": {
+   "error": "state and instructions must be non-empty text"
+  },
+  "missing_key": {
+   "error": "KeyError: 'instructions'"
+  },
+  "bad_json": {
+   "error": "bad row: Expecting value: line 1 column 1 (char 0)"
+  }
+ },
+ "stats": {
+  "rows_scored": 9,
+  "tokens_scored": 1754,
+  "infer_s": 0.383,
+  "peak_vram_mib": 1965.9,
+  "peak_vram_reserved_mib": 1974.0
+ },
+ "clean_exit_code": 0,
+ "all_probabilities_finite_in_unit_interval": true
+}
