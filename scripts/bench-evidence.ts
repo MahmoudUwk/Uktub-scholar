@@ -51,8 +51,10 @@ const url = arg("url", "http://127.0.0.1:8099")!;
 const only = arg("papers"); // "held-out" | "tuning" | undefined = all
 const engineName = arg("engine", "llama-cpp")!; // llama-cpp (server at --url) | eos (in-package worker)
 const stride = Number(arg("stride", "1")); // every n-th claim of each label: a deterministic subset
+const offset = Number(arg("offset", "0")); // which of the `stride` interleaved subsets (0..stride-1): disjoint samples for validation
 const falseScope = arg("false-scope", "all")!; // all | own
 const label = arg("label", `T${chunkTokens}`)!;
+const boundary = arg("boundary", "paragraph") as ChunkTextConfig["boundary"]; // paragraph | hard | section (cap = --chunk-tokens)
 
 interface Claim { id: string; paper: string; claim: string; label: "TRUE" | "FALSE"; evidence: string; kind?: string }
 const claims: Claim[] = JSON.parse(readFileSync(join(datasetDir, "claims.json"), "utf8")).claims;
@@ -67,7 +69,7 @@ function pdfFor(id: string): string {
   throw new Error(`no PDF for ${id}`);
 }
 
-const cfgFor = (tokens: number): ChunkTextConfig => ({ chunk_tokens: tokens, overlap_tokens: Math.round(tokens / 64), chars_per_token: 2.8, boundary: "paragraph" });
+const cfgFor = (tokens: number): ChunkTextConfig => ({ chunk_tokens: tokens, overlap_tokens: Math.round(tokens / 64), chars_per_token: 2.8, boundary });
 
 interface Project { root: string; dois: Map<string, string>; texts: Map<string, string>; close(): void }
 async function buildProject(tokens: number): Promise<Project> {
@@ -82,7 +84,7 @@ async function buildProject(tokens: number): Promise<Project> {
     const bytes = new Uint8Array(readFileSync(pdfFor(id)));
     const x = await extractPdf(bytes);
     texts.set(id, x.text);
-    publishSource(db, doi, { kind: "local-file", ref: "bench.pdf", license: null, digest: createHash("sha256").update(bytes).digest("hex"), extraction: x.extraction, text: x.text, pageStarts: x.pageStarts }, cfgFor(tokens), new Date());
+    publishSource(db, doi, { kind: "local-file", ref: "bench.pdf", license: null, digest: createHash("sha256").update(bytes).digest("hex"), extraction: x.extraction, text: x.text, pageStarts: x.pageStarts, sections: x.sections }, cfgFor(tokens), new Date());
   }
   db.close();
   return { root, dois, texts, close: () => rmSync(root, { recursive: true, force: true }) };
@@ -149,13 +151,13 @@ async function endToEnd(): Promise<void> {
   for (const mode of ["exhaustive", "guided"] as const) {
     const p = await buildProject(tokens); // a fresh registry per mode: no shared judgment cache
     const cfgPath = join(p.root, "bench.yaml");
-    writeFileSync(cfgPath, `chunking:\n  chunk_tokens: ${tokens}\n  overlap_tokens: ${Math.round(tokens / 64)}\n  chars_per_token: 2.8\n  boundary: paragraph\nverification:\n  engine: ${engineName}\n  min_confidence: 0.99\n  workers: 2\n  max_judgments: 100000\n`);
+    writeFileSync(cfgPath, `chunking:\n  chunk_tokens: ${tokens}\n  overlap_tokens: ${Math.round(tokens / 64)}\n  chars_per_token: 2.8\n  boundary: ${boundary}\nverification:\n  engine: ${engineName}\n  min_confidence: 0.99\n  workers: 2\n  max_judgments: 100000\n`);
     const engineEnv: Record<string, string> = engineName === "eos"
       ? Object.fromEntries(Object.entries(process.env).filter(([k, v]) => k.startsWith("UKTUB_EOS_") && v !== undefined) as [string, string][])
       : { UKTUB_VERIFY_URL: url };
     const ctx = { root: p.root, fetch: ((...a: Parameters<typeof fetch>) => fetch(...a)) as never, env: { UKTUB_CHUNK_CONFIG: cfgPath, ...engineEnv } as Record<string, string>, now: () => new Date(), queue: new WriteQueue() };
     const seen = { TRUE: 0, FALSE: 0 };
-    const scoped = claims.filter(inScope).filter((c) => seen[c.label]++ % stride === 0);
+    const scoped = claims.filter(inScope).filter((c) => seen[c.label]++ % stride === offset);
     for (const c of scoped) {
       const doi = p.dois.get(c.paper)!;
       const wide = c.label === "FALSE" && falseScope === "all"; // FALSE claims run over EVERY paper (corpus-size false supports)
@@ -177,16 +179,16 @@ async function endToEnd(): Promise<void> {
     p.close();
   }
   const file = join(outDir, `evidence-endtoend-${label}-${only ?? "all"}-${date}.results.json`);
-  writeFileSync(file, JSON.stringify({ schema: "bench-evidence/1", phase, date, chunkTokens: tokens, k: perPaperK, engineUrl: url, policy: chunkPolicyOf(cfgFor(tokens)), records: out }, null, 1));
+  writeFileSync(file, JSON.stringify({ schema: "bench-evidence/1", phase, date, chunkTokens: tokens, boundary, k: perPaperK, engineUrl: url, policy: chunkPolicyOf(cfgFor(tokens)), records: out }, null, 1));
   console.log(`wrote ${file} (${out.length} runs)`);
 }
 
 // ── review export / merge ───────────────────────────────────────────────────
 
-function loadResults(): { file: string; tokens: number; recs: Rec[] }[] {
+function loadResults(): { file: string; tokens: number; window: string; recs: Rec[] }[] {
   return (arg("results", "") as string).split(",").filter(Boolean).map((file) => {
-    const d = JSON.parse(readFileSync(file, "utf8")) as { chunkTokens: number; records: Rec[] };
-    return { file, tokens: d.chunkTokens, recs: d.records };
+    const d = JSON.parse(readFileSync(file, "utf8")) as { chunkTokens: number; boundary?: string; records: Rec[] };
+    return { file, tokens: d.chunkTokens, window: d.boundary === "section" ? `${d.chunkTokens} (sections)` : String(d.chunkTokens), recs: d.records };
   });
 }
 
@@ -334,12 +336,12 @@ function sweep(): void {
   const files = loadResults();
   const sweepFiles = files.filter((f) => f.file.includes("sweep"));
   const ids = new Set(sweepFiles[0].recs.map((r) => r.id));
-  const byWindow = new Map<number, Rec[]>();
-  for (const f of files) byWindow.set(f.tokens, [...(byWindow.get(f.tokens) ?? []), ...f.recs.filter((r) => ids.has(r.id))]);
+  const byWindow = new Map<string, Rec[]>();
+  for (const f of files) byWindow.set(f.window, [...(byWindow.get(f.window) ?? []), ...f.recs.filter((r) => ids.has(r.id))]);
   const doiIndex = new Map(paperIds.map((id, i) => [`10.9999/p${String(i + 1).padStart(2, "0")}`, i]));
   const mean = (xs: number[]): number => (xs.length === 0 ? NaN : xs.reduce((a, b) => a + b, 0) / xs.length);
   const rows: string[] = [];
-  for (const tokens of [...byWindow.keys()].sort((a, b) => b - a)) for (const mode of ["exhaustive", "guided"] as const) {
+  for (const tokens of [...byWindow.keys()].sort((a, b) => parseInt(b) - parseInt(a) || a.localeCompare(b))) for (const mode of ["exhaustive", "guided"] as const) {
     const recs = byWindow.get(tokens)!;
     const tr = recs.filter((r) => r.label === "TRUE" && r.mode === mode);
     if (tr.length === 0) continue;

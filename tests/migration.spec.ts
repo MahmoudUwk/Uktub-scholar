@@ -12,7 +12,7 @@ import { join } from "node:path";
 import { REGISTRY_SCHEMA_VERSION, RegistryError, createRegistry, openRegistry, listPapers } from "../src/core/registry.ts";
 import { DatabaseSync } from "node:sqlite";
 import { mkdirSync } from "node:fs";
-import { LEGACY_PAPER, V3_PAPER, buildForeignRegistry, buildLegacyRegistry, buildV3Registry } from "./helpers/legacy-registry.ts";
+import { LEGACY_PAPER, V3_PAPER, buildForeignRegistry, buildLegacyRegistry, buildV3Registry, buildV4Registry } from "./helpers/legacy-registry.ts";
 
 let root: string;
 beforeEach(() => {
@@ -55,6 +55,15 @@ describe("registry migration", () => {
     assert.equal(chunk.text, V3_PAPER.text);
     assert.equal(chunk.section, null);
     assert.equal((db.prepare("SELECT COUNT(*) n FROM chunk_fts WHERE chunk_fts MATCH 'captured'").get() as { n: number }).n, 1, "the locator index still finds the migrated chunk");
+    db.close();
+  });
+
+  it("a v4 registry gains the passage-vector cache in place and keeps its papers", () => {
+    buildV4Registry(root);
+    const db = openRegistry(root);
+    assert.equal((db.prepare("PRAGMA user_version").get() as { user_version: number }).user_version, REGISTRY_SCHEMA_VERSION);
+    assert.ok(tables(db).includes("passage_vectors"));
+    assert.equal(listPapers(db)[0].doi, "10.1234/v4paper");
     db.close();
   });
 

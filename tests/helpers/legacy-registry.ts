@@ -119,3 +119,16 @@ export function buildV3Registry(root: string): string {
   db.close();
   return file;
 }
+
+/** `<root>/.registry/registry.db` at schema version 4 (section storage, no vector cache), from the shipped DDL. */
+export function buildV4Registry(root: string): string {
+  const file = join(root, ".registry", "registry.db");
+  mkdirSync(dirname(file), { recursive: true });
+  const db = new DatabaseSync(file);
+  db.exec(readFileSync(join(import.meta.dirname, "..", "fixtures", "schema-v4.sql"), "utf8"));
+  db.prepare(
+    "INSERT INTO papers (doi, citekey, title, authors_json, year, venue, provider_bibtex, bibtex_source, citable, ingested_at) VALUES (?,?,?,?,?,?,?,?,?,?)",
+  ).run("10.1234/v4paper", "v42024", "A V4 Paper", '["Ada Lovelace"]', 2024, null, "@article{v4,\n  title={A V4 Paper},\n  year={2024}\n}", "crossref", 1, "2026-10-01T00:00:00Z");
+  db.close();
+  return file;
+}

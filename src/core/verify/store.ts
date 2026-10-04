@@ -98,7 +98,7 @@ export interface StoredChunk {
 
 const iso = (d: Date): string => d.toISOString().replace(/\.\d{3}Z$/, "Z");
 
-function inTransaction<T>(db: DatabaseSync, fn: () => T): T {
+export function inTransaction<T>(db: DatabaseSync, fn: () => T): T {
   db.exec("BEGIN IMMEDIATE");
   try {
     const out = fn();

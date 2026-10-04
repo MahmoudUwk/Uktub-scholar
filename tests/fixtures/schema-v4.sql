@@ -6,7 +6,7 @@
 -- `doi` is the PRIMARY KEY: DOIs are case-insensitive, and the canonical
 -- lowercase form is what makes the uniqueness meaningful.
 --
--- Version 5 (current). Migration from v1–v4 is explicit in registry.ts; this
+-- Version 4 (current). Migration from v1/v2/v3 is explicit in registry.ts; this
 -- file is the whole current schema and is idempotent (IF NOT EXISTS).
 -- Every column names its consumer.
 
@@ -108,20 +108,6 @@ CREATE TRIGGER IF NOT EXISTS chunks_fts_ad AFTER DELETE ON chunks BEGIN
   INSERT INTO chunk_fts(chunk_fts, rowid, text) VALUES ('delete', old.rowid, old.text);
 END;
 
--- Passage vectors (pure compute cache): the embedding of a passage's text under one embedder
--- identity. Keyed by content, not by chunk, so a vector survives rechunking that keeps the text and
--- is shared by papers containing the same passage; never read for another embedder (embed_id names
--- model + prompt profile). Exact-cosine search scans these rows; nothing else reads them.
-CREATE TABLE IF NOT EXISTS passage_vectors (
-  content_hash TEXT NOT NULL,
-  embed_id TEXT NOT NULL,
-  dim INTEGER NOT NULL,
-  -- little-endian float32 × dim, L2-normalised
-  vector BLOB NOT NULL,
-  created_at TEXT NOT NULL,
-  PRIMARY KEY (content_hash, embed_id)
-);
-
 -- Reusable judgment compute cache. Pure cache: nothing reads evidence from it.
 -- Key = effective decision identity: claim, passage content, model identity,
 -- decision protocol. The confidence bar is policy applied on read, not a key.
@@ -183,4 +169,4 @@ CREATE TABLE IF NOT EXISTS registry_state (
 );
 INSERT OR IGNORE INTO registry_state (id, generation) VALUES (1, 0);
 
-PRAGMA user_version = 5;
+PRAGMA user_version = 4;

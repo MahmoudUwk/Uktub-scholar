@@ -49,6 +49,24 @@ export function locatorTokens(query: string): string[] {
   return [...new Set(words)].slice(0, QUERY_MAX_TOKENS);
 }
 
+/** FTS5 expression from locator tokens: every word quoted, joined by OR (no operator can come from caller text). */
+export const ftsExpression = (tokens: string[]): string => tokens.map((t) => `"${t}"`).join(" OR ");
+
+/** BM25-ranked passages of `dois` for `query`, best first, across papers (no per-paper cap). Refuses a query with no words. */
+export function lexicalRank(db: DatabaseSync, dois: string[], query: string, limit: number): { doi: string; chunkIndex: number }[] {
+  const tokens = locatorTokens(query);
+  if (tokens.length === 0) throw new Error("the query has no searchable words; use words or numbers");
+  if (dois.length === 0 || limit <= 0) return [];
+  const rows = db
+    .prepare(
+      `SELECT c.doi AS doi, c.chunk_index AS idx FROM chunk_fts JOIN chunks c ON c.rowid = chunk_fts.rowid
+       WHERE chunk_fts MATCH ? AND c.doi IN (${dois.map(() => "?").join(",")})
+       ORDER BY bm25(chunk_fts), c.doi, c.chunk_index LIMIT ?`,
+    )
+    .all(ftsExpression(tokens), ...dois, limit) as unknown as { doi: string; idx: number }[];
+  return rows.map((r) => ({ doi: r.doi, chunkIndex: Number(r.idx) }));
+}
+
 interface ChunkRow {
   doi: string;
   chunk_index: number;
@@ -99,7 +117,7 @@ export function selectCandidates(db: DatabaseSync, dois: string[], query: string
     });
   }
 
-  const expression = tokens.map((t) => `"${t}"`).join(" OR ");
+  const expression = ftsExpression(tokens);
   const ranked = db
     .prepare(
       `SELECT c.doi AS doi, c.chunk_index, c.chunk_id, c.revision, c.char_start, c.char_end, c.content_hash, c.text

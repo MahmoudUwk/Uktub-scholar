@@ -32,7 +32,7 @@ export const REGISTRY_REL_PATH = ".registry/registry.db";
 export const BIBLIOGRAPHY_REL_PATH = "refs/references.bib";
 
 /** The only schema version this package speaks (KTD4). */
-export const REGISTRY_SCHEMA_VERSION = 4;
+export const REGISTRY_SCHEMA_VERSION = 5;
 
 /**
  * R15/KTD5: cross-process writes serialize through SQLite's busy wait. The
@@ -108,14 +108,14 @@ const ADDED_COLUMNS = [
 ] as const;
 
 /**
- * Explicit in-place migration of the known package schemas (v1, v2, v3) to the
+ * Explicit in-place migration of the known package schemas (v1–v4) to the
  * current version, inside one transaction. Papers, citekeys, captured texts and
- * chunks are never rewritten; v3 only gains columns. v2's chunk/verdict/pointer
+ * chunks are never rewritten; v3 gains columns and v4 gains the vector cache table. v2's chunk/verdict/pointer
  * rows are dropped (unsourced); when any exist the whole file is copied to
  * `<db>.v2.bak` first (backup = copy one file). Anything else — foreign or
  * newer — is refused by the callers.
  */
-export function migrateLegacy(db: DatabaseSync, file: string, from: 1 | 2 | 3): void {
+export function migrateLegacy(db: DatabaseSync, file: string, from: 1 | 2 | 3 | 4): void {
   if (from === 2) {
     const held = LEGACY_V2_TABLES.some(
       (t) => tableExists(db, t) && Number(getRow<{ n: number }>(db.prepare(`SELECT COUNT(*) AS n FROM ${t}`))?.n ?? 0) > 0,
@@ -153,7 +153,7 @@ export function migrateLegacy(db: DatabaseSync, file: string, from: 1 | 2 | 3): 
 function unsupported(version: number, verb: string): RegistryError {
   return new RegistryError(
     "REGISTRY_SCHEMA_UNSUPPORTED",
-    `${verb} a registry of schema version ${version} is not supported (this package speaks version ${REGISTRY_SCHEMA_VERSION}, and migrates 1, 2 and 3)`,
+    `${verb} a registry of schema version ${version} is not supported (this package speaks version ${REGISTRY_SCHEMA_VERSION}, and migrates 1 to 4)`,
   );
 }
 
@@ -172,11 +172,11 @@ function openDatabaseFile(abs: string, allowFresh: boolean): DatabaseSync {
     // someone else's tables are refused untouched.
     const empty = getRow<{ n: number }>(opened.prepare("SELECT COUNT(*) AS n FROM sqlite_master WHERE name NOT LIKE 'sqlite_%'"))?.n === 0;
     const fresh = version === 0 && allowFresh && empty;
-    if (!fresh && version !== REGISTRY_SCHEMA_VERSION && version !== 1 && version !== 2 && version !== 3) {
+    if (!fresh && version !== REGISTRY_SCHEMA_VERSION && version !== 1 && version !== 2 && version !== 3 && version !== 4) {
       throw unsupported(version, allowFresh ? "refusing to re-initialize" : "opening");
     }
     opened.exec(OPEN_PRAGMAS);
-    if (version === 1 || version === 2 || version === 3) migrateLegacy(opened, abs, version);
+    if (version === 1 || version === 2 || version === 3 || version === 4) migrateLegacy(opened, abs, version);
     return opened;
   } catch (err) {
     try {

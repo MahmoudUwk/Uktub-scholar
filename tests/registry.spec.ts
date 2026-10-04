@@ -111,10 +111,10 @@ const EXPECTED_PAPER_COLUMNS = [
 // ── schema and open gates ──────────────────────────────────────────────────
 
 describe("registry schema (KTD4)", () => {
-  it("creates the current schema: papers plus the source, chunk, judgment, run and evidence tables", () => {
+  it("creates the current schema: papers plus the source, chunk, vector, judgment, run and evidence tables", () => {
     assert.deepEqual(columnsOf(db, "papers"), EXPECTED_PAPER_COLUMNS);
     const tables = (db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'chunk_fts%' ORDER BY name").all() as { name: string }[]).map((t) => t.name);
-    assert.deepEqual(tables, ["chunks", "claim_evidence", "claim_judgments", "paper_sources", "papers", "registry_state", "verify_runs"]);
+    assert.deepEqual(tables, ["chunks", "claim_evidence", "claim_judgments", "paper_sources", "papers", "passage_vectors", "registry_state", "verify_runs"]);
     const version = getRow<{ user_version: number }>(db.prepare("PRAGMA user_version"));
     assert.equal(version?.user_version, REGISTRY_SCHEMA_VERSION);
   });
