@@ -206,6 +206,15 @@ describe("section-aware chunk storage", () => {
     assert.ok(chunksOf(db, DOI).some((c) => c.section === "3. Results"));
   });
 
+  it("a PDF source's marks are re-derived from its text on every rechunk, so a better detector reaches stored sources (review finding)", () => {
+    // stored marks know only the first heading (as an older detector would have found)
+    publishSource(db, DOI, source(SECTIONED, { sections: marks.slice(0, 1) }), CFG, NOW);
+    assert.equal(sectionsOf()!.length, 1);
+    ensureChunks(db, DOI, SEC);
+    assert.deepEqual(sectionsOf()?.map((m) => m.heading), ["1. Introduction", "2. Methods", "3. Results"], "current detector output replaces the stale marks");
+    assert.deepEqual([...new Set(chunksOf(db, DOI).map((c) => c.section))], ["1. Introduction", "2. Methods", "3. Results"]);
+  });
+
   it("a non-PDF source without marks stays unlabelled-by-heading (nothing is guessed from TEI-derived text)", () => {
     publishSource(db, DOI, source(SECTIONED, { sections: null, extraction: "grobid-tei@fxp5.11.2/body-v1" }), CFG, NOW);
     ensureChunks(db, DOI, SEC);

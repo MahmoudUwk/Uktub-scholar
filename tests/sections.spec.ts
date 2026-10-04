@@ -15,12 +15,13 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
-import { splitBySections, type SectionChunk, type SectionMark, type SplitOptions } from "../src/core/sections.ts";
+import { MAX_SECTION_LABEL_CHARS, splitBySections, type SectionChunk, type SectionMark, type SplitOptions } from "../src/core/sections.ts";
 
 const mk = (text: string, headings: string[]): SectionMark[] =>
   headings.map((h, i) => ({ start: text.indexOf(h, i === 0 ? 0 : 0), heading: h, level: 1 })).filter((m) => m.start >= 0);
 
 const para = (tag: string, n: number): string => `${tag} ` + "Sentence about the experiment and its measured outcome. ".repeat(n).trim();
+const body = (n: number): string => "The measured outcome improved over the baseline in every configuration. ".repeat(n).trim();
 
 const OPTS: SplitOptions = { maxChars: 400, minChars: 100 };
 
@@ -147,6 +148,54 @@ describe("splitBySections — fixed cases", () => {
     }
   });
 
+  it("a heading-only section goes forward with the section after it, never backward as the trailing line of the previous chunk (review finding)", () => {
+    const text = `2. Related Work\n${body(8)}\n3. Methods\n3.1 Data\n${body(14)}\n3.2 Model\n${body(5)}\n`;
+    const marks = ["2. Related Work", "3. Methods", "3.1 Data", "3.2 Model"].map((h) => ({ start: text.indexOf(h + "\n"), heading: h, level: 1 }));
+    const chunks = splitBySections(text, marks, { maxChars: 1433, minChars: 359 });
+    assertTiling(text, chunks);
+    const methods = text.indexOf("3. Methods");
+    const holder = chunks.find((c) => c.start <= methods && methods < c.end)!;
+    assert.ok(text.slice(methods, holder.end).includes("3.1 Data"), "the heading shares a chunk with the section that follows it");
+    assert.ok(!chunks.some((c) => c.start < methods && c.end > methods && text.slice(c.start, c.end).trimEnd().endsWith("3. Methods")), "no earlier chunk ends with the dangling heading");
+    // a heading-only section that cannot go forward (the next one is full) stands alone rather than dangling
+    const full = `1. A\n${body(3)}\n2. Only a heading\n3. B\n${"x".repeat(3000)}`;
+    const m2 = ["1. A", "2. Only a heading", "3. B"].map((h) => ({ start: full.indexOf(h + "\n"), heading: h, level: 1 }));
+    const out = splitBySections(full, m2, { maxChars: 400, minChars: 100 });
+    const at = full.indexOf("2. Only a heading");
+    const h = out.find((c) => c.start <= at && at < c.end)!;
+    assert.ok(h.start === at || full.slice(at, h.end).includes("3. B"), "alone, or forward with its section");
+  });
+
+  it("an unbroken run of astral characters is never cut between a surrogate pair, with or without a heading (review finding)", () => {
+    const bad = (t: string, cs: SectionChunk[]): boolean => cs.some((c) => c.start > 0 && t.charCodeAt(c.start - 1) >= 0xd800 && t.charCodeAt(c.start - 1) <= 0xdbff && t.charCodeAt(c.start) >= 0xdc00 && t.charCodeAt(c.start) <= 0xdfff);
+    for (const max of [100, 101, 1433]) {
+      for (const total of [150, 199, 201, 301, 2866, 2867, 5000]) {
+        for (const pre of [0, 1, 5]) {
+          const t = "x".repeat(pre) + "😀".repeat(Math.ceil(total / 2));
+          const cs = splitBySections(t, [], { maxChars: max, minChars: Math.ceil(max * 0.25) });
+          assertTiling(t, cs);
+          assert.ok(!bad(t, cs), `no marks: max ${max} total ${t.length} pre ${pre}`);
+          const h = "1. Intro\n" + t;
+          const hs = splitBySections(h, [{ start: 0, heading: "1. Intro", level: 1 }], { maxChars: max, minChars: Math.ceil(max * 0.25) });
+          assertTiling(h, hs);
+          assert.ok(!bad(h, hs), `heading: max ${max} total ${t.length} pre ${pre}`);
+          assert.ok(hs.every((c) => c.end - c.start <= max + 1), "the cap holds up to one code unit (an astral character is two)");
+        }
+      }
+    }
+  });
+
+  it("a very long heading is labelled with a bounded clip: the label travels with search results and must not carry text out (review finding)", () => {
+    const long = "Secret ".repeat(800); // 5,600 characters of "heading"
+    const text = `${long}\nBody text that follows the heading and is long enough to be a passage.`;
+    const chunks = splitBySections(text, [{ start: 0, heading: long, level: 1 }], { maxChars: 9000, minChars: 0 });
+    assert.equal(chunks.length, 1);
+    assert.ok(chunks[0].section.length <= MAX_SECTION_LABEL_CHARS, `label ${chunks[0].section.length} characters`);
+    assert.ok(chunks[0].section.endsWith("…"));
+    assert.ok(long.startsWith(chunks[0].section.slice(0, -1)), "the clip is a prefix of the heading");
+    assert.equal(splitBySections("1. Intro\nbody", [{ start: 0, heading: "1. Intro", level: 1 }], { maxChars: 100, minChars: 0 })[0].section, "1. Intro", "short labels are untouched");
+  });
+
   it("is deterministic", () => {
     const text = [`ABSTRACT\n${para("a", 4)}`, `I. X\n${para("b", 30)}`].join("\n\n");
     const marks = mk(text, ["ABSTRACT", "I. X"]);
@@ -222,17 +271,23 @@ describe("splitBySections — properties (seeded)", () => {
         for (const c of chunks) {
           assert.ok(!(c.start > m.start && c.start <= headingEnd && c.start < text.length), `${label} boundary inside heading "${m.heading}"`);
         }
+        // a heading is never the trailing line of a chunk that also holds earlier content (the last chunk of the text excepted):
+        // a heading with nothing after it either stands alone in its chunk or goes forward with its section
         const holder = chunks.find((c) => c.start <= m.start && m.start < c.end)!;
         const after = text.slice(Math.min(headingEnd + 1, holder.end), holder.end);
-        const sectionHasBody = text.slice(headingEnd + 1).split(/\n/)[0] !== undefined && headingEnd + 1 < text.length;
-        if (sectionHasBody && holder.end < text.length) {
-          // an orphaned heading would have no content after its own line inside its chunk
-          const nextMark = marks.find((n) => n.start > m.start);
-          const bodyLen = (nextMark ? nextMark.start : text.length) - (headingEnd + 1);
-          if (bodyLen > 0 && text.slice(headingEnd + 1, headingEnd + 1 + bodyLen).trim().length > 0) {
-            assert.ok(after.trim().length > 0 || (nextMark !== undefined && holder.end > nextMark.start), `${label} heading "${m.heading}" orphaned at chunk end`);
-          }
+        if (after.trim().length === 0 && holder.end < text.length) {
+          // allowed only when the chunk is nothing but stranded headings (no earlier content to be cut off from)
+          const headings = new Set(marks.map((x) => x.heading.trim()));
+          const lines = text.slice(holder.start, holder.end).split("\n").map((l) => l.trim()).filter((l) => l.length > 0);
+          assert.ok(lines.every((l) => headings.has(l)), `${label} heading "${m.heading}" dangles at the end of a chunk that holds earlier content`);
         }
+      }
+
+      // no boundary falls between the two halves of a surrogate pair (the stored text would diverge from the pointer slice)
+      for (const c of chunks.slice(1)) {
+        const high = text.charCodeAt(c.start - 1);
+        const low = text.charCodeAt(c.start);
+        assert.ok(!(high >= 0xd800 && high <= 0xdbff && low >= 0xdc00 && low <= 0xdfff), `${label} chunk boundary ${c.start} splits a surrogate pair`);
       }
 
       // pieces of a split section are balanced: none is a sliver below minChars
@@ -250,13 +305,51 @@ describe("splitBySections — properties (seeded)", () => {
       chunks.forEach((c, i) => {
         const size = c.end - c.start;
         if (size >= minChars || chunks.length === 1 || c.parts > 1) return;
+        const headingSet = new Set(marks.map((m) => m.heading.trim()));
+        const headOnly = (x: SectionChunk | undefined): boolean => {
+          if (x === undefined || x.parts !== 1) return false;
+          const lines = text.slice(x.start, x.end).split("\n").map((l) => l.trim()).filter((l) => l.length > 0);
+          return lines.length > 0 && lines.every((l) => headingSet.has(l)); // nothing but (a chain of) stranded headings
+        };
+        // a heading-only chunk deliberately refuses to merge backward, and nothing merges onto its heading from before
+        // (either would leave a heading as the trailing line of earlier content)
+        if (headOnly(c)) return;
         const prev = chunks[i - 1];
         const next = chunks[i + 1];
         // split pieces are never merged by design, so only whole-section neighbours count
         const fitsPrev = prev !== undefined && prev.parts === 1 && prev.end - prev.start + size <= maxChars;
-        const fitsNext = next !== undefined && next.parts === 1 && next.end - next.start + size <= maxChars;
+        const fitsNext = next !== undefined && (!headOnly(next) || i + 1 === chunks.length - 1) && next.parts === 1 && next.end - next.start + size <= maxChars;
         assert.ok(!fitsPrev && !fitsNext, `${label} chunk ${i} (${size} < ${minChars}) could have merged`);
       });
+    }
+  });
+
+  it("hostile text with tiny caps (astral characters, CR/LF, tabs, duplicate marks, headings longer than the cap) still tiles, never yields an empty or oversize chunk, never splits a pair (review fuzz)", () => {
+    const atoms = ["word", "Intro", ". ", "\n", "\r\n", "\t", " ", "😀", "a😀b", "  ", "\n\n", "x.", "Hello. World", "!", "?\"", "123", "é"];
+    const r = rng(20261004);
+    for (let iter = 0; iter < 6000; iter++) {
+      let t = "";
+      const n = Math.floor(r() * 60);
+      for (let i = 0; i < n; i++) t += atoms[Math.floor(r() * atoms.length)] + (r() < 0.5 ? " " : "");
+      const lineStarts = [0, ...[...t.matchAll(/\n/g)].map((m) => (m.index as number) + 1)];
+      const marks = Array.from({ length: Math.floor(r() * 6) }, (_, i) => ({ start: lineStarts[Math.floor(r() * lineStarts.length)], heading: `H${i}`, level: 1 }));
+      const maxChars = 4 + Math.floor(r() * (r() < 0.5 ? 20 : 120));
+      const minChars = Math.max(0, Math.floor(r() * (r() < 0.3 ? 200 : maxChars + 1)));
+      const chunks = splitBySections(t, marks, { maxChars, minChars });
+      const label = `iter ${iter} ${JSON.stringify({ t, maxChars, minChars })}`;
+      if (t.length === 0) {
+        assert.deepEqual(chunks, [], label);
+        continue;
+      }
+      assertTiling(t, chunks, label);
+      for (const c of chunks) {
+        assert.ok(c.end > c.start, `${label} empty chunk`);
+        assert.ok(c.end - c.start <= maxChars, `${label} chunk ${c.end - c.start} over the cap`);
+      }
+      for (const c of chunks.slice(1)) {
+        const high = t.charCodeAt(c.start - 1);
+        assert.ok(!(high >= 0xd800 && high <= 0xdbff && t.charCodeAt(c.start) >= 0xdc00 && t.charCodeAt(c.start) <= 0xdfff), `${label} splits a pair at ${c.start}`);
+      }
     }
   });
 

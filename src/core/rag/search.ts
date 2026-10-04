@@ -8,7 +8,7 @@
 import type { DatabaseSync } from "node:sqlite";
 
 import { EmbedError, type Embedder } from "../embed/embedder.ts";
-import { ensureVectors, rankByVector } from "../embed/vectors.ts";
+import { VectorSpaceError, dropVectorsOfOtherDimension, ensureVectors, rankByVector } from "../embed/vectors.ts";
 import { lexicalRank } from "../verify/retrieve.ts";
 import { pageOf } from "../verify/store.ts";
 
@@ -55,49 +55,80 @@ export interface SearchResult {
   limitations: string[];
 }
 
-const keyOf = (doi: string, idx: number): string => `${doi}\u0000${String(idx).padStart(8, "0")}`;
-const unkey = (key: string): { doi: string; idx: number } => {
-  const [doi, idx] = key.split("\u0000");
-  return { doi, idx: Number(idx) };
-};
+/** Client policy: passages embedded per search call. A cold index of a large corpus is built over several calls (each states
+ *  how far it got) instead of blocking one call for minutes; ≈ 10 s on a CPU at the measured 35 passages per second. */
+export const MAX_NEW_EMBEDDINGS_PER_CALL = 256;
 
 export async function searchPassages(
   db: DatabaseSync,
-  a: { query: string; dois: string[]; limit: number; embedder: Embedder | null; now: Date; signal?: AbortSignal },
+  a: { query: string; dois: string[]; limit: number; embedder: Embedder | null; now: Date; signal?: AbortSignal; maxNewEmbeddings?: number },
 ): Promise<SearchResult> {
+  // The corpus can change under a call (another process republishes a paper while the query is being embedded). Hits are
+  // handles to content-addressed chunks, so a changed chunk is detected, not served as different text; one retry re-ranks
+  // on the new corpus, after which anything still missing is dropped.
+  let result = await searchOnce(db, a);
+  if (result.changed) result = await searchOnce(db, a);
+  return { hits: result.hits, mode: result.mode, limitations: result.limitations };
+}
+
+async function searchOnce(
+  db: DatabaseSync,
+  a: { query: string; dois: string[]; limit: number; embedder: Embedder | null; now: Date; signal?: AbortSignal; maxNewEmbeddings?: number },
+): Promise<SearchResult & { changed: boolean }> {
   const limit = Math.max(0, Math.floor(a.limit));
-  const lexical = lexicalRank(db, a.dois, a.query, LEG_POOL).map((h) => keyOf(h.doi, h.chunkIndex));
+  const lexical = lexicalRank(db, a.dois, a.query, LEG_POOL).map((h) => h.chunkId);
   let vector: string[] = [];
   let mode: SearchResult["mode"] = "lexical";
   const limitations: string[] = [];
   if (a.embedder !== null && a.dois.length > 0) {
+    const vectorLeg = async (): Promise<{ ids: string[]; partial: string | null }> => {
+      const built = await ensureVectors(db, a.embedder!, a.dois, a.now, { signal: a.signal, maxNew: a.maxNewEmbeddings ?? MAX_NEW_EMBEDDINGS_PER_CALL });
+      const q = await a.embedder!.embedQuery(a.query, a.signal);
+      const ids = rankByVector(db, a.embedder!.id, q, a.dois, LEG_POOL).map((h) => h.chunkId);
+      const total = built.embedded + built.reused + built.pending;
+      return { ids, partial: built.pending > 0 ? `semantic index is partial (${built.embedded + built.reused} of ${total} passages embedded); repeat the search to extend it` : null };
+    };
     try {
-      await ensureVectors(db, a.embedder, a.dois, a.now, { signal: a.signal });
-      const q = await a.embedder.embedQuery(a.query, a.signal);
-      vector = rankByVector(db, a.embedder.id, q, a.dois, LEG_POOL).map((h) => keyOf(h.doi, h.chunkIndex));
+      let leg: { ids: string[]; partial: string | null };
+      try {
+        leg = await vectorLeg();
+      } catch (err) {
+        if (!(err instanceof VectorSpaceError)) throw err;
+        // a different model is serving under this identity: its old vectors are in another space — replace them once
+        const probe = await a.embedder.embedQuery(a.query, a.signal);
+        dropVectorsOfOtherDimension(db, a.embedder.id, probe.length);
+        leg = await vectorLeg();
+      }
+      vector = leg.ids;
       mode = "hybrid";
+      if (leg.partial !== null) limitations.push(leg.partial);
     } catch (err) {
-      const why = err instanceof EmbedError ? err.message : "the stored vectors do not match the configured embedder";
-      limitations.push(`vector search unavailable (${why}); lexical results only`);
+      // only the embedder's own failures degrade to keyword results; anything else (a locked registry, a bug) is not an
+      // embedding problem and must not be reported as one
+      if (!(err instanceof EmbedError || err instanceof VectorSpaceError)) throw err;
+      limitations.push(`vector search unavailable (${err instanceof EmbedError ? err.message : "the stored vectors do not match the configured embedder"}); lexical results only`);
     }
   }
   const fused = rrfFuse(mode === "hybrid" ? [lexical, vector] : [lexical]).slice(0, limit);
   const inLexical = new Set(lexical);
   const inVector = new Set(vector);
   const row = db.prepare(
-    `SELECT c.revision AS revision, c.char_start AS start, c.char_end AS end, c.section AS section, c.text AS text, p.citekey AS citekey, s.page_starts_json AS pages
-     FROM chunks c JOIN papers p ON p.doi = c.doi LEFT JOIN paper_sources s ON s.doi = c.doi WHERE c.doi = ? AND c.chunk_index = ?`,
+    `SELECT c.doi AS doi, c.revision AS revision, c.char_start AS start, c.char_end AS end, c.section AS section, c.text AS text, p.citekey AS citekey, s.page_starts_json AS pages
+     FROM chunks c JOIN papers p ON p.doi = c.doi LEFT JOIN paper_sources s ON s.doi = c.doi WHERE c.chunk_id = ?`,
   );
   const hits: SearchHit[] = [];
+  let changed = false;
   for (const f of fused) {
-    const { doi, idx } = unkey(f.key);
-    const r = row.get(doi, idx) as { revision: string; start: number; end: number; section: string | null; text: string; citekey: string; pages: string | null } | undefined;
-    if (r === undefined) continue;
+    const r = row.get(f.key) as { doi: string; revision: string; start: number; end: number; section: string | null; text: string; citekey: string; pages: string | null } | undefined;
+    if (r === undefined) {
+      changed = true; // the chunk was replaced between ranking and reading
+      continue;
+    }
     const found: SearchHit["found"] = [];
     if (inLexical.has(f.key)) found.push("lexical");
     if (inVector.has(f.key)) found.push("vector");
     hits.push({
-      doi,
+      doi: r.doi,
       citekey: r.citekey,
       revision: r.revision,
       start: Number(r.start),
@@ -108,5 +139,5 @@ export async function searchPassages(
       found,
     });
   }
-  return { hits, mode, limitations };
+  return { hits, mode, limitations, changed };
 }

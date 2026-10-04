@@ -38,6 +38,9 @@ export interface Embedder {
 /** Client policy: texts per request. Small enough that one request fits a local server's slot, large
  *  enough to amortise the round trip (a paper is ≈15–150 chunks). */
 export const EMBED_BATCH_SIZE = 16;
+/** Client policy: the widest embedding vector accepted. Real embedding models are 128–4096 wide; a server claiming more is
+ *  broken or hostile, and a stored vector costs 4 bytes per dimension. */
+export const MAX_EMBED_DIM = 8192;
 /** Client policy: one request may take this long (local cold start, CPU inference of a batch). */
 export const EMBED_TIMEOUT_MS = 120_000;
 
@@ -97,17 +100,20 @@ export function createHttpEmbedder(o: {
       const raw = (item as { embedding?: unknown })?.embedding;
       if (!Number.isInteger(index) || index < 0 || index >= inputs.length || slots[index] !== undefined) throw new EmbedError("invalid embedding output: bad or repeated index");
       if (!Array.isArray(raw) || raw.length === 0) throw new EmbedError("invalid embedding output: empty vector");
-      const v = new Float32Array(raw.length);
-      let sum = 0;
+      if (raw.length > MAX_EMBED_DIM) throw new EmbedError(`invalid embedding output: dimension ${raw.length} exceeds the limit of ${MAX_EMBED_DIM}`);
+      let peak = 0;
       for (let i = 0; i < raw.length; i++) {
         const x = raw[i];
         if (typeof x !== "number" || !Number.isFinite(x)) throw new EmbedError("invalid embedding output: a component is not a finite number");
-        v[i] = x;
-        sum += x * x;
+        peak = Math.max(peak, Math.abs(x));
       }
-      if (sum === 0) throw new EmbedError("invalid embedding output: a zero vector");
+      if (peak === 0) throw new EmbedError("invalid embedding output: a zero vector");
+      // scale by the largest component first: squaring extreme but finite components would overflow or underflow
+      let sum = 0;
+      for (let i = 0; i < raw.length; i++) sum += ((raw[i] as number) / peak) ** 2;
       const n = Math.sqrt(sum);
-      for (let i = 0; i < v.length; i++) v[i] /= n;
+      const v = new Float32Array(raw.length);
+      for (let i = 0; i < raw.length; i++) v[i] = (raw[i] as number) / peak / n;
       slots[index] = v;
     });
     const out = slots as Float32Array[];

@@ -12,7 +12,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
-import { EMBED_PROFILES, EmbedError, createHttpEmbedder, type Embedder } from "../src/core/embed/embedder.ts";
+import { EMBED_PROFILES, EmbedError, MAX_EMBED_DIM, createHttpEmbedder, type Embedder } from "../src/core/embed/embedder.ts";
 
 interface Seen {
   url: string;
@@ -113,6 +113,29 @@ describe("createHttpEmbedder", () => {
       return true;
     });
     await assert.rejects(make(fakeServer({ status: 503, body: "x".repeat(5000) })).embedDocuments(["a"]), (err) => err instanceof EmbedError && err.message.length < 500 && /503/.test(err.message));
+  });
+
+  it("an error body that echoes the passage is withheld even when the passage has runs of whitespace the server collapsed (review finding)", async () => {
+    const passage = "Secret  cycle-life   result of 4.2 percent  degradation per hundred cycles";
+    const collapsed = passage.replace(/\s+/g, " ");
+    await assert.rejects(make(fakeServer({ status: 400, body: `input rejected: ["${collapsed}"]` })).embedDocuments([passage]), (err) => {
+      assert.ok(err instanceof EmbedError);
+      assert.ok(!err.message.includes("cycle-life"), err.message);
+      return true;
+    });
+  });
+
+  it("extreme but finite components are scaled before normalising, so a valid vector never becomes NaN, Infinity or zero (review finding)", async () => {
+    for (const comps of [[1e200, 1e200], [1e-50, 1e-50], [4e38, 1], [3e38, 3e38]]) {
+      const [v] = await make(fakeServer({ vectors: (t) => t.map(() => comps) })).embedDocuments(["x"]);
+      assert.ok([...v].every(Number.isFinite), `finite for ${comps}`);
+      assert.ok(Math.abs(norm(v) - 1) < 1e-5, `unit length for ${comps}`);
+    }
+  });
+
+  it("a vector wider than any real embedding model is refused rather than stored (review finding)", async () => {
+    const huge = Array.from({ length: MAX_EMBED_DIM + 1 }, () => 1);
+    await assert.rejects(make(fakeServer({ vectors: (t) => t.map(() => huge) })).embedDocuments(["x"]), (e) => e instanceof EmbedError && /dimension/.test(e.message));
   });
 
   it("a network failure or an abort is an EmbedError, never a raw exception", async () => {

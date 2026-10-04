@@ -252,12 +252,14 @@ export function ensureChunks(db: DatabaseSync, doi: string, cfg: ChunkTextConfig
       | undefined;
     if (cur?.status !== "ready" || cur.revision === null || cur.text === null || cur.chunk_policy === chunkPolicyOf(cfg)) return;
     let sections: SectionMark[] | null = cur.sections_json === null ? null : (JSON.parse(cur.sections_json) as SectionMark[]);
-    if (sections === null && cfg.boundary === "section" && cur.extraction?.startsWith("unpdf@")) {
+    if (cfg.boundary === "section" && cur.extraction?.startsWith("unpdf@")) {
+      // PDF marks are a pure function of the text: always derive them with the current detector, so an improved detector
+      // reaches sources stored earlier (other extractions cannot be re-derived and keep what they stored)
       const found = detectHeadings(cur.text);
-      if (found.length > 0) {
-        sections = found;
-        db.prepare("UPDATE paper_sources SET sections_json = ? WHERE doi = ?").run(JSON.stringify(found), doi);
-      }
+      const derived = found.length > 0 ? found : null;
+      const json = derived === null ? null : JSON.stringify(derived);
+      if (json !== cur.sections_json) db.prepare("UPDATE paper_sources SET sections_json = ? WHERE doi = ?").run(json, doi);
+      sections = derived;
     }
     writeChunks(db, doi, cur.revision, cur.text, sections, cfg);
     bumpGeneration(db);

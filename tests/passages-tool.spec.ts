@@ -63,7 +63,8 @@ const sentence = "The measured outcome improved over the baseline in every confi
 const body = (n: number): string => sentence.repeat(n).trim();
 /** n sections "k. Name\n<body>" about a topic word, each ≈ 260 chars so a 256-char cap keeps one section per chunk. */
 function sectioned(topic: string, n: number): { text: string; heads: string[] } {
-  const heads = Array.from({ length: n }, (_, i) => `${i + 1}. ${topic} part ${i + 1}`);
+  const Topic = topic.charAt(0).toUpperCase() + topic.slice(1);
+  const heads = Array.from({ length: n }, (_, i) => `${i + 1}. ${Topic} part ${i + 1}`); // capitalised: the PDF detector's own shape
   return { text: heads.map((h) => `${h}\n${body(3)} ${topic}.`).join("\n"), heads };
 }
 
@@ -114,13 +115,13 @@ describe("search_passages — results", () => {
     assert.ok(out.hits.length >= 1);
     const top = out.hits[0];
     assert.equal(top.rank, 1);
-    assert.equal(top.section, "2. battery part 2");
+    assert.equal(top.section, "2. Battery part 2");
     assert.match(top.pointer, /^10\.1234\/aaa@[0-9a-f]{16}#\d+-\d+$/);
     assert.equal(top.page, 1);
-    assert.ok(top.excerpt!.startsWith("2. battery part 2"));
+    assert.ok(top.excerpt!.startsWith("2. Battery part 2"));
     assert.ok(!JSON.stringify(out).match(/score|bm25|rrf/i), "no ranking scores in the output");
     const text = r.content[0].text;
-    assert.ok(text.includes(top.pointer) && text.includes("2. battery part 2"), "the model reads pointers and sections in the text content");
+    assert.ok(text.includes(top.pointer) && text.includes("2. Battery part 2"), "the model reads pointers and sections in the text content");
   });
 
   it("every pointer resolves to exactly its excerpt", async () => {
@@ -168,6 +169,35 @@ describe("search_passages — results", () => {
     const r = await run({ query: "battery" });
     assert.match(r.content[0].text, /usable source/i);
     assert.equal((r.structuredContent as any).result.found, false);
+  });
+});
+
+describe("search_passages — review findings", () => {
+  it("no section label returned to the agent is longer than the label cap, whatever the source's headings look like", async () => {
+    writeConfig("section", 300);
+    const long = "Secret finding ".repeat(400);
+    const text = `${long}\n${body(3)} battery.\n2. Methods\n${body(3)} battery.`;
+    addPaper("10.1234/aaa", "Long heading", text, [long.trim(), "2. Methods"], { chunk_tokens: 300, overlap_tokens: 0, chars_per_token: 1, boundary: "section" });
+    const r = await run({ query: "battery", limit: 10 });
+    const hits = hitsOf(r);
+    assert.ok(hits.length > 0);
+    assert.ok(hits.every((h) => h.section === null || h.section.length <= 200), `longest label ${Math.max(...hits.map((h) => (h.section ?? "").length))}`);
+    assert.ok(!r.content[0].text.includes("Secret finding ".repeat(20)), "the heading's text does not leave through the label");
+  });
+
+  it("hits that overlap a better hit are dropped (overlapping chunks add nothing), not mislabelled as whole-source (review finding)", async () => {
+    mkdirSync(join(root, "config"), { recursive: true });
+    writeFileSync(join(root, "config", "chunking.yaml"), "chunking:\n  chunk_tokens: 256\n  overlap_tokens: 100\n  chars_per_token: 1\n  boundary: paragraph\nverification:\n  engine: k2\n  min_confidence: 0.99\n  workers: 2\n  max_judgments: 120\n");
+    const text = Array.from({ length: 14 }, (_, i) => `Paragraph ${i}: battery cells age faster under heavy load. Filler words about nothing.`).join("\n\n"); // ≈ 75 characters each: two per chunk, one carried over
+    addPaper("10.1234/aaa", "Overlap", text, [], { chunk_tokens: 256, overlap_tokens: 100, chars_per_token: 1, boundary: "paragraph" });
+    const hits = hitsOf(await run({ query: "battery cells age", limit: 8 }));
+    assert.ok(hits.length >= 2);
+    const overlapping = (db.prepare("SELECT c1.chunk_index a, c2.chunk_index b FROM chunks c1 JOIN chunks c2 ON c2.doi = c1.doi AND c2.chunk_index = c1.chunk_index + 1 WHERE c2.char_start < c1.char_end").all() as unknown[]).length;
+    assert.ok(overlapping > 0, "the fixture really has overlapping chunks");
+    const spans = hits.map((h) => h.pointer.split("#")[1].split("-").map(Number) as [number, number]);
+    for (let i = 0; i < spans.length; i++) for (let j = i + 1; j < spans.length; j++) assert.ok(spans[i][1] <= spans[j][0] || spans[j][1] <= spans[i][0], `hits ${i} and ${j} overlap`);
+    assert.ok(hits.every((h, i) => h.rank === i + 1), "ranks stay 1..n after dropping");
+    assert.ok(hits.every((h) => h.withheld !== "whole_source" || spans[0][1] - spans[0][0] >= 0.5 * text.length), "'whole_source' is only said when it is true");
   });
 });
 

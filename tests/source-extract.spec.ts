@@ -140,6 +140,14 @@ describe("section marks from extraction", () => {
     assert.ok(out.sections![0].start > out.text.indexOf("Cycle Life of Cells"), "the title is not a section");
   });
 
+  it("TEI: a <head> longer than a heading can be (a mis-parsed paragraph) is text, not a section mark (review finding)", () => {
+    const long = "Secret finding about cells that is much too long to be a section heading. ".repeat(6);
+    const tei = makeTei({ title: "Cycle Life of Cells", sections: [{ head: "Introduction", paragraphs: ["Cells age faster at high temperature and under load."] }, { head: long, paragraphs: ["More body text follows here for the paper."] }] });
+    const out = extractTei(new TextEncoder().encode(tei));
+    assert.deepEqual(out.sections?.map((m) => m.heading), ["Introduction"]);
+    assert.ok(out.text.includes(long.trim().slice(0, 40)), "the long head is still part of the text");
+  });
+
   it("TEI without any head has no marks (null, not an empty list)", () => {
     const tei = makeTei({ title: "Cycle Life of Cells", sections: [{ paragraphs: ["Only a paragraph of body text, long enough to count as usable text."] }] });
     assert.equal(extractTei(new TextEncoder().encode(tei)).sections, null);

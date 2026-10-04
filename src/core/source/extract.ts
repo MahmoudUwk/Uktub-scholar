@@ -14,7 +14,7 @@ import { XMLParser } from "fast-xml-parser";
 import { extractText, getDocumentProxy } from "unpdf";
 
 import { decodeHtmlEntities } from "../bibrender.ts";
-import type { SectionMark } from "../sections.ts";
+import { MAX_SECTION_LABEL_CHARS, type SectionMark } from "../sections.ts";
 import { detectHeadings } from "./headings.ts";
 
 export type SourceFailureCode =
@@ -164,7 +164,8 @@ function blocks(nodes: XNode[], out: Block[]): void {
       if (t === ":@" || !Array.isArray(kids)) continue;
       if (t === "head" || t === "p") {
         const s = clean(textOf(kids as XNode[]));
-        if (s.length > 0) out.push({ text: s, head: t === "head" });
+        // a "head" longer than any heading is a mis-parsed paragraph: keep its text, not a section mark
+        if (s.length > 0) out.push({ text: s, head: t === "head" && s.length <= MAX_SECTION_LABEL_CHARS });
       } else if (t !== "figure" && t !== "note") blocks(kids as XNode[], out);
     }
   }

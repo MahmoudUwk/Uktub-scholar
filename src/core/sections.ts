@@ -18,6 +18,18 @@
 
 import { cutPoint } from "./chunk.ts";
 
+/** Client policy: a section label is a heading, not text. Labels travel with search results and evidence, so they are
+ *  clipped (with an ellipsis) rather than allowed to carry a mis-parsed paragraph out of a source. */
+export const MAX_SECTION_LABEL_CHARS = 200;
+
+/** The bounded label of a heading: unchanged when short, a prefix plus "…" (at most the cap) otherwise. */
+export function clipLabel(heading: string): string {
+  if (heading.length <= MAX_SECTION_LABEL_CHARS) return heading;
+  let end = MAX_SECTION_LABEL_CHARS - 1;
+  if (isHighSurrogate(heading.charCodeAt(end - 1)) && isLowSurrogate(heading.charCodeAt(end))) end--; // never half a pair
+  return heading.slice(0, end) + "…";
+}
+
 export interface SectionMark {
   /** Offset in the captured text where the heading line begins. */
   start: number;
@@ -76,6 +88,15 @@ function bodyStart(text: string, section: Section): number {
 }
 
 const isSpace = (text: string, i: number): boolean => /\s/.test(text[i]);
+const isHighSurrogate = (code: number): boolean => code >= 0xd800 && code <= 0xdbff;
+const isLowSurrogate = (code: number): boolean => code >= 0xdc00 && code <= 0xdfff;
+
+/** A whole section that is just its heading line (nothing but whitespace after it). */
+function isHeadOnly(text: string, u: { start: number; end: number; section: string; parts: number }): boolean {
+  if (u.parts !== 1 || u.section === "") return false;
+  const nl = text.indexOf("\n", u.start);
+  return nl === -1 || nl >= u.end || text.slice(nl + 1, u.end).trim() === "";
+}
 
 /**
  * The best cut in [lo, hi] (inclusive, text offsets): the sentence end nearest `prefer`, else the word
@@ -131,11 +152,18 @@ function splitSection(text: string, section: Section, max: number, min: number):
       }
     }
     if (cut <= s) cut = Math.min(section.end, s + 1);
+    // Never between the two halves of a surrogate pair (a forced cut at the cap or a clamped boundary can land there):
+    // one code unit earlier when that still leaves body after the heading, else one later.
+    if (cut < section.end && isHighSurrogate(text.charCodeAt(cut - 1)) && isLowSurrogate(text.charCodeAt(cut))) {
+      // the heading guard only binds when a cut after it fits the cap at all (a heading line longer than the cap is cut regardless)
+      const floor = guard >= s + max ? s + 1 : Math.max(s + 1, guard);
+      cut = cut - 1 >= floor ? cut - 1 : cut + 1;
+    }
     pieces.push([s, cut]);
     s = cut;
     guard = s;
   }
-  pieces.push([s, section.end]);
+  if (section.end > s) pieces.push([s, section.end]); // (a pair-safe cut can land exactly on the end: nothing is left)
   return pieces;
 }
 
@@ -149,22 +177,39 @@ export function splitBySections(text: string, marks: SectionMark[], opts: SplitO
   for (const sec of sections) {
     if (sec.end <= sec.start) continue;
     if (sec.end - sec.start <= max) {
-      units.push({ start: sec.start, end: sec.end, section: sec.heading, sections: 1, part: 0, parts: 1 });
+      units.push({ start: sec.start, end: sec.end, section: clipLabel(sec.heading), sections: 1, part: 0, parts: 1 });
       continue;
     }
     const pieces = splitSection(text, sec, max, min);
-    pieces.forEach(([a, b], i) => units.push({ start: a, end: b, section: sec.heading, sections: 1, part: i, parts: pieces.length }));
+    pieces.forEach(([a, b], i) => units.push({ start: a, end: b, section: clipLabel(sec.heading), sections: 1, part: i, parts: pieces.length }));
   }
 
-  // Merge tiny whole sections into a neighbour while the result fits.
-  const out: SectionChunk[] = [];
+  // Pass A: a heading-only section goes forward with the section after it when that fits (never backward, where it
+  // would be the trailing line of earlier content); when it cannot, it stands alone.
+  type Unit = SectionChunk & { headOnly: boolean };
+  const forward: Unit[] = [];
   for (const u of units) {
-    const cur = out[out.length - 1];
-    const tiny = cur !== undefined && (cur.end - cur.start < min || u.end - u.start < min);
-    if (cur !== undefined && cur.parts === 1 && u.parts === 1 && tiny && u.end - cur.start <= max) {
+    const cur = forward[forward.length - 1];
+    const headOnly = isHeadOnly(text, u);
+    if (cur !== undefined && cur.headOnly && u.parts === 1 && u.end - cur.start <= max) {
       cur.end = u.end;
       cur.sections += u.sections;
-    } else out.push({ ...u });
+      cur.headOnly = headOnly;
+    } else forward.push({ ...u, headOnly });
   }
+
+  // Pass B: merge tiny whole sections into a neighbour while the result fits (a stranded heading-only unit stays put).
+  const merged: Unit[] = [];
+  for (const [i, u] of forward.entries()) {
+    const cur = merged[merged.length - 1];
+    const tiny = cur !== undefined && (cur.end - cur.start < min || u.end - u.start < min);
+    // the last unit of the text may take trailing headings: nothing follows them, so none is cut off from its content
+    const mayJoin = !u.headOnly || i === forward.length - 1;
+    if (cur !== undefined && !cur.headOnly && mayJoin && cur.parts === 1 && u.parts === 1 && tiny && u.end - cur.start <= max) {
+      cur.end = u.end;
+      cur.sections += u.sections;
+    } else merged.push({ ...u });
+  }
+  const out: SectionChunk[] = merged.map(({ headOnly: _headOnly, ...c }) => c);
   return out;
 }

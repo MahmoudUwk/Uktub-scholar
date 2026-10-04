@@ -131,7 +131,7 @@ describe("ensureVectors", () => {
     const e = fakeEmbedder();
     await ensureVectors(db, e, [A], NOW);
     assert.equal(count("passage_vectors"), chunksOf(db, A).length);
-    assert.deepEqual(await ensureVectors(db, e, [], NOW), { embedded: 0, reused: 0 });
+    assert.deepEqual(await ensureVectors(db, e, [], NOW), { embedded: 0, reused: 0, pending: 0 });
   });
 });
 

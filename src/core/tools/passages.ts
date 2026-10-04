@@ -15,6 +15,7 @@ import { embedderFromEnv } from "../embed/config.ts";
 import { EmbedError, type Embedder } from "../embed/embedder.ts";
 import { searchPassages } from "../rag/search.ts";
 import { RegistryError, openRegistry } from "../registry.ts";
+import { clipLabel } from "../sections.ts";
 import { containEvidence, type SupportedPassage } from "../verify/evidence.ts";
 import { locatorTokens } from "../verify/retrieve.ts";
 import { resolveScope } from "../verify/scope.ts";
@@ -127,7 +128,10 @@ export async function searchPassagesTool(ctx: ToolContext, args: SearchPassagesA
     }
 
     const found = searchable.length === 0 ? null : await searchPassages(db, { query, dois: searchable, limit, embedder, now: ctx.now(), signal: ctx.signal });
-    const hits = found?.hits ?? [];
+    // Overlapping chunks (fixed-window policies carry overlap) add nothing beyond the better-ranked one: drop them here, so
+    // containment never has to guess and every returned pointer is distinct text.
+    const hits: NonNullable<typeof found>["hits"] = [];
+    for (const h of found?.hits ?? []) if (!hits.some((k) => k.doi === h.doi && h.start < k.end && k.start < h.end)) hits.push(h);
     const length = new Map(selected.map((p) => [p.doi, getSource(db, p.doi)?.textLength ?? 0]));
     // Containment decides in rank order (rank-derived strength), output keeps rank order.
     const passages: SupportedPassage[] = hits.map((h, i) => ({
@@ -146,11 +150,11 @@ export async function searchPassagesTool(ctx: ToolContext, args: SearchPassagesA
           doi: h.doi,
           citekey: h.citekey,
           pointer: formatPointer(h.doi, h.revision, h.start, h.end),
-          section: h.section === "" ? null : h.section,
+          section: h.section === null || h.section === "" ? null : clipLabel(h.section),
           page: h.page,
           found: h.found,
-          excerpt: c?.excerpt ?? null,
-          withheld: c === undefined ? "whole_source" : c.withheld,
+          excerpt: c!.excerpt,
+          withheld: c!.withheld,
         };
       }),
     };

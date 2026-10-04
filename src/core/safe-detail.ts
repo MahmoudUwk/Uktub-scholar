@@ -12,9 +12,11 @@ const MAX_DETAIL_CHARS = 300;
 
 export function agentSafeDetail(err: unknown, submitted: string[]): string {
   const raw = (err instanceof Error ? err.message : String(err)).replace(/\s+/g, " ").trim();
+  // a server may collapse whitespace when it echoes, so compare in the same normal form
+  const texts = submitted.map((t) => t.replace(/\s+/g, " "));
   for (let i = 0; i + ECHO_WINDOW <= raw.length; i++) {
     const window = raw.slice(i, i + ECHO_WINDOW);
-    if (submitted.some((t) => t.includes(window))) return "the engine rejected the request (details withheld: the error quoted passage text)";
+    if (texts.some((t) => t.includes(window))) return "the engine rejected the request (details withheld: the error quoted passage text)";
   }
   return raw.slice(0, MAX_DETAIL_CHARS);
 }

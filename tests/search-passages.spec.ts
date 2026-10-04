@@ -15,7 +15,9 @@ import { createRegistry, registerPaper } from "../src/core/registry.ts";
 import type { ChunkTextConfig } from "../src/core/chunk.ts";
 import { EmbedError, type Embedder } from "../src/core/embed/embedder.ts";
 import { RRF_K, rrfFuse, searchPassages } from "../src/core/rag/search.ts";
-import { publishSource } from "../src/core/verify/store.ts";
+import { chunksOf, publishSource } from "../src/core/verify/store.ts";
+import { ensureVectors } from "../src/core/embed/vectors.ts";
+import { openRegistry } from "../src/core/registry.ts";
 
 const NOW = new Date("2026-10-04T10:00:00Z");
 const SEC: ChunkTextConfig = { chunk_tokens: 256, overlap_tokens: 0, chars_per_token: 1, boundary: "section" }; // 256-char cap
@@ -173,5 +175,135 @@ describe("searchPassages", () => {
     publish(A, SECTIONED_A, ["1. Introduction", "2. Methods", "3. Results"]);
     const run = (): Promise<unknown> => searchPassages(db, { query: "cells energy", dois: [A], limit: 3, embedder: conceptEmbedder(), now: NOW });
     assert.deepEqual(await run(), await run());
+  });
+});
+
+describe("searchPassages — review findings", () => {
+  const CFGP: ChunkTextConfig = { chunk_tokens: 256, overlap_tokens: 0, chars_per_token: 1, boundary: "paragraph" };
+  const paras = (w: string, n = 6): string => Array.from({ length: n }, (_, k) => `${w} paragraph ${k}: ` + "filler words about nothing in particular. ".repeat(5)).join("\n\n");
+  const publishP = (database: DatabaseSync, doi: string, text: string, digest = doi.padEnd(64, "0")): void => {
+    publishSource(database, doi, { kind: "local-file", ref: "x.pdf", license: null, digest, extraction: "t@1", text, pageStarts: null }, CFGP, NOW);
+  };
+
+  it("a paper re-published by another process while the query is being embedded never yields text from a revision the ranking did not see", async () => {
+    publishP(db, A, paras("zebra"));
+    const other = openRegistry(root);
+    const e: Embedder = {
+      id: "f|none",
+      async embedDocuments(t) {
+        return t.map(() => Float32Array.from([1, 0]));
+      },
+      async embedQuery() {
+        publishP(other, A, paras("giraffe"), "f".repeat(64)); // new revision, different text, mid-call
+        return Float32Array.from([1, 0]);
+      },
+    };
+    const r = await searchPassages(db, { query: "zebra", dois: [A], limit: 5, embedder: e, now: NOW });
+    other.close();
+    const current = (db.prepare("SELECT revision, text FROM paper_sources WHERE doi = ?").get(A) as { revision: string; text: string });
+    for (const h of r.hits) {
+      assert.equal(h.revision, current.revision, "every hit comes from the current revision");
+      assert.equal(current.text.slice(h.start, h.end), h.text, "and its text is exactly the span it claims");
+    }
+    assert.ok(r.hits.every((h) => !h.found.includes("lexical")), "the query's word is gone from the current corpus: no hit may survive from the keyword ranking of the replaced revision");
+  });
+
+  it("an error that is not the embedder's (a locked database) is not reported as an embedding problem (review finding)", async () => {
+    publishP(db, A, paras("zebra"));
+    const e: Embedder = {
+      id: "f|none",
+      async embedDocuments() {
+        throw new Error("database is locked");
+      },
+      async embedQuery() {
+        return Float32Array.from([1, 0]);
+      },
+    };
+    await assert.rejects(searchPassages(db, { query: "zebra", dois: [A], limit: 3, embedder: e, now: NOW }), /database is locked/);
+  });
+
+  it("vectors of the wrong dimension under one embedder identity are replaced, not left to degrade every later search (review finding)", async () => {
+    publishP(db, A, paras("zebra"));
+    const mk = (dim: number): Embedder => ({
+      id: "same-id|none",
+      async embedQuery() {
+        return Float32Array.from({ length: dim }, () => 1 / Math.sqrt(dim));
+      },
+      async embedDocuments(t) {
+        return t.map(() => Float32Array.from({ length: dim }, () => 1 / Math.sqrt(dim)));
+      },
+    });
+    await searchPassages(db, { query: "zebra", dois: [A], limit: 3, embedder: mk(3), now: NOW });
+    publishP(db, B, paras("giraffe"));
+    for (let i = 0; i < 2; i++) {
+      const r = await searchPassages(db, { query: "giraffe", dois: [A, B], limit: 3, embedder: mk(4), now: NOW });
+      assert.equal(r.mode, "hybrid", `search ${i + 1} is hybrid`);
+      assert.deepEqual(r.limitations, []);
+    }
+    const dims = (db.prepare("SELECT DISTINCT dim FROM passage_vectors WHERE embed_id = 'same-id|none'").all() as { dim: number }[]).map((d) => d.dim);
+    assert.deepEqual(dims, [4]);
+  });
+
+  it("a cold index is built a bounded amount per call and the result says so; repeating the search completes it (review finding)", async () => {
+    publishP(db, A, paras("zebra", 40));
+    const total = chunksOf(db, A).length;
+    const calls: number[] = [];
+    const e: Embedder = {
+      id: "f|none",
+      async embedQuery() {
+        return Float32Array.from([1, 0]);
+      },
+      async embedDocuments(t) {
+        calls.push(t.length);
+        return t.map(() => Float32Array.from([1, 0]));
+      },
+    };
+    const first = await searchPassages(db, { query: "zebra", dois: [A], limit: 3, embedder: e, now: NOW, maxNewEmbeddings: 10 });
+    assert.equal(calls.reduce((a, b) => a + b, 0), 10);
+    assert.equal(first.mode, "hybrid");
+    assert.match(first.limitations.join(" "), /semantic index is partial \(10 of \d+ passages/);
+    let guard = 0;
+    let last = first;
+    while (last.limitations.length > 0 && guard++ < 20) last = await searchPassages(db, { query: "zebra", dois: [A], limit: 3, embedder: e, now: NOW, maxNewEmbeddings: 10 });
+    assert.deepEqual(last.limitations, []);
+    assert.equal(calls.reduce((a, b) => a + b, 0), total, "every passage embedded exactly once across the calls");
+  });
+
+  it("two concurrent searches over one cold corpus do not embed the same passages twice (review finding)", async () => {
+    publishP(db, A, paras("zebra", 30));
+    const total = chunksOf(db, A).length;
+    let embedded = 0;
+    const e: Embedder = {
+      id: "f|none",
+      async embedQuery() {
+        return Float32Array.from([1, 0]);
+      },
+      async embedDocuments(t) {
+        await new Promise((r) => setTimeout(r, 5));
+        embedded += t.length;
+        return t.map(() => Float32Array.from([1, 0]));
+      },
+    };
+    await Promise.all([ensureVectors(db, e, [A], NOW), ensureVectors(db, e, [A], NOW)]);
+    assert.equal(embedded, total);
+  });
+
+  it("vectors of passages that no longer exist are pruned when vectors are next ensured (review finding)", async () => {
+    publishP(db, A, paras("zebra"));
+    const e: Embedder = {
+      id: "f|none",
+      async embedQuery() {
+        return Float32Array.from([1, 0]);
+      },
+      async embedDocuments(t) {
+        return t.map(() => Float32Array.from([1, 0]));
+      },
+    };
+    await ensureVectors(db, e, [A], NOW);
+    publishP(db, A, paras("giraffe"), "f".repeat(64)); // the old passages are gone
+    await ensureVectors(db, e, [A], NOW);
+    const live = new Set(chunksOf(db, A).map((c) => c.content_hash));
+    const stored = (db.prepare("SELECT content_hash h FROM passage_vectors").all() as { h: string }[]).map((r) => r.h);
+    assert.deepEqual(new Set(stored), live, "only live passages keep a vector");
   });
 });
