@@ -38,7 +38,7 @@ describe("loadChunkConfig", () => {
     const c = loadChunkConfig(root, { env: {} });
     assert.deepEqual(c, DEFAULTS);
     assert.equal(c.chunking.chars_per_token, 2.8, "the calibrated factor, so a default chunk fits the engine window");
-    assert.deepEqual([c.chunking.chunk_tokens, c.chunking.overlap_tokens], [1024, 16], "the measured window (docs/benchmarks window sweep, 2026-10-04)");
+    assert.deepEqual([c.chunking.chunk_tokens, c.chunking.overlap_tokens, c.chunking.boundary], [512, 0, "section"], "the measured policy: section chunks capped at 512 tokens (docs/benchmarks/evidence-chunking-sections-2026-10-04.md)");
     assert.equal(c.verification.engine, "eos", "the owner's default engine (decision 2026-10-04)");
   });
 

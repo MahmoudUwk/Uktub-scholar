@@ -47,12 +47,15 @@ const SHAPE: Record<string, Record<string, "number" | "string">> = {
 
 /** Documented package defaults — what an agent-only project runs with. */
 export const DEFAULTS: ChunkConfig = {
-  // 1,024 tokens: measured. With Eos at the 0.99 bar, support recall on a fixed claim subset was
-  // 52 % (8,192), 76 % (2,048), 84 % (1,024), 84 % (512): it plateaus at 1,024, and a locator query
-  // then needs about a quarter of the judgments for the same recall (docs/benchmarks, window sweep).
-  // Overlap 16 tokens (1.5 %): matches what was measured. 2.8 chars/token: calibrated on the benchmark
+  // Section chunks capped at 512 tokens (docs/benchmarks/evidence-chunking-sections-2026-10-04.md). With Eos at
+  // the 0.99 bar on 50 claims in two disjoint samples, support recall was 80 % for fixed 1,024-token windows,
+  // 88 % for section chunks at 1,024 and 90 % at 512 (6 claims gained, 1 lost, against the fixed baseline);
+  // a locator query then needs 5.0 judgments per claim (7.6 for fixed 1,024). 512 also keeps every chunk
+  // (≤ 1,433 characters) inside the 1,500-character excerpt limit, so one chunk is one releasable passage and
+  // the same chunks serve passage search and verification. No index-time overlap: a section is a unit, and a
+  // continuation across a split is the neighbouring chunk. 2.8 chars/token: calibrated on the benchmark
   // corpus with the mmBERT tokenizer (median 4.1, densest paper 3.10; 0.9 headroom so a window never overflows).
-  chunking: { chunk_tokens: 1024, overlap_tokens: 16, chars_per_token: 2.8, boundary: "paragraph" },
+  chunking: { chunk_tokens: 512, overlap_tokens: 0, chars_per_token: 2.8, boundary: "section" },
   // engine: Decision 2.0 Eos, local (owner decision 2026-10-04). 0.99: client policy, the
   // scientific-writing confidence bar. 4 lanes (one resident model serializes them) and 120
   // judgments per call: client policy — seconds locally, ≈ 7 minutes on a 20-requests/minute hosted tier.

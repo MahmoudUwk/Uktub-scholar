@@ -1,0 +1,715 @@
+{
+ "schema": "bench-rag/1",
+ "date": "x",
+ "label": "section-512",
+ "embedModel": "embeddinggemma-300m-qat-q8_0-dense",
+ "profile": "embeddinggemma",
+ "chunkTokens": 512,
+ "boundary": "section",
+ "chunkCount": 697,
+ "embedMs": 19708,
+ "rows": [
+  {
+   "field": "claim",
+   "scope": "own",
+   "part": "tuning",
+   "claims": 37,
+   "method": "lexical",
+   "recall": {
+    "1": "83.8%",
+    "3": "100.0%",
+    "5": "100.0%",
+    "10": "100.0%"
+   }
+  },
+  {
+   "field": "claim",
+   "scope": "own",
+   "part": "tuning",
+   "claims": 37,
+   "method": "vector",
+   "recall": {
+    "1": "62.2%",
+    "3": "89.2%",
+    "5": "97.3%",
+    "10": "97.3%"
+   }
+  },
+  {
+   "field": "claim",
+   "scope": "own",
+   "part": "tuning",
+   "claims": 37,
+   "method": "hybrid",
+   "recall": {
+    "1": "86.5%",
+    "3": "97.3%",
+    "5": "97.3%",
+    "10": "100.0%"
+   }
+  },
+  {
+   "field": "claim",
+   "scope": "own",
+   "part": "held-out",
+   "claims": 37,
+   "method": "lexical",
+   "recall": {
+    "1": "94.6%",
+    "3": "97.3%",
+    "5": "97.3%",
+    "10": "100.0%"
+   }
+  },
+  {
+   "field": "claim",
+   "scope": "own",
+   "part": "held-out",
+   "claims": 37,
+   "method": "vector",
+   "recall": {
+    "1": "64.9%",
+    "3": "89.2%",
+    "5": "94.6%",
+    "10": "97.3%"
+   }
+  },
+  {
+   "field": "claim",
+   "scope": "own",
+   "part": "held-out",
+   "claims": 37,
+   "method": "hybrid",
+   "recall": {
+    "1": "89.2%",
+    "3": "94.6%",
+    "5": "100.0%",
+    "10": "100.0%"
+   }
+  },
+  {
+   "field": "claim",
+   "scope": "own",
+   "part": "both",
+   "claims": 74,
+   "method": "lexical",
+   "recall": {
+    "1": "89.2%",
+    "3": "98.6%",
+    "5": "98.6%",
+    "10": "100.0%"
+   }
+  },
+  {
+   "field": "claim",
+   "scope": "own",
+   "part": "both",
+   "claims": 74,
+   "method": "vector",
+   "recall": {
+    "1": "63.5%",
+    "3": "89.2%",
+    "5": "95.9%",
+    "10": "97.3%"
+   }
+  },
+  {
+   "field": "claim",
+   "scope": "own",
+   "part": "both",
+   "claims": 74,
+   "method": "hybrid",
+   "recall": {
+    "1": "87.8%",
+    "3": "95.9%",
+    "5": "98.6%",
+    "10": "100.0%"
+   }
+  },
+  {
+   "field": "claim",
+   "scope": "all",
+   "part": "tuning",
+   "claims": 37,
+   "method": "lexical",
+   "recall": {
+    "1": "81.1%",
+    "3": "100.0%",
+    "5": "100.0%",
+    "10": "100.0%"
+   }
+  },
+  {
+   "field": "claim",
+   "scope": "all",
+   "part": "tuning",
+   "claims": 37,
+   "method": "vector",
+   "recall": {
+    "1": "59.5%",
+    "3": "86.5%",
+    "5": "89.2%",
+    "10": "94.6%"
+   }
+  },
+  {
+   "field": "claim",
+   "scope": "all",
+   "part": "tuning",
+   "claims": 37,
+   "method": "hybrid",
+   "recall": {
+    "1": "81.1%",
+    "3": "94.6%",
+    "5": "94.6%",
+    "10": "100.0%"
+   }
+  },
+  {
+   "field": "claim",
+   "scope": "all",
+   "part": "held-out",
+   "claims": 37,
+   "method": "lexical",
+   "recall": {
+    "1": "86.5%",
+    "3": "94.6%",
+    "5": "97.3%",
+    "10": "100.0%"
+   }
+  },
+  {
+   "field": "claim",
+   "scope": "all",
+   "part": "held-out",
+   "claims": 37,
+   "method": "vector",
+   "recall": {
+    "1": "56.8%",
+    "3": "75.7%",
+    "5": "81.1%",
+    "10": "89.2%"
+   }
+  },
+  {
+   "field": "claim",
+   "scope": "all",
+   "part": "held-out",
+   "claims": 37,
+   "method": "hybrid",
+   "recall": {
+    "1": "73.0%",
+    "3": "86.5%",
+    "5": "94.6%",
+    "10": "97.3%"
+   }
+  },
+  {
+   "field": "claim",
+   "scope": "all",
+   "part": "both",
+   "claims": 74,
+   "method": "lexical",
+   "recall": {
+    "1": "83.8%",
+    "3": "97.3%",
+    "5": "98.6%",
+    "10": "100.0%"
+   }
+  },
+  {
+   "field": "claim",
+   "scope": "all",
+   "part": "both",
+   "claims": 74,
+   "method": "vector",
+   "recall": {
+    "1": "58.1%",
+    "3": "81.1%",
+    "5": "85.1%",
+    "10": "91.9%"
+   }
+  },
+  {
+   "field": "claim",
+   "scope": "all",
+   "part": "both",
+   "claims": 74,
+   "method": "hybrid",
+   "recall": {
+    "1": "77.0%",
+    "3": "90.5%",
+    "5": "94.6%",
+    "10": "98.6%"
+   }
+  },
+  {
+   "field": "paraphrase",
+   "scope": "own",
+   "part": "tuning",
+   "claims": 37,
+   "method": "lexical",
+   "recall": {
+    "1": "51.4%",
+    "3": "73.0%",
+    "5": "78.4%",
+    "10": "86.5%"
+   }
+  },
+  {
+   "field": "paraphrase",
+   "scope": "own",
+   "part": "tuning",
+   "claims": 37,
+   "method": "vector",
+   "recall": {
+    "1": "54.1%",
+    "3": "70.3%",
+    "5": "81.1%",
+    "10": "94.6%"
+   }
+  },
+  {
+   "field": "paraphrase",
+   "scope": "own",
+   "part": "tuning",
+   "claims": 37,
+   "method": "hybrid",
+   "recall": {
+    "1": "51.4%",
+    "3": "81.1%",
+    "5": "86.5%",
+    "10": "94.6%"
+   }
+  },
+  {
+   "field": "paraphrase",
+   "scope": "own",
+   "part": "held-out",
+   "claims": 37,
+   "method": "lexical",
+   "recall": {
+    "1": "59.5%",
+    "3": "73.0%",
+    "5": "86.5%",
+    "10": "94.6%"
+   }
+  },
+  {
+   "field": "paraphrase",
+   "scope": "own",
+   "part": "held-out",
+   "claims": 37,
+   "method": "vector",
+   "recall": {
+    "1": "62.2%",
+    "3": "78.4%",
+    "5": "86.5%",
+    "10": "91.9%"
+   }
+  },
+  {
+   "field": "paraphrase",
+   "scope": "own",
+   "part": "held-out",
+   "claims": 37,
+   "method": "hybrid",
+   "recall": {
+    "1": "67.6%",
+    "3": "81.1%",
+    "5": "81.1%",
+    "10": "97.3%"
+   }
+  },
+  {
+   "field": "paraphrase",
+   "scope": "own",
+   "part": "both",
+   "claims": 74,
+   "method": "lexical",
+   "recall": {
+    "1": "55.4%",
+    "3": "73.0%",
+    "5": "82.4%",
+    "10": "90.5%"
+   }
+  },
+  {
+   "field": "paraphrase",
+   "scope": "own",
+   "part": "both",
+   "claims": 74,
+   "method": "vector",
+   "recall": {
+    "1": "58.1%",
+    "3": "74.3%",
+    "5": "83.8%",
+    "10": "93.2%"
+   }
+  },
+  {
+   "field": "paraphrase",
+   "scope": "own",
+   "part": "both",
+   "claims": 74,
+   "method": "hybrid",
+   "recall": {
+    "1": "59.5%",
+    "3": "81.1%",
+    "5": "83.8%",
+    "10": "95.9%"
+   }
+  },
+  {
+   "field": "paraphrase",
+   "scope": "all",
+   "part": "tuning",
+   "claims": 37,
+   "method": "lexical",
+   "recall": {
+    "1": "40.5%",
+    "3": "59.5%",
+    "5": "70.3%",
+    "10": "78.4%"
+   }
+  },
+  {
+   "field": "paraphrase",
+   "scope": "all",
+   "part": "tuning",
+   "claims": 37,
+   "method": "vector",
+   "recall": {
+    "1": "45.9%",
+    "3": "59.5%",
+    "5": "70.3%",
+    "10": "78.4%"
+   }
+  },
+  {
+   "field": "paraphrase",
+   "scope": "all",
+   "part": "tuning",
+   "claims": 37,
+   "method": "hybrid",
+   "recall": {
+    "1": "43.2%",
+    "3": "64.9%",
+    "5": "75.7%",
+    "10": "81.1%"
+   }
+  },
+  {
+   "field": "paraphrase",
+   "scope": "all",
+   "part": "held-out",
+   "claims": 37,
+   "method": "lexical",
+   "recall": {
+    "1": "48.6%",
+    "3": "64.9%",
+    "5": "70.3%",
+    "10": "83.8%"
+   }
+  },
+  {
+   "field": "paraphrase",
+   "scope": "all",
+   "part": "held-out",
+   "claims": 37,
+   "method": "vector",
+   "recall": {
+    "1": "54.1%",
+    "3": "64.9%",
+    "5": "73.0%",
+    "10": "75.7%"
+   }
+  },
+  {
+   "field": "paraphrase",
+   "scope": "all",
+   "part": "held-out",
+   "claims": 37,
+   "method": "hybrid",
+   "recall": {
+    "1": "56.8%",
+    "3": "67.6%",
+    "5": "70.3%",
+    "10": "89.2%"
+   }
+  },
+  {
+   "field": "paraphrase",
+   "scope": "all",
+   "part": "both",
+   "claims": 74,
+   "method": "lexical",
+   "recall": {
+    "1": "44.6%",
+    "3": "62.2%",
+    "5": "70.3%",
+    "10": "81.1%"
+   }
+  },
+  {
+   "field": "paraphrase",
+   "scope": "all",
+   "part": "both",
+   "claims": 74,
+   "method": "vector",
+   "recall": {
+    "1": "50.0%",
+    "3": "62.2%",
+    "5": "71.6%",
+    "10": "77.0%"
+   }
+  },
+  {
+   "field": "paraphrase",
+   "scope": "all",
+   "part": "both",
+   "claims": 74,
+   "method": "hybrid",
+   "recall": {
+    "1": "50.0%",
+    "3": "66.2%",
+    "5": "73.0%",
+    "10": "85.1%"
+   }
+  },
+  {
+   "field": "question",
+   "scope": "own",
+   "part": "tuning",
+   "claims": 37,
+   "method": "lexical",
+   "recall": {
+    "1": "29.7%",
+    "3": "43.2%",
+    "5": "54.1%",
+    "10": "64.9%"
+   }
+  },
+  {
+   "field": "question",
+   "scope": "own",
+   "part": "tuning",
+   "claims": 37,
+   "method": "vector",
+   "recall": {
+    "1": "40.5%",
+    "3": "73.0%",
+    "5": "83.8%",
+    "10": "86.5%"
+   }
+  },
+  {
+   "field": "question",
+   "scope": "own",
+   "part": "tuning",
+   "claims": 37,
+   "method": "hybrid",
+   "recall": {
+    "1": "43.2%",
+    "3": "64.9%",
+    "5": "78.4%",
+    "10": "83.8%"
+   }
+  },
+  {
+   "field": "question",
+   "scope": "own",
+   "part": "held-out",
+   "claims": 37,
+   "method": "lexical",
+   "recall": {
+    "1": "45.9%",
+    "3": "73.0%",
+    "5": "73.0%",
+    "10": "86.5%"
+   }
+  },
+  {
+   "field": "question",
+   "scope": "own",
+   "part": "held-out",
+   "claims": 37,
+   "method": "vector",
+   "recall": {
+    "1": "43.2%",
+    "3": "75.7%",
+    "5": "86.5%",
+    "10": "86.5%"
+   }
+  },
+  {
+   "field": "question",
+   "scope": "own",
+   "part": "held-out",
+   "claims": 37,
+   "method": "hybrid",
+   "recall": {
+    "1": "54.1%",
+    "3": "73.0%",
+    "5": "81.1%",
+    "10": "89.2%"
+   }
+  },
+  {
+   "field": "question",
+   "scope": "own",
+   "part": "both",
+   "claims": 74,
+   "method": "lexical",
+   "recall": {
+    "1": "37.8%",
+    "3": "58.1%",
+    "5": "63.5%",
+    "10": "75.7%"
+   }
+  },
+  {
+   "field": "question",
+   "scope": "own",
+   "part": "both",
+   "claims": 74,
+   "method": "vector",
+   "recall": {
+    "1": "41.9%",
+    "3": "74.3%",
+    "5": "85.1%",
+    "10": "86.5%"
+   }
+  },
+  {
+   "field": "question",
+   "scope": "own",
+   "part": "both",
+   "claims": 74,
+   "method": "hybrid",
+   "recall": {
+    "1": "48.6%",
+    "3": "68.9%",
+    "5": "79.7%",
+    "10": "86.5%"
+   }
+  },
+  {
+   "field": "question",
+   "scope": "all",
+   "part": "tuning",
+   "claims": 37,
+   "method": "lexical",
+   "recall": {
+    "1": "24.3%",
+    "3": "32.4%",
+    "5": "37.8%",
+    "10": "45.9%"
+   }
+  },
+  {
+   "field": "question",
+   "scope": "all",
+   "part": "tuning",
+   "claims": 37,
+   "method": "vector",
+   "recall": {
+    "1": "37.8%",
+    "3": "59.5%",
+    "5": "67.6%",
+    "10": "81.1%"
+   }
+  },
+  {
+   "field": "question",
+   "scope": "all",
+   "part": "tuning",
+   "claims": 37,
+   "method": "hybrid",
+   "recall": {
+    "1": "27.0%",
+    "3": "56.8%",
+    "5": "64.9%",
+    "10": "67.6%"
+   }
+  },
+  {
+   "field": "question",
+   "scope": "all",
+   "part": "held-out",
+   "claims": 37,
+   "method": "lexical",
+   "recall": {
+    "1": "18.9%",
+    "3": "40.5%",
+    "5": "45.9%",
+    "10": "54.1%"
+   }
+  },
+  {
+   "field": "question",
+   "scope": "all",
+   "part": "held-out",
+   "claims": 37,
+   "method": "vector",
+   "recall": {
+    "1": "35.1%",
+    "3": "59.5%",
+    "5": "70.3%",
+    "10": "70.3%"
+   }
+  },
+  {
+   "field": "question",
+   "scope": "all",
+   "part": "held-out",
+   "claims": 37,
+   "method": "hybrid",
+   "recall": {
+    "1": "35.1%",
+    "3": "54.1%",
+    "5": "56.8%",
+    "10": "70.3%"
+   }
+  },
+  {
+   "field": "question",
+   "scope": "all",
+   "part": "both",
+   "claims": 74,
+   "method": "lexical",
+   "recall": {
+    "1": "21.6%",
+    "3": "36.5%",
+    "5": "41.9%",
+    "10": "50.0%"
+   }
+  },
+  {
+   "field": "question",
+   "scope": "all",
+   "part": "both",
+   "claims": 74,
+   "method": "vector",
+   "recall": {
+    "1": "36.5%",
+    "3": "59.5%",
+    "5": "68.9%",
+    "10": "75.7%"
+   }
+  },
+  {
+   "field": "question",
+   "scope": "all",
+   "part": "both",
+   "claims": 74,
+   "method": "hybrid",
+   "recall": {
+    "1": "31.1%",
+    "3": "55.4%",
+    "5": "60.8%",
+    "10": "68.9%"
+   }
+  }
+ ]
+}

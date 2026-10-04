@@ -1,0 +1,2281 @@
+{
+ "schema": "bench-evidence/1",
+ "phase": "endtoend",
+ "date": "2026-10-04",
+ "chunkTokens": 512,
+ "boundary": "paragraph",
+ "k": 5,
+ "engineUrl": "http://127.0.0.1:8099",
+ "policy": "b5276b541ef5",
+ "records": [
+  {
+   "id": "c003",
+   "paper": "2411.09996v1",
+   "part": "tuning",
+   "kind": "method",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 10012,
+    "end": 10125
+   },
+   "evidence": [
+    {
+     "start": 9649,
+     "end": 11003,
+     "doi": "10.9999/p01",
+     "excerpt": "The goal is to reconstruct the missing patches from only the\nsampled subset, while the remaining patches—effectively the\nmasked patches—are excluded. This appro…",
+     "withheld": null,
+     "score": 0.9980474173284438
+    }
+   ],
+   "fresh": 23,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 6427,
+   "limitations": [],
+   "chars": 1354
+  },
+  {
+   "id": "c004",
+   "paper": "2411.09996v1",
+   "part": "tuning",
+   "kind": "method",
+   "mode": "exhaustive",
+   "label": "FALSE",
+   "gold": {
+    "start": 15736,
+    "end": 15826
+   },
+   "evidence": [],
+   "fresh": 23,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 1544,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c009",
+   "paper": "2411.09996v1",
+   "part": "tuning",
+   "kind": "finding",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 21142,
+    "end": 21201
+   },
+   "evidence": [
+    {
+     "start": 9649,
+     "end": 11003,
+     "doi": "10.9999/p01",
+     "excerpt": "The goal is to reconstruct the missing patches from only the\nsampled subset, while the remaining patches—effectively the\nmasked patches—are excluded. This appro…",
+     "withheld": null,
+     "score": 0.9945708067520902
+    },
+    {
+     "start": 20541,
+     "end": 21875,
+     "doi": "10.9999/p01",
+     "excerpt": "We then evaluate the models’ recon-\nstruction performance across various masking ratios, including\nbut not limited to those used during pretraining. A model’s\nr…",
+     "withheld": null,
+     "score": 0.9995283369353699
+    },
+    {
+     "start": 22336,
+     "end": 23755,
+     "doi": "10.9999/p01",
+     "excerpt": "pretrained model’s tendency to confuse run and walk, due to\ntheir close distribution.\nFor the SD dataset, Table V presents the results, including\nmodels pretrai…",
+     "withheld": null,
+     "score": 0.996040163287599
+    }
+   ],
+   "fresh": 23,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 1527,
+   "limitations": [],
+   "chars": 4107
+  },
+  {
+   "id": "c010",
+   "paper": "2411.09996v1",
+   "part": "tuning",
+   "kind": "numeric",
+   "mode": "exhaustive",
+   "label": "FALSE",
+   "gold": {
+    "start": 8000,
+    "end": 8071
+   },
+   "evidence": [],
+   "fresh": 23,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 1565,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c015",
+   "paper": "2504.14100v1",
+   "part": "held-out",
+   "kind": "method",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 42702,
+    "end": 42801
+   },
+   "evidence": [
+    {
+     "start": 42602,
+     "end": 43951,
+     "doi": "10.9999/p02",
+     "excerpt": "For human activity\nsensing, the backbone remains fully frozen and only the task\nhead is fine-tuned; for the other three tasks, we unfreeze the\nlast 2 of 12 ViT …",
+     "withheld": null,
+     "score": 0.993412776585829
+    }
+   ],
+   "fresh": 48,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 3237,
+   "limitations": [],
+   "chars": 1349
+  },
+  {
+   "id": "c017",
+   "paper": "2504.14100v1",
+   "part": "held-out",
+   "kind": "numeric",
+   "mode": "exhaustive",
+   "label": "FALSE",
+   "gold": {
+    "start": 17794,
+    "end": 17860
+   },
+   "evidence": [],
+   "fresh": 48,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 3163,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c021",
+   "paper": "2506.06718v2",
+   "part": "tuning",
+   "kind": "method",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 35772,
+    "end": 35938
+   },
+   "evidence": [],
+   "fresh": 55,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 3706,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c023",
+   "paper": "2506.06718v2",
+   "part": "tuning",
+   "kind": "numeric",
+   "mode": "exhaustive",
+   "label": "FALSE",
+   "gold": {
+    "start": 30660,
+    "end": 30778
+   },
+   "evidence": [],
+   "fresh": 55,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 3581,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c027",
+   "paper": "2506.06718v2",
+   "part": "tuning",
+   "kind": "dataset",
+   "mode": "exhaustive",
+   "label": "FALSE",
+   "gold": {
+    "start": 31412,
+    "end": 31502
+   },
+   "evidence": [],
+   "fresh": 55,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 3597,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c028",
+   "paper": "2506.06718v2",
+   "part": "tuning",
+   "kind": "finding",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 48525,
+    "end": 48638
+   },
+   "evidence": [
+    {
+     "start": 48219,
+     "end": 49614,
+     "doi": "10.9999/p03",
+     "excerpt": "The modulation-specific SSL encoder (Figure 12a) forms\nseven well-separated clusters, corresponding precisely to the\nseven modulation classes. This demonstrates…",
+     "withheld": null,
+     "score": 0.9972322778767788
+    }
+   ],
+   "fresh": 55,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 3626,
+   "limitations": [],
+   "chars": 1395
+  },
+  {
+   "id": "c033",
+   "paper": "2509.03077v1",
+   "part": "held-out",
+   "kind": "method",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 13826,
+    "end": 13885
+   },
+   "evidence": [
+    {
+     "start": 12457,
+     "end": 13887,
+     "doi": "10.9999/p04",
+     "excerpt": "The positives and negatives in a batch are determined\nby the labels yi. Intuitively, we compute the vector similarity\nbetween the stored representations, keys, …",
+     "withheld": null,
+     "score": 0.9900940146675165
+    }
+   ],
+   "fresh": 28,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 1762,
+   "limitations": [],
+   "chars": 1430
+  },
+  {
+   "id": "c035",
+   "paper": "2509.03077v1",
+   "part": "held-out",
+   "kind": "finding",
+   "mode": "exhaustive",
+   "label": "FALSE",
+   "gold": {
+    "start": 22618,
+    "end": 22701
+   },
+   "evidence": [],
+   "fresh": 28,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 1787,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c039",
+   "paper": "2509.03077v1",
+   "part": "held-out",
+   "kind": "finding",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 5892,
+    "end": 6009
+   },
+   "evidence": [
+    {
+     "start": 5592,
+     "end": 6998,
+     "doi": "10.9999/p04",
+     "excerpt": "Our results show that our proposed framework learns\nradio representations that are effective even with frozen\nencoder weights, and fine-tuning further enhances …",
+     "withheld": null,
+     "score": 0.9997227505765546
+    }
+   ],
+   "fresh": 28,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 1762,
+   "limitations": [],
+   "chars": 1406
+  },
+  {
+   "id": "c042",
+   "paper": "2511.15162v1",
+   "part": "tuning",
+   "kind": "numeric",
+   "mode": "exhaustive",
+   "label": "FALSE",
+   "gold": {
+    "start": 21373,
+    "end": 21425
+   },
+   "evidence": [],
+   "fresh": 25,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 1716,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c045",
+   "paper": "2511.15162v1",
+   "part": "tuning",
+   "kind": "method",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 25323,
+    "end": 25444
+   },
+   "evidence": [
+    {
+     "start": 24216,
+     "end": 25644,
+     "doi": "10.9999/p05",
+     "excerpt": "TABLE II: Performance of the Multimodal WFM compared to baselines on downstream tasks.\n(a) Linear probing (LP)\nModel RFP INTD INTC HAS RFS POS\nMulti-Modal WFM 9…",
+     "withheld": null,
+     "score": 0.9993411635016192
+    }
+   ],
+   "fresh": 25,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 1759,
+   "limitations": [],
+   "chars": 1428
+  },
+  {
+   "id": "c047",
+   "paper": "2511.15162v1",
+   "part": "tuning",
+   "kind": "finding",
+   "mode": "exhaustive",
+   "label": "FALSE",
+   "gold": {
+    "start": 22838,
+    "end": 22931
+   },
+   "evidence": [],
+   "fresh": 25,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 1716,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c050",
+   "paper": "2606.06373v1",
+   "part": "held-out",
+   "kind": "numeric",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 12709,
+    "end": 13021
+   },
+   "evidence": [
+    {
+     "start": 11610,
+     "end": 13023,
+     "doi": "10.9999/p06",
+     "excerpt": "Predictor. The predictor 𝑃( · ; 𝜙) is a smaller, narrower ViT.\nIt takes the context encoder output ℎ and forecasts the latent\nrepresentations corresponding to…",
+     "withheld": null,
+     "score": 0.9986928068991757
+    }
+   ],
+   "fresh": 25,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 1757,
+   "limitations": [],
+   "chars": 1413
+  },
+  {
+   "id": "c053",
+   "paper": "2606.06373v1",
+   "part": "held-out",
+   "kind": "numeric",
+   "mode": "exhaustive",
+   "label": "FALSE",
+   "gold": {
+    "start": 22662,
+    "end": 22729
+   },
+   "evidence": [],
+   "fresh": 25,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 1723,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c057",
+   "paper": "2606.06373v1",
+   "part": "held-out",
+   "kind": "method",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 12475,
+    "end": 12574
+   },
+   "evidence": [
+    {
+     "start": 11610,
+     "end": 13023,
+     "doi": "10.9999/p06",
+     "excerpt": "Predictor. The predictor 𝑃( · ; 𝜙) is a smaller, narrower ViT.\nIt takes the context encoder output ℎ and forecasts the latent\nrepresentations corresponding to…",
+     "withheld": null,
+     "score": 0.9959437164411512
+    }
+   ],
+   "fresh": 25,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 1695,
+   "limitations": [],
+   "chars": 1413
+  },
+  {
+   "id": "c058",
+   "paper": "2606.06373v1",
+   "part": "held-out",
+   "kind": "numeric",
+   "mode": "exhaustive",
+   "label": "FALSE",
+   "gold": {
+    "start": 13148,
+    "end": 13199
+   },
+   "evidence": [],
+   "fresh": 25,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 1728,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c062",
+   "paper": "2609.04707v1",
+   "part": "tuning",
+   "kind": "finding",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 51705,
+    "end": 51842
+   },
+   "evidence": [
+    {
+     "start": 51654,
+     "end": 52562,
+     "doi": "10.9999/p07",
+     "excerpt": "Several trends emerge from this comparison. First, the\nnumber of identified works grows markedly from only 6\npapers in 2024 to 23 in 2025, corresponding to an i…",
+     "withheld": null,
+     "score": 0.9989301647763974
+    }
+   ],
+   "fresh": 142,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 10497,
+   "limitations": [],
+   "chars": 908
+  },
+  {
+   "id": "c066",
+   "paper": "2609.04707v1",
+   "part": "tuning",
+   "kind": "dataset",
+   "mode": "exhaustive",
+   "label": "FALSE",
+   "gold": {
+    "start": 7854,
+    "end": 7908
+   },
+   "evidence": [],
+   "fresh": 142,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 9566,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c067",
+   "paper": "2609.04707v1",
+   "part": "tuning",
+   "kind": "method",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 40614,
+    "end": 40658
+   },
+   "evidence": [
+    {
+     "start": 101354,
+     "end": 102710,
+     "doi": "10.9999/p07",
+     "excerpt": "LatentWave [116] further shows that the choice of hidden\nregion changes the downstream behavior: frequency masking\nfavors positioning and beam prediction, while…",
+     "withheld": null,
+     "score": 0.9904697103607429
+    }
+   ],
+   "fresh": 142,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 9508,
+   "limitations": [],
+   "chars": 1356
+  },
+  {
+   "id": "c072",
+   "paper": "Tiny_Federated_Wireless_Foundation_Model",
+   "part": "tuning",
+   "kind": "finding",
+   "mode": "exhaustive",
+   "label": "FALSE",
+   "gold": {
+    "start": 48959,
+    "end": 49153
+   },
+   "evidence": [],
+   "fresh": 54,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 3546,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c073",
+   "paper": "Tiny_Federated_Wireless_Foundation_Model",
+   "part": "tuning",
+   "kind": "method",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 36069,
+    "end": 36179
+   },
+   "evidence": [
+    {
+     "start": 34993,
+     "end": 36418,
+     "doi": "10.9999/p09",
+     "excerpt": "The projection\nmatrices transform the input feature representations into\ndistinct subspaces: WQ projects into the query space,\nWK into the key space, and WV int…",
+     "withheld": null,
+     "score": 0.9999461839764834
+    }
+   ],
+   "fresh": 54,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 3464,
+   "limitations": [],
+   "chars": 1425
+  },
+  {
+   "id": "c078",
+   "paper": "http_thesai.org_Downloads_Volume12No2_Pa",
+   "part": "held-out",
+   "kind": "dataset",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 17115,
+    "end": 17210
+   },
+   "evidence": [
+    {
+     "start": 16638,
+     "end": 17904,
+     "doi": "10.9999/p10",
+     "excerpt": "MQTT used in [13]) that\nallows real-time communication between the NodeMCU and\nthe Homergy Mobile App will also work.\nFig. 5. Hardware Components of the Homergy…",
+     "withheld": null,
+     "score": 0.9960593752927847
+    }
+   ],
+   "fresh": 26,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 1667,
+   "limitations": [],
+   "chars": 1266
+  },
+  {
+   "id": "c079",
+   "paper": "http_thesai.org_Downloads_Volume12No2_Pa",
+   "part": "held-out",
+   "kind": "method",
+   "mode": "exhaustive",
+   "label": "FALSE",
+   "gold": {
+    "start": 12711,
+    "end": 12832
+   },
+   "evidence": [],
+   "fresh": 26,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 1684,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c083",
+   "paper": "http_thesai.org_Downloads_Volume12No2_Pa",
+   "part": "held-out",
+   "kind": "method",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 17718,
+    "end": 17837
+   },
+   "evidence": [],
+   "fresh": 26,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 1705,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c086",
+   "paper": "http_thesai.org_Downloads_Volume12No2_Pa",
+   "part": "held-out",
+   "kind": "finding",
+   "mode": "exhaustive",
+   "label": "FALSE",
+   "gold": {
+    "start": 10252,
+    "end": 10353
+   },
+   "evidence": [],
+   "fresh": 26,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 1657,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c088",
+   "paper": "https_www.mdpi.com_2071-1050_14_21_14556",
+   "part": "tuning",
+   "kind": "finding",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 50051,
+    "end": 50216
+   },
+   "evidence": [
+    {
+     "start": 1176,
+     "end": 2481,
+     "doi": "10.9999/p11",
+     "excerpt": "CARE Energy Research and Innovation Center, King Abdulaziz University, Jeddah 21589, Saudi Arabia\n3 Department of Management & Innovation Systems, University of…",
+     "withheld": null,
+     "score": 0.9986122827997663
+    },
+    {
+     "start": 49844,
+     "end": 51264,
+     "doi": "10.9999/p11",
+     "excerpt": "Sustainability 2022, 14, 14556 18 of 20\nit. There are eight shiftable appliances using a 5 kW roof-top PV panel. This problem\nis addressed by comparing eight sc…",
+     "withheld": null,
+     "score": 0.9905471600116759
+    }
+   ],
+   "fresh": 53,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 3839,
+   "limitations": [],
+   "chars": 2725
+  },
+  {
+   "id": "c093",
+   "paper": "https_www.mdpi.com_2071-1050_14_21_14556",
+   "part": "tuning",
+   "kind": "numeric",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 12720,
+    "end": 12787
+   },
+   "evidence": [
+    {
+     "start": 12015,
+     "end": 13361,
+     "doi": "10.9999/p11",
+     "excerpt": "Sustainability 2022, 14, 14556 4 of 20\n(TOUP) and feed-in tariff (FIP) are set at equal levels for this paper as a demonstration\nof the scheme’s efficiency. A l…",
+     "withheld": null,
+     "score": 0.9949374732146282
+    }
+   ],
+   "fresh": 53,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 3934,
+   "limitations": [],
+   "chars": 1346
+  },
+  {
+   "id": "c094",
+   "paper": "https_www.mdpi.com_2071-1050_14_21_14556",
+   "part": "tuning",
+   "kind": "numeric",
+   "mode": "exhaustive",
+   "label": "FALSE",
+   "gold": {
+    "start": 47022,
+    "end": 47095
+   },
+   "evidence": [],
+   "fresh": 53,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 3963,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c099",
+   "paper": "https_www.mdpi.com_2079-9292_12_19_4041_",
+   "part": "held-out",
+   "kind": "numeric",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 2551,
+    "end": 2638
+   },
+   "evidence": [
+    {
+     "start": 1314,
+     "end": 2640,
+     "doi": "10.9999/p12",
+     "excerpt": "Implementing\ndemand-response programs in residential and commercial buildings requires the use of smart meters\nand smart plugs. In this paper, we propose an arc…",
+     "withheld": null,
+     "score": 0.9998493685451311
+    }
+   ],
+   "fresh": 51,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 3473,
+   "limitations": [],
+   "chars": 1326
+  },
+  {
+   "id": "c101",
+   "paper": "https_www.mdpi.com_2079-9292_12_19_4041_",
+   "part": "held-out",
+   "kind": "method",
+   "mode": "exhaustive",
+   "label": "FALSE",
+   "gold": {
+    "start": 1953,
+    "end": 2047
+   },
+   "evidence": [],
+   "fresh": 51,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 3457,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c104",
+   "paper": "https_www.mdpi.com_2079-9292_12_19_4041_",
+   "part": "held-out",
+   "kind": "numeric",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 41634,
+    "end": 41816
+   },
+   "evidence": [
+    {
+     "start": 41534,
+     "end": 41913,
+     "doi": "10.9999/p12",
+     "excerpt": "The first is based on the user’s needs without considering the TOU. The second scenario is\nbased on the TOU. Those cases are summarized in Tables 12 and 13. The…",
+     "withheld": null,
+     "score": 0.9991724854558109
+    }
+   ],
+   "fresh": 51,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 3609,
+   "limitations": [],
+   "chars": 379
+  },
+  {
+   "id": "c107",
+   "paper": "https_www.mdpi.com_2079-9292_12_19_4041_",
+   "part": "held-out",
+   "kind": "dataset",
+   "mode": "exhaustive",
+   "label": "FALSE",
+   "gold": {
+    "start": 40902,
+    "end": 40956
+   },
+   "evidence": [],
+   "fresh": 51,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 3524,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c109",
+   "paper": "https_www.mdpi.com_2079-9292_12_21_4453_",
+   "part": "tuning",
+   "kind": "method",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 37562,
+    "end": 37812
+   },
+   "evidence": [
+    {
+     "start": 37188,
+     "end": 38554,
+     "doi": "10.9999/p13",
+     "excerpt": "This module implements control APIs for the devices and, if necessary,\ninterfaces with their proprietary APIs. Predefined APIs exist, and it is possible to\ndeve…",
+     "withheld": null,
+     "score": 0.9999535970894232
+    }
+   ],
+   "fresh": 62,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 3962,
+   "limitations": [],
+   "chars": 1366
+  },
+  {
+   "id": "c114",
+   "paper": "https_www.mdpi.com_2079-9292_12_21_4453_",
+   "part": "tuning",
+   "kind": "method",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 36424,
+    "end": 36500
+   },
+   "evidence": [
+    {
+     "start": 18596,
+     "end": 19968,
+     "doi": "10.9999/p13",
+     "excerpt": "[6] designed and prototyped an HEMS connecting home appli-\nances, heating, ventilation, and air conditioning (HVAC) units to monitoring and control\nmodules with…",
+     "withheld": null,
+     "score": 0.9919395202905894
+    },
+    {
+     "start": 35860,
+     "end": 37188,
+     "doi": "10.9999/p13",
+     "excerpt": "Electronics 2023, 12, 4453 11 of 23\nfor middleware development were utilized, including microservices, multiprocessing, and\nauthenticated communication protocol…",
+     "withheld": null,
+     "score": 0.9998802367996489
+    },
+    {
+     "start": 39973,
+     "end": 41355,
+     "doi": "10.9999/p13",
+     "excerpt": "Electronics 2023, 12, 4453 12 of 23\nThe RT-DSP/SHArM Github project offers the open middleware implementation\nthat enables the support of specifications for Hom…",
+     "withheld": null,
+     "score": 0.9919288629347873
+    }
+   ],
+   "fresh": 62,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 3906,
+   "limitations": [],
+   "chars": 4082
+  },
+  {
+   "id": "c116",
+   "paper": "https_www.mdpi.com_2079-9292_12_21_4453_",
+   "part": "tuning",
+   "kind": "method",
+   "mode": "exhaustive",
+   "label": "FALSE",
+   "gold": {
+    "start": 35545,
+    "end": 35623
+   },
+   "evidence": [],
+   "fresh": 62,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 3955,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c118",
+   "paper": "https_www.mdpi.com_2624-6511_5_3_53_pdf_",
+   "part": "held-out",
+   "kind": "method",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 24058,
+    "end": 24120
+   },
+   "evidence": [],
+   "fresh": 66,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 4219,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c123",
+   "paper": "https_www.mdpi.com_2624-6511_5_3_53_pdf_",
+   "part": "held-out",
+   "kind": "method",
+   "mode": "exhaustive",
+   "label": "FALSE",
+   "gold": {
+    "start": 30524,
+    "end": 30611
+   },
+   "evidence": [],
+   "fresh": 66,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 4202,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c124",
+   "paper": "https_www.mdpi.com_2624-6511_5_3_53_pdf_",
+   "part": "held-out",
+   "kind": "dataset",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 37339,
+    "end": 37444
+   },
+   "evidence": [
+    {
+     "start": 36636,
+     "end": 38045,
+     "doi": "10.9999/p14",
+     "excerpt": "Element Description\nHome automation system Home Assistant, running in a Raspberry Pi 4, 4 GB RAM\nPhoto voltaic array 14 panels, 480 W rated\nInverter Ingecon Sun…",
+     "withheld": null,
+     "score": 0.9998415643851868
+    }
+   ],
+   "fresh": 66,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 4225,
+   "limitations": [],
+   "chars": 1409
+  },
+  {
+   "id": "c128",
+   "paper": "Papaers_overview",
+   "part": "held-out",
+   "kind": "finding",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 921,
+    "end": 1063
+   },
+   "evidence": [
+    {
+     "start": 0,
+     "end": 1412,
+     "doi": "10.9999/p08",
+     "excerpt": "Foundational Models for Raw I/Q Streams in AI-Native 6G\nExecutive Summary\nThe transition toward sixth-generation (6G) wireless architectures necessitates a shif…",
+     "withheld": null,
+     "score": 0.9998073769669814
+    }
+   ],
+   "fresh": 7,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 462,
+   "limitations": [],
+   "chars": 1412
+  },
+  {
+   "id": "c132",
+   "paper": "Papaers_overview",
+   "part": "held-out",
+   "kind": "numeric",
+   "mode": "exhaustive",
+   "label": "FALSE",
+   "gold": {
+    "start": 6144,
+    "end": 6208
+   },
+   "evidence": [],
+   "fresh": 7,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 459,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c133",
+   "paper": "Papaers_overview",
+   "part": "held-out",
+   "kind": "numeric",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 5687,
+    "end": 5823
+   },
+   "evidence": [
+    {
+     "start": 5133,
+     "end": 6423,
+     "doi": "10.9999/p08",
+     "excerpt": "Performance Benchmarks and Data Efficiency\nEvaluation on real-world, over-the-air datasets—including 68-70 GB of captured IQ\ndata—demonstrates the superiority o…",
+     "withheld": null,
+     "score": 0.9988959694191872
+    }
+   ],
+   "fresh": 7,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 459,
+   "limitations": [],
+   "chars": 1290
+  },
+  {
+   "id": "c003",
+   "paper": "2411.09996v1",
+   "part": "tuning",
+   "kind": "method",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 10012,
+    "end": 10125
+   },
+   "evidence": [
+    {
+     "start": 9649,
+     "end": 11003,
+     "doi": "10.9999/p01",
+     "excerpt": "The goal is to reconstruct the missing patches from only the\nsampled subset, while the remaining patches—effectively the\nmasked patches—are excluded. This appro…",
+     "withheld": null,
+     "score": 0.9980474173284438
+    }
+   ],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 5421,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 1354
+  },
+  {
+   "id": "c004",
+   "paper": "2411.09996v1",
+   "part": "tuning",
+   "kind": "method",
+   "mode": "guided",
+   "label": "FALSE",
+   "gold": {
+    "start": 15736,
+    "end": 15826
+   },
+   "evidence": [],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 393,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 0
+  },
+  {
+   "id": "c009",
+   "paper": "2411.09996v1",
+   "part": "tuning",
+   "kind": "finding",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 21142,
+    "end": 21201
+   },
+   "evidence": [
+    {
+     "start": 9649,
+     "end": 11003,
+     "doi": "10.9999/p01",
+     "excerpt": "The goal is to reconstruct the missing patches from only the\nsampled subset, while the remaining patches—effectively the\nmasked patches—are excluded. This appro…",
+     "withheld": null,
+     "score": 0.9945708067520902
+    },
+    {
+     "start": 20541,
+     "end": 21875,
+     "doi": "10.9999/p01",
+     "excerpt": "We then evaluate the models’ recon-\nstruction performance across various masking ratios, including\nbut not limited to those used during pretraining. A model’s\nr…",
+     "withheld": null,
+     "score": 0.9995283369353699
+    },
+    {
+     "start": 22336,
+     "end": 23755,
+     "doi": "10.9999/p01",
+     "excerpt": "pretrained model’s tendency to confuse run and walk, due to\ntheir close distribution.\nFor the SD dataset, Table V presents the results, including\nmodels pretrai…",
+     "withheld": null,
+     "score": 0.996040163287599
+    }
+   ],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 366,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 4107
+  },
+  {
+   "id": "c010",
+   "paper": "2411.09996v1",
+   "part": "tuning",
+   "kind": "numeric",
+   "mode": "guided",
+   "label": "FALSE",
+   "gold": {
+    "start": 8000,
+    "end": 8071
+   },
+   "evidence": [],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 382,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 0
+  },
+  {
+   "id": "c015",
+   "paper": "2504.14100v1",
+   "part": "held-out",
+   "kind": "method",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 42702,
+    "end": 42801
+   },
+   "evidence": [
+    {
+     "start": 42602,
+     "end": 43951,
+     "doi": "10.9999/p02",
+     "excerpt": "For human activity\nsensing, the backbone remains fully frozen and only the task\nhead is fine-tuned; for the other three tasks, we unfreeze the\nlast 2 of 12 ViT …",
+     "withheld": null,
+     "score": 0.993412776585829
+    }
+   ],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 424,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 1349
+  },
+  {
+   "id": "c017",
+   "paper": "2504.14100v1",
+   "part": "held-out",
+   "kind": "numeric",
+   "mode": "guided",
+   "label": "FALSE",
+   "gold": {
+    "start": 17794,
+    "end": 17860
+   },
+   "evidence": [],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 374,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 0
+  },
+  {
+   "id": "c021",
+   "paper": "2506.06718v2",
+   "part": "tuning",
+   "kind": "method",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 35772,
+    "end": 35938
+   },
+   "evidence": [],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 415,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 0
+  },
+  {
+   "id": "c023",
+   "paper": "2506.06718v2",
+   "part": "tuning",
+   "kind": "numeric",
+   "mode": "guided",
+   "label": "FALSE",
+   "gold": {
+    "start": 30660,
+    "end": 30778
+   },
+   "evidence": [],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 384,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 0
+  },
+  {
+   "id": "c027",
+   "paper": "2506.06718v2",
+   "part": "tuning",
+   "kind": "dataset",
+   "mode": "guided",
+   "label": "FALSE",
+   "gold": {
+    "start": 31412,
+    "end": 31502
+   },
+   "evidence": [],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 389,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 0
+  },
+  {
+   "id": "c028",
+   "paper": "2506.06718v2",
+   "part": "tuning",
+   "kind": "finding",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 48525,
+    "end": 48638
+   },
+   "evidence": [
+    {
+     "start": 48219,
+     "end": 49614,
+     "doi": "10.9999/p03",
+     "excerpt": "The modulation-specific SSL encoder (Figure 12a) forms\nseven well-separated clusters, corresponding precisely to the\nseven modulation classes. This demonstrates…",
+     "withheld": null,
+     "score": 0.9972322778767788
+    }
+   ],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 379,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 1395
+  },
+  {
+   "id": "c033",
+   "paper": "2509.03077v1",
+   "part": "held-out",
+   "kind": "method",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 13826,
+    "end": 13885
+   },
+   "evidence": [
+    {
+     "start": 12457,
+     "end": 13887,
+     "doi": "10.9999/p04",
+     "excerpt": "The positives and negatives in a batch are determined\nby the labels yi. Intuitively, we compute the vector similarity\nbetween the stored representations, keys, …",
+     "withheld": null,
+     "score": 0.9900940146675165
+    }
+   ],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 378,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 1430
+  },
+  {
+   "id": "c035",
+   "paper": "2509.03077v1",
+   "part": "held-out",
+   "kind": "finding",
+   "mode": "guided",
+   "label": "FALSE",
+   "gold": {
+    "start": 22618,
+    "end": 22701
+   },
+   "evidence": [],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 415,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 0
+  },
+  {
+   "id": "c039",
+   "paper": "2509.03077v1",
+   "part": "held-out",
+   "kind": "finding",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 5892,
+    "end": 6009
+   },
+   "evidence": [
+    {
+     "start": 5592,
+     "end": 6998,
+     "doi": "10.9999/p04",
+     "excerpt": "Our results show that our proposed framework learns\nradio representations that are effective even with frozen\nencoder weights, and fine-tuning further enhances …",
+     "withheld": null,
+     "score": 0.9997227505765546
+    }
+   ],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 381,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 1406
+  },
+  {
+   "id": "c042",
+   "paper": "2511.15162v1",
+   "part": "tuning",
+   "kind": "numeric",
+   "mode": "guided",
+   "label": "FALSE",
+   "gold": {
+    "start": 21373,
+    "end": 21425
+   },
+   "evidence": [],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 360,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 0
+  },
+  {
+   "id": "c045",
+   "paper": "2511.15162v1",
+   "part": "tuning",
+   "kind": "method",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 25323,
+    "end": 25444
+   },
+   "evidence": [
+    {
+     "start": 24216,
+     "end": 25644,
+     "doi": "10.9999/p05",
+     "excerpt": "TABLE II: Performance of the Multimodal WFM compared to baselines on downstream tasks.\n(a) Linear probing (LP)\nModel RFP INTD INTC HAS RFS POS\nMulti-Modal WFM 9…",
+     "withheld": null,
+     "score": 0.9993411635016192
+    }
+   ],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 376,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 1428
+  },
+  {
+   "id": "c047",
+   "paper": "2511.15162v1",
+   "part": "tuning",
+   "kind": "finding",
+   "mode": "guided",
+   "label": "FALSE",
+   "gold": {
+    "start": 22838,
+    "end": 22931
+   },
+   "evidence": [],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 400,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 0
+  },
+  {
+   "id": "c050",
+   "paper": "2606.06373v1",
+   "part": "held-out",
+   "kind": "numeric",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 12709,
+    "end": 13021
+   },
+   "evidence": [
+    {
+     "start": 11610,
+     "end": 13023,
+     "doi": "10.9999/p06",
+     "excerpt": "Predictor. The predictor 𝑃( · ; 𝜙) is a smaller, narrower ViT.\nIt takes the context encoder output ℎ and forecasts the latent\nrepresentations corresponding to…",
+     "withheld": null,
+     "score": 0.9986928068991757
+    }
+   ],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 462,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 1413
+  },
+  {
+   "id": "c053",
+   "paper": "2606.06373v1",
+   "part": "held-out",
+   "kind": "numeric",
+   "mode": "guided",
+   "label": "FALSE",
+   "gold": {
+    "start": 22662,
+    "end": 22729
+   },
+   "evidence": [],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 415,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 0
+  },
+  {
+   "id": "c057",
+   "paper": "2606.06373v1",
+   "part": "held-out",
+   "kind": "method",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 12475,
+    "end": 12574
+   },
+   "evidence": [
+    {
+     "start": 11610,
+     "end": 13023,
+     "doi": "10.9999/p06",
+     "excerpt": "Predictor. The predictor 𝑃( · ; 𝜙) is a smaller, narrower ViT.\nIt takes the context encoder output ℎ and forecasts the latent\nrepresentations corresponding to…",
+     "withheld": null,
+     "score": 0.9959437164411512
+    }
+   ],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 409,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 1413
+  },
+  {
+   "id": "c058",
+   "paper": "2606.06373v1",
+   "part": "held-out",
+   "kind": "numeric",
+   "mode": "guided",
+   "label": "FALSE",
+   "gold": {
+    "start": 13148,
+    "end": 13199
+   },
+   "evidence": [],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 426,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 0
+  },
+  {
+   "id": "c062",
+   "paper": "2609.04707v1",
+   "part": "tuning",
+   "kind": "finding",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 51705,
+    "end": 51842
+   },
+   "evidence": [
+    {
+     "start": 51654,
+     "end": 52562,
+     "doi": "10.9999/p07",
+     "excerpt": "Several trends emerge from this comparison. First, the\nnumber of identified works grows markedly from only 6\npapers in 2024 to 23 in 2025, corresponding to an i…",
+     "withheld": null,
+     "score": 0.9989301647763974
+    }
+   ],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 517,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 908
+  },
+  {
+   "id": "c066",
+   "paper": "2609.04707v1",
+   "part": "tuning",
+   "kind": "dataset",
+   "mode": "guided",
+   "label": "FALSE",
+   "gold": {
+    "start": 7854,
+    "end": 7908
+   },
+   "evidence": [],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 385,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 0
+  },
+  {
+   "id": "c067",
+   "paper": "2609.04707v1",
+   "part": "tuning",
+   "kind": "method",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 40614,
+    "end": 40658
+   },
+   "evidence": [
+    {
+     "start": 101354,
+     "end": 102710,
+     "doi": "10.9999/p07",
+     "excerpt": "LatentWave [116] further shows that the choice of hidden\nregion changes the downstream behavior: frequency masking\nfavors positioning and beam prediction, while…",
+     "withheld": null,
+     "score": 0.9904697103607429
+    }
+   ],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 400,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 1356
+  },
+  {
+   "id": "c072",
+   "paper": "Tiny_Federated_Wireless_Foundation_Model",
+   "part": "tuning",
+   "kind": "finding",
+   "mode": "guided",
+   "label": "FALSE",
+   "gold": {
+    "start": 48959,
+    "end": 49153
+   },
+   "evidence": [],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 382,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 0
+  },
+  {
+   "id": "c073",
+   "paper": "Tiny_Federated_Wireless_Foundation_Model",
+   "part": "tuning",
+   "kind": "method",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 36069,
+    "end": 36179
+   },
+   "evidence": [
+    {
+     "start": 34993,
+     "end": 36418,
+     "doi": "10.9999/p09",
+     "excerpt": "The projection\nmatrices transform the input feature representations into\ndistinct subspaces: WQ projects into the query space,\nWK into the key space, and WV int…",
+     "withheld": null,
+     "score": 0.9999461839764834
+    }
+   ],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 395,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 1425
+  },
+  {
+   "id": "c078",
+   "paper": "http_thesai.org_Downloads_Volume12No2_Pa",
+   "part": "held-out",
+   "kind": "dataset",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 17115,
+    "end": 17210
+   },
+   "evidence": [
+    {
+     "start": 16638,
+     "end": 17904,
+     "doi": "10.9999/p10",
+     "excerpt": "MQTT used in [13]) that\nallows real-time communication between the NodeMCU and\nthe Homergy Mobile App will also work.\nFig. 5. Hardware Components of the Homergy…",
+     "withheld": null,
+     "score": 0.9960593752927847
+    }
+   ],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 353,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 1266
+  },
+  {
+   "id": "c079",
+   "paper": "http_thesai.org_Downloads_Volume12No2_Pa",
+   "part": "held-out",
+   "kind": "method",
+   "mode": "guided",
+   "label": "FALSE",
+   "gold": {
+    "start": 12711,
+    "end": 12832
+   },
+   "evidence": [],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 390,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 0
+  },
+  {
+   "id": "c083",
+   "paper": "http_thesai.org_Downloads_Volume12No2_Pa",
+   "part": "held-out",
+   "kind": "method",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 17718,
+    "end": 17837
+   },
+   "evidence": [],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 388,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 0
+  },
+  {
+   "id": "c086",
+   "paper": "http_thesai.org_Downloads_Volume12No2_Pa",
+   "part": "held-out",
+   "kind": "finding",
+   "mode": "guided",
+   "label": "FALSE",
+   "gold": {
+    "start": 10252,
+    "end": 10353
+   },
+   "evidence": [],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 352,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 0
+  },
+  {
+   "id": "c088",
+   "paper": "https_www.mdpi.com_2071-1050_14_21_14556",
+   "part": "tuning",
+   "kind": "finding",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 50051,
+    "end": 50216
+   },
+   "evidence": [
+    {
+     "start": 1176,
+     "end": 2481,
+     "doi": "10.9999/p11",
+     "excerpt": "CARE Energy Research and Innovation Center, King Abdulaziz University, Jeddah 21589, Saudi Arabia\n3 Department of Management & Innovation Systems, University of…",
+     "withheld": null,
+     "score": 0.9986122827997663
+    },
+    {
+     "start": 49844,
+     "end": 51264,
+     "doi": "10.9999/p11",
+     "excerpt": "Sustainability 2022, 14, 14556 18 of 20\nit. There are eight shiftable appliances using a 5 kW roof-top PV panel. This problem\nis addressed by comparing eight sc…",
+     "withheld": null,
+     "score": 0.9905471600116759
+    }
+   ],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 373,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 2725
+  },
+  {
+   "id": "c093",
+   "paper": "https_www.mdpi.com_2071-1050_14_21_14556",
+   "part": "tuning",
+   "kind": "numeric",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 12720,
+    "end": 12787
+   },
+   "evidence": [
+    {
+     "start": 12015,
+     "end": 13361,
+     "doi": "10.9999/p11",
+     "excerpt": "Sustainability 2022, 14, 14556 4 of 20\n(TOUP) and feed-in tariff (FIP) are set at equal levels for this paper as a demonstration\nof the scheme’s efficiency. A l…",
+     "withheld": null,
+     "score": 0.9949374732146282
+    }
+   ],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 488,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 1346
+  },
+  {
+   "id": "c094",
+   "paper": "https_www.mdpi.com_2071-1050_14_21_14556",
+   "part": "tuning",
+   "kind": "numeric",
+   "mode": "guided",
+   "label": "FALSE",
+   "gold": {
+    "start": 47022,
+    "end": 47095
+   },
+   "evidence": [],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 445,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 0
+  },
+  {
+   "id": "c099",
+   "paper": "https_www.mdpi.com_2079-9292_12_19_4041_",
+   "part": "held-out",
+   "kind": "numeric",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 2551,
+    "end": 2638
+   },
+   "evidence": [
+    {
+     "start": 1314,
+     "end": 2640,
+     "doi": "10.9999/p12",
+     "excerpt": "Implementing\ndemand-response programs in residential and commercial buildings requires the use of smart meters\nand smart plugs. In this paper, we propose an arc…",
+     "withheld": null,
+     "score": 0.9998493685451311
+    }
+   ],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 373,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 1326
+  },
+  {
+   "id": "c101",
+   "paper": "https_www.mdpi.com_2079-9292_12_19_4041_",
+   "part": "held-out",
+   "kind": "method",
+   "mode": "guided",
+   "label": "FALSE",
+   "gold": {
+    "start": 1953,
+    "end": 2047
+   },
+   "evidence": [],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 327,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 0
+  },
+  {
+   "id": "c104",
+   "paper": "https_www.mdpi.com_2079-9292_12_19_4041_",
+   "part": "held-out",
+   "kind": "numeric",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 41634,
+    "end": 41816
+   },
+   "evidence": [
+    {
+     "start": 41534,
+     "end": 41913,
+     "doi": "10.9999/p12",
+     "excerpt": "The first is based on the user’s needs without considering the TOU. The second scenario is\nbased on the TOU. Those cases are summarized in Tables 12 and 13. The…",
+     "withheld": null,
+     "score": 0.9991724854558109
+    }
+   ],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 373,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 379
+  },
+  {
+   "id": "c107",
+   "paper": "https_www.mdpi.com_2079-9292_12_19_4041_",
+   "part": "held-out",
+   "kind": "dataset",
+   "mode": "guided",
+   "label": "FALSE",
+   "gold": {
+    "start": 40902,
+    "end": 40956
+   },
+   "evidence": [],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 431,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 0
+  },
+  {
+   "id": "c109",
+   "paper": "https_www.mdpi.com_2079-9292_12_21_4453_",
+   "part": "tuning",
+   "kind": "method",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 37562,
+    "end": 37812
+   },
+   "evidence": [
+    {
+     "start": 37188,
+     "end": 38554,
+     "doi": "10.9999/p13",
+     "excerpt": "This module implements control APIs for the devices and, if necessary,\ninterfaces with their proprietary APIs. Predefined APIs exist, and it is possible to\ndeve…",
+     "withheld": null,
+     "score": 0.9999535970894232
+    }
+   ],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 337,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 1366
+  },
+  {
+   "id": "c114",
+   "paper": "https_www.mdpi.com_2079-9292_12_21_4453_",
+   "part": "tuning",
+   "kind": "method",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 36424,
+    "end": 36500
+   },
+   "evidence": [
+    {
+     "start": 35860,
+     "end": 37188,
+     "doi": "10.9999/p13",
+     "excerpt": "Electronics 2023, 12, 4453 11 of 23\nfor middleware development were utilized, including microservices, multiprocessing, and\nauthenticated communication protocol…",
+     "withheld": null,
+     "score": 0.9998802367996489
+    },
+    {
+     "start": 39973,
+     "end": 41355,
+     "doi": "10.9999/p13",
+     "excerpt": "Electronics 2023, 12, 4453 12 of 23\nThe RT-DSP/SHArM Github project offers the open middleware implementation\nthat enables the support of specifications for Hom…",
+     "withheld": null,
+     "score": 0.9919288629347873
+    }
+   ],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 369,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 2710
+  },
+  {
+   "id": "c116",
+   "paper": "https_www.mdpi.com_2079-9292_12_21_4453_",
+   "part": "tuning",
+   "kind": "method",
+   "mode": "guided",
+   "label": "FALSE",
+   "gold": {
+    "start": 35545,
+    "end": 35623
+   },
+   "evidence": [],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 334,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 0
+  },
+  {
+   "id": "c118",
+   "paper": "https_www.mdpi.com_2624-6511_5_3_53_pdf_",
+   "part": "held-out",
+   "kind": "method",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 24058,
+    "end": 24120
+   },
+   "evidence": [],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 384,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 0
+  },
+  {
+   "id": "c123",
+   "paper": "https_www.mdpi.com_2624-6511_5_3_53_pdf_",
+   "part": "held-out",
+   "kind": "method",
+   "mode": "guided",
+   "label": "FALSE",
+   "gold": {
+    "start": 30524,
+    "end": 30611
+   },
+   "evidence": [],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 340,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 0
+  },
+  {
+   "id": "c124",
+   "paper": "https_www.mdpi.com_2624-6511_5_3_53_pdf_",
+   "part": "held-out",
+   "kind": "dataset",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 37339,
+    "end": 37444
+   },
+   "evidence": [
+    {
+     "start": 36636,
+     "end": 38045,
+     "doi": "10.9999/p14",
+     "excerpt": "Element Description\nHome automation system Home Assistant, running in a Raspberry Pi 4, 4 GB RAM\nPhoto voltaic array 14 panels, 480 W rated\nInverter Ingecon Sun…",
+     "withheld": null,
+     "score": 0.9998415643851868
+    }
+   ],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 370,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 1409
+  },
+  {
+   "id": "c128",
+   "paper": "Papaers_overview",
+   "part": "held-out",
+   "kind": "finding",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 921,
+    "end": 1063
+   },
+   "evidence": [
+    {
+     "start": 0,
+     "end": 1412,
+     "doi": "10.9999/p08",
+     "excerpt": "Foundational Models for Raw I/Q Streams in AI-Native 6G\nExecutive Summary\nThe transition toward sixth-generation (6G) wireless architectures necessitates a shif…",
+     "withheld": null,
+     "score": 0.9998073769669814
+    }
+   ],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 339,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 1412
+  },
+  {
+   "id": "c132",
+   "paper": "Papaers_overview",
+   "part": "held-out",
+   "kind": "numeric",
+   "mode": "guided",
+   "label": "FALSE",
+   "gold": {
+    "start": 6144,
+    "end": 6208
+   },
+   "evidence": [],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 329,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 0
+  },
+  {
+   "id": "c133",
+   "paper": "Papaers_overview",
+   "part": "held-out",
+   "kind": "numeric",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 5687,
+    "end": 5823
+   },
+   "evidence": [
+    {
+     "start": 5133,
+     "end": 6423,
+     "doi": "10.9999/p08",
+     "excerpt": "Performance Benchmarks and Data Efficiency\nEvaluation on real-world, over-the-air datasets—including 68-70 GB of captured IQ\ndata—demonstrates the superiority o…",
+     "withheld": null,
+     "score": 0.9988959694191872
+    }
+   ],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 360,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 1290
+  }
+ ],
+ "redacted": true
+}

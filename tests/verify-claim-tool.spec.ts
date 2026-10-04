@@ -58,11 +58,11 @@ function addPaper(doi: string, title: string, text: string | null): void {
   publishSource(db, doi, { kind: "local-file", ref: `${doi.slice(-3)}.pdf`, license: null, digest: String(++digestN).padStart(64, "0"), extraction: "t@1", text, pageStarts: [0] }, cfg, NOW());
 }
 
-function writeConfig(opts: { chunkTokens?: number; maxJudgments?: number; workers?: number; engine?: string } = {}): void {
+function writeConfig(opts: { chunkTokens?: number; maxJudgments?: number; workers?: number; engine?: string; boundary?: "paragraph" | "section" | "hard" } = {}): void {
   mkdirSync(join(root, "config"), { recursive: true });
   writeFileSync(
     join(root, "config", "chunking.yaml"),
-    `chunking:\n  chunk_tokens: ${opts.chunkTokens ?? 8192}\n  overlap_tokens: 0\n  chars_per_token: 2.8\n  boundary: paragraph\nverification:\n  engine: ${opts.engine ?? "k2"}\n  min_confidence: 0.99\n  workers: ${opts.workers ?? 2}\n  max_judgments: ${opts.maxJudgments ?? 120}\n`,
+    `chunking:\n  chunk_tokens: ${opts.chunkTokens ?? 8192}\n  overlap_tokens: 0\n  chars_per_token: 2.8\n  boundary: ${opts.boundary ?? "paragraph"}\nverification:\n  engine: ${opts.engine ?? "k2"}\n  min_confidence: 0.99\n  workers: ${opts.workers ?? 2}\n  max_judgments: ${opts.maxJudgments ?? 120}\n`,
   );
 }
 
@@ -224,6 +224,9 @@ describe("supporting evidence (R8–R11, R13, AE4)", () => {
   });
 
   it("exhaustive: checks every usable chunk, localizes support to a verbatim excerpt, returns an exact pointer", async () => {
+    // Large stage-1 chunks (over the excerpt limit) are what localization exists for: pin that policy here.
+    // At the default 512-token section policy a chunk is already a releasable passage and needs no recheck.
+    writeConfig({ chunkTokens: 1024, engine: "eos" });
     const { hooks, stats } = engine();
     const r = await run({ papers: "all" }, hooks);
     const s = S(r);
@@ -244,6 +247,20 @@ describe("supporting evidence (R8–R11, R13, AE4)", () => {
     assert.equal(s.coverage.work.checked, chunks);
     assert.ok(stats.rows > chunks, "stage-1 judgments plus localization rechecks");
     assert.ok(Value.Check(VerifyClaimOutput, s));
+  });
+
+  it("under the default policy (section chunks capped at 512 tokens) a chunk is already a passage: support needs no localization recheck", async () => {
+    const { hooks, stats } = engine(); // no config file: the documented defaults
+    const s = S(await run({ papers: "all" }, hooks));
+    assert.equal(s.evidence.length, 1);
+    const ev = s.evidence[0];
+    assert.ok(ev.excerpt.includes(SUPPORT));
+    assert.ok(ev.excerpt.length <= 1_500);
+    assert.equal(sourceText("10.1111/aaa").slice(ev.span.start, ev.span.end), ev.excerpt);
+    const chunks = chunksOf(db, "10.1111/aaa").length + chunksOf(db, "10.2222/bbb").length;
+    assert.equal(s.coverage.work.checked, chunks);
+    assert.equal(stats.rows, chunks, "one judgment per chunk and nothing else: the chunk IS the passage");
+    assert.ok(chunksOf(db, "10.1111/aaa").every((c) => c.text.length <= 1_433 && c.section !== null));
   });
 
   it("returns only supporting records: non-supporting text never reaches the agent (R10, R5)", async () => {

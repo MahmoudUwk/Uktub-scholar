@@ -9,24 +9,38 @@ Each item names its trigger and source/template. Historical rationale lives in
 Every step is behavior-first: tests written and run red, implemented, then green, then verified on the
 real corpus and recorded. Status is updated in place.
 
-1. **Section-aware chunking (in progress).** One structure-aware splitter shared by retrieval and claim
-   verification: whole sections when they fit the window, merged when tiny, split at paragraph then
-   sentence boundaries when too large, every chunk labelled with its section. Structure from GROBID TEI
-   heads and from PDF text items (font size plus numbering), paragraphs as the fallback. Must be provably
-   reliable: every character in exactly one chunk, exact offsets, deterministic, size-capped, no orphaned
-   headings, golden sections on the real papers. Adopt as the default only if held-out claim recall is not
-   worse than the fixed 1,024-token baseline.
-2. **Local model runtime: llama.cpp for embeddings (and any GGUF decision model).** Choice among bundling,
-   first-use pinned download, an npm binding, or a user install is being researched; embedding model is
-   EmbeddingGemma-300m QAT Q8_0 (GGUF, Gemma licence — terms apply). Decision-2.0 Eos is a custom
-   Qwen-backbone-plus-head model, not a stock llama.cpp architecture; it stays on its Python worker unless
-   a conversion is shown to reproduce its scores.
-3. **RAG (exploratory retrieval) for the writing agent.** A passage-search tool over registered papers:
-   hybrid FTS5/BM25 plus vector search fused with Reciprocal Rank Fusion (k = 60), lexical fallback when no
-   embedder is available, results as bounded passages with section labels and `doi@revision#start-end`
-   pointers under the same containment rules as evidence. Vectors in a plain SQLite BLOB table with an exact
-   scan (per-project corpora are small) unless measurement shows an index is needed. Measured on held-out
-   papers (recall of the gold passage, latency) before it ships.
+1. **Section-aware chunking — done (2026-10-04).** `splitBySections` (property- and mutation-tested), TEI heads
+   and PDF heading detection, schema v4, default `boundary: section` at 512 tokens
+   ([evidence](benchmarks/evidence-chunking-sections-2026-10-04.md); [decision](DECISIONS.md)). Open items:
+   - PDF heading detector residue on the 14 real PDFs: ≈ 7 false positives in ≈ 300 headings (three pseudocode
+     lines with a bare line number, one affiliation footnote, two numbered list items, one notes line). They
+     add a wrong boundary/label, never break a pointer. A font-size/boldness pass over `pdf.js` text items
+     (needs our own item-level extraction) would remove most; build it only if real sessions show harm.
+   - TEI levels: GROBID's `n` attribute is dropped by the parser setting, so every TEI heading is level 1
+     (levels are not consumed by chunking). Live TEI extraction is still unexercised (needs the OpenAlex key).
+   - Scanned/multi-column layouts: a heading split across lines is not detected; headings are lost, text is not.
+   - Exhaustive verification at 512 costs ≈ 1.7× the judgments of a 1,024 window; pass a `query` (5.0
+     judgments per claim measured) for large corpora. Consider defaulting the locator to the claim.
+2. **Local model runtime: llama.cpp for embeddings (and any GGUF decision model) — decision open.**
+   The retrieval code is runtime-agnostic (any OpenAI-compatible `/v1/embeddings` server, configured with
+   `UKTUB_EMBED_URL`); what is undecided is who provides the server. Researched (Hermes, 2026-10-04):
+   (A) bundling a binary in the package is only viable for a CPU build (≈ 5 MB) — a CUDA build is ≈ 370 MB;
+   (B) a pinned official `llama-server` release asset, fetched on first use with a checked sha256 into the user's
+   data directory, supervised as a child process (crash isolation from the agent host), with the GGUF fetched
+   the same way from a lock file (recommended); (C) the `node-llama-cpp` npm binding (single maintainer, install
+   scripts, source-build fallback; opt-in in-process path for the CLI only); (D) a user-installed llama.cpp or
+   Ollama as an explicit override. Decision-2.0 Eos is a custom Qwen backbone plus a trained head and is not a
+   stock llama.cpp architecture; it stays on its Python worker (a logprob-of-"true" hack on the backbone GGUF is
+   not the trained head and was not adopted). Model terms: EmbeddingGemma is under the Gemma terms (carry the
+   terms and notice if redistributed), so the package should fetch rather than bundle the 334 MB file; the
+   file named by the owner lacks the dense modules (see DECISIONS), so the pinned file needs a stated provenance
+   (third-party conversion with a measured parity gate, or our own conversion from the gated Google weights).
+3. **RAG (exploratory retrieval) — done at the code level (2026-10-04).** `search_passages` (Pi tool and CLI
+   `search`), hybrid FTS5 + vector + RRF k = 60, lexical fallback, containment, schema v5 vector cache;
+   measured ([report](benchmarks/rag-search-section-512-2026-10-04.md)). Open items: runtime packaging (item 2);
+   weighted or reranked fusion if a later measurement shows it pays (equal-weight RRF trails the better single
+   leg on the extremes); the Pi TUI widget is not launched; the vector leg has not been measured on a corpus
+   larger than 14 papers (the exact scan is O(passages), 3 ms at 700 passages).
 4. **OCR fallback for scanned PDFs** (optional; LiteParse was reviewed and not adopted as the primary parser).
 5. **Full-text download for open-access papers** (deferred by the owner): Content API with the existing key,
    other lawful routes.

@@ -1,0 +1,2327 @@
+{
+ "schema": "bench-evidence/1",
+ "phase": "endtoend",
+ "date": "2026-10-04",
+ "chunkTokens": 1024,
+ "boundary": "section",
+ "k": 5,
+ "engineUrl": "http://127.0.0.1:8099",
+ "policy": "d9387caecd99",
+ "records": [
+  {
+   "id": "c003",
+   "paper": "2411.09996v1",
+   "part": "tuning",
+   "kind": "method",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 10012,
+    "end": 10125
+   },
+   "evidence": [
+    {
+     "start": 9373,
+     "end": 10810,
+     "doi": "10.9999/p01",
+     "excerpt": "A. Masked Spectrogram Modeling (MSM)\nWe introduce the Masked Spectrogram Modeling (MSM)\napproach using Vision Transformers (ViT). In this method, we\ndivide each…",
+     "withheld": null,
+     "score": 0.9991610976480927
+    }
+   ],
+   "fresh": 17,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 6347,
+   "limitations": [],
+   "chars": 1437
+  },
+  {
+   "id": "c004",
+   "paper": "2411.09996v1",
+   "part": "tuning",
+   "kind": "method",
+   "mode": "exhaustive",
+   "label": "FALSE",
+   "gold": {
+    "start": 15736,
+    "end": 15826
+   },
+   "evidence": [],
+   "fresh": 17,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 1409,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c009",
+   "paper": "2411.09996v1",
+   "part": "tuning",
+   "kind": "finding",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 21142,
+    "end": 21201
+   },
+   "evidence": [
+    {
+     "start": 9373,
+     "end": 10810,
+     "doi": "10.9999/p01",
+     "excerpt": "A. Masked Spectrogram Modeling (MSM)\nWe introduce the Masked Spectrogram Modeling (MSM)\napproach using Vision Transformers (ViT). In this method, we\ndivide each…",
+     "withheld": null,
+     "score": 0.996411870617891
+    },
+    {
+     "start": 20307,
+     "end": 21277,
+     "doi": "10.9999/p01",
+     "excerpt": "The threshold 𝛿 is determined empirically by the formula:\n𝛿 = 𝜇 + 0.5 × 𝜎 (4)\nwhere 𝜇 and 𝜎 represent the mean and standard deviation of\nthe spectrogram, …",
+     "withheld": null,
+     "score": 0.9997347808289394
+    }
+   ],
+   "fresh": 20,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 1572,
+   "limitations": [],
+   "chars": 2407
+  },
+  {
+   "id": "c010",
+   "paper": "2411.09996v1",
+   "part": "tuning",
+   "kind": "numeric",
+   "mode": "exhaustive",
+   "label": "FALSE",
+   "gold": {
+    "start": 8000,
+    "end": 8071
+   },
+   "evidence": [],
+   "fresh": 17,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 1407,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c015",
+   "paper": "2504.14100v1",
+   "part": "held-out",
+   "kind": "method",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 42702,
+    "end": 42801
+   },
+   "evidence": [
+    {
+     "start": 42474,
+     "end": 43510,
+     "doi": "10.9999/p02",
+     "excerpt": "A. ViT-All Performance Evaluation\nWe compare ViT-All’s fine-tuning performance against\nViT-SL across the four downstream tasks. For human activity\nsensing, the …",
+     "withheld": null,
+     "score": 0.9932326052147311
+    }
+   ],
+   "fresh": 34,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 2991,
+   "limitations": [],
+   "chars": 1036
+  },
+  {
+   "id": "c017",
+   "paper": "2504.14100v1",
+   "part": "held-out",
+   "kind": "numeric",
+   "mode": "exhaustive",
+   "label": "FALSE",
+   "gold": {
+    "start": 17794,
+    "end": 17860
+   },
+   "evidence": [],
+   "fresh": 32,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 2843,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c021",
+   "paper": "2506.06718v2",
+   "part": "tuning",
+   "kind": "method",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 35772,
+    "end": 35938
+   },
+   "evidence": [],
+   "fresh": 31,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 3145,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c023",
+   "paper": "2506.06718v2",
+   "part": "tuning",
+   "kind": "numeric",
+   "mode": "exhaustive",
+   "label": "FALSE",
+   "gold": {
+    "start": 30660,
+    "end": 30778
+   },
+   "evidence": [],
+   "fresh": 31,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 3116,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c027",
+   "paper": "2506.06718v2",
+   "part": "tuning",
+   "kind": "dataset",
+   "mode": "exhaustive",
+   "label": "FALSE",
+   "gold": {
+    "start": 31412,
+    "end": 31502
+   },
+   "evidence": [],
+   "fresh": 31,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 3140,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c028",
+   "paper": "2506.06718v2",
+   "part": "tuning",
+   "kind": "finding",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 48525,
+    "end": 48638
+   },
+   "evidence": [
+    {
+     "start": 48362,
+     "end": 49131,
+     "doi": "10.9999/p03",
+     "excerpt": "This demonstrates that modulation-\nguided augmentations enhance temporal feature extraction\nand facilitate class-level separability. As a result, pseudo-\nlabeli…",
+     "withheld": null,
+     "score": 0.9931289292750577
+    }
+   ],
+   "fresh": 33,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 3242,
+   "limitations": [],
+   "chars": 769
+  },
+  {
+   "id": "c033",
+   "paper": "2509.03077v1",
+   "part": "held-out",
+   "kind": "method",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 13826,
+    "end": 13885
+   },
+   "evidence": [
+    {
+     "start": 12658,
+     "end": 14905,
+     "doi": "10.9999/p04",
+     "excerpt": null,
+     "withheld": "excerpt_cap",
+     "score": 0.9937167138583142
+    }
+   ],
+   "fresh": 21,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 1727,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c035",
+   "paper": "2509.03077v1",
+   "part": "held-out",
+   "kind": "finding",
+   "mode": "exhaustive",
+   "label": "FALSE",
+   "gold": {
+    "start": 22618,
+    "end": 22701
+   },
+   "evidence": [],
+   "fresh": 19,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 1598,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c039",
+   "paper": "2509.03077v1",
+   "part": "held-out",
+   "kind": "finding",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 5892,
+    "end": 6009
+   },
+   "evidence": [
+    {
+     "start": 5592,
+     "end": 6667,
+     "doi": "10.9999/p04",
+     "excerpt": "Our results show that our proposed framework learns\nradio representations that are effective even with frozen\nencoder weights, and fine-tuning further enhances …",
+     "withheld": null,
+     "score": 0.999750418453681
+    }
+   ],
+   "fresh": 22,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 1734,
+   "limitations": [],
+   "chars": 1075
+  },
+  {
+   "id": "c042",
+   "paper": "2511.15162v1",
+   "part": "tuning",
+   "kind": "numeric",
+   "mode": "exhaustive",
+   "label": "FALSE",
+   "gold": {
+    "start": 21373,
+    "end": 21425
+   },
+   "evidence": [],
+   "fresh": 19,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 1587,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c045",
+   "paper": "2511.15162v1",
+   "part": "tuning",
+   "kind": "method",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 25323,
+    "end": 25444
+   },
+   "evidence": [
+    {
+     "start": 24774,
+     "end": 25788,
+     "doi": "10.9999/p05",
+     "excerpt": "C. Multi-task Performance with LoRA\nLoRA adapts the network by inserting low-rank modules,\nallowing both early and late blocks to change behavior while the\nback…",
+     "withheld": null,
+     "score": 0.9999265274082059
+    }
+   ],
+   "fresh": 19,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 1653,
+   "limitations": [],
+   "chars": 1014
+  },
+  {
+   "id": "c047",
+   "paper": "2511.15162v1",
+   "part": "tuning",
+   "kind": "finding",
+   "mode": "exhaustive",
+   "label": "FALSE",
+   "gold": {
+    "start": 22838,
+    "end": 22931
+   },
+   "evidence": [],
+   "fresh": 19,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 1613,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c050",
+   "paper": "2606.06373v1",
+   "part": "held-out",
+   "kind": "numeric",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 12709,
+    "end": 13021
+   },
+   "evidence": [
+    {
+     "start": 11903,
+     "end": 13023,
+     "doi": "10.9999/p06",
+     "excerpt": "The predictor’s limited capacity is deliberate: it forces the con-\ntext encoder to produce maximally informative representations\nrather than offloading the pred…",
+     "withheld": null,
+     "score": 0.9993999200460346
+    }
+   ],
+   "fresh": 19,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 1716,
+   "limitations": [],
+   "chars": 1120
+  },
+  {
+   "id": "c053",
+   "paper": "2606.06373v1",
+   "part": "held-out",
+   "kind": "numeric",
+   "mode": "exhaustive",
+   "label": "FALSE",
+   "gold": {
+    "start": 22662,
+    "end": 22729
+   },
+   "evidence": [],
+   "fresh": 17,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 1561,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c057",
+   "paper": "2606.06373v1",
+   "part": "held-out",
+   "kind": "method",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 12475,
+    "end": 12574
+   },
+   "evidence": [
+    {
+     "start": 11903,
+     "end": 13023,
+     "doi": "10.9999/p06",
+     "excerpt": "The predictor’s limited capacity is deliberate: it forces the con-\ntext encoder to produce maximally informative representations\nrather than offloading the pred…",
+     "withheld": null,
+     "score": 0.9965210933458429
+    }
+   ],
+   "fresh": 19,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 1664,
+   "limitations": [],
+   "chars": 1120
+  },
+  {
+   "id": "c058",
+   "paper": "2606.06373v1",
+   "part": "held-out",
+   "kind": "numeric",
+   "mode": "exhaustive",
+   "label": "FALSE",
+   "gold": {
+    "start": 13148,
+    "end": 13199
+   },
+   "evidence": [],
+   "fresh": 17,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 1574,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c062",
+   "paper": "2609.04707v1",
+   "part": "tuning",
+   "kind": "finding",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 51705,
+    "end": 51842
+   },
+   "evidence": [
+    {
+     "start": 51110,
+     "end": 52159,
+     "doi": "10.9999/p07",
+     "excerpt": "B. Categorization and Analysis of WFMs by Task\nTable III summarizes the taxonomic coverage of physical-\nlayer wireless foundation models from 2024 to 2026, cons…",
+     "withheld": null,
+     "score": 0.9997283117187316
+    }
+   ],
+   "fresh": 85,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 8766,
+   "limitations": [],
+   "chars": 1049
+  },
+  {
+   "id": "c066",
+   "paper": "2609.04707v1",
+   "part": "tuning",
+   "kind": "dataset",
+   "mode": "exhaustive",
+   "label": "FALSE",
+   "gold": {
+    "start": 7854,
+    "end": 7908
+   },
+   "evidence": [],
+   "fresh": 83,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 8355,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c067",
+   "paper": "2609.04707v1",
+   "part": "tuning",
+   "kind": "method",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 40614,
+    "end": 40658
+   },
+   "evidence": [
+    {
+     "start": 39516,
+     "end": 40660,
+     "doi": "10.9999/p07",
+     "excerpt": "3) MLP-based: MLPs offer lightweight feature encoding\nfor edge-oriented WFMs, where latency and parameter ef-\nficiency are prioritized. Lightweight Edge FM uses…",
+     "withheld": null,
+     "score": 0.9984052758214734
+    },
+    {
+     "start": 101563,
+     "end": 102707,
+     "doi": "10.9999/p07",
+     "excerpt": "Temporal prediction intro-\nduces another learning signal for localization-oriented sensing.\nMulti-Task Prediction FM [42] uses CSI and location series to\nmodel …",
+     "withheld": null,
+     "score": 0.9909358765725846
+    }
+   ],
+   "fresh": 88,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 8556,
+   "limitations": [],
+   "chars": 2288
+  },
+  {
+   "id": "c072",
+   "paper": "Tiny_Federated_Wireless_Foundation_Model",
+   "part": "tuning",
+   "kind": "finding",
+   "mode": "exhaustive",
+   "label": "FALSE",
+   "gold": {
+    "start": 48959,
+    "end": 49153
+   },
+   "evidence": [],
+   "fresh": 33,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 3076,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c073",
+   "paper": "Tiny_Federated_Wireless_Foundation_Model",
+   "part": "tuning",
+   "kind": "method",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 36069,
+    "end": 36179
+   },
+   "evidence": [
+    {
+     "start": 36034,
+     "end": 36418,
+     "doi": "10.9999/p09",
+     "excerpt": "To implement this pruning process, we used the DepGraph\nframework [24], which enables dependency-aware pruning\nby constructing a dependency graph that preserves…",
+     "withheld": null,
+     "score": 0.9999731067721266
+    }
+   ],
+   "fresh": 36,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 3213,
+   "limitations": [],
+   "chars": 384
+  },
+  {
+   "id": "c078",
+   "paper": "http_thesai.org_Downloads_Volume12No2_Pa",
+   "part": "held-out",
+   "kind": "dataset",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 17115,
+    "end": 17210
+   },
+   "evidence": [
+    {
+     "start": 16876,
+     "end": 17904,
+     "doi": "10.9999/p10",
+     "excerpt": "B. Hardware Design\nThe exterior of the Homergy Box hardware is shown in\nFig. 15. The internal components are shown in Figs. 5 and 6.\nBelow are the properties of…",
+     "withheld": null,
+     "score": 0.9964722646238995
+    }
+   ],
+   "fresh": 20,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 1658,
+   "limitations": [],
+   "chars": 1028
+  },
+  {
+   "id": "c079",
+   "paper": "http_thesai.org_Downloads_Volume12No2_Pa",
+   "part": "held-out",
+   "kind": "method",
+   "mode": "exhaustive",
+   "label": "FALSE",
+   "gold": {
+    "start": 12711,
+    "end": 12832
+   },
+   "evidence": [],
+   "fresh": 17,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 1488,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c083",
+   "paper": "http_thesai.org_Downloads_Volume12No2_Pa",
+   "part": "held-out",
+   "kind": "method",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 17718,
+    "end": 17837
+   },
+   "evidence": [
+    {
+     "start": 16876,
+     "end": 19233,
+     "doi": "10.9999/p10",
+     "excerpt": null,
+     "withheld": "excerpt_cap",
+     "score": 0.9920480398323567
+    }
+   ],
+   "fresh": 20,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 1676,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c086",
+   "paper": "http_thesai.org_Downloads_Volume12No2_Pa",
+   "part": "held-out",
+   "kind": "finding",
+   "mode": "exhaustive",
+   "label": "FALSE",
+   "gold": {
+    "start": 10252,
+    "end": 10353
+   },
+   "evidence": [],
+   "fresh": 17,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 1475,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c088",
+   "paper": "https_www.mdpi.com_2071-1050_14_21_14556",
+   "part": "tuning",
+   "kind": "finding",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 50051,
+    "end": 50216
+   },
+   "evidence": [
+    {
+     "start": 1771,
+     "end": 3025,
+     "doi": "10.9999/p11",
+     "excerpt": "Abstract: Smart grids (SG) allow users to plan and control device usage patterns optimally, thereby\nminimizing power costs, peak-to-average ratios (PAR), and pe…",
+     "withheld": null,
+     "score": 0.9977418406431816
+    },
+    {
+     "start": 48302,
+     "end": 49307,
+     "doi": "10.9999/p11",
+     "excerpt": "7. Conclusions\nThe paper formulates and optimizes a smart house device planning problem with\nnew restricted and multi-restricted time-range planning methods to …",
+     "withheld": null,
+     "score": 0.9904348415612757
+    },
+    {
+     "start": 49307,
+     "end": 51418,
+     "doi": "10.9999/p11",
+     "excerpt": null,
+     "withheld": "excerpt_cap",
+     "score": 0.9989397036353442
+    }
+   ],
+   "fresh": 36,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 3401,
+   "limitations": [],
+   "chars": 2259
+  },
+  {
+   "id": "c093",
+   "paper": "https_www.mdpi.com_2071-1050_14_21_14556",
+   "part": "tuning",
+   "kind": "numeric",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 12720,
+    "end": 12787
+   },
+   "evidence": [
+    {
+     "start": 12635,
+     "end": 13967,
+     "doi": "10.9999/p11",
+     "excerpt": "3. Problem Development\nIn the beginning, there are 24 time slots throughout the day. In a day, there are 120 time\nslots, every one of which lasts 12 min, and an…",
+     "withheld": null,
+     "score": 0.9974196702401958
+    }
+   ],
+   "fresh": 33,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 3223,
+   "limitations": [],
+   "chars": 1332
+  },
+  {
+   "id": "c094",
+   "paper": "https_www.mdpi.com_2071-1050_14_21_14556",
+   "part": "tuning",
+   "kind": "numeric",
+   "mode": "exhaustive",
+   "label": "FALSE",
+   "gold": {
+    "start": 47022,
+    "end": 47095
+   },
+   "evidence": [
+    {
+     "start": 45656,
+     "end": 46568,
+     "doi": "10.9999/p11",
+     "excerpt": "6.6. Multi-Restricted Time Range Scheduling Integrated with PV\nIn multi-restricted time-range planning, the parameters in scenario 3 and Table 7 are\nutilized fo…",
+     "withheld": null,
+     "score": 0.9921443878686667
+    }
+   ],
+   "fresh": 33,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 3236,
+   "limitations": [],
+   "chars": 912
+  },
+  {
+   "id": "c099",
+   "paper": "https_www.mdpi.com_2079-9292_12_19_4041_",
+   "part": "held-out",
+   "kind": "numeric",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 2551,
+    "end": 2638
+   },
+   "evidence": [
+    {
+     "start": 2134,
+     "end": 2926,
+     "doi": "10.9999/p12",
+     "excerpt": "To assess the speed and precision of the small machine learning algorithm,\na publicly accessible dataset was utilized. The obtained results indicate that the ac…",
+     "withheld": null,
+     "score": 0.9999655056532409
+    }
+   ],
+   "fresh": 29,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 2839,
+   "limitations": [],
+   "chars": 792
+  },
+  {
+   "id": "c101",
+   "paper": "https_www.mdpi.com_2079-9292_12_19_4041_",
+   "part": "held-out",
+   "kind": "method",
+   "mode": "exhaustive",
+   "label": "FALSE",
+   "gold": {
+    "start": 1953,
+    "end": 2047
+   },
+   "evidence": [
+    {
+     "start": 930,
+     "end": 2134,
+     "doi": "10.9999/p12",
+     "excerpt": "2 Department of Computing, University of Turku, FI-20014 Turku, Finland\n3 Department of Technology, Higher Institute of Computer Sciences and Mathematics, Unive…",
+     "withheld": null,
+     "score": 0.9994342910995094
+    }
+   ],
+   "fresh": 29,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 2820,
+   "limitations": [],
+   "chars": 1204
+  },
+  {
+   "id": "c104",
+   "paper": "https_www.mdpi.com_2079-9292_12_19_4041_",
+   "part": "held-out",
+   "kind": "numeric",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 41634,
+    "end": 41816
+   },
+   "evidence": [
+    {
+     "start": 41691,
+     "end": 41913,
+     "doi": "10.9999/p12",
+     "excerpt": "The energy bill for the\nfirst case is approximately 9.22 USD/day, whereas for the second case, the estimated bill is\n6.43 USD, which leads to over 30.26% in sav…",
+     "withheld": null,
+     "score": 0.9976594344426143
+    }
+   ],
+   "fresh": 31,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 3008,
+   "limitations": [],
+   "chars": 222
+  },
+  {
+   "id": "c107",
+   "paper": "https_www.mdpi.com_2079-9292_12_19_4041_",
+   "part": "held-out",
+   "kind": "dataset",
+   "mode": "exhaustive",
+   "label": "FALSE",
+   "gold": {
+    "start": 40902,
+    "end": 40956
+   },
+   "evidence": [],
+   "fresh": 27,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 2750,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c109",
+   "paper": "https_www.mdpi.com_2079-9292_12_21_4453_",
+   "part": "tuning",
+   "kind": "method",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 37562,
+    "end": 37812
+   },
+   "evidence": [
+    {
+     "start": 37048,
+     "end": 38053,
+     "doi": "10.9999/p13",
+     "excerpt": "This module implements functions related to\nthe devices, such as on/off actions, gathering current status, and controlling message\nsending. This module implemen…",
+     "withheld": null,
+     "score": 0.9998878098231755
+    }
+   ],
+   "fresh": 37,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 3137,
+   "limitations": [],
+   "chars": 1005
+  },
+  {
+   "id": "c114",
+   "paper": "https_www.mdpi.com_2079-9292_12_21_4453_",
+   "part": "tuning",
+   "kind": "method",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 36424,
+    "end": 36500
+   },
+   "evidence": [
+    {
+     "start": 35860,
+     "end": 37048,
+     "doi": "10.9999/p13",
+     "excerpt": "Electronics 2023, 12, 4453 11 of 23\nfor middleware development were utilized, including microservices, multiprocessing, and\nauthenticated communication protocol…",
+     "withheld": null,
+     "score": 0.9998974268338251
+    }
+   ],
+   "fresh": 37,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 3133,
+   "limitations": [],
+   "chars": 1188
+  },
+  {
+   "id": "c116",
+   "paper": "https_www.mdpi.com_2079-9292_12_21_4453_",
+   "part": "tuning",
+   "kind": "method",
+   "mode": "exhaustive",
+   "label": "FALSE",
+   "gold": {
+    "start": 35545,
+    "end": 35623
+   },
+   "evidence": [],
+   "fresh": 34,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 3007,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c118",
+   "paper": "https_www.mdpi.com_2624-6511_5_3_53_pdf_",
+   "part": "held-out",
+   "kind": "method",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 24058,
+    "end": 24120
+   },
+   "evidence": [],
+   "fresh": 37,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 3246,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c123",
+   "paper": "https_www.mdpi.com_2624-6511_5_3_53_pdf_",
+   "part": "held-out",
+   "kind": "method",
+   "mode": "exhaustive",
+   "label": "FALSE",
+   "gold": {
+    "start": 30524,
+    "end": 30611
+   },
+   "evidence": [],
+   "fresh": 37,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 3219,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c124",
+   "paper": "https_www.mdpi.com_2624-6511_5_3_53_pdf_",
+   "part": "held-out",
+   "kind": "dataset",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 37339,
+    "end": 37444
+   },
+   "evidence": [
+    {
+     "start": 36305,
+     "end": 37446,
+     "doi": "10.9999/p14",
+     "excerpt": "4.1. Test-Bed Description\nThe test-bed (Table 4) consists of a two-story house at ground level, located in Murcia,\nin the south-east of Spain, with a patio and …",
+     "withheld": null,
+     "score": 0.999845057227875
+    }
+   ],
+   "fresh": 40,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 3426,
+   "limitations": [],
+   "chars": 1141
+  },
+  {
+   "id": "c128",
+   "paper": "Papaers_overview",
+   "part": "held-out",
+   "kind": "finding",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 921,
+    "end": 1063
+   },
+   "evidence": [
+    {
+     "start": 0,
+     "end": 1065,
+     "doi": "10.9999/p08",
+     "excerpt": "Foundational Models for Raw I/Q Streams in AI-Native 6G\nExecutive Summary\nThe transition toward sixth-generation (6G) wireless architectures necessitates a shif…",
+     "withheld": null,
+     "score": 0.9998617559337629
+    }
+   ],
+   "fresh": 7,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 509,
+   "limitations": [],
+   "chars": 1065
+  },
+  {
+   "id": "c132",
+   "paper": "Papaers_overview",
+   "part": "held-out",
+   "kind": "numeric",
+   "mode": "exhaustive",
+   "label": "FALSE",
+   "gold": {
+    "start": 6144,
+    "end": 6208
+   },
+   "evidence": [],
+   "fresh": 4,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 354,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c133",
+   "paper": "Papaers_overview",
+   "part": "held-out",
+   "kind": "numeric",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 5687,
+    "end": 5823
+   },
+   "evidence": [
+    {
+     "start": 5133,
+     "end": 6282,
+     "doi": "10.9999/p08",
+     "excerpt": "Performance Benchmarks and Data Efficiency\nEvaluation on real-world, over-the-air datasets—including 68-70 GB of captured IQ\ndata—demonstrates the superiority o…",
+     "withheld": null,
+     "score": 0.998969838166669
+    }
+   ],
+   "fresh": 7,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 534,
+   "limitations": [],
+   "chars": 1149
+  },
+  {
+   "id": "c003",
+   "paper": "2411.09996v1",
+   "part": "tuning",
+   "kind": "method",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 10012,
+    "end": 10125
+   },
+   "evidence": [
+    {
+     "start": 9373,
+     "end": 10810,
+     "doi": "10.9999/p01",
+     "excerpt": "A. Masked Spectrogram Modeling (MSM)\nWe introduce the Masked Spectrogram Modeling (MSM)\napproach using Vision Transformers (ViT). In this method, we\ndivide each…",
+     "withheld": null,
+     "score": 0.9991610976480927
+    }
+   ],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 5318,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 1437
+  },
+  {
+   "id": "c004",
+   "paper": "2411.09996v1",
+   "part": "tuning",
+   "kind": "method",
+   "mode": "guided",
+   "label": "FALSE",
+   "gold": {
+    "start": 15736,
+    "end": 15826
+   },
+   "evidence": [],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 444,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 0
+  },
+  {
+   "id": "c009",
+   "paper": "2411.09996v1",
+   "part": "tuning",
+   "kind": "finding",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 21142,
+    "end": 21201
+   },
+   "evidence": [
+    {
+     "start": 9373,
+     "end": 10810,
+     "doi": "10.9999/p01",
+     "excerpt": "A. Masked Spectrogram Modeling (MSM)\nWe introduce the Masked Spectrogram Modeling (MSM)\napproach using Vision Transformers (ViT). In this method, we\ndivide each…",
+     "withheld": null,
+     "score": 0.996411870617891
+    },
+    {
+     "start": 20307,
+     "end": 21277,
+     "doi": "10.9999/p01",
+     "excerpt": "The threshold 𝛿 is determined empirically by the formula:\n𝛿 = 𝜇 + 0.5 × 𝜎 (4)\nwhere 𝜇 and 𝜎 represent the mean and standard deviation of\nthe spectrogram, …",
+     "withheld": null,
+     "score": 0.9997347808289394
+    }
+   ],
+   "fresh": 8,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 580,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 2407
+  },
+  {
+   "id": "c010",
+   "paper": "2411.09996v1",
+   "part": "tuning",
+   "kind": "numeric",
+   "mode": "guided",
+   "label": "FALSE",
+   "gold": {
+    "start": 8000,
+    "end": 8071
+   },
+   "evidence": [],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 385,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 0
+  },
+  {
+   "id": "c015",
+   "paper": "2504.14100v1",
+   "part": "held-out",
+   "kind": "method",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 42702,
+    "end": 42801
+   },
+   "evidence": [
+    {
+     "start": 42474,
+     "end": 43510,
+     "doi": "10.9999/p02",
+     "excerpt": "A. ViT-All Performance Evaluation\nWe compare ViT-All’s fine-tuning performance against\nViT-SL across the four downstream tasks. For human activity\nsensing, the …",
+     "withheld": null,
+     "score": 0.9932326052147311
+    }
+   ],
+   "fresh": 7,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 583,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 1036
+  },
+  {
+   "id": "c017",
+   "paper": "2504.14100v1",
+   "part": "held-out",
+   "kind": "numeric",
+   "mode": "guided",
+   "label": "FALSE",
+   "gold": {
+    "start": 17794,
+    "end": 17860
+   },
+   "evidence": [],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 414,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 0
+  },
+  {
+   "id": "c021",
+   "paper": "2506.06718v2",
+   "part": "tuning",
+   "kind": "method",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 35772,
+    "end": 35938
+   },
+   "evidence": [],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 514,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 0
+  },
+  {
+   "id": "c023",
+   "paper": "2506.06718v2",
+   "part": "tuning",
+   "kind": "numeric",
+   "mode": "guided",
+   "label": "FALSE",
+   "gold": {
+    "start": 30660,
+    "end": 30778
+   },
+   "evidence": [],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 541,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 0
+  },
+  {
+   "id": "c027",
+   "paper": "2506.06718v2",
+   "part": "tuning",
+   "kind": "dataset",
+   "mode": "guided",
+   "label": "FALSE",
+   "gold": {
+    "start": 31412,
+    "end": 31502
+   },
+   "evidence": [],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 558,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 0
+  },
+  {
+   "id": "c028",
+   "paper": "2506.06718v2",
+   "part": "tuning",
+   "kind": "finding",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 48525,
+    "end": 48638
+   },
+   "evidence": [
+    {
+     "start": 48362,
+     "end": 49131,
+     "doi": "10.9999/p03",
+     "excerpt": "This demonstrates that modulation-\nguided augmentations enhance temporal feature extraction\nand facilitate class-level separability. As a result, pseudo-\nlabeli…",
+     "withheld": null,
+     "score": 0.9931289292750577
+    }
+   ],
+   "fresh": 7,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 584,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 769
+  },
+  {
+   "id": "c033",
+   "paper": "2509.03077v1",
+   "part": "held-out",
+   "kind": "method",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 13826,
+    "end": 13885
+   },
+   "evidence": [
+    {
+     "start": 12658,
+     "end": 14905,
+     "doi": "10.9999/p04",
+     "excerpt": null,
+     "withheld": "excerpt_cap",
+     "score": 0.9937167138583142
+    }
+   ],
+   "fresh": 7,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 567,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 0
+  },
+  {
+   "id": "c035",
+   "paper": "2509.03077v1",
+   "part": "held-out",
+   "kind": "finding",
+   "mode": "guided",
+   "label": "FALSE",
+   "gold": {
+    "start": 22618,
+    "end": 22701
+   },
+   "evidence": [],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 394,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 0
+  },
+  {
+   "id": "c039",
+   "paper": "2509.03077v1",
+   "part": "held-out",
+   "kind": "finding",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 5892,
+    "end": 6009
+   },
+   "evidence": [
+    {
+     "start": 5592,
+     "end": 6667,
+     "doi": "10.9999/p04",
+     "excerpt": "Our results show that our proposed framework learns\nradio representations that are effective even with frozen\nencoder weights, and fine-tuning further enhances …",
+     "withheld": null,
+     "score": 0.999750418453681
+    }
+   ],
+   "fresh": 8,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 613,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 1075
+  },
+  {
+   "id": "c042",
+   "paper": "2511.15162v1",
+   "part": "tuning",
+   "kind": "numeric",
+   "mode": "guided",
+   "label": "FALSE",
+   "gold": {
+    "start": 21373,
+    "end": 21425
+   },
+   "evidence": [],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 473,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 0
+  },
+  {
+   "id": "c045",
+   "paper": "2511.15162v1",
+   "part": "tuning",
+   "kind": "method",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 25323,
+    "end": 25444
+   },
+   "evidence": [
+    {
+     "start": 24774,
+     "end": 25788,
+     "doi": "10.9999/p05",
+     "excerpt": "C. Multi-task Performance with LoRA\nLoRA adapts the network by inserting low-rank modules,\nallowing both early and late blocks to change behavior while the\nback…",
+     "withheld": null,
+     "score": 0.9999265274082059
+    }
+   ],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 394,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 1014
+  },
+  {
+   "id": "c047",
+   "paper": "2511.15162v1",
+   "part": "tuning",
+   "kind": "finding",
+   "mode": "guided",
+   "label": "FALSE",
+   "gold": {
+    "start": 22838,
+    "end": 22931
+   },
+   "evidence": [],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 451,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 0
+  },
+  {
+   "id": "c050",
+   "paper": "2606.06373v1",
+   "part": "held-out",
+   "kind": "numeric",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 12709,
+    "end": 13021
+   },
+   "evidence": [
+    {
+     "start": 11903,
+     "end": 13023,
+     "doi": "10.9999/p06",
+     "excerpt": "The predictor’s limited capacity is deliberate: it forces the con-\ntext encoder to produce maximally informative representations\nrather than offloading the pred…",
+     "withheld": null,
+     "score": 0.9993999200460346
+    }
+   ],
+   "fresh": 7,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 709,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 1120
+  },
+  {
+   "id": "c053",
+   "paper": "2606.06373v1",
+   "part": "held-out",
+   "kind": "numeric",
+   "mode": "guided",
+   "label": "FALSE",
+   "gold": {
+    "start": 22662,
+    "end": 22729
+   },
+   "evidence": [],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 422,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 0
+  },
+  {
+   "id": "c057",
+   "paper": "2606.06373v1",
+   "part": "held-out",
+   "kind": "method",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 12475,
+    "end": 12574
+   },
+   "evidence": [
+    {
+     "start": 11903,
+     "end": 13023,
+     "doi": "10.9999/p06",
+     "excerpt": "The predictor’s limited capacity is deliberate: it forces the con-\ntext encoder to produce maximally informative representations\nrather than offloading the pred…",
+     "withheld": null,
+     "score": 0.9965210933458429
+    }
+   ],
+   "fresh": 7,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 672,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 1120
+  },
+  {
+   "id": "c058",
+   "paper": "2606.06373v1",
+   "part": "held-out",
+   "kind": "numeric",
+   "mode": "guided",
+   "label": "FALSE",
+   "gold": {
+    "start": 13148,
+    "end": 13199
+   },
+   "evidence": [],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 496,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 0
+  },
+  {
+   "id": "c062",
+   "paper": "2609.04707v1",
+   "part": "tuning",
+   "kind": "finding",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 51705,
+    "end": 51842
+   },
+   "evidence": [
+    {
+     "start": 51110,
+     "end": 52159,
+     "doi": "10.9999/p07",
+     "excerpt": "B. Categorization and Analysis of WFMs by Task\nTable III summarizes the taxonomic coverage of physical-\nlayer wireless foundation models from 2024 to 2026, cons…",
+     "withheld": null,
+     "score": 0.9997283117187316
+    }
+   ],
+   "fresh": 7,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 1012,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 1049
+  },
+  {
+   "id": "c066",
+   "paper": "2609.04707v1",
+   "part": "tuning",
+   "kind": "dataset",
+   "mode": "guided",
+   "label": "FALSE",
+   "gold": {
+    "start": 7854,
+    "end": 7908
+   },
+   "evidence": [],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 569,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 0
+  },
+  {
+   "id": "c067",
+   "paper": "2609.04707v1",
+   "part": "tuning",
+   "kind": "method",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 40614,
+    "end": 40658
+   },
+   "evidence": [
+    {
+     "start": 39516,
+     "end": 40660,
+     "doi": "10.9999/p07",
+     "excerpt": "3) MLP-based: MLPs offer lightweight feature encoding\nfor edge-oriented WFMs, where latency and parameter ef-\nficiency are prioritized. Lightweight Edge FM uses…",
+     "withheld": null,
+     "score": 0.9984052758214734
+    },
+    {
+     "start": 101563,
+     "end": 102707,
+     "doi": "10.9999/p07",
+     "excerpt": "Temporal prediction intro-\nduces another learning signal for localization-oriented sensing.\nMulti-Task Prediction FM [42] uses CSI and location series to\nmodel …",
+     "withheld": null,
+     "score": 0.9909358765725846
+    }
+   ],
+   "fresh": 10,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 892,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 2288
+  },
+  {
+   "id": "c072",
+   "paper": "Tiny_Federated_Wireless_Foundation_Model",
+   "part": "tuning",
+   "kind": "finding",
+   "mode": "guided",
+   "label": "FALSE",
+   "gold": {
+    "start": 48959,
+    "end": 49153
+   },
+   "evidence": [],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 530,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 0
+  },
+  {
+   "id": "c073",
+   "paper": "Tiny_Federated_Wireless_Foundation_Model",
+   "part": "tuning",
+   "kind": "method",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 36069,
+    "end": 36179
+   },
+   "evidence": [
+    {
+     "start": 36034,
+     "end": 36418,
+     "doi": "10.9999/p09",
+     "excerpt": "To implement this pruning process, we used the DepGraph\nframework [24], which enables dependency-aware pruning\nby constructing a dependency graph that preserves…",
+     "withheld": null,
+     "score": 0.9999731067721266
+    }
+   ],
+   "fresh": 8,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 707,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 384
+  },
+  {
+   "id": "c078",
+   "paper": "http_thesai.org_Downloads_Volume12No2_Pa",
+   "part": "held-out",
+   "kind": "dataset",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 17115,
+    "end": 17210
+   },
+   "evidence": [
+    {
+     "start": 16876,
+     "end": 17904,
+     "doi": "10.9999/p10",
+     "excerpt": "B. Hardware Design\nThe exterior of the Homergy Box hardware is shown in\nFig. 15. The internal components are shown in Figs. 5 and 6.\nBelow are the properties of…",
+     "withheld": null,
+     "score": 0.9964722646238995
+    }
+   ],
+   "fresh": 8,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 596,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 1028
+  },
+  {
+   "id": "c079",
+   "paper": "http_thesai.org_Downloads_Volume12No2_Pa",
+   "part": "held-out",
+   "kind": "method",
+   "mode": "guided",
+   "label": "FALSE",
+   "gold": {
+    "start": 12711,
+    "end": 12832
+   },
+   "evidence": [],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 447,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 0
+  },
+  {
+   "id": "c083",
+   "paper": "http_thesai.org_Downloads_Volume12No2_Pa",
+   "part": "held-out",
+   "kind": "method",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 17718,
+    "end": 17837
+   },
+   "evidence": [
+    {
+     "start": 16876,
+     "end": 19233,
+     "doi": "10.9999/p10",
+     "excerpt": null,
+     "withheld": "excerpt_cap",
+     "score": 0.9920480398323567
+    }
+   ],
+   "fresh": 8,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 665,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 0
+  },
+  {
+   "id": "c086",
+   "paper": "http_thesai.org_Downloads_Volume12No2_Pa",
+   "part": "held-out",
+   "kind": "finding",
+   "mode": "guided",
+   "label": "FALSE",
+   "gold": {
+    "start": 10252,
+    "end": 10353
+   },
+   "evidence": [],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 495,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 0
+  },
+  {
+   "id": "c088",
+   "paper": "https_www.mdpi.com_2071-1050_14_21_14556",
+   "part": "tuning",
+   "kind": "finding",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 50051,
+    "end": 50216
+   },
+   "evidence": [
+    {
+     "start": 1771,
+     "end": 3025,
+     "doi": "10.9999/p11",
+     "excerpt": "Abstract: Smart grids (SG) allow users to plan and control device usage patterns optimally, thereby\nminimizing power costs, peak-to-average ratios (PAR), and pe…",
+     "withheld": null,
+     "score": 0.9977418406431816
+    },
+    {
+     "start": 48302,
+     "end": 49307,
+     "doi": "10.9999/p11",
+     "excerpt": "7. Conclusions\nThe paper formulates and optimizes a smart house device planning problem with\nnew restricted and multi-restricted time-range planning methods to …",
+     "withheld": null,
+     "score": 0.9904348415612757
+    },
+    {
+     "start": 49307,
+     "end": 51418,
+     "doi": "10.9999/p11",
+     "excerpt": null,
+     "withheld": "excerpt_cap",
+     "score": 0.9989397036353442
+    }
+   ],
+   "fresh": 8,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 555,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 2259
+  },
+  {
+   "id": "c093",
+   "paper": "https_www.mdpi.com_2071-1050_14_21_14556",
+   "part": "tuning",
+   "kind": "numeric",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 12720,
+    "end": 12787
+   },
+   "evidence": [
+    {
+     "start": 12635,
+     "end": 13967,
+     "doi": "10.9999/p11",
+     "excerpt": "3. Problem Development\nIn the beginning, there are 24 time slots throughout the day. In a day, there are 120 time\nslots, every one of which lasts 12 min, and an…",
+     "withheld": null,
+     "score": 0.9974196702401958
+    }
+   ],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 626,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 1332
+  },
+  {
+   "id": "c094",
+   "paper": "https_www.mdpi.com_2071-1050_14_21_14556",
+   "part": "tuning",
+   "kind": "numeric",
+   "mode": "guided",
+   "label": "FALSE",
+   "gold": {
+    "start": 47022,
+    "end": 47095
+   },
+   "evidence": [
+    {
+     "start": 45656,
+     "end": 46568,
+     "doi": "10.9999/p11",
+     "excerpt": "6.6. Multi-Restricted Time Range Scheduling Integrated with PV\nIn multi-restricted time-range planning, the parameters in scenario 3 and Table 7 are\nutilized fo…",
+     "withheld": null,
+     "score": 0.9921443878686667
+    }
+   ],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 506,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 912
+  },
+  {
+   "id": "c099",
+   "paper": "https_www.mdpi.com_2079-9292_12_19_4041_",
+   "part": "held-out",
+   "kind": "numeric",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 2551,
+    "end": 2638
+   },
+   "evidence": [
+    {
+     "start": 2134,
+     "end": 2926,
+     "doi": "10.9999/p12",
+     "excerpt": "To assess the speed and precision of the small machine learning algorithm,\na publicly accessible dataset was utilized. The obtained results indicate that the ac…",
+     "withheld": null,
+     "score": 0.9999655056532409
+    }
+   ],
+   "fresh": 7,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 644,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 792
+  },
+  {
+   "id": "c101",
+   "paper": "https_www.mdpi.com_2079-9292_12_19_4041_",
+   "part": "held-out",
+   "kind": "method",
+   "mode": "guided",
+   "label": "FALSE",
+   "gold": {
+    "start": 1953,
+    "end": 2047
+   },
+   "evidence": [
+    {
+     "start": 930,
+     "end": 2134,
+     "doi": "10.9999/p12",
+     "excerpt": "2 Department of Computing, University of Turku, FI-20014 Turku, Finland\n3 Department of Technology, Higher Institute of Computer Sciences and Mathematics, Unive…",
+     "withheld": null,
+     "score": 0.9994342910995094
+    }
+   ],
+   "fresh": 7,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 628,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 1204
+  },
+  {
+   "id": "c104",
+   "paper": "https_www.mdpi.com_2079-9292_12_19_4041_",
+   "part": "held-out",
+   "kind": "numeric",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 41634,
+    "end": 41816
+   },
+   "evidence": [
+    {
+     "start": 41691,
+     "end": 41913,
+     "doi": "10.9999/p12",
+     "excerpt": "The energy bill for the\nfirst case is approximately 9.22 USD/day, whereas for the second case, the estimated bill is\n6.43 USD, which leads to over 30.26% in sav…",
+     "withheld": null,
+     "score": 0.9976594344426143
+    }
+   ],
+   "fresh": 9,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 771,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 222
+  },
+  {
+   "id": "c107",
+   "paper": "https_www.mdpi.com_2079-9292_12_19_4041_",
+   "part": "held-out",
+   "kind": "dataset",
+   "mode": "guided",
+   "label": "FALSE",
+   "gold": {
+    "start": 40902,
+    "end": 40956
+   },
+   "evidence": [],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 668,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 0
+  },
+  {
+   "id": "c109",
+   "paper": "https_www.mdpi.com_2079-9292_12_21_4453_",
+   "part": "tuning",
+   "kind": "method",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 37562,
+    "end": 37812
+   },
+   "evidence": [
+    {
+     "start": 37048,
+     "end": 38053,
+     "doi": "10.9999/p13",
+     "excerpt": "This module implements functions related to\nthe devices, such as on/off actions, gathering current status, and controlling message\nsending. This module implemen…",
+     "withheld": null,
+     "score": 0.9998878098231755
+    }
+   ],
+   "fresh": 8,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 584,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 1005
+  },
+  {
+   "id": "c114",
+   "paper": "https_www.mdpi.com_2079-9292_12_21_4453_",
+   "part": "tuning",
+   "kind": "method",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 36424,
+    "end": 36500
+   },
+   "evidence": [
+    {
+     "start": 35860,
+     "end": 37048,
+     "doi": "10.9999/p13",
+     "excerpt": "Electronics 2023, 12, 4453 11 of 23\nfor middleware development were utilized, including microservices, multiprocessing, and\nauthenticated communication protocol…",
+     "withheld": null,
+     "score": 0.9998974268338251
+    }
+   ],
+   "fresh": 8,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 559,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 1188
+  },
+  {
+   "id": "c116",
+   "paper": "https_www.mdpi.com_2079-9292_12_21_4453_",
+   "part": "tuning",
+   "kind": "method",
+   "mode": "guided",
+   "label": "FALSE",
+   "gold": {
+    "start": 35545,
+    "end": 35623
+   },
+   "evidence": [],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 407,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 0
+  },
+  {
+   "id": "c118",
+   "paper": "https_www.mdpi.com_2624-6511_5_3_53_pdf_",
+   "part": "held-out",
+   "kind": "method",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 24058,
+    "end": 24120
+   },
+   "evidence": [],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 437,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 0
+  },
+  {
+   "id": "c123",
+   "paper": "https_www.mdpi.com_2624-6511_5_3_53_pdf_",
+   "part": "held-out",
+   "kind": "method",
+   "mode": "guided",
+   "label": "FALSE",
+   "gold": {
+    "start": 30524,
+    "end": 30611
+   },
+   "evidence": [],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 439,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 0
+  },
+  {
+   "id": "c124",
+   "paper": "https_www.mdpi.com_2624-6511_5_3_53_pdf_",
+   "part": "held-out",
+   "kind": "dataset",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 37339,
+    "end": 37444
+   },
+   "evidence": [
+    {
+     "start": 36305,
+     "end": 37446,
+     "doi": "10.9999/p14",
+     "excerpt": "4.1. Test-Bed Description\nThe test-bed (Table 4) consists of a two-story house at ground level, located in Murcia,\nin the south-east of Spain, with a patio and …",
+     "withheld": null,
+     "score": 0.999845057227875
+    }
+   ],
+   "fresh": 8,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 654,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 1141
+  },
+  {
+   "id": "c128",
+   "paper": "Papaers_overview",
+   "part": "held-out",
+   "kind": "finding",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 921,
+    "end": 1063
+   },
+   "evidence": [
+    {
+     "start": 0,
+     "end": 1065,
+     "doi": "10.9999/p08",
+     "excerpt": "Foundational Models for Raw I/Q Streams in AI-Native 6G\nExecutive Summary\nThe transition toward sixth-generation (6G) wireless architectures necessitates a shif…",
+     "withheld": null,
+     "score": 0.9998617559337629
+    }
+   ],
+   "fresh": 7,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 517,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 1065
+  },
+  {
+   "id": "c132",
+   "paper": "Papaers_overview",
+   "part": "held-out",
+   "kind": "numeric",
+   "mode": "guided",
+   "label": "FALSE",
+   "gold": {
+    "start": 6144,
+    "end": 6208
+   },
+   "evidence": [],
+   "fresh": 4,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 352,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 0
+  },
+  {
+   "id": "c133",
+   "paper": "Papaers_overview",
+   "part": "held-out",
+   "kind": "numeric",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 5687,
+    "end": 5823
+   },
+   "evidence": [
+    {
+     "start": 5133,
+     "end": 6282,
+     "doi": "10.9999/p08",
+     "excerpt": "Performance Benchmarks and Data Efficiency\nEvaluation on real-world, over-the-air datasets—including 68-70 GB of captured IQ\ndata—demonstrates the superiority o…",
+     "withheld": null,
+     "score": 0.998969838166669
+    }
+   ],
+   "fresh": 7,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 536,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 1149
+  }
+ ],
+ "redacted": true
+}

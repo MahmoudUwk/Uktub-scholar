@@ -1,9 +1,9 @@
 # uktub-scholar chunking + claim verification (every limit names its source)
 chunking:
-  chunk_tokens: 1024      # measured window (recall plateaus here; docs/benchmarks window sweep, 2026-10-04)
-  overlap_tokens: 16      # carried into the next chunk (continuity, not context)
+  chunk_tokens: 512       # cap of one chunk; measured (docs/benchmarks/evidence-chunking-sections-2026-10-04.md)
+  overlap_tokens: 0       # fixed-window boundaries only; section chunks are units and carry no overlap
   chars_per_token: 2.8    # calibrated on this corpus with the mmBERT tokenizer (median 4.1, densest paper 3.10; 0.9 headroom so strict_encoding never raises)
-  boundary: paragraph     # paragraph | hard
+  boundary: section       # section (headings, split only when larger than the cap) | paragraph | hard
 verification:
   engine: eos             # ClaimEngine registry in src/core/verify/engines.ts (eos | openrouter | llama-cpp | k2 | bev | lumma | julia | laya)
   min_confidence: 0.99    # client policy: scientific-writing confidence bar

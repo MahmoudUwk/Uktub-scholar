@@ -1,0 +1,372 @@
+[
+ {
+  "id": "c001",
+  "paraphrase": "HSD supplies wireless channel-state recordings of half a dozen different body movements, like jogging and punching",
+  "question": "Which body movements, such as jogging, do the HSD wireless sensing recordings cover?"
+ },
+ {
+  "id": "c003",
+  "paraphrase": "Hiding about 80% of spectrogram patches during self-supervised training forces a tougher rebuilding task",
+  "question": "Why do spectrogram-based self-supervised models hide roughly four-fifths of the input patches?"
+ },
+ {
+  "id": "c005",
+  "paraphrase": "Per-pixel signal labeling: pre-trained ViT-M hiding 70% of patches beats randomly initialized models despite quarter size",
+  "question": "Which model wins per-pixel signal labeling, and how big is it versus from-scratch rivals?"
+ },
+ {
+  "id": "c007",
+  "paraphrase": "Ground-truth masks encode background as zero, NR transmissions as one, and LTE transmissions as two",
+  "question": "What integer codes do the ground-truth masks assign to NR, LTE, and background?"
+ },
+ {
+  "id": "c009",
+  "paraphrase": "Best results during self-supervised training come from hiding somewhere around 70 to 80% of the input",
+  "question": "What portion of the input should be concealed for self-supervised learning to work best?"
+ },
+ {
+  "id": "c011",
+  "paraphrase": "Optimal low-rank adapter setup for radio-signal categorization: scaling 8, inner dimension 50, about 1.5M added weights",
+  "question": "Which low-rank adapter hyperparameters work best for radio-signal categorization, and how many weights do they add?"
+ },
+ {
+  "id": "c013",
+  "paraphrase": "5G channel-state records for self-supervised learning came from a handset at 476 spots, totaling 476 examples",
+  "question": "How many 5G channel-state samples were collected for pretraining, and from how many handset positions?"
+ },
+ {
+  "id": "c015",
+  "paraphrase": "Final two of 12 transformer layers are trainable for localization, channel-response estimation, and radio-signal categorization",
+  "question": "Which layers of the 12-block ViT are thawed when assessing localization, channel-response estimation, and signal categorization?"
+ },
+ {
+  "id": "c016",
+  "paraphrase": "At signal-to-noise levels past 13 dB, the traditional LS method outperforms both neural models",
+  "question": "Beyond what signal-to-noise level does the classical LS method beat both trained networks?"
+ },
+ {
+  "id": "c020",
+  "paraphrase": "ViT-WiFi needs about 20 adaptation passes since its source data resembles the body-movement recognition task",
+  "question": "How quickly does ViT-WiFi adapt to body-movement recognition given its similar source data?"
+ },
+ {
+  "id": "c021",
+  "paraphrase": "IQFM's feature extractor is a half-width ShuffleNetV2 with about 341 thousand learnable weights",
+  "question": "What network and learnable-weight count does IQFM's feature extractor have?"
+ },
+ {
+  "id": "c022",
+  "paraphrase": "Real-radio experimental recordings hold 1,115,378 annotated examples, divided 70 percent for training and 30 for evaluation",
+  "question": "How many annotated examples are in the real-radio experimental recordings, and how were they split?"
+ },
+ {
+  "id": "c024",
+  "paraphrase": "One annotated example per category gives 99.67% modulation-identification hit rate under task-tailored self-supervision versus 14.27% supervised",
+  "question": "With only one annotated example per category, how well does task-tailored self-supervision identify modulation?"
+ },
+ {
+  "id": "c028",
+  "paraphrase": "Nearest-neighbor automatic labeling with the modulation-tuned encoder reaches 99.99% correctness",
+  "question": "How correct is nearest-neighbor automatic labeling when using the modulation-tuned encoder?"
+ },
+ {
+  "id": "c029",
+  "paraphrase": "Dropping both circular temporal offsets and channel hiding in component-removal experiment sinks angle-of-arrival correctness to 0.95%",
+  "question": "What happens to angle-of-arrival correctness when circular temporal offsets and channel hiding are both dropped?"
+ },
+ {
+  "id": "c031",
+  "paraphrase": "The collected data totals 68 gigabytes spread over 4,609 separate capture files",
+  "question": "How much storage do the collected signals take up, and in how many files?"
+ },
+ {
+  "id": "c033",
+  "paraphrase": "The chosen perturbations are randomly removing antennas and blanking entries with zeros, each at 20% likelihood",
+  "question": "Which two data perturbations were chosen, and how frequently is each used?"
+ },
+ {
+  "id": "c034",
+  "paraphrase": "Two-fold deeper linear head atop a fixed encoder cuts angle-of-arrival error by 46%, reaching 4.28°",
+  "question": "By how much does a twice-as-deep linear head cut angle-of-arrival error on a fixed encoder?"
+ },
+ {
+  "id": "c036",
+  "paraphrase": "Recorded waveform types include PAM4, QPSK, 16-QAM, BPSK, 64-QAM, and an unmodulated carrier",
+  "question": "Which signal types are included, among them 64-QAM, PAM4, and an unmodulated carrier?"
+ },
+ {
+  "id": "c039",
+  "paraphrase": "When annotations are scarce, self-supervised learning beats conventional supervised models by up to roughly 41%",
+  "question": "How much better is self-supervised learning than conventional supervised models when annotations are scarce?"
+ },
+ {
+  "id": "c040",
+  "paraphrase": "This work creates the earliest general-purpose radio model handling unprocessed IQ samples together with picture-like inputs",
+  "question": "Which work introduced the earliest general-purpose radio model handling both unprocessed IQ samples and picture-like inputs?"
+ },
+ {
+  "id": "c041",
+  "paraphrase": "Time-frequency images used for initial model training number 3,200 in all",
+  "question": "How many time-frequency images make up the data used for initial training?"
+ },
+ {
+  "id": "c045",
+  "paraphrase": "Low-rank adaptation with width 32 and multiplier 32 adds about 0.3M weights, against FT2's 1.65M",
+  "question": "How many weights does low-rank adaptation add compared with FT2, and with what width and multiplier?"
+ },
+ {
+  "id": "c046",
+  "paraphrase": "Low-rank adapters outperform adjusting only two layers in 4 out of 6 tasks",
+  "question": "Out of 6 benchmarks, how often do low-rank adapters beat adjusting only two layers?"
+ },
+ {
+  "id": "c049",
+  "paraphrase": "JEPA training in LatentWave sets the target network to a decayed running mean of context-network weights",
+  "question": "How does JEPA training in LatentWave obtain the weights of its target network?"
+ },
+ {
+  "id": "c050",
+  "paraphrase": "Context-side and target-side ViTs each have 8 blocks, 8 heads, 256-dimensional embeddings, roughly 6.4M weights",
+  "question": "What size are the ViTs on the context-side and target-side, in blocks, heads, width, and weights?"
+ },
+ {
+  "id": "c052",
+  "paraphrase": "Occluding frequency bands instead of zones lifts beam selection 11+ points, cutting localization error to 2.32 m",
+  "question": "What gains come from hiding frequency bands instead of spatial zones in beam selection and localization?"
+ },
+ {
+  "id": "c054",
+  "paraphrase": "Random subsampling of streams keeps a number drawn evenly between one and the total on hand",
+  "question": "How is the number of kept streams chosen during random channel subsampling?"
+ },
+ {
+  "id": "c057",
+  "paraphrase": "Once self-supervised learning finishes, the target-side network is what gets kept for later applications",
+  "question": "Once initial training ends, which network is retained for subsequent tasks?"
+ },
+ {
+  "id": "c059",
+  "paraphrase": "Reviewed wireless foundation models fall into five PHY-level categories, such as beam handling and spectrum observation",
+  "question": "Into how many PHY-level categories does the review sort wireless foundation models, and which?"
+ },
+ {
+  "id": "c060",
+  "paraphrase": "Radio-based sensing and positioning is the commonest focus, shown in 30 of 49 models (61.2%)",
+  "question": "Which task category appears in the most models, 30 of the 49 surveyed?"
+ },
+ {
+  "id": "c062",
+  "paraphrase": "Wireless foundation model publications jumped from 6 in 2024 to 23 in 2025, roughly 283% growth",
+  "question": "How fast did publications on wireless foundation models grow between 2024 and 2025?"
+ },
+ {
+  "id": "c063",
+  "paraphrase": "Within channel-embedding foundation models, rebuilding hidden input portions is the leading training goal (15 of 30)",
+  "question": "What training goal do most channel-embedding foundation models use, and how many of 30 adopt it?"
+ },
+ {
+  "id": "c065",
+  "paraphrase": "LatentWave uses JEPA to weigh embedding-space forecasting against rebuilding hidden input for time-frequency and CSI data",
+  "question": "Which JEPA model compares embedding-space forecasting against rebuilding hidden input on time-frequency and CSI data?"
+ },
+ {
+  "id": "c067",
+  "paraphrase": "WiMamba's principal channel-state feature extractor is built on the Mamba sequence architecture",
+  "question": "What kind of architecture serves as WiMamba's principal channel-state feature extractor?"
+ },
+ {
+  "id": "c068",
+  "paraphrase": "Compressed vision-transformer radio models need up to 93% fewer multiply-accumulates, 85% less processor runtime",
+  "question": "How much computation and processor runtime do compressed vision-transformer radio models save?"
+ },
+ {
+  "id": "c070",
+  "paraphrase": "The starting network is a small vision transformer made of 12 encoding layers and 8 heads",
+  "question": "What backbone configuration does the starting network have in terms of depth and heads?"
+ },
+ {
+  "id": "c073",
+  "paraphrase": "Network trimming is done with the DepGraph toolkit, which accounts for coupling between layers",
+  "question": "Which toolkit handles network trimming while accounting for coupling between layers?"
+ },
+ {
+  "id": "c075",
+  "paraphrase": "Radio transmission recognition was tested on only the 10 most typical categories",
+  "question": "How many categories were used to test radio transmission recognition?"
+ },
+ {
+  "id": "c077",
+  "paraphrase": "Trimming cuts the network footprint for body-movement recognition from 148.22 MB down to 13.24 MB",
+  "question": "How small does the network become after trimming for body-movement recognition?"
+ },
+ {
+  "id": "c078",
+  "paraphrase": "Homergy's device offers 16 switching outputs built from 4 boards of 4 relays each",
+  "question": "How many switching outputs does the Homergy device offer, and how are they built?"
+ },
+ {
+  "id": "c080",
+  "paraphrase": "Homergy cut usage per week by 0.5 kWh (lifeline home) and 18 kWh (non-lifeline home)",
+  "question": "How many kilowatt-hours per week did Homergy save in lifeline and non-lifeline homes?"
+ },
+ {
+  "id": "c081",
+  "paraphrase": "In the heavy-usage home, Homergy beat setups relying solely on smart gadgets by 13 kWh weekly",
+  "question": "By how much did Homergy outperform gadget-only smart setups in the heavy-usage home?"
+ },
+ {
+  "id": "c083",
+  "paraphrase": "Using the relay's default-connected terminal keeps power flowing to appliances while the Homergy unit is unpowered",
+  "question": "Why does power still reach appliances when the Homergy unit is unpowered?"
+ },
+ {
+  "id": "c085",
+  "paraphrase": "Every Homergy unit carries an enciphered square barcode on its casing containing the unit's entry passcode",
+  "question": "Where is each Homergy unit's entry passcode stored on the hardware, and in what form?"
+ },
+ {
+  "id": "c087",
+  "paraphrase": "An I2C link connects the Arduino board to the NodeMCU wireless module",
+  "question": "Which protocol connects the Arduino board to the NodeMCU wireless module?"
+ },
+ {
+  "id": "c088",
+  "paraphrase": "In every tested case, WDO outperforms DE on electricity expense, highest demand, and peak-to-average ratio",
+  "question": "Which of WDO and DE gives lower electricity expense, highest demand, and PAR across scenarios?"
+ },
+ {
+  "id": "c089",
+  "paraphrase": "The work incorporates a grid-tied photovoltaic array of 5 kW installed on the roof",
+  "question": "What size and type of photovoltaic installation does the work incorporate?"
+ },
+ {
+  "id": "c091",
+  "paraphrase": "Low-demand-period homes are charged 0.00517 USD per kilowatt-hour for their initial 50 kWh",
+  "question": "What rate per kilowatt-hour applies to a low-demand-period home's initial 50 kWh?"
+ },
+ {
+  "id": "c093",
+  "paraphrase": "A 24-hour period is split into 120 intervals of 12 minutes apiece",
+  "question": "Into how many intervals is the 24-hour period split, and how long is each?"
+ },
+ {
+  "id": "c096",
+  "paraphrase": "Fixed-window scheduling without solar panels lowers electricity cost 15.78% versus unscheduled consumption",
+  "question": "How much does fixed-window scheduling without solar panels reduce electricity cost versus unscheduled usage?"
+ },
+ {
+  "id": "c098",
+  "paraphrase": "Plug senses frequency, effective current, cosine-phi, useful and wattless power, reporting to the meter via Zigbee",
+  "question": "Which electrical quantities does the plug sense, and how does it send them to the meter?"
+ },
+ {
+  "id": "c099",
+  "paraphrase": "Predictions from the tree-based model on a Raspberry Pi took about 1.59 microseconds each",
+  "question": "How long does a tree-based model take to make a prediction on a Raspberry Pi?"
+ },
+ {
+  "id": "c100",
+  "paraphrase": "A tariff-by-hour load-shifting scheme lowered electricity expense around 30% in a realistic example",
+  "question": "How much can hour-dependent pricing incentives for load-shifting reduce electricity bills in a realistic example?"
+ },
+ {
+  "id": "c102",
+  "paraphrase": "The metering unit is over 97% accurate, whereas the outlet device is over 99% accurate",
+  "question": "How accurate are the metering unit and the outlet device?"
+ },
+ {
+  "id": "c104",
+  "paraphrase": "Hourly-tariff scheduling lowers one day's electricity cost in the example from about $9.22 to $6.43",
+  "question": "In the example, what does the daily electricity cost become with hourly-tariff scheduling?"
+ },
+ {
+  "id": "c106",
+  "paraphrase": "The new mains-frequency estimator scales proportionally with input size, in contrast to the Fourier-transform method",
+  "question": "Which mains-frequency tracking method scales better with input size than Fourier-transform approaches?"
+ },
+ {
+  "id": "c108",
+  "paraphrase": "Controller-to-outlet traffic in the home energy manager rides WI-SUN HAN, while meter data rides WI-SUN FAN",
+  "question": "Which Wi-SUN network types carry controller-to-outlet traffic and meter data in the home energy manager?"
+ },
+ {
+  "id": "c109",
+  "paraphrase": "Intermediate software layer keeps its data in SQLite arranged as a ring buffer with capped length",
+  "question": "How is the intermediate software layer's SQLite storage organized to bound its length?"
+ },
+ {
+  "id": "c111",
+  "paraphrase": "Outlets sampled readings once per five seconds, a rate of 0.2 Hz",
+  "question": "How often did the outlets sample their readings?"
+ },
+ {
+  "id": "c112",
+  "paraphrase": "Principal component analysis is used in the appliance-separation workflow to recognize appliances and derive separation inputs",
+  "question": "What is principal component analysis used for in the appliance-separation workflow?"
+ },
+ {
+  "id": "c114",
+  "paraphrase": "The intermediate software layer regularly uploads data to the remote server over MQTT",
+  "question": "Which messaging protocol does the intermediate layer use to upload data to the remote server?"
+ },
+ {
+  "id": "c115",
+  "paraphrase": "On-site tests showed Wi-SUN HAN beating WiFi in reliability, even for outlets hidden behind steel-bodied appliances",
+  "question": "Is Wi-SUN HAN more reliable than WiFi for outlets hidden behind steel-bodied appliances?"
+ },
+ {
+  "id": "c117",
+  "paraphrase": "Statistical learning infers per-device energy use from a home's total usage alone",
+  "question": "How does the platform work out each device's energy use from just the whole-home total?"
+ },
+ {
+  "id": "c118",
+  "paraphrase": "The smart home energy design revolves around a central knowledge repository accessed via the NGSI-LD specification",
+  "question": "What is the core of the smart home energy design, and which specification does it use?"
+ },
+ {
+  "id": "c121",
+  "paraphrase": "The data schema is grounded primarily on the DABGEO vocabulary",
+  "question": "Which vocabulary forms the primary foundation of the data schema?"
+ },
+ {
+  "id": "c122",
+  "paraphrase": "Current smart-house controller hosts Home Assistant on a Raspberry Pi 4 with four gigabytes of memory",
+  "question": "What hardware hosts Home Assistant in the current smart-house controller?"
+ },
+ {
+  "id": "c124",
+  "paraphrase": "The espresso brewer plugged into the intelligent outlet draws at most 1.6 kW",
+  "question": "What is the maximum power draw of the espresso brewer on the intelligent outlet?"
+ },
+ {
+  "id": "c126",
+  "paraphrase": "Users are alerted by the HEC once electricity drawn from the mains hits 80%",
+  "question": "At what level of mains electricity drawn does the HEC alert users?"
+ },
+ {
+  "id": "c127",
+  "paraphrase": "The build relies on FIWARE's Orion-LD for context brokering and Keyrock for managing identities",
+  "question": "Which FIWARE components handle context brokering and identity handling in the build?"
+ },
+ {
+  "id": "c128",
+  "paraphrase": "Pretrained IQ-sample models identify modulation at 99.67% from one annotated example per category, 7x over supervised",
+  "question": "How accurately do pretrained IQ-sample models identify modulation from one annotated example per category?"
+ },
+ {
+  "id": "c129",
+  "paraphrase": "Compact networks like half-width ShuffleNetV2 are the favored choice when deploying such systems on edge devices",
+  "question": "What kind of network is best for deploying such systems on edge devices?"
+ },
+ {
+  "id": "c131",
+  "paraphrase": "Given one example, the models surpass supervised equivalents up to 145x at angle-of-arrival estimation",
+  "question": "How much better than supervised equivalents are the models at angle-of-arrival with one example?"
+ },
+ {
+  "id": "c133",
+  "paraphrase": "With ten annotated examples per category, the combined self-supervised model hit 95.71% modulation and 89.35% angle-of-arrival",
+  "question": "What accuracies does the combined self-supervised model reach with ten annotated examples per category?"
+ }
+]

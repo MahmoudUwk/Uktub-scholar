@@ -34,7 +34,7 @@ Run `uktub-scholar init` in the research project to create `.registry/registry.d
 and `refs/references.bib`. Nested projects are refused. The user owns layout,
 LaTeX sources, git, backups, and toolchains; sandboxing is optional.
 
-## Four Pi tools
+## Five Pi tools
 
 | Tool | Behavior / limits |
 |---|---|
@@ -42,6 +42,7 @@ LaTeX sources, git, backups, and toolchains; sandboxing is optional.
 | `paper_registry(action, …)` | Register, remove, read, attach a source, sync the bibliography — one tool, below |
 | `compile_document(entry?)` | Local Tectonic, PDF in `build/`; 120 s budget, maximum 50 diagnostics |
 | `verify_claim(claim, papers \| passages, query?, continuation?)` | One claim over all or selected papers; supporting passages plus coverage, below |
+| `search_passages(query, papers?, limit?)` | Exploratory retrieval over the registered papers' full text; best-matching passages (section, page, pointer, excerpt), below |
 
 Caps are client policies unless a source is named (search/registration informed
 by the recorded Feynman incident). `UKTUB_COMPILE_TIMEOUT_S` overrides the
@@ -122,6 +123,39 @@ Direct path (rare): `passages: [{source: pointer} | {text}]` judges exactly thos
 and is checked against its current revision, so the direct path cannot be used to read
 arbitrary spans; `text` carries **no authenticated paper provenance** and can never claim a DOI.
 
+### `search_passages`
+
+Retrieval for the writing agent: describe a topic, question or phrase and get the best-matching passages of
+the registered papers, each with its paper, **section heading**, page, an exact `doi@revision#start-end`
+pointer and a verbatim excerpt. The passages are the same chunks `verify_claim` judges (section chunks, at
+most 512 tokens ≈ 1,433 characters, so one chunk is one releasable passage). Output containment is the evidence
+rule: a passage that is half its paper or longer than 1,500 characters, and text past 25 % of one paper's
+text in one call, is withheld with its reason (the pointer is always kept), spending the budget on the
+best-ranked passages first. At most 10 passages per call (default 5). Results are retrieval, not
+verification — check a claim with `verify_claim` before citing it.
+
+Search is BM25 over an FTS5 index, and **hybrid when an embedding server is configured**: BM25 and an
+exact-cosine vector ranking fused with Reciprocal Rank Fusion (k = 60). Any OpenAI-compatible
+`/v1/embeddings` server works; the measured one is
+[EmbeddingGemma-300m](https://huggingface.co/google/embeddinggemma-300m) (QAT Q8_0 GGUF, Gemma terms) on `llama-server`:
+
+| Variable | Meaning |
+|---|---|
+| `UKTUB_EMBED_URL` | base URL of the embedding server; unset = keyword search only (not a degradation) |
+| `UKTUB_EMBED_MODEL` | optional declared model name; by default the model the server reports on `/v1/models` |
+| `UKTUB_EMBED_PROFILE` | prompt profile: `embeddinggemma` (default; adds the model's query/document task prefixes) or `none` |
+
+Vectors are cached in the registry keyed by passage content and the served model (its size and
+quantisation are part of the identity), so they are embedded once, survive rechunking that keeps a
+passage, and are never read for a different model. If the server is down or answers badly the call returns
+keyword results and states `vector search unavailable (…)`. **Server requirements** (found by running it):
+start `llama-server` with `--embeddings --pooling mean -c 2048 -b 2048 -ub 2048` — the default physical
+batch of 512 tokens rejects a chunk of ≈ 570 tokens — and use a GGUF **converted with the sentence-transformers
+dense modules**: the `ggml-org/embeddinggemma-300m-qat-q8_0-GGUF` file omits them and its vectors have cosine
+≈ 0.01 with the reference model (measured). `cduk/embeddinggemma-300m-GGUF-with-dense-modules`
+(`embeddinggemma-300M-QAT-Q8.gguf`) reproduces the reference (mean cosine 0.990, pairwise-similarity
+correlation 0.995, on 20 sentences). Measured value: [passage search benchmark](docs/benchmarks/rag-search-section-512-2026-10-04.md).
+
 ### Sources
 
 Registration stores metadata only. `verify_claim` prepares sources on demand, from
@@ -148,8 +182,9 @@ PeerJ paper and an arXiv preprint did), which are not scraped — attach a file 
 
 `uktub-scholar` exposes `init`, `register <id>...`, `attach <doi|citekey> <file>`,
 `verify <claim> [--papers all|<handle>,… ] [--query <words>] [--continuation <token>]`,
+`search <query> [--papers all|<handle>,… ] [--limit <n>]`,
 `deregister <doi|citekey>...`, `sync-bib`, `list`, and `compile [entry.tex]`.
-`register`, `attach` and `verify` call the same tool functions the agent uses and print
+`register`, `attach`, `verify` and `search` call the same tool functions the agent uses and print
 exactly what the agent reads.
 
 ## Configuration
@@ -160,10 +195,10 @@ Malformed or unknown supplied configuration fails with `CONFIG_INVALID`.
 
 | Key | Default | Source |
 |---|---|---|
-| `chunking.chunk_tokens` | 1024 | measured: recall plateaus here ([window sweep](docs/benchmarks/evidence-window-sweep-2026-10-04.md)); the engine window is the ceiling |
-| `chunking.overlap_tokens` | 16 | continuity across paragraph boundaries (the measured setting) |
+| `chunking.chunk_tokens` | 512 | cap of one chunk; measured ([section chunking](docs/benchmarks/evidence-chunking-sections-2026-10-04.md)); ≤ 1,433 characters, inside the 1,500-character excerpt limit |
+| `chunking.overlap_tokens` | 0 | fixed-window boundaries only; a section chunk is a unit and carries no overlap |
 | `chunking.chars_per_token` | 2.8 | calibrated on the benchmark corpus (densest paper 3.10; 0.9 headroom) |
-| `chunking.boundary` | `paragraph` | `paragraph` \| `hard` |
+| `chunking.boundary` | `section` | `section` (document headings; split only when larger than the cap, tiny sections merged) \| `paragraph` \| `hard` |
 | `verification.engine` | `eos` | owner decision 2026-10-04; env `UKTUB_VERIFY_ENGINE` overrides |
 | `verification.min_confidence` | 0.99 | client policy; env `UKTUB_VERIFY_MIN_CONFIDENCE` overrides |
 | `verification.workers` | 4 | client policy: concurrent engine calls |
@@ -178,7 +213,7 @@ Engines:
   `transformers>=5.17`, `safetensors` — selected with `UKTUB_EOS_PYTHON` (default `python3`).
   `UKTUB_EOS_MODEL` (a local snapshot directory or the HF id) and `UKTUB_EOS_REVISION` override the pin;
   the judgment identity includes the revision and a fingerprint of local files. At the 0.99 bar it
-  measured precision 0.97 and recall 0.84 at the default 1,024-token window (0.52 at 8,192)
+  measured precision 0.97 and recall 0.84 with fixed 1,024-token windows (0.52 at 8,192); the default section chunks measured 0.88–0.90 on 50 claims
   ([evidence](docs/benchmarks/evidence-quality-end-to-end-2026-10-04.md)); a missing environment is a
   `VERIFY_ENGINE_MISSING` refusal naming the cause.
 - `openrouter`: `inception/mercury-decide:free`, System One decisions API;
@@ -205,7 +240,7 @@ Optional project `AGENTS.md` guidance (never written by `init`): use the scholar
 tools for papers, cite only citable registered keys, never hand-edit the rendered
 bibliography, and compile user-owned LaTeX with `compile_document`.
 
-Registry schema version 3. Version 1 and 2 registries migrate in place on open (papers and
+Registry schema version 5. Version 1 to 4 registries migrate in place on open (papers and
 citekeys intact); version 2's unsourced chunk, verdict and pointer rows are dropped, after
 a `registry.db.v2.bak` copy. A foreign or newer schema is refused byte-for-byte unchanged.
 

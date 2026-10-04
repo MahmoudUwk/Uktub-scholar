@@ -12,6 +12,55 @@ local alternative. Earlier “primary” choices and Stage-D candidate lists bel
 are superseded. Recorded live/benchmark runs are historical; the latest
 Mercury CLI attempt was quota-blocked, not a new successful live verification.
 
+## 2026-10-04 (section chunking and passage search)
+
+Owner request: chunk by the document's own structure, one set of chunks for retrieval and claim
+verification, with a very reliable, well-tested splitter; add RAG; a small llama.cpp runtime for
+EmbeddingGemma was asked about.
+
+- **Splitter (`src/core/sections.ts`)** — pure `splitBySections(text, marks, {maxChars, minChars})`. A section
+  that fits stays whole; a larger one splits into pieces of at most the cap at sentence boundaries, balanced
+  (the final cut is chosen in the feasible range near the middle so no piece is a sliver); a heading line is
+  never cut and never left alone at the end of a chunk; tiny whole sections merge into a neighbour only while
+  the result fits. Verified by fixed cases and seeded property tests over 3,000 random documents (tiling,
+  cap, determinism, heading integrity, parts bookkeeping, no sliver pieces, "tiny only if a neighbour
+  cannot absorb it", "a fitting section is never fragmented") plus mutation checks (each injected bug is
+  caught; the one surviving mutant is equivalent). The property run found two real defects in the first
+  implementation (a sliver tail piece; a short piece before an unbroken run).
+- **Structure** — TEI `<head>` offsets (exact); PDF heading lines (`src/core/source/headings.ts`) detected
+  from the text itself, because `unpdf` keeps the page's hard-wrapped lines: canonical section names and
+  numbered headings (roman, arabic with depth, lettered subsections after a roman section), with rejections for
+  titles, units ("10 MHz"), pseudocode lines (math symbols), table rows, dates, figure panels, wrapped
+  sentences and everything after the References heading. Measured on the 14 real PDFs: about 300 headings,
+  **7 known false positives (≈ 2 %)** — three pseudocode lines, one affiliation, two list items, one notes
+  line — recorded in BACKLOG. A wrong mark can only mislabel or shift a boundary, never break a pointer (the
+  splitter tiles the text whatever the marks are). A font-based pass over `pdf.js` items was not built: the
+  text-level detector is already measured and the residue is small; revisit if real sessions show harm.
+- **Adoption** — default `boundary: section`, 512 tokens, no overlap
+  ([evidence](benchmarks/evidence-chunking-sections-2026-10-04.md)): pooled support recall 90 % against 80 % for
+  fixed 1,024 on 50 claims in two disjoint samples (6 gains, 1 loss; not conclusive, not worse), 5.0 judgments
+  per claim with a locator, and every chunk inside the excerpt limit. Fixed policies keep their identities.
+  Schema v4 stores the marks (`paper_sources.sections_json`) and the label (`chunks.section`); a PDF source stored
+  before marks existed derives them from its text on the next rechunk.
+- **Passage search** — hybrid FTS5/BM25 + exact-cosine vector ranking fused with RRF (k = 60), lexical when no
+  embedder is configured or it fails (stated, never hidden). Vectors are a content-keyed compute cache
+  (schema v5, `passage_vectors`, key = passage content + served-model identity). Measured on the 74 TRUE claims
+  ([report](benchmarks/rag-search-section-512-2026-10-04.md)), recall@5 over all 14 papers: claim-text queries
+  — BM25 98.6 %, vector 85.1 %, hybrid 94.6 %; independent paraphrases — 70.3 / 71.6 / 73.0 %; independent
+  natural-language questions — **41.9 / 68.9 / 60.8 %**. Reading: BM25 is the floor and is hard to beat when the
+  query reuses the paper's words; the vector leg is what finds passages for questions and paraphrases; unweighted
+  RRF never fails badly across styles but trails the better single leg on each extreme (a weighted or reranked
+  fusion is a possible later measurement). Cost: embedding the 697 passages takes 20 s once on CPU, a search 30 ms.
+- **Embedding model provenance (a measured trap)** — the `ggml-org/embeddinggemma-300m-qat-q8_0-GGUF` file the
+  owner named has no dense-module tensors: its vectors have cosine ≈ 0.01 with the reference model (pairwise
+  geometry still correlates 0.97, which would have looked plausible). A GGUF converted with
+  `--sentence-transformers-dense-modules` (`cduk/embeddinggemma-300m-GGUF-with-dense-modules`) matches the
+  reference (mean cosine 0.990). llama-server also needs `-b/-ub` ≥ the chunk size (default 512 rejects a
+  570-token chunk). Both are in the README; the embedder fails closed (typed error, lexical fallback).
+- **Runtime packaging** — not decided; see BACKLOG item 2 for the researched options and the open question.
+- Bug found by the live work: `containEvidence` spends the release budget in reading order (right for paged
+  verification); search needs it spent on the best-ranked passages, so it takes an explicit `releaseOrder`.
+
 ## 2026-10-04 (paper registry and supporting evidence)
 
 Measured choices; numbers live in the dated reports in [benchmarks/](benchmarks/).

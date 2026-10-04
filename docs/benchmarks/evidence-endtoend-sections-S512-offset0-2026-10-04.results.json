@@ -1,0 +1,2459 @@
+{
+ "schema": "bench-evidence/1",
+ "phase": "endtoend",
+ "date": "2026-10-04",
+ "chunkTokens": 512,
+ "boundary": "section",
+ "k": 5,
+ "engineUrl": "http://127.0.0.1:8099",
+ "policy": "b00e46081a63",
+ "records": [
+  {
+   "id": "c001",
+   "paper": "2411.09996v1",
+   "part": "tuning",
+   "kind": "dataset",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 7526,
+    "end": 7661
+   },
+   "evidence": [
+    {
+     "start": 7476,
+     "end": 8291,
+     "doi": "10.9999/p01",
+     "excerpt": "B. Human Activity CSI-Based Sensing Dataset (HSD)\nThe HSD dataset contains CSI measurements for six human\nactivities: running, walking, falling, boxing, arm cir…",
+     "withheld": null,
+     "score": 0.9971711730683961
+    }
+   ],
+   "fresh": 26,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 6618,
+   "limitations": [],
+   "chars": 815
+  },
+  {
+   "id": "c002",
+   "paper": "2411.09996v1",
+   "part": "tuning",
+   "kind": "numeric",
+   "mode": "exhaustive",
+   "label": "FALSE",
+   "gold": {
+    "start": 7781,
+    "end": 7906
+   },
+   "evidence": [],
+   "fresh": 26,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 1629,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c007",
+   "paper": "2411.09996v1",
+   "part": "tuning",
+   "kind": "dataset",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 9026,
+    "end": 9128
+   },
+   "evidence": [
+    {
+     "start": 8291,
+     "end": 9373,
+     "doi": "10.9999/p01",
+     "excerpt": "C. NR-LTE Segmentation Dataset (SD)\nThe SD dataset is created by generating NR and LTE signals,\neach transmitted through its respective wireless channel in\nTABL…",
+     "withheld": null,
+     "score": 0.9983030945634845
+    }
+   ],
+   "fresh": 26,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 1657,
+   "limitations": [],
+   "chars": 1082
+  },
+  {
+   "id": "c008",
+   "paper": "2411.09996v1",
+   "part": "tuning",
+   "kind": "finding",
+   "mode": "exhaustive",
+   "label": "FALSE",
+   "gold": {
+    "start": 1315,
+    "end": 1443
+   },
+   "evidence": [
+    {
+     "start": 915,
+     "end": 1864,
+     "doi": "10.9999/p01",
+     "excerpt": "We introduce a Masked\nSpectrogram Modeling (MSM) approach to pretrain the ViT in\na self-supervised fashion. We evaluate the ViT-based foundation\nmodel on two do…",
+     "withheld": null,
+     "score": 0.9946894625263023
+    },
+    {
+     "start": 23537,
+     "end": 24578,
+     "doi": "10.9999/p01",
+     "excerpt": "V. CONCLUSION\nIn this paper, we proposed ViT as a radio foundation\nmodel for spectrogram learning which offers superior modelling\ncapabilities, support for vari…",
+     "withheld": null,
+     "score": 0.9982202408834191
+    }
+   ],
+   "fresh": 26,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 1634,
+   "limitations": [],
+   "chars": 1990
+  },
+  {
+   "id": "c013",
+   "paper": "2504.14100v1",
+   "part": "held-out",
+   "kind": "dataset",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 15208,
+    "end": 15255
+   },
+   "evidence": [
+    {
+     "start": 14937,
+     "end": 15604,
+     "doi": "10.9999/p02",
+     "excerpt": "The setup includes a baseband unit and a four-\nchannel picocell sub-6GHz remote radio unit that together\nform a base station, as well as a user terminal (UT) mo…",
+     "withheld": null,
+     "score": 0.9920848229929912
+    }
+   ],
+   "fresh": 51,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 3280,
+   "limitations": [],
+   "chars": 667
+  },
+  {
+   "id": "c014",
+   "paper": "2504.14100v1",
+   "part": "held-out",
+   "kind": "numeric",
+   "mode": "exhaustive",
+   "label": "FALSE",
+   "gold": {
+    "start": 14574,
+    "end": 14621
+   },
+   "evidence": [],
+   "fresh": 51,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 3226,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c019",
+   "paper": "2504.14100v1",
+   "part": "held-out",
+   "kind": "numeric",
+   "mode": "exhaustive",
+   "label": "FALSE",
+   "gold": {
+    "start": 14044,
+    "end": 14097
+   },
+   "evidence": [],
+   "fresh": 51,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 3233,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c020",
+   "paper": "2504.14100v1",
+   "part": "held-out",
+   "kind": "finding",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 47961,
+    "end": 48047
+   },
+   "evidence": [
+    {
+     "start": 47526,
+     "end": 48556,
+     "doi": "10.9999/p02",
+     "excerpt": "Furthermore, Figure 7 illustrate\n\n12\nthe performance on the test set for every downstream task, as\na function of epochs during fine-tuning.\nOur evaluation revea…",
+     "withheld": null,
+     "score": 0.9998063551598262
+    }
+   ],
+   "fresh": 51,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 3300,
+   "limitations": [],
+   "chars": 1030
+  },
+  {
+   "id": "c024",
+   "paper": "2506.06718v2",
+   "part": "tuning",
+   "kind": "finding",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 40619,
+    "end": 40728
+   },
+   "evidence": [
+    {
+     "start": 7808,
+     "end": 9126,
+     "doi": "10.9999/p03",
+     "excerpt": "• We validate the foundational model’s practical effective-\nness through comprehensive evaluations on multiple over-\nthe-air datasets. On the in-distribution te…",
+     "withheld": null,
+     "score": 0.9959929451368259
+    }
+   ],
+   "fresh": 56,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 3763,
+   "limitations": [],
+   "chars": 1318
+  },
+  {
+   "id": "c026",
+   "paper": "2506.06718v2",
+   "part": "tuning",
+   "kind": "numeric",
+   "mode": "exhaustive",
+   "label": "FALSE",
+   "gold": {
+    "start": 42612,
+    "end": 42718
+   },
+   "evidence": [],
+   "fresh": 56,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 3663,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c031",
+   "paper": "2509.03077v1",
+   "part": "held-out",
+   "kind": "dataset",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 17258,
+    "end": 17331
+   },
+   "evidence": [
+    {
+     "start": 16724,
+     "end": 17799,
+     "doi": "10.9999/p04",
+     "excerpt": "The\ndataset covers various positions and angles, with azimuth and\nelevation ranging from -70° to 70°, controlled precisely by\nservo motors. The elevation servo …",
+     "withheld": null,
+     "score": 0.9997380490482008
+    }
+   ],
+   "fresh": 33,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 1858,
+   "limitations": [],
+   "chars": 1075
+  },
+  {
+   "id": "c032",
+   "paper": "2509.03077v1",
+   "part": "held-out",
+   "kind": "dataset",
+   "mode": "exhaustive",
+   "label": "FALSE",
+   "gold": {
+    "start": 17333,
+    "end": 17426
+   },
+   "evidence": [],
+   "fresh": 33,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 1845,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c036",
+   "paper": "2509.03077v1",
+   "part": "held-out",
+   "kind": "dataset",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 9502,
+    "end": 9584
+   },
+   "evidence": [
+    {
+     "start": 8961,
+     "end": 9790,
+     "doi": "10.9999/p04",
+     "excerpt": "A. Problem Statement\nWe consider a MIMO setup with Nt transmit antennas and\nNr receive antennas as show in 1. The transmitter sends a\nvariety of modulation sign…",
+     "withheld": null,
+     "score": 0.9998534415973908
+    }
+   ],
+   "fresh": 33,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 2076,
+   "limitations": [],
+   "chars": 829
+  },
+  {
+   "id": "c038",
+   "paper": "2509.03077v1",
+   "part": "held-out",
+   "kind": "numeric",
+   "mode": "exhaustive",
+   "label": "FALSE",
+   "gold": {
+    "start": 19071,
+    "end": 19155
+   },
+   "evidence": [],
+   "fresh": 33,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 1982,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c041",
+   "paper": "2511.15162v1",
+   "part": "tuning",
+   "kind": "dataset",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 17241,
+    "end": 17285
+   },
+   "evidence": [
+    {
+     "start": 16533,
+     "end": 17362,
+     "doi": "10.9999/p05",
+     "excerpt": "B. Pretraining Data\nWe pretrain on two datasets: a spectrogram dataset for image-\nlike wireless modalities and an IQ dataset for raw in-phase and\nquadrature str…",
+     "withheld": null,
+     "score": 0.999397703711671
+    },
+    {
+     "start": 17362,
+     "end": 18264,
+     "doi": "10.9999/p05",
+     "excerpt": "Each sample contains four streams\n(one per antenna) shown stacked vertically.\nFig. 2: Pretraining Datasets.\nIQ Dataset. The datasets represents the IQ modality.…",
+     "withheld": null,
+     "score": 0.9989596730728632
+    }
+   ],
+   "fresh": 30,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 1973,
+   "limitations": [],
+   "chars": 1731
+  },
+  {
+   "id": "c044",
+   "paper": "2511.15162v1",
+   "part": "tuning",
+   "kind": "finding",
+   "mode": "exhaustive",
+   "label": "FALSE",
+   "gold": {
+    "start": 23276,
+    "end": 23374
+   },
+   "evidence": [],
+   "fresh": 30,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 1856,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c049",
+   "paper": "2606.06373v1",
+   "part": "held-out",
+   "kind": "method",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 11277,
+    "end": 11373
+   },
+   "evidence": [
+    {
+     "start": 10339,
+     "end": 11675,
+     "doi": "10.9999/p06",
+     "excerpt": "The\nmasked patch indices form the set M ⊂ {1, . . . , 𝑁 }, and the\ncomplementary visible set is defined as V = {1, . . . , 𝑁 } \\ M.\nFull details of the maskin…",
+     "withheld": null,
+     "score": 0.9988513654257021
+    }
+   ],
+   "fresh": 28,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 1846,
+   "limitations": [],
+   "chars": 1336
+  },
+  {
+   "id": "c051",
+   "paper": "2606.06373v1",
+   "part": "held-out",
+   "kind": "finding",
+   "mode": "exhaustive",
+   "label": "FALSE",
+   "gold": {
+    "start": 1365,
+    "end": 1544
+   },
+   "evidence": [],
+   "fresh": 28,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 1800,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c054",
+   "paper": "2606.06373v1",
+   "part": "held-out",
+   "kind": "method",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 9707,
+    "end": 9831
+   },
+   "evidence": [
+    {
+     "start": 8919,
+     "end": 10339,
+     "doi": "10.9999/p06",
+     "excerpt": "A shared linear projection maps each single-channel\npatch to a 𝐷-dimensional embedding. This yields a total of\n𝑁 = 𝐶 × 𝐻\n𝑝ℎ × 𝑊\n𝑝𝑤 patch tokens z = [𝑧1…",
+     "withheld": null,
+     "score": 0.9943615640456577
+    }
+   ],
+   "fresh": 28,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 1780,
+   "limitations": [],
+   "chars": 1420
+  },
+  {
+   "id": "c056",
+   "paper": "2606.06373v1",
+   "part": "held-out",
+   "kind": "finding",
+   "mode": "exhaustive",
+   "label": "FALSE",
+   "gold": {
+    "start": 1047,
+    "end": 1187
+   },
+   "evidence": [],
+   "fresh": 28,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 1759,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c060",
+   "paper": "2609.04707v1",
+   "part": "tuning",
+   "kind": "finding",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 51920,
+    "end": 52141
+   },
+   "evidence": [
+    {
+     "start": 51110,
+     "end": 52523,
+     "doi": "10.9999/p07",
+     "excerpt": "B. Categorization and Analysis of WFMs by Task\nTable III summarizes the taxonomic coverage of physical-\nlayer wireless foundation models from 2024 to 2026, cons…",
+     "withheld": null,
+     "score": 0.9976643996503606
+    }
+   ],
+   "fresh": 152,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 9990,
+   "limitations": [],
+   "chars": 1413
+  },
+  {
+   "id": "c064",
+   "paper": "2609.04707v1",
+   "part": "tuning",
+   "kind": "finding",
+   "mode": "exhaustive",
+   "label": "FALSE",
+   "gold": {
+    "start": 8304,
+    "end": 8441
+   },
+   "evidence": [],
+   "fresh": 152,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 9731,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c065",
+   "paper": "2609.04707v1",
+   "part": "tuning",
+   "kind": "method",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 62313,
+    "end": 62482
+   },
+   "evidence": [
+    {
+     "start": 61414,
+     "end": 62744,
+     "doi": "10.9999/p07",
+     "excerpt": "B. Pretraining Objectives\nPretraining objectives differ not only in downstream per-\nformance, but also in the signal assumptions they impose.\nContrastive object…",
+     "withheld": null,
+     "score": 0.9944956054134225
+    }
+   ],
+   "fresh": 152,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 9896,
+   "limitations": [],
+   "chars": 1330
+  },
+  {
+   "id": "c070",
+   "paper": "Tiny_Federated_Wireless_Foundation_Model",
+   "part": "tuning",
+   "kind": "method",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 44020,
+    "end": 44096
+   },
+   "evidence": [
+    {
+     "start": 43943,
+     "end": 45196,
+     "doi": "10.9999/p09",
+     "excerpt": "A. Experimental Setup\n1) Tiny Wireless Foundation Model: In our experiments,\nwe employ a ViT small model with 12 encoder blocks\nand eight attention heads. Pruni…",
+     "withheld": null,
+     "score": 0.9997868587280073
+    }
+   ],
+   "fresh": 57,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 3593,
+   "limitations": [],
+   "chars": 1253
+  },
+  {
+   "id": "c071",
+   "paper": "Tiny_Federated_Wireless_Foundation_Model",
+   "part": "tuning",
+   "kind": "numeric",
+   "mode": "exhaustive",
+   "label": "FALSE",
+   "gold": {
+    "start": 44586,
+    "end": 44764
+   },
+   "evidence": [],
+   "fresh": 57,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 3614,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c076",
+   "paper": "Tiny_Federated_Wireless_Foundation_Model",
+   "part": "tuning",
+   "kind": "dataset",
+   "mode": "exhaustive",
+   "label": "FALSE",
+   "gold": {
+    "start": 48134,
+    "end": 48272
+   },
+   "evidence": [],
+   "fresh": 57,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 3548,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c077",
+   "paper": "Tiny_Federated_Wireless_Foundation_Model",
+   "part": "tuning",
+   "kind": "numeric",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 50848,
+    "end": 50923
+   },
+   "evidence": [
+    {
+     "start": 49928,
+     "end": 51296,
+     "doi": "10.9999/p09",
+     "excerpt": "The results presented in the next section confirm that prun-\ning noncritical blocks reduces model size and computational\ncomplexity while maintaining accuracy, …",
+     "withheld": null,
+     "score": 0.9914123448036879
+    }
+   ],
+   "fresh": 57,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 3631,
+   "limitations": [],
+   "chars": 1368
+  },
+  {
+   "id": "c081",
+   "paper": "http_thesai.org_Downloads_Volume12No2_Pa",
+   "part": "held-out",
+   "kind": "finding",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 2235,
+    "end": 2328
+   },
+   "evidence": [
+    {
+     "start": 1159,
+     "end": 2403,
+     "doi": "10.9999/p10",
+     "excerpt": "However,\nthese systems apply only to already-smart devices and are not\nappropriate for the many locales where a majority of appliances\nare not yet IoT-capable. …",
+     "withheld": null,
+     "score": 0.9997275426033309
+    }
+   ],
+   "fresh": 31,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 1833,
+   "limitations": [],
+   "chars": 1244
+  },
+  {
+   "id": "c084",
+   "paper": "http_thesai.org_Downloads_Volume12No2_Pa",
+   "part": "held-out",
+   "kind": "method",
+   "mode": "exhaustive",
+   "label": "FALSE",
+   "gold": {
+    "start": 20784,
+    "end": 21021
+   },
+   "evidence": [],
+   "fresh": 31,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 1802,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c087",
+   "paper": "http_thesai.org_Downloads_Volume12No2_Pa",
+   "part": "held-out",
+   "kind": "method",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 13334,
+    "end": 13418
+   },
+   "evidence": [
+    {
+     "start": 13212,
+     "end": 14236,
+     "doi": "10.9999/p10",
+     "excerpt": "B. Communication\nCommunication protocols used in Homergy include the I2C\nserial protocol, HTTP, WebSocket and TCP/IP. I2C is imple-\nmented between the microcont…",
+     "withheld": null,
+     "score": 0.9981767487538584
+    }
+   ],
+   "fresh": 31,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 1819,
+   "limitations": [],
+   "chars": 1024
+  },
+  {
+   "id": "c091",
+   "paper": "https_www.mdpi.com_2071-1050_14_21_14556",
+   "part": "tuning",
+   "kind": "numeric",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 12298,
+    "end": 12391
+   },
+   "evidence": [
+    {
+     "start": 11239,
+     "end": 11812,
+     "doi": "10.9999/p11",
+     "excerpt": "2.2. Energy Tariff Scheme\nAs a result, feed-in tariffs need to be greater in comparison to grid tariffs in order to\nappeal to consumers and generate renewable e…",
+     "withheld": null,
+     "score": 0.9993859235254775
+    },
+    {
+     "start": 11812,
+     "end": 12635,
+     "doi": "10.9999/p11",
+     "excerpt": "2.2. Energy Tariff Scheme\nAs a result, feed-in tariffs need to be greater in comparison to grid tariffs in order\nto appeal to consumers and generate renewable e…",
+     "withheld": null,
+     "score": 0.9986657732066052
+    }
+   ],
+   "fresh": 56,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 3723,
+   "limitations": [],
+   "chars": 1396
+  },
+  {
+   "id": "c092",
+   "paper": "https_www.mdpi.com_2071-1050_14_21_14556",
+   "part": "tuning",
+   "kind": "numeric",
+   "mode": "exhaustive",
+   "label": "FALSE",
+   "gold": {
+    "start": 12393,
+    "end": 12486
+   },
+   "evidence": [],
+   "fresh": 56,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 3698,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c097",
+   "paper": "https_www.mdpi.com_2071-1050_14_21_14556",
+   "part": "tuning",
+   "kind": "method",
+   "mode": "exhaustive",
+   "label": "FALSE",
+   "gold": {
+    "start": 30075,
+    "end": 30152
+   },
+   "evidence": [],
+   "fresh": 56,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 3665,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c098",
+   "paper": "https_www.mdpi.com_2079-9292_12_19_4041_",
+   "part": "held-out",
+   "kind": "method",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 1529,
+    "end": 1852
+   },
+   "evidence": [
+    {
+     "start": 930,
+     "end": 1953,
+     "doi": "10.9999/p12",
+     "excerpt": "2 Department of Computing, University of Turku, FI-20014 Turku, Finland\n3 Department of Technology, Higher Institute of Computer Sciences and Mathematics, Unive…",
+     "withheld": null,
+     "score": 0.9999439173167944
+    },
+    {
+     "start": 10538,
+     "end": 11844,
+     "doi": "10.9999/p12",
+     "excerpt": "2. Related Works\nThe proposed home-energy-management system (HEMS) is pictured in Figure 2. The\nsmart plug scattered all over the residential areas scans, monit…",
+     "withheld": null,
+     "score": 0.9996222994259153
+    },
+    {
+     "start": 14391,
+     "end": 15816,
+     "doi": "10.9999/p12",
+     "excerpt": "The researchers made use of a cheap commercial smart plug (the Plug-\nwise system). Real power, reactive power, the phase angle between current and voltage (φ),\n…",
+     "withheld": null,
+     "score": 0.9977191763892115
+    },
+    {
+     "start": 21608,
+     "end": 22311,
+     "doi": "10.9999/p12",
+     "excerpt": "3.1. Appliance’s Signature\nThere are numerous characteristics that set each electric appliance apart and can be\nused to identify them. The classification of app…",
+     "withheld": null,
+     "score": 0.9962104519885081
+    }
+   ],
+   "fresh": 49,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 3243,
+   "limitations": [],
+   "chars": 4457
+  },
+  {
+   "id": "c102",
+   "paper": "https_www.mdpi.com_2079-9292_12_19_4041_",
+   "part": "held-out",
+   "kind": "finding",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 2253,
+    "end": 2377
+   },
+   "evidence": [
+    {
+     "start": 1953,
+     "end": 2926,
+     "doi": "10.9999/p12",
+     "excerpt": "The smart meter and smart plug were prototyped by using\nRaspberry Pi and Arduino, respectively. The smart plug’s accuracy was quantified by comparing it to\nlabo…",
+     "withheld": null,
+     "score": 0.99977987369979
+    }
+   ],
+   "fresh": 49,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 3209,
+   "limitations": [],
+   "chars": 973
+  },
+  {
+   "id": "c105",
+   "paper": "https_www.mdpi.com_2079-9292_12_19_4041_",
+   "part": "held-out",
+   "kind": "method",
+   "mode": "exhaustive",
+   "label": "FALSE",
+   "gold": {
+    "start": 1763,
+    "end": 1852
+   },
+   "evidence": [],
+   "fresh": 49,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 3111,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c108",
+   "paper": "https_www.mdpi.com_2079-9292_12_21_4453_",
+   "part": "tuning",
+   "kind": "method",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 1967,
+    "end": 2297
+   },
+   "evidence": [
+    {
+     "start": 2044,
+     "end": 2917,
+     "doi": "10.9999/p13",
+     "excerpt": "The system comprises a control unit that communicates with smart outlets using the Wireless Smart\nUbiquitous Network (WI-SUN) Home Area Network (HAN) specificat…",
+     "withheld": null,
+     "score": 0.9965719586550869
+    },
+    {
+     "start": 5575,
+     "end": 6986,
+     "doi": "10.9999/p13",
+     "excerpt": "Such a middleware can make operation with new devices easier than using the definition\nin the communication protocol, allowing new applications to run in the co…",
+     "withheld": null,
+     "score": 0.9978849523705651
+    }
+   ],
+   "fresh": 59,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 3652,
+   "limitations": [],
+   "chars": 2284
+  },
+  {
+   "id": "c112",
+   "paper": "https_www.mdpi.com_2079-9292_12_21_4453_",
+   "part": "tuning",
+   "kind": "method",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 50039,
+    "end": 50167
+   },
+   "evidence": [
+    {
+     "start": 49870,
+     "end": 51200,
+     "doi": "10.9999/p13",
+     "excerpt": "We employed Principal Component Analysis\n(PCA) to identify the loads of disaggregation according to [3]. Consequently, we applied\nPCA in two stages. In the firs…",
+     "withheld": null,
+     "score": 0.9996817694275792
+    }
+   ],
+   "fresh": 59,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 3580,
+   "limitations": [],
+   "chars": 1330
+  },
+  {
+   "id": "c113",
+   "paper": "https_www.mdpi.com_2079-9292_12_21_4453_",
+   "part": "tuning",
+   "kind": "dataset",
+   "mode": "exhaustive",
+   "label": "FALSE",
+   "gold": {
+    "start": 52508,
+    "end": 52654
+   },
+   "evidence": [],
+   "fresh": 59,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 3577,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c117",
+   "paper": "https_www.mdpi.com_2079-9292_12_21_4453_",
+   "part": "tuning",
+   "kind": "method",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 2383,
+    "end": 2548
+   },
+   "evidence": [
+    {
+     "start": 2044,
+     "end": 2917,
+     "doi": "10.9999/p13",
+     "excerpt": "The system comprises a control unit that communicates with smart outlets using the Wireless Smart\nUbiquitous Network (WI-SUN) Home Area Network (HAN) specificat…",
+     "withheld": null,
+     "score": 0.9996570038310241
+    },
+    {
+     "start": 6986,
+     "end": 8336,
+     "doi": "10.9999/p13",
+     "excerpt": "The middleware is part of this\narchitecture, providing an application connectivity layer between the software elements\nand the hardware resources without requir…",
+     "withheld": null,
+     "score": 0.9984476522871343
+    }
+   ],
+   "fresh": 59,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 3576,
+   "limitations": [],
+   "chars": 2223
+  },
+  {
+   "id": "c120",
+   "paper": "https_www.mdpi.com_2624-6511_5_3_53_pdf_",
+   "part": "held-out",
+   "kind": "dataset",
+   "mode": "exhaustive",
+   "label": "FALSE",
+   "gold": {
+    "start": 38132,
+    "end": 38322
+   },
+   "evidence": [],
+   "fresh": 62,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 3746,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c122",
+   "paper": "https_www.mdpi.com_2624-6511_5_3_53_pdf_",
+   "part": "held-out",
+   "kind": "dataset",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 36656,
+    "end": 36732
+   },
+   "evidence": [
+    {
+     "start": 36305,
+     "end": 37730,
+     "doi": "10.9999/p14",
+     "excerpt": "4.1. Test-Bed Description\nThe test-bed (Table 4) consists of a two-story house at ground level, located in Murcia,\nin the south-east of Spain, with a patio and …",
+     "withheld": null,
+     "score": 0.9999140767714412
+    }
+   ],
+   "fresh": 62,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 3809,
+   "limitations": [],
+   "chars": 1425
+  },
+  {
+   "id": "c127",
+   "paper": "https_www.mdpi.com_2624-6511_5_3_53_pdf_",
+   "part": "held-out",
+   "kind": "method",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 40464,
+    "end": 40617
+   },
+   "evidence": [
+    {
+     "start": 40340,
+     "end": 41765,
+     "doi": "10.9999/p14",
+     "excerpt": "4.3. Knowledge Base and Security Components\nFor the KB and security components, we have selected some Generic Enablers from\nthe FIWARE project: the CB implement…",
+     "withheld": null,
+     "score": 0.9991621339887298
+    }
+   ],
+   "fresh": 62,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 3797,
+   "limitations": [],
+   "chars": 1425
+  },
+  {
+   "id": "c130",
+   "paper": "Papaers_overview",
+   "part": "held-out",
+   "kind": "numeric",
+   "mode": "exhaustive",
+   "label": "FALSE",
+   "gold": {
+    "start": 3436,
+    "end": 3579
+   },
+   "evidence": [
+    {
+     "start": 2326,
+     "end": 3581,
+     "doi": "10.9999/p08",
+     "excerpt": "3. MIMO Exploitation: Multi-antenna data provides spatial diversity that encodes\ndirectional characteristics, allowing a unified model to understand both \"what\"…",
+     "withheld": null,
+     "score": 0.9992545408009041
+    }
+   ],
+   "fresh": 7,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 416,
+   "limitations": [],
+   "chars": 1255
+  },
+  {
+   "id": "c131",
+   "paper": "Papaers_overview",
+   "part": "held-out",
+   "kind": "finding",
+   "mode": "exhaustive",
+   "label": "TRUE",
+   "gold": {
+    "start": 1269,
+    "end": 1410
+   },
+   "evidence": [
+    {
+     "start": 1065,
+     "end": 2326,
+     "doi": "10.9999/p08",
+     "excerpt": "● Enable Multi-Task Versatility: A single frozen encoder can support diverse tasks,\nincluding modulation classification, angle-of-arrival (AoA) estimation, beam…",
+     "withheld": null,
+     "score": 0.9994384771008303
+    }
+   ],
+   "fresh": 7,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 418,
+   "limitations": [],
+   "chars": 1261
+  },
+  {
+   "id": "c135",
+   "paper": "Papaers_overview",
+   "part": "held-out",
+   "kind": "numeric",
+   "mode": "exhaustive",
+   "label": "FALSE",
+   "gold": {
+    "start": 5840,
+    "end": 5982
+   },
+   "evidence": [],
+   "fresh": 7,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 422,
+   "limitations": [],
+   "chars": 0
+  },
+  {
+   "id": "c001",
+   "paper": "2411.09996v1",
+   "part": "tuning",
+   "kind": "dataset",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 7526,
+    "end": 7661
+   },
+   "evidence": [
+    {
+     "start": 7476,
+     "end": 8291,
+     "doi": "10.9999/p01",
+     "excerpt": "B. Human Activity CSI-Based Sensing Dataset (HSD)\nThe HSD dataset contains CSI measurements for six human\nactivities: running, walking, falling, boxing, arm cir…",
+     "withheld": null,
+     "score": 0.9971711730683961
+    }
+   ],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 5213,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 815
+  },
+  {
+   "id": "c002",
+   "paper": "2411.09996v1",
+   "part": "tuning",
+   "kind": "numeric",
+   "mode": "guided",
+   "label": "FALSE",
+   "gold": {
+    "start": 7781,
+    "end": 7906
+   },
+   "evidence": [],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 300,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 0
+  },
+  {
+   "id": "c007",
+   "paper": "2411.09996v1",
+   "part": "tuning",
+   "kind": "dataset",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 9026,
+    "end": 9128
+   },
+   "evidence": [
+    {
+     "start": 8291,
+     "end": 9373,
+     "doi": "10.9999/p01",
+     "excerpt": "C. NR-LTE Segmentation Dataset (SD)\nThe SD dataset is created by generating NR and LTE signals,\neach transmitted through its respective wireless channel in\nTABL…",
+     "withheld": null,
+     "score": 0.9983030945634845
+    }
+   ],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 331,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 1082
+  },
+  {
+   "id": "c008",
+   "paper": "2411.09996v1",
+   "part": "tuning",
+   "kind": "finding",
+   "mode": "guided",
+   "label": "FALSE",
+   "gold": {
+    "start": 1315,
+    "end": 1443
+   },
+   "evidence": [
+    {
+     "start": 915,
+     "end": 1864,
+     "doi": "10.9999/p01",
+     "excerpt": "We introduce a Masked\nSpectrogram Modeling (MSM) approach to pretrain the ViT in\na self-supervised fashion. We evaluate the ViT-based foundation\nmodel on two do…",
+     "withheld": null,
+     "score": 0.9946894625263023
+    },
+    {
+     "start": 23537,
+     "end": 24578,
+     "doi": "10.9999/p01",
+     "excerpt": "V. CONCLUSION\nIn this paper, we proposed ViT as a radio foundation\nmodel for spectrogram learning which offers superior modelling\ncapabilities, support for vari…",
+     "withheld": null,
+     "score": 0.9982202408834191
+    }
+   ],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 337,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 1990
+  },
+  {
+   "id": "c013",
+   "paper": "2504.14100v1",
+   "part": "held-out",
+   "kind": "dataset",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 15208,
+    "end": 15255
+   },
+   "evidence": [
+    {
+     "start": 14937,
+     "end": 15604,
+     "doi": "10.9999/p02",
+     "excerpt": "The setup includes a baseband unit and a four-\nchannel picocell sub-6GHz remote radio unit that together\nform a base station, as well as a user terminal (UT) mo…",
+     "withheld": null,
+     "score": 0.9920848229929912
+    }
+   ],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 333,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 667
+  },
+  {
+   "id": "c014",
+   "paper": "2504.14100v1",
+   "part": "held-out",
+   "kind": "numeric",
+   "mode": "guided",
+   "label": "FALSE",
+   "gold": {
+    "start": 14574,
+    "end": 14621
+   },
+   "evidence": [],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 310,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 0
+  },
+  {
+   "id": "c019",
+   "paper": "2504.14100v1",
+   "part": "held-out",
+   "kind": "numeric",
+   "mode": "guided",
+   "label": "FALSE",
+   "gold": {
+    "start": 14044,
+    "end": 14097
+   },
+   "evidence": [],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 300,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 0
+  },
+  {
+   "id": "c020",
+   "paper": "2504.14100v1",
+   "part": "held-out",
+   "kind": "finding",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 47961,
+    "end": 48047
+   },
+   "evidence": [
+    {
+     "start": 47526,
+     "end": 48556,
+     "doi": "10.9999/p02",
+     "excerpt": "Furthermore, Figure 7 illustrate\n\n12\nthe performance on the test set for every downstream task, as\na function of epochs during fine-tuning.\nOur evaluation revea…",
+     "withheld": null,
+     "score": 0.9998063551598262
+    }
+   ],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 360,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 1030
+  },
+  {
+   "id": "c024",
+   "paper": "2506.06718v2",
+   "part": "tuning",
+   "kind": "finding",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 40619,
+    "end": 40728
+   },
+   "evidence": [
+    {
+     "start": 7808,
+     "end": 9126,
+     "doi": "10.9999/p03",
+     "excerpt": "• We validate the foundational model’s practical effective-\nness through comprehensive evaluations on multiple over-\nthe-air datasets. On the in-distribution te…",
+     "withheld": null,
+     "score": 0.9959929451368259
+    }
+   ],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 377,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 1318
+  },
+  {
+   "id": "c026",
+   "paper": "2506.06718v2",
+   "part": "tuning",
+   "kind": "numeric",
+   "mode": "guided",
+   "label": "FALSE",
+   "gold": {
+    "start": 42612,
+    "end": 42718
+   },
+   "evidence": [],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 331,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 0
+  },
+  {
+   "id": "c031",
+   "paper": "2509.03077v1",
+   "part": "held-out",
+   "kind": "dataset",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 17258,
+    "end": 17331
+   },
+   "evidence": [
+    {
+     "start": 16724,
+     "end": 17799,
+     "doi": "10.9999/p04",
+     "excerpt": "The\ndataset covers various positions and angles, with azimuth and\nelevation ranging from -70° to 70°, controlled precisely by\nservo motors. The elevation servo …",
+     "withheld": null,
+     "score": 0.9997380490482008
+    }
+   ],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 310,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 1075
+  },
+  {
+   "id": "c032",
+   "paper": "2509.03077v1",
+   "part": "held-out",
+   "kind": "dataset",
+   "mode": "guided",
+   "label": "FALSE",
+   "gold": {
+    "start": 17333,
+    "end": 17426
+   },
+   "evidence": [],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 272,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 0
+  },
+  {
+   "id": "c036",
+   "paper": "2509.03077v1",
+   "part": "held-out",
+   "kind": "dataset",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 9502,
+    "end": 9584
+   },
+   "evidence": [
+    {
+     "start": 8961,
+     "end": 9790,
+     "doi": "10.9999/p04",
+     "excerpt": "A. Problem Statement\nWe consider a MIMO setup with Nt transmit antennas and\nNr receive antennas as show in 1. The transmitter sends a\nvariety of modulation sign…",
+     "withheld": null,
+     "score": 0.9998534415973908
+    }
+   ],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 280,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 829
+  },
+  {
+   "id": "c038",
+   "paper": "2509.03077v1",
+   "part": "held-out",
+   "kind": "numeric",
+   "mode": "guided",
+   "label": "FALSE",
+   "gold": {
+    "start": 19071,
+    "end": 19155
+   },
+   "evidence": [],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 306,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 0
+  },
+  {
+   "id": "c041",
+   "paper": "2511.15162v1",
+   "part": "tuning",
+   "kind": "dataset",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 17241,
+    "end": 17285
+   },
+   "evidence": [
+    {
+     "start": 16533,
+     "end": 17362,
+     "doi": "10.9999/p05",
+     "excerpt": "B. Pretraining Data\nWe pretrain on two datasets: a spectrogram dataset for image-\nlike wireless modalities and an IQ dataset for raw in-phase and\nquadrature str…",
+     "withheld": null,
+     "score": 0.999397703711671
+    },
+    {
+     "start": 17362,
+     "end": 18264,
+     "doi": "10.9999/p05",
+     "excerpt": "Each sample contains four streams\n(one per antenna) shown stacked vertically.\nFig. 2: Pretraining Datasets.\nIQ Dataset. The datasets represents the IQ modality.…",
+     "withheld": null,
+     "score": 0.9989596730728632
+    }
+   ],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 263,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 1731
+  },
+  {
+   "id": "c044",
+   "paper": "2511.15162v1",
+   "part": "tuning",
+   "kind": "finding",
+   "mode": "guided",
+   "label": "FALSE",
+   "gold": {
+    "start": 23276,
+    "end": 23374
+   },
+   "evidence": [],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 314,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 0
+  },
+  {
+   "id": "c049",
+   "paper": "2606.06373v1",
+   "part": "held-out",
+   "kind": "method",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 11277,
+    "end": 11373
+   },
+   "evidence": [
+    {
+     "start": 10339,
+     "end": 11675,
+     "doi": "10.9999/p06",
+     "excerpt": "The\nmasked patch indices form the set M ⊂ {1, . . . , 𝑁 }, and the\ncomplementary visible set is defined as V = {1, . . . , 𝑁 } \\ M.\nFull details of the maskin…",
+     "withheld": null,
+     "score": 0.9988513654257021
+    }
+   ],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 421,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 1336
+  },
+  {
+   "id": "c051",
+   "paper": "2606.06373v1",
+   "part": "held-out",
+   "kind": "finding",
+   "mode": "guided",
+   "label": "FALSE",
+   "gold": {
+    "start": 1365,
+    "end": 1544
+   },
+   "evidence": [],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 260,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 0
+  },
+  {
+   "id": "c054",
+   "paper": "2606.06373v1",
+   "part": "held-out",
+   "kind": "method",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 9707,
+    "end": 9831
+   },
+   "evidence": [
+    {
+     "start": 8919,
+     "end": 10339,
+     "doi": "10.9999/p06",
+     "excerpt": "A shared linear projection maps each single-channel\npatch to a 𝐷-dimensional embedding. This yields a total of\n𝑁 = 𝐶 × 𝐻\n𝑝ℎ × 𝑊\n𝑝𝑤 patch tokens z = [𝑧1…",
+     "withheld": null,
+     "score": 0.9943615640456577
+    }
+   ],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 268,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 1420
+  },
+  {
+   "id": "c056",
+   "paper": "2606.06373v1",
+   "part": "held-out",
+   "kind": "finding",
+   "mode": "guided",
+   "label": "FALSE",
+   "gold": {
+    "start": 1047,
+    "end": 1187
+   },
+   "evidence": [],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 257,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 0
+  },
+  {
+   "id": "c060",
+   "paper": "2609.04707v1",
+   "part": "tuning",
+   "kind": "finding",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 51920,
+    "end": 52141
+   },
+   "evidence": [
+    {
+     "start": 51110,
+     "end": 52523,
+     "doi": "10.9999/p07",
+     "excerpt": "B. Categorization and Analysis of WFMs by Task\nTable III summarizes the taxonomic coverage of physical-\nlayer wireless foundation models from 2024 to 2026, cons…",
+     "withheld": null,
+     "score": 0.9976643996503606
+    }
+   ],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 310,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 1413
+  },
+  {
+   "id": "c064",
+   "paper": "2609.04707v1",
+   "part": "tuning",
+   "kind": "finding",
+   "mode": "guided",
+   "label": "FALSE",
+   "gold": {
+    "start": 8304,
+    "end": 8441
+   },
+   "evidence": [],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 264,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 0
+  },
+  {
+   "id": "c065",
+   "paper": "2609.04707v1",
+   "part": "tuning",
+   "kind": "method",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 62313,
+    "end": 62482
+   },
+   "evidence": [
+    {
+     "start": 61414,
+     "end": 62744,
+     "doi": "10.9999/p07",
+     "excerpt": "B. Pretraining Objectives\nPretraining objectives differ not only in downstream per-\nformance, but also in the signal assumptions they impose.\nContrastive object…",
+     "withheld": null,
+     "score": 0.9944956054134225
+    }
+   ],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 373,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 1330
+  },
+  {
+   "id": "c070",
+   "paper": "Tiny_Federated_Wireless_Foundation_Model",
+   "part": "tuning",
+   "kind": "method",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 44020,
+    "end": 44096
+   },
+   "evidence": [
+    {
+     "start": 43943,
+     "end": 45196,
+     "doi": "10.9999/p09",
+     "excerpt": "A. Experimental Setup\n1) Tiny Wireless Foundation Model: In our experiments,\nwe employ a ViT small model with 12 encoder blocks\nand eight attention heads. Pruni…",
+     "withheld": null,
+     "score": 0.9997868587280073
+    }
+   ],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 335,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 1253
+  },
+  {
+   "id": "c071",
+   "paper": "Tiny_Federated_Wireless_Foundation_Model",
+   "part": "tuning",
+   "kind": "numeric",
+   "mode": "guided",
+   "label": "FALSE",
+   "gold": {
+    "start": 44586,
+    "end": 44764
+   },
+   "evidence": [],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 337,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 0
+  },
+  {
+   "id": "c076",
+   "paper": "Tiny_Federated_Wireless_Foundation_Model",
+   "part": "tuning",
+   "kind": "dataset",
+   "mode": "guided",
+   "label": "FALSE",
+   "gold": {
+    "start": 48134,
+    "end": 48272
+   },
+   "evidence": [],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 342,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 0
+  },
+  {
+   "id": "c077",
+   "paper": "Tiny_Federated_Wireless_Foundation_Model",
+   "part": "tuning",
+   "kind": "numeric",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 50848,
+    "end": 50923
+   },
+   "evidence": [
+    {
+     "start": 49928,
+     "end": 51296,
+     "doi": "10.9999/p09",
+     "excerpt": "The results presented in the next section confirm that prun-\ning noncritical blocks reduces model size and computational\ncomplexity while maintaining accuracy, …",
+     "withheld": null,
+     "score": 0.9914123448036879
+    }
+   ],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 341,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 1368
+  },
+  {
+   "id": "c081",
+   "paper": "http_thesai.org_Downloads_Volume12No2_Pa",
+   "part": "held-out",
+   "kind": "finding",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 2235,
+    "end": 2328
+   },
+   "evidence": [
+    {
+     "start": 1159,
+     "end": 2403,
+     "doi": "10.9999/p10",
+     "excerpt": "However,\nthese systems apply only to already-smart devices and are not\nappropriate for the many locales where a majority of appliances\nare not yet IoT-capable. …",
+     "withheld": null,
+     "score": 0.9997275426033309
+    }
+   ],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 323,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 1244
+  },
+  {
+   "id": "c084",
+   "paper": "http_thesai.org_Downloads_Volume12No2_Pa",
+   "part": "held-out",
+   "kind": "method",
+   "mode": "guided",
+   "label": "FALSE",
+   "gold": {
+    "start": 20784,
+    "end": 21021
+   },
+   "evidence": [],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 281,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 0
+  },
+  {
+   "id": "c087",
+   "paper": "http_thesai.org_Downloads_Volume12No2_Pa",
+   "part": "held-out",
+   "kind": "method",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 13334,
+    "end": 13418
+   },
+   "evidence": [
+    {
+     "start": 13212,
+     "end": 14236,
+     "doi": "10.9999/p10",
+     "excerpt": "B. Communication\nCommunication protocols used in Homergy include the I2C\nserial protocol, HTTP, WebSocket and TCP/IP. I2C is imple-\nmented between the microcont…",
+     "withheld": null,
+     "score": 0.9981767487538584
+    }
+   ],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 317,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 1024
+  },
+  {
+   "id": "c091",
+   "paper": "https_www.mdpi.com_2071-1050_14_21_14556",
+   "part": "tuning",
+   "kind": "numeric",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 12298,
+    "end": 12391
+   },
+   "evidence": [
+    {
+     "start": 11239,
+     "end": 11812,
+     "doi": "10.9999/p11",
+     "excerpt": "2.2. Energy Tariff Scheme\nAs a result, feed-in tariffs need to be greater in comparison to grid tariffs in order to\nappeal to consumers and generate renewable e…",
+     "withheld": null,
+     "score": 0.9993859235254775
+    },
+    {
+     "start": 11812,
+     "end": 12635,
+     "doi": "10.9999/p11",
+     "excerpt": "2.2. Energy Tariff Scheme\nAs a result, feed-in tariffs need to be greater in comparison to grid tariffs in order\nto appeal to consumers and generate renewable e…",
+     "withheld": null,
+     "score": 0.9986657732066052
+    }
+   ],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 321,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 1396
+  },
+  {
+   "id": "c092",
+   "paper": "https_www.mdpi.com_2071-1050_14_21_14556",
+   "part": "tuning",
+   "kind": "numeric",
+   "mode": "guided",
+   "label": "FALSE",
+   "gold": {
+    "start": 12393,
+    "end": 12486
+   },
+   "evidence": [],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 294,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 0
+  },
+  {
+   "id": "c097",
+   "paper": "https_www.mdpi.com_2071-1050_14_21_14556",
+   "part": "tuning",
+   "kind": "method",
+   "mode": "guided",
+   "label": "FALSE",
+   "gold": {
+    "start": 30075,
+    "end": 30152
+   },
+   "evidence": [],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 316,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 0
+  },
+  {
+   "id": "c098",
+   "paper": "https_www.mdpi.com_2079-9292_12_19_4041_",
+   "part": "held-out",
+   "kind": "method",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 1529,
+    "end": 1852
+   },
+   "evidence": [
+    {
+     "start": 930,
+     "end": 1953,
+     "doi": "10.9999/p12",
+     "excerpt": "2 Department of Computing, University of Turku, FI-20014 Turku, Finland\n3 Department of Technology, Higher Institute of Computer Sciences and Mathematics, Unive…",
+     "withheld": null,
+     "score": 0.9999439173167944
+    },
+    {
+     "start": 10538,
+     "end": 11844,
+     "doi": "10.9999/p12",
+     "excerpt": "2. Related Works\nThe proposed home-energy-management system (HEMS) is pictured in Figure 2. The\nsmart plug scattered all over the residential areas scans, monit…",
+     "withheld": null,
+     "score": 0.9996222994259153
+    },
+    {
+     "start": 14391,
+     "end": 15816,
+     "doi": "10.9999/p12",
+     "excerpt": "The researchers made use of a cheap commercial smart plug (the Plug-\nwise system). Real power, reactive power, the phase angle between current and voltage (φ),\n…",
+     "withheld": null,
+     "score": 0.9977191763892115
+    }
+   ],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 307,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 3754
+  },
+  {
+   "id": "c102",
+   "paper": "https_www.mdpi.com_2079-9292_12_19_4041_",
+   "part": "held-out",
+   "kind": "finding",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 2253,
+    "end": 2377
+   },
+   "evidence": [
+    {
+     "start": 1953,
+     "end": 2926,
+     "doi": "10.9999/p12",
+     "excerpt": "The smart meter and smart plug were prototyped by using\nRaspberry Pi and Arduino, respectively. The smart plug’s accuracy was quantified by comparing it to\nlabo…",
+     "withheld": null,
+     "score": 0.99977987369979
+    }
+   ],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 301,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 973
+  },
+  {
+   "id": "c105",
+   "paper": "https_www.mdpi.com_2079-9292_12_19_4041_",
+   "part": "held-out",
+   "kind": "method",
+   "mode": "guided",
+   "label": "FALSE",
+   "gold": {
+    "start": 1763,
+    "end": 1852
+   },
+   "evidence": [],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 296,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 0
+  },
+  {
+   "id": "c108",
+   "paper": "https_www.mdpi.com_2079-9292_12_21_4453_",
+   "part": "tuning",
+   "kind": "method",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 1967,
+    "end": 2297
+   },
+   "evidence": [
+    {
+     "start": 2044,
+     "end": 2917,
+     "doi": "10.9999/p13",
+     "excerpt": "The system comprises a control unit that communicates with smart outlets using the Wireless Smart\nUbiquitous Network (WI-SUN) Home Area Network (HAN) specificat…",
+     "withheld": null,
+     "score": 0.9965719586550869
+    },
+    {
+     "start": 5575,
+     "end": 6986,
+     "doi": "10.9999/p13",
+     "excerpt": "Such a middleware can make operation with new devices easier than using the definition\nin the communication protocol, allowing new applications to run in the co…",
+     "withheld": null,
+     "score": 0.9978849523705651
+    }
+   ],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 323,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 2284
+  },
+  {
+   "id": "c112",
+   "paper": "https_www.mdpi.com_2079-9292_12_21_4453_",
+   "part": "tuning",
+   "kind": "method",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 50039,
+    "end": 50167
+   },
+   "evidence": [
+    {
+     "start": 49870,
+     "end": 51200,
+     "doi": "10.9999/p13",
+     "excerpt": "We employed Principal Component Analysis\n(PCA) to identify the loads of disaggregation according to [3]. Consequently, we applied\nPCA in two stages. In the firs…",
+     "withheld": null,
+     "score": 0.9996817694275792
+    }
+   ],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 310,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 1330
+  },
+  {
+   "id": "c113",
+   "paper": "https_www.mdpi.com_2079-9292_12_21_4453_",
+   "part": "tuning",
+   "kind": "dataset",
+   "mode": "guided",
+   "label": "FALSE",
+   "gold": {
+    "start": 52508,
+    "end": 52654
+   },
+   "evidence": [],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 293,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 0
+  },
+  {
+   "id": "c117",
+   "paper": "https_www.mdpi.com_2079-9292_12_21_4453_",
+   "part": "tuning",
+   "kind": "method",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 2383,
+    "end": 2548
+   },
+   "evidence": [
+    {
+     "start": 2044,
+     "end": 2917,
+     "doi": "10.9999/p13",
+     "excerpt": "The system comprises a control unit that communicates with smart outlets using the Wireless Smart\nUbiquitous Network (WI-SUN) Home Area Network (HAN) specificat…",
+     "withheld": null,
+     "score": 0.9996570038310241
+    },
+    {
+     "start": 6986,
+     "end": 8336,
+     "doi": "10.9999/p13",
+     "excerpt": "The middleware is part of this\narchitecture, providing an application connectivity layer between the software elements\nand the hardware resources without requir…",
+     "withheld": null,
+     "score": 0.9984476522871343
+    }
+   ],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 304,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 2223
+  },
+  {
+   "id": "c120",
+   "paper": "https_www.mdpi.com_2624-6511_5_3_53_pdf_",
+   "part": "held-out",
+   "kind": "dataset",
+   "mode": "guided",
+   "label": "FALSE",
+   "gold": {
+    "start": 38132,
+    "end": 38322
+   },
+   "evidence": [],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 310,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 0
+  },
+  {
+   "id": "c122",
+   "paper": "https_www.mdpi.com_2624-6511_5_3_53_pdf_",
+   "part": "held-out",
+   "kind": "dataset",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 36656,
+    "end": 36732
+   },
+   "evidence": [
+    {
+     "start": 36305,
+     "end": 37730,
+     "doi": "10.9999/p14",
+     "excerpt": "4.1. Test-Bed Description\nThe test-bed (Table 4) consists of a two-story house at ground level, located in Murcia,\nin the south-east of Spain, with a patio and …",
+     "withheld": null,
+     "score": 0.9999140767714412
+    }
+   ],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 325,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 1425
+  },
+  {
+   "id": "c127",
+   "paper": "https_www.mdpi.com_2624-6511_5_3_53_pdf_",
+   "part": "held-out",
+   "kind": "method",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 40464,
+    "end": 40617
+   },
+   "evidence": [
+    {
+     "start": 40340,
+     "end": 41765,
+     "doi": "10.9999/p14",
+     "excerpt": "4.3. Knowledge Base and Security Components\nFor the KB and security components, we have selected some Generic Enablers from\nthe FIWARE project: the CB implement…",
+     "withheld": null,
+     "score": 0.9991621339887298
+    }
+   ],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 350,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 1425
+  },
+  {
+   "id": "c130",
+   "paper": "Papaers_overview",
+   "part": "held-out",
+   "kind": "numeric",
+   "mode": "guided",
+   "label": "FALSE",
+   "gold": {
+    "start": 3436,
+    "end": 3579
+   },
+   "evidence": [
+    {
+     "start": 2326,
+     "end": 3581,
+     "doi": "10.9999/p08",
+     "excerpt": "3. MIMO Exploitation: Multi-antenna data provides spatial diversity that encodes\ndirectional characteristics, allowing a unified model to understand both \"what\"…",
+     "withheld": null,
+     "score": 0.9992545408009041
+    }
+   ],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 309,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 1255
+  },
+  {
+   "id": "c131",
+   "paper": "Papaers_overview",
+   "part": "held-out",
+   "kind": "finding",
+   "mode": "guided",
+   "label": "TRUE",
+   "gold": {
+    "start": 1269,
+    "end": 1410
+   },
+   "evidence": [
+    {
+     "start": 1065,
+     "end": 2326,
+     "doi": "10.9999/p08",
+     "excerpt": "● Enable Multi-Task Versatility: A single frozen encoder can support diverse tasks,\nincluding modulation classification, angle-of-arrival (AoA) estimation, beam…",
+     "withheld": null,
+     "score": 0.9994384771008303
+    }
+   ],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 321,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 1261
+  },
+  {
+   "id": "c135",
+   "paper": "Papaers_overview",
+   "part": "held-out",
+   "kind": "numeric",
+   "mode": "guided",
+   "label": "FALSE",
+   "gold": {
+    "start": 5840,
+    "end": 5982
+   },
+   "evidence": [],
+   "fresh": 5,
+   "cached": 0,
+   "unchecked": 0,
+   "wallMs": 332,
+   "limitations": [
+    "query_limited"
+   ],
+   "chars": 0
+  }
+ ],
+ "redacted": true
+}
