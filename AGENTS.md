@@ -6,7 +6,7 @@ For coding agents and human contributors working on `uktub-scholar`.
 
 - `README.md`: installation, tools, CLI, configuration and limits.
 - `docs/VISION.md`: scope; `docs/DECISIONS.md`: rationale.
-- `docs/BACKLOG.md`: deferred work; `docs/handoff.md`: latest verification evidence and gaps.
+- `docs/BACKLOG.md`: deferred work; `docs/review-2026-10-04.md`: independent review evidence and verification record.
 - `docs/plans/`: dated plans with acceptance cases (history, not the current contract).
 - `src/core/`: host-independent domain code; `src/pi/` and `src/cli/`: adapters.
 - `benchmarks/`: dataset/protocol; `docs/benchmarks/`: measured evidence.
@@ -68,7 +68,7 @@ Do not duplicate these ledgers or treat historical plans as current contracts.
   and never stage `.mcp.json` or `opencode.json`. Run the checks below before pushing; a push
   does not deploy anything.
 - Never read credentials from retired repositories. Offline tests must not spend provider
-  quota; live provider calls belong in dated experiments and smokes, recorded in the handoff.
+  quota; live provider calls belong in dated experiments and smokes, recorded in review documents.
 - Verification defaults to the local Decision 2.0 Eos engine (owner decision 2026-10-04;
   needs a Python env with torch/transformers — README); OpenRouter Mercury and the other
   engines remain selectable.
@@ -85,5 +85,5 @@ Do not duplicate these ledgers or treat historical plans as current contracts.
   A search never downloads anything. Do not edit `src/` or the schema while a benchmark
   that starts fresh processes is running (it once read a newer schema than its code).
 - After behavioral changes, run `pnpm exec tsc --noEmit`, `pnpm test`, and an
-  actual CLI/tool smoke. Record evidence once in the handoff, not fixed test
+  actual CLI/tool smoke. Record evidence once in review documentation, not fixed test
   counts throughout the docs.

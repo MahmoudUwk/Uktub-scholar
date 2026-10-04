@@ -269,7 +269,7 @@ pnpm test
 ```
 
 The test suite uses offline provider fakes. Real-Pi smoke and live API evidence
-are separate tiers; the exercised checkout evidence is in [handoff](docs/handoff.md).
+are separate tiers; the exercised checkout evidence is in [the independent system review](docs/review-2026-10-04.md).
 [Dated benchmark reports](docs/benchmarks/) preserve measurements of engines and
 evidence quality; a score is evidence about one dataset, not a guarantee.
 
