@@ -57,11 +57,11 @@
     }
   },
   "embedding": {
-    "id": "embeddinggemma-300m-qat-q8_0-dense",
-    "file": "embeddinggemma-300M-QAT-Q8.gguf",
-    "url": "https://huggingface.co/cduk/embeddinggemma-300m-GGUF-with-dense-modules/resolve/16eaef07700282e488368e27b992b8fe5a40c423/embeddinggemma-300M-QAT-Q8.gguf",
-    "sha256": "f6e8134a50d04402e1df9e388bec90b001637b58a0dc20a8bee0b2a78dbaff42",
-    "size": 333590816,
+    "id": "embeddinggemma-300m-q8_0",
+    "file": "embeddinggemma-300M-Q8_0.gguf",
+    "url": "https://huggingface.co/ggml-org/embeddinggemma-300M-GGUF/resolve/0f741b5a6585bd53aeb15cd1372c56f2a0f65e12/embeddinggemma-300M-Q8_0.gguf",
+    "sha256": "b5ce9d77a3fc4b3b39ccb5643c36777911cc4eb46a66962eadfa3f5f60490d63",
+    "size": 333590944,
     "license": "gemma",
     "terms": "https://ai.google.dev/gemma/terms",
     "profile": "embeddinggemma",

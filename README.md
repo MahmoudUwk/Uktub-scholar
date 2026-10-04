@@ -167,8 +167,10 @@ states `vector search unavailable (…)`. **Requirements for your own server** (
 `--embeddings --pooling mean -c 2048 -b 2048 -ub 2048` — the default physical batch of 512 tokens rejects a chunk of ≈ 570
 tokens — and use a GGUF **converted with the sentence-transformers dense modules**: the
 `ggml-org/embeddinggemma-300m-qat-q8_0-GGUF` file omits them and its vectors have cosine ≈ 0.01 with the reference model
-(measured). The pinned file (`cduk/embeddinggemma-300m-GGUF-with-dense-modules`, a third-party conversion) reproduces the
-reference (mean cosine 0.990, pairwise-similarity correlation 0.995, on 20 sentences, with the pinned runtime build).
+(measured). In October 2026, ggml-org published the first-party ungated repository `ggml-org/embeddinggemma-300M-GGUF`
+(`embeddinggemma-300M-Q8_0.gguf`, 316 tensors including `dense_2.weight` and `dense_3.weight`), which reproduces the
+reference model near-perfectly (mean cosine 0.9997, pairwise Pearson correlation 0.9999, top-1 agreement 1.00 on the parity
+gate). This first-party ungated model is now the pinned model in `models.lock.json`.
 Measured value: [passage search benchmark](docs/benchmarks/rag-search-section-512-2026-10-04.md).
 
 ### Sources

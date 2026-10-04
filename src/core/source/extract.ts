@@ -142,10 +142,11 @@ function textOf(nodes: XNode[]): string {
 const clean = (s: string): string => decodeHtmlEntities(s).replace(/\s+/gu, " ").trim();
 
 function find(nodes: XNode[], tag: string, found: XNode[][] = []): XNode[][] {
+  const target = tag.toLowerCase();
   for (const n of nodes) {
     for (const [t, kids] of Object.entries(n)) {
       if (t === ":@" || !Array.isArray(kids)) continue;
-      if (t === tag) found.push(kids as XNode[]);
+      if (t.toLowerCase() === target) found.push(kids as XNode[]);
       else find(kids as XNode[], tag, found);
     }
   }
@@ -161,12 +162,28 @@ interface Block {
 function blocks(nodes: XNode[], out: Block[]): void {
   for (const n of nodes) {
     for (const [t, kids] of Object.entries(n)) {
-      if (t === ":@" || !Array.isArray(kids)) continue;
-      if (t === "head" || t === "p") {
-        const s = clean(textOf(kids as XNode[]));
-        // a "head" longer than any heading is a mis-parsed paragraph: keep its text, not a section mark
-        if (s.length > 0) out.push({ text: s, head: t === "head" && s.length <= MAX_SECTION_LABEL_CHARS });
-      } else if (t !== "figure" && t !== "note") blocks(kids as XNode[], out);
+      if (t === ":@") continue;
+      const tag = t.toLowerCase();
+      if (tag === "head" || tag === "p") {
+        if (Array.isArray(kids)) {
+          const s = clean(textOf(kids as XNode[]));
+          // a "head" longer than any heading is a mis-parsed paragraph: keep its text, not a section mark
+          if (s.length > 0) out.push({ text: s, head: tag === "head" && s.length <= MAX_SECTION_LABEL_CHARS });
+        }
+      } else if (tag === "div" && Array.isArray(kids)) {
+        for (const kid of kids as XNode[]) {
+          if (typeof kid["#text"] === "string") {
+            const h = clean(kid["#text"] as string);
+            if (h.length > 0 && h.length <= MAX_SECTION_LABEL_CHARS) {
+              out.push({ text: h, head: true });
+            }
+          } else {
+            blocks([kid], out);
+          }
+        }
+      } else if (tag !== "figure" && tag !== "note" && Array.isArray(kids)) {
+        blocks(kids as XNode[], out);
+      }
     }
   }
 }
@@ -191,7 +208,7 @@ export function extractTei(bytes: Uint8Array): Extraction {
     throw new SourceError("malformed", "the TEI is not valid UTF-8");
   }
   if (/<!DOCTYPE|<!ENTITY/i.test(xml)) throw new SourceError("unsupported_xml", "DOCTYPE and entity declarations are refused");
-  if (!/<TEI[\s>]/.test(xml)) throw new SourceError("not_a_document", "the body is not a TEI document");
+  if (!/<TEI[\s>]/i.test(xml)) throw new SourceError("not_a_document", "the body is not a TEI document");
 
   let tree: XNode[];
   try {
@@ -199,8 +216,9 @@ export function extractTei(bytes: Uint8Array): Extraction {
   } catch {
     throw new SourceError("malformed", "the TEI could not be parsed");
   }
+  const tei = find(tree, "tei")[0] ?? tree;
   const front: Block[] = []; // title + abstract: never section marks
-  const header = find(tree, "teiHeader")[0] ?? [];
+  const header = find(tei, "teiHeader")[0] ?? [];
   const title = find(find(header, "titleStmt")[0] ?? [], "title")[0];
   if (title) {
     const t = clean(textOf(title));
@@ -209,8 +227,10 @@ export function extractTei(bytes: Uint8Array): Extraction {
   const abstract = find(header, "abstract")[0];
   if (abstract) blocks(abstract, front);
   const bodyBlocks: Block[] = [];
-  const body = find(tree, "body")[0];
-  if (body) blocks(body, bodyBlocks);
+  const innerBody = find(tei, "body")[0];
+  const textNode = find(tei, "text")[0];
+  const contentNode = innerBody ?? (textNode ?? tei);
+  blocks(contentNode, bodyBlocks);
   // A header-only TEI (title + abstract) is not a readable paper: the body must carry the text.
   if (!hasUsableText(bodyBlocks.map((b) => b.text).join(""))) throw new SourceError("no_text_layer", "the TEI body holds no text");
   let text = "";

@@ -23,7 +23,7 @@ real corpus and recorded. Status is updated in place.
      judgments per claim measured) for large corpora. Consider defaulting the locator to the claim.
 2. **Local model runtime: llama.cpp for embeddings — done; pinned for six platforms, run on one (2026-10-04).** Owner decision: a pinned
    official `llama-server` fetched on first use (sha256-verified, safe extraction) and supervised as a child process;
-   EmbeddingGemma from the cduk dense-modules GGUF pinned by sha256; explicit `embed install --yes` (Gemma terms
+   EmbeddingGemma from the first-party ungated `ggml-org/embeddinggemma-300M-GGUF` pinned by sha256; explicit `embed install --yes` (Gemma terms
    shown), never downloaded by a search; your own server via `UKTUB_EMBED_URL` always wins
    ([decision](DECISIONS.md)). Open items:
    - Pinned for linux/darwin/win32 × x64/arm64 (`b11398`). Only **linux-x64 has run the server**; the other five were
@@ -33,8 +33,8 @@ real corpus and recorded. Status is updated in place.
      path handling, macOS `libggml-metal` GPU selection.
    - CPU build only. A Vulkan/CUDA asset would speed a large first index; not needed at the measured 20 s for 700
      passages.
-   - The pinned GGUF is a third-party conversion (hash-pinned, parity-gated); a first-party conversion from the
-     gated Google weights would remove that trust step (needs the owner's Hugging Face licence acceptance).
+   - First-party GGUF resolved on 2026-10-04: `ggml-org/embeddinggemma-300M-GGUF` (Q8_0, 316 tensors, ungated) was discovered,
+     verified at 0.9997 cosine parity against sentence-transformers, and pinned, eliminating the third-party conversion reliance.
    - A child killed with SIGKILL cannot clean itself up (Node cannot set a parent-death signal): the next session
      starts a fresh one; a stale one holds a port and ≈ 400 MB until the OS or the user ends it.
    - Decision-2.0 Eos stays on its Python worker (a custom Qwen backbone plus a trained head is not a stock llama.cpp

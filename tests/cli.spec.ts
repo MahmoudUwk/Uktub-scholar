@@ -31,15 +31,16 @@ function io(extra: Partial<CliIo> = {}) {
   const out: string[] = [];
   const err: string[] = [];
   return {
+    cwd: root,
+    lines: { out, err },
     ...extra,
+    env: { UKTUB_CACHE_DIR: join(root, ".cache"), ...(extra.env ?? {}) },
     out: (line: string): void => {
       out.push(line);
     },
     err: (line: string): void => {
       err.push(line);
     },
-    cwd: root,
-    lines: { out, err },
   };
 }
 

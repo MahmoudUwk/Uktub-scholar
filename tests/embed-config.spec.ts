@@ -24,8 +24,8 @@ const MODELS = [
 
 describe("embedderFromEnv", () => {
   it("no URL means no embedder (keyword search by choice)", async () => {
-    assert.equal(await embedderFromEnv({}, server(MODELS)), null);
-    assert.equal(await embedderFromEnv({ UKTUB_EMBED_URL: "  " }, server(MODELS)), null);
+    assert.equal(await embedderFromEnv({ UKTUB_CACHE_DIR: "/nonexistent-empty-cache" }, server(MODELS)), null);
+    assert.equal(await embedderFromEnv({ UKTUB_CACHE_DIR: "/nonexistent-empty-cache", UKTUB_EMBED_URL: "  " }, server(MODELS)), null);
   });
 
   it("the identity follows the DECLARED model's entry on a multi-model server, not the first one listed (review finding)", async () => {

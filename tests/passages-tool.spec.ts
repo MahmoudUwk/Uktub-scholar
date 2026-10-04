@@ -38,7 +38,7 @@ afterEach(() => {
 const ctx = (env: Record<string, string | undefined> = {}, fetchImpl?: typeof fetch): ToolContext => ({
   root,
   fetch: (fetchImpl ?? (async () => new Response("nope", { status: 404 }))) as unknown as ToolContext["fetch"],
-  env,
+  env: { UKTUB_CACHE_DIR: join(root, ".cache"), ...env },
   now: NOW,
   queue: new WriteQueue(),
 });

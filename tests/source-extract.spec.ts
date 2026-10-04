@@ -160,6 +160,17 @@ describe("section marks from extraction", () => {
     assert.deepEqual(out.sections?.map((m) => m.heading), ["Intro 😀", "Methods"]);
   });
 
+  it("TEI: handles OpenAlex lowercase HTML-wrapped GROBID format with direct div headings", () => {
+    const grobid = `<?xml version="1.0" encoding="UTF-8"?><html><body><tei xml:space="preserve" xmlns="http://www.tei-c.org/ns/1.0">
+<teiheader><filedesc><titlestmt><title level="a" type="main">Deep Neural Architectures</title></titlestmt></filedesc></teiheader>
+<text><div>Introduction<p>Deep learning has advanced rapidly across many domains.</p></div>
+<div>Network Design<p>The architecture consists of multiple recurrent layers.</p></div></text></tei></body></html>`;
+    const out = extractTei(new TextEncoder().encode(grobid));
+    marksOk(out.text, out.sections);
+    assert.deepEqual(out.sections?.map((m) => m.heading), ["Introduction", "Network Design"]);
+    assert.ok(out.text.includes("Deep learning has advanced rapidly"));
+  });
+
   it("PDF: heading lines become marks at line starts; plain prose has none", async () => {
     const withHeads = await extractPdf(
       makePdf([

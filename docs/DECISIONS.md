@@ -51,19 +51,21 @@ EmbeddingGemma was asked about.
   query reuses the paper's words; the vector leg is what finds passages for questions and paraphrases; unweighted
   RRF never fails badly across styles but trails the better single leg on each extreme (a weighted or reranked
   fusion is a possible later measurement). Cost: embedding the 697 passages takes 20 s once on CPU, a search 30 ms.
-- **Embedding model provenance (a measured trap)** — the `ggml-org/embeddinggemma-300m-qat-q8_0-GGUF` file the
-  owner named has no dense-module tensors: its vectors have cosine ≈ 0.01 with the reference model (pairwise
-  geometry still correlates 0.97, which would have looked plausible). A GGUF converted with
-  `--sentence-transformers-dense-modules` (`cduk/embeddinggemma-300m-GGUF-with-dense-modules`) matches the
-  reference (mean cosine 0.990). llama-server also needs `-b/-ub` ≥ the chunk size (default 512 rejects a
+- **Embedding model provenance (a measured trap & first-party resolution)** — the `ggml-org/embeddinggemma-300m-qat-q8_0-GGUF` file the
+  owner originally named had no dense-module tensors (314 tensors): its vectors had cosine ≈ 0.01 with the reference model. A third-party
+  GGUF converted with `--sentence-transformers-dense-modules` (`cduk/embeddinggemma-300m-GGUF-with-dense-modules`, 316 tensors) matched the
+  reference at mean cosine 0.990. During the independent review on 2026-10-04, ggml-org's newer first-party, ungated repository
+  `ggml-org/embeddinggemma-300M-GGUF` was discovered: its `embeddinggemma-300M-Q8_0.gguf` carries all 316 tensors (including `dense_2.weight`
+  and `dense_3.weight`), requires no HF authorization token, and achieves near-perfect parity against sentence-transformers (mean cosine 0.9997,
+  pairwise Pearson correlation 0.9999, top-1 agreement 1.00). It was pinned in `models.lock.json`. llama-server also needs `-b/-ub` ≥ the chunk size (default 512 rejects a
   570-token chunk). Both are in the README; the embedder fails closed (typed error, lexical fallback).
 - **Runtime packaging (owner decision, 2026-10-04)** — a pinned official `llama-server` build fetched on first use
   and supervised as a child process (not bundled in the package: a CUDA build is ≈ 370 MB; not an in-process
-  binding: a native crash or a CPU-bound batch must not take the agent host down), plus the cduk dense-modules
-  EmbeddingGemma GGUF pinned by sha256. Facts found while building it: the research report's advice to pin the
+  binding: a native crash or a CPU-bound batch must not take the agent host down), plus the first-party ungated
+  `ggml-org/embeddinggemma-300M-GGUF` (Q8_0) pinned by sha256. Facts found while building it: the research report's advice to pin the
   semver tag `v0.5.0` does not hold — that release has **no binary assets**; binaries exist only under the `b…`
   build tags, so a `b…` tag is pinned (first `b11160`, then, on the owner's request for the latest build, `b11398`; the digest
-  published by GitHub equals the downloaded file's, and each pin re-ran the parity gate). The pinned pair was re-measured end to end (mean cosine 0.990 against sentence-transformers).
+  published by GitHub equals the downloaded file's, and each pin re-ran the parity gate). The pinned pair was re-measured end to end (mean cosine 0.9997 against sentence-transformers).
   Install is an explicit CLI step with the Gemma terms shown and `--yes` required; a search never downloads. The
   live install found a defect the unit tests could not: the real archive carries chains of same-directory library
   symlinks that node-tar's strict mode rejects in some orders, so symlinks are validated (plain sibling names,
