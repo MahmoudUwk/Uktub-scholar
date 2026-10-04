@@ -171,13 +171,17 @@ function blocks(nodes: XNode[], out: Block[]): void {
           if (s.length > 0) out.push({ text: s, head: tag === "head" && s.length <= MAX_SECTION_LABEL_CHARS });
         }
       } else if (tag === "div" && Array.isArray(kids)) {
+        let seenInDiv = false;
         for (const kid of kids as XNode[]) {
           if (typeof kid["#text"] === "string") {
             const h = clean(kid["#text"] as string);
-            if (h.length > 0 && h.length <= MAX_SECTION_LABEL_CHARS) {
-              out.push({ text: h, head: true });
+            if (h.length > 0) {
+              const isHead = !seenInDiv && h.length <= MAX_SECTION_LABEL_CHARS;
+              out.push({ text: h, head: isHead });
+              seenInDiv = true;
             }
           } else {
+            seenInDiv = true;
             blocks([kid], out);
           }
         }

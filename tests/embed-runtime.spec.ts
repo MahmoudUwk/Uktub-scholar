@@ -465,6 +465,42 @@ describe("startServer (supervised child)", () => {
     process.kill(pid, "SIGKILL");
     assert.fail("the llama-server child outlived its parent");
   });
+
+  it("the child does not outlive its parent when parent receives SIGTERM", async () => {
+    const { lock, paths } = await installed();
+    const driver = join(cache, "driver-sig.ts");
+    writeFileSync(
+      driver,
+      `import { startServer } from ${JSON.stringify(join(HERE, "..", "src", "core", "embed", "runtime.ts"))};\n` +
+        `const lock = JSON.parse(process.argv[2]); const paths = JSON.parse(process.argv[3]);\n` +
+        `const s = await startServer({ paths, lock, cacheDir: process.argv[4] });\nconsole.log("PID:" + s.pid);\nsetInterval(() => {}, 1000);\n`,
+    );
+    const { spawn } = await import("node:child_process");
+    const parent = spawn(process.execPath, [driver, JSON.stringify(lock), JSON.stringify(paths), cache], { stdio: ["ignore", "pipe", "pipe"] });
+    let childPid = 0;
+    await new Promise<void>((resolve, reject) => {
+      parent.stdout.on("data", (chunk: Buffer) => {
+        const m = chunk.toString().match(/PID:(\d+)/);
+        if (m) {
+          childPid = Number(m[1]);
+          resolve();
+        }
+      });
+      parent.on("error", reject);
+    });
+    assert.ok(childPid > 0);
+    parent.kill("SIGTERM");
+    for (let i = 0; i < 50; i++) {
+      try {
+        process.kill(childPid, 0);
+      } catch {
+        return; // child is gone
+      }
+      await new Promise((r) => setTimeout(r, 100));
+    }
+    process.kill(childPid, "SIGKILL");
+    assert.fail("the llama-server child outlived its parent on SIGTERM");
+  });
 });
 
 void mkdirSync;

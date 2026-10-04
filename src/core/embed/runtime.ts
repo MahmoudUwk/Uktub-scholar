@@ -373,10 +373,35 @@ async function startOnce(o: { paths: InstallPaths; lock: RuntimeLock; cacheDir: 
   let spawnError: Error | null = null;
   child.once("error", (err) => (spawnError = err));
   child.once("exit", (code, signal) => (exited = { code, signal }));
-  const killNow = (): void => void child.kill("SIGTERM");
+  const killNow = (): void => {
+    try {
+      child.kill("SIGTERM");
+    } catch {}
+  };
+  const onSigInt = (): void => {
+    killNow();
+    process.exit(130);
+  };
+  const onSigTerm = (): void => {
+    killNow();
+    process.exit(143);
+  };
+  const onSigHup = (): void => {
+    killNow();
+    process.exit(129);
+  };
   process.once("exit", killNow);
-  const stop = async (): Promise<void> => {
+  process.once("SIGINT", onSigInt);
+  process.once("SIGTERM", onSigTerm);
+  process.once("SIGHUP", onSigHup);
+  const detachSignals = (): void => {
     process.removeListener("exit", killNow);
+    process.removeListener("SIGINT", onSigInt);
+    process.removeListener("SIGTERM", onSigTerm);
+    process.removeListener("SIGHUP", onSigHup);
+  };
+  const stop = async (): Promise<void> => {
+    detachSignals();
     if (exited !== null) return;
     child.kill("SIGTERM");
     for (let i = 0; i < 50 && exited === null; i++) await sleep(100);
@@ -387,11 +412,11 @@ async function startOnce(o: { paths: InstallPaths; lock: RuntimeLock; cacheDir: 
   const deadline = Date.now() + timeoutMs;
   while (true) {
     if (spawnError !== null) {
-      process.removeListener("exit", killNow);
+      detachSignals();
       throw new RuntimeError("start_failed", `could not start ${o.paths.server}: ${(spawnError as Error).message}`);
     }
     if (exited !== null) {
-      process.removeListener("exit", killNow);
+      detachSignals();
       const e = exited as { code: number | null; signal: string | null };
       throw new RuntimeError("start_failed", `llama-server exited during start (${e.signal ?? `code ${e.code}`}): ${tailOf(logPath)}`);
     }

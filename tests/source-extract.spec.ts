@@ -171,6 +171,19 @@ describe("section marks from extraction", () => {
     assert.ok(out.text.includes("Deep learning has advanced rapidly"));
   });
 
+  it("TEI: long direct text inside div (> MAX_SECTION_LABEL_CHARS) is preserved as body text and not dropped", () => {
+    const longText = "This is a long introductory text directly inside a div tag without paragraph markers. ".repeat(4);
+    assert.ok(longText.length > 200, "text is longer than 200 chars");
+    const xml = `<?xml version="1.0" encoding="UTF-8"?><TEI xmlns="http://www.tei-c.org/ns/1.0">
+<teiHeader><fileDesc><titleStmt><title>Long Div Test</title></titleStmt></fileDesc></teiHeader>
+<text><body><div>Introduction<p>Deep learning has advanced rapidly across many domains and fields of research.</p></div>
+<div>${longText}<p>Second paragraph with sufficient content for a usable text layer.</p></div></body></text></TEI>`;
+    const out = extractTei(new TextEncoder().encode(xml));
+    marksOk(out.text, out.sections);
+    assert.deepEqual(out.sections?.map((m) => m.heading), ["Introduction"]);
+    assert.ok(out.text.includes(longText.trim()), "long text inside div must not be dropped");
+  });
+
   it("PDF: heading lines become marks at line starts; plain prose has none", async () => {
     const withHeads = await extractPdf(
       makePdf([
