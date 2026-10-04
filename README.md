@@ -1,14 +1,15 @@
 # uktub-scholar
 
 Local-first scholarly tools for [Pi](https://github.com/earendil-works/pi): paper
-search, a paper registry, a rendered bibliography, LaTeX compilation, and
-evidence retrieval for claims. The core is host-agnostic; other host adapters
-are not implemented.
+search, a paper registry, a rendered bibliography, LaTeX compilation, exploratory
+passage search (RAG), and evidence retrieval for claims. The core is host-agnostic;
+other host adapters are not implemented.
 
 ## Start here
 
 - This README: current setup and behavior.
 - [AGENTS.md](AGENTS.md): contributor rules.
+- [Changelog](CHANGELOG.md): version history and release notes.
 - [Vision](docs/VISION.md): product direction; [backlog](docs/BACKLOG.md): deferred work.
 - [Decisions](docs/DECISIONS.md): dated rationale, not current setup instructions.
 - [Benchmarks](benchmarks/README.md): datasets, runner, and historical evidence.

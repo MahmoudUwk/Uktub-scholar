@@ -18,7 +18,7 @@ import { refusalResult, validateContext, type ToolContext, type ToolResult } fro
 import { resolve } from "node:path";
 
 /**
- * Registers the search, paper-registry, compile and verify-claim tools with
+ * Registers the search, paper-registry, compile, verify-claim, and search-passages tools with
  * their TypeBox schemas. Requires pi.registerTool; execute receives the host's
  * five arguments, including ExtensionToolContext.cwd.
  */

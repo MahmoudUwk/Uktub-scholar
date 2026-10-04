@@ -1,12 +1,12 @@
 ---
 name: uktub-research
-description: Using uktub-scholar's four tools for scholarly search, the paper registry (register, read, remove, attach, sync), citekeys, LaTeX compilation, and one-claim evidence retrieval.
+description: Using uktub-scholar's five tools for scholarly search, the paper registry (register, read, remove, attach, sync), citekeys, LaTeX compilation, one-claim evidence retrieval, and exploratory passage search.
 ---
 
 # Scholarly research with uktub-scholar
 
-Four tools operate beside the user's project: `search_papers`, `paper_registry`,
-`compile_document`, and `verify_claim`. The SQLite registry is canonical.
+Five tools operate beside the user's project: `search_papers`, `paper_registry`,
+`compile_document`, `verify_claim`, and `search_passages`. The SQLite registry is canonical.
 `refs/references.bib` is rendered from it. The PDF is derived from the user's own LaTeX sources.
 
 ## Search versus register
@@ -84,6 +84,20 @@ Four tools operate beside the user's project: `search_papers`, `paper_registry`,
 - If a source cannot be prepared, the result names the reason (`no_open_copy`, `no_credential`,
   `identity_mismatch`, `no_text_layer`, and others). Ask the user to attach a file with
   `paper_registry` `attach_source`, or to set `OPENALEX_API_KEY` for open-access content.
+
+## Searching passages in registered papers
+
+- `search_passages` performs exploratory text retrieval over registered papers (`papers: "all"` or an explicit list of DOIs or citekeys).
+- Give a descriptive natural-language `query`, question, or phrase.
+- Returns the best-matching passages (at most `limit`, default 5, maximum 10), each with:
+  - The paper's `citekey`, `title`, and `doi`
+  - The `section` heading where the passage occurs
+  - The grounded `page` number (when available from the source)
+  - An exact source pointer `doi@revision#start-end`
+  - A verbatim `excerpt` (capped at 1,500 characters and bounded by the 25% per-source containment policy)
+- Search is hybrid when an embedding runtime is present (combining FTS5 BM25 lexical search and dense cosine vector search via Reciprocal Rank Fusion), or lexical BM25 when no embedder is configured.
+- Use `search_passages` to explore what the registered papers say about a topic or question.
+- **Retrieval is not verification**: always use `verify_claim` to rigorously verify a factual proposition before citing it.
 
 ## Compiling the document
 
