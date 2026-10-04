@@ -1,16 +1,20 @@
 /**
- * Typed loader for config/chunking.yaml (KTD6): the yaml file is the source
- * of chunking + verification knobs; env vars still override where an env
- * contract already exists (UKTUB_VERIFY_MIN_CONFIDENCE, UKTUB_CHUNK_CONFIG
- * for the file path). Malformed or unknown-key files are a typed refusal
- * (CONFIG_INVALID) — typos fail loudly instead of silently defaulting.
+ * YAML chunking + verification configuration, resolved on ONE path: the
+ * project's `config/chunking.yaml` (or the file `UKTUB_CHUNK_CONFIG` names)
+ * when present, the documented package defaults when absent, and the same
+ * env overrides applied to either. Malformed or unknown supplied
+ * configuration fails with CONFIG_INVALID — never silently defaulted.
  */
 
 import { existsSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { parse as yamlParse } from "yaml";
 
+import { VERIFICATION_ENGINES } from "./verify/engines.ts";
+
 export const CHUNK_CONFIG_ENV = "UKTUB_CHUNK_CONFIG";
+export const VERIFY_ENGINE_ENV = "UKTUB_VERIFY_ENGINE";
+export const VERIFY_MIN_CONFIDENCE_ENV = "UKTUB_VERIFY_MIN_CONFIDENCE";
 export const DEFAULT_CHUNK_CONFIG_PATH = "config/chunking.yaml";
 
 export interface ChunkConfig {
@@ -24,7 +28,7 @@ export interface ChunkConfig {
     engine: string;
     min_confidence: number;
     workers: number;
-    record_negative_pointers: boolean;
+    max_judgments: number;
   };
 }
 
@@ -36,9 +40,23 @@ export class ConfigError extends Error {
   }
 }
 
-const SHAPE: Record<string, Record<string, "number" | "string" | "boolean">> = {
+const SHAPE: Record<string, Record<string, "number" | "string">> = {
   chunking: { chunk_tokens: "number", overlap_tokens: "number", chars_per_token: "number", boundary: "string" },
-  verification: { engine: "string", min_confidence: "number", workers: "number", record_negative_pointers: "boolean" },
+  verification: { engine: "string", min_confidence: "number", workers: "number", max_judgments: "number" },
+};
+
+/** Documented package defaults — what an agent-only project runs with. */
+export const DEFAULTS: ChunkConfig = {
+  // 1,024 tokens: measured. With Eos at the 0.99 bar, support recall on a fixed claim subset was
+  // 52 % (8,192), 76 % (2,048), 84 % (1,024), 84 % (512): it plateaus at 1,024, and a locator query
+  // then needs about a quarter of the judgments for the same recall (docs/benchmarks, window sweep).
+  // Overlap 16 tokens (1.5 %): matches what was measured. 2.8 chars/token: calibrated on the benchmark
+  // corpus with the mmBERT tokenizer (median 4.1, densest paper 3.10; 0.9 headroom so a window never overflows).
+  chunking: { chunk_tokens: 1024, overlap_tokens: 16, chars_per_token: 2.8, boundary: "paragraph" },
+  // engine: Decision 2.0 Eos, local (owner decision 2026-10-04). 0.99: client policy, the
+  // scientific-writing confidence bar. 4 lanes (one resident model serializes them) and 120
+  // judgments per call: client policy — seconds locally, ≈ 7 minutes on a 20-requests/minute hosted tier.
+  verification: { engine: "eos", min_confidence: 0.99, workers: 4, max_judgments: 120 },
 };
 
 function validate(parsed: unknown): ChunkConfig {
@@ -65,49 +83,62 @@ function validate(parsed: unknown): ChunkConfig {
   if (c.chunking.overlap_tokens < 0 || c.chunking.overlap_tokens >= c.chunking.chunk_tokens) {
     throw new ConfigError(`chunking.overlap_tokens must be 0..chunk_tokens-1`);
   }
-  if (c.chunking.chars_per_token <= 0 || c.chunking.chars_per_token > 20) {
+  // Lower bound: below a quarter character per token a window rounds to nothing.
+  if (!Number.isFinite(c.chunking.chars_per_token) || c.chunking.chars_per_token < 0.25 || c.chunking.chars_per_token > 20) {
     throw new ConfigError(`chunking.chars_per_token out of range: ${c.chunking.chars_per_token}`);
   }
   if (c.chunking.boundary !== "paragraph" && c.chunking.boundary !== "hard") {
     throw new ConfigError(`chunking.boundary must be "paragraph" or "hard"`);
   }
-  if (c.verification.min_confidence < 0.5 || c.verification.min_confidence > 1) {
-    throw new ConfigError(`verification.min_confidence must be within 0.5..1`);
-  }
-  if (c.verification.workers < 1 || c.verification.workers > 64) {
-    throw new ConfigError(`verification.workers must be within 1..64`);
-  }
+  validateVerification(c.verification);
   return c;
 }
 
-/** Load + validate the chunk config. `path` defaults to the env override,
- * then `config/chunking.yaml` under `base`. Missing file is allowed only when
- * `required` is false (returns package defaults). */
+function validateVerification(v: ChunkConfig["verification"]): void {
+  if (!(VERIFICATION_ENGINES as readonly string[]).includes(v.engine)) {
+    throw new ConfigError(`unknown verification.engine "${v.engine}" (known: ${VERIFICATION_ENGINES.join(", ")})`);
+  }
+  if (!Number.isFinite(v.min_confidence) || v.min_confidence < 0.5 || v.min_confidence > 1) throw new ConfigError(`verification.min_confidence must be within 0.5..1`);
+  if (!Number.isFinite(v.workers) || !Number.isInteger(v.workers) || v.workers < 1 || v.workers > 64) throw new ConfigError(`verification.workers must be an integer within 1..64`);
+  // Upper bound: a call that long exceeds any host's patience even on a local engine.
+  if (!Number.isInteger(v.max_judgments) || v.max_judgments < 1 || v.max_judgments > 100_000) {
+    throw new ConfigError(`verification.max_judgments must be an integer within 1..100000`);
+  }
+}
+
+/**
+ * Load + validate the effective config. The file is `UKTUB_CHUNK_CONFIG` when
+ * set (it must exist), else `config/chunking.yaml` under `base`; when the
+ * default file is absent the package defaults apply unless `required`. Env
+ * overrides (`UKTUB_VERIFY_ENGINE`, `UKTUB_VERIFY_MIN_CONFIDENCE`) apply to
+ * whichever source supplied the values and are validated like file values.
+ */
 export function loadChunkConfig(base: string, opts: { env?: Record<string, string | undefined>; required?: boolean } = {}): ChunkConfig {
-  const path = opts.env?.[CHUNK_CONFIG_ENV] ?? join(base, DEFAULT_CHUNK_CONFIG_PATH);
+  const env = opts.env ?? {};
+  const explicit = env[CHUNK_CONFIG_ENV];
+  // A relative override is relative to the PROJECT, not to wherever the process started.
+  const path = explicit !== undefined ? resolve(base, explicit) : join(base, DEFAULT_CHUNK_CONFIG_PATH);
+  let c: ChunkConfig;
   if (!existsSync(path)) {
-    if (opts.required) throw new ConfigError(`chunk config not found at ${path}`);
-    return validate(JSON.parse(JSON.stringify(DEFAULTS)));
+    if (explicit !== undefined || opts.required) throw new ConfigError(`chunk config not found at ${path}`);
+    c = JSON.parse(JSON.stringify(DEFAULTS)) as ChunkConfig;
+  } else {
+    let parsed: unknown;
+    try {
+      parsed = yamlParse(readFileSync(path, "utf8"));
+    } catch (e) {
+      throw new ConfigError(`yaml parse failed for ${path}: ${e instanceof Error ? e.message : String(e)}`);
+    }
+    c = validate(parsed);
   }
-  let parsed: unknown;
-  try {
-    parsed = yamlParse(readFileSync(path, "utf8"));
-  } catch (e) {
-    throw new ConfigError(`yaml parse failed for ${path}: ${e instanceof Error ? e.message : String(e)}`);
+  const engine = env[VERIFY_ENGINE_ENV];
+  if (engine !== undefined && engine !== "") c.verification.engine = engine;
+  const bar = env[VERIFY_MIN_CONFIDENCE_ENV];
+  if (bar !== undefined && bar !== "") {
+    const n = Number(bar);
+    if (!Number.isFinite(n)) throw new ConfigError(`${VERIFY_MIN_CONFIDENCE_ENV} must be a number, got "${bar}"`);
+    c.verification.min_confidence = n;
   }
-  const c = validate(parsed);
-  // Engine override: UKTUB_VERIFY_ENGINE switches the verification engine
-  // without editing the yaml (e.g. openrouter ↔ llama-cpp for offline runs).
-  const engineOverride = opts.env?.[VERIFY_ENGINE_ENV];
-  if (engineOverride) c.verification.engine = engineOverride;
+  validateVerification(c.verification);
   return c;
 }
-
-export const VERIFY_ENGINE_ENV = "UKTUB_VERIFY_ENGINE";
-
-export const DEFAULTS: ChunkConfig = {
-  chunking: { chunk_tokens: 8192, overlap_tokens: 128, chars_per_token: 4.0, boundary: "paragraph" },
-  verification: { engine: "openrouter", min_confidence: 0.99, workers: 4, record_negative_pointers: false },
-};
-
-

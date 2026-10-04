@@ -1,35 +1,17 @@
 /**
- * Claim verification (KTD1, KTD6): does a passage entail a claim? Engine-
- * agnostic core — an engine adapter turns (claim, chunk) rows into P(entailed)
- * probabilities; the verdict layer maps probability + threshold to
- * supported / refuted / unverified. The first engine (Julia-1, a 144M
- * encoder) was measured on 2026-10-02 and FAILED the discrimination bar for
- * scientific claims (clear entailments scored P 0.29–0.53; unrelated up to
- * 0.58) — kept as a measured-rejected engine; the interface and the resident
- * batch design survive it, generative verdict models via llama.cpp are the
- * next candidate (docs/DECISIONS.md, docs/BACKLOG.md).
+ * Engine adapters return P(entailed) for claim/passage pairs. The only decision
+ * the package takes from a score is "support at or above the configured bar"
+ * (verify/judge.ts); there is no refutation. Benchmark evidence is in docs/benchmarks/.
  */
 
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-/** Owner bar for scientific writing: a verdict needs ≥99% engine confidence. */
+/** Owner bar for scientific writing: support needs ≥99% engine confidence. */
 export const DEFAULT_MIN_CONFIDENCE = 0.99;
 /** Env override for the bar (labelled client policy, not a provider limit). */
 export const MIN_CONFIDENCE_ENV = "UKTUB_VERIFY_MIN_CONFIDENCE";
-
-export interface ClaimPair {
-  /** The passage (registered abstract, chunk, section) judged as evidence. */
-  chunk: string;
-  /** The claim under test. */
-  claim: string;
-}
-
-export type ClaimVerdict =
-  | { verdict: "supported"; confidence: number }
-  | { verdict: "refuted"; confidence: number }
-  | { verdict: "unverified"; confidence: number };
 
 export interface ClaimEngine {
   /** One resident process answers N rows; implementations may batch freely. */
@@ -42,29 +24,6 @@ export function minConfidenceFromEnv(env: Record<string, string | undefined>): n
   const v = Number(raw);
   if (!Number.isFinite(v) || v < 0.5 || v > 1) return DEFAULT_MIN_CONFIDENCE;
   return v;
-}
-
-export function mapVerdict(pTrue: number, minConfidence: number): ClaimVerdict {
-  if (pTrue >= minConfidence) return { verdict: "supported", confidence: pTrue };
-  if (1 - pTrue >= minConfidence) return { verdict: "refuted", confidence: 1 - pTrue };
-  return { verdict: "unverified", confidence: pTrue };
-}
-
-/** Verify one claim against one chunk. */
-export async function verifyClaim(engine: ClaimEngine, pair: ClaimPair, minConfidence: number): Promise<ClaimVerdict> {
-  const [pTrue] = await engine.run([{ state: pair.chunk, instructions: pair.claim }]);
-  return mapVerdict(pTrue, minConfidence);
-}
-
-/** Verify many claim/chunk pairs over one resident engine process (batch). */
-export async function verifyClaims(
-  engine: ClaimEngine,
-  pairs: ClaimPair[],
-  minConfidence: number,
-): Promise<ClaimVerdict[]> {
-  if (pairs.length === 0) return [];
-  const pTrues = await engine.run(pairs.map((p) => ({ state: p.chunk, instructions: p.claim })));
-  return pTrues.map((p) => mapVerdict(p, minConfidence));
 }
 
 /**
@@ -93,6 +52,33 @@ export function layaEngine(opts: {
   spawnImpl?: typeof spawn;
 }): ClaimEngine {
   return workerEngine({ ...opts, script: "laya_decide.py", envName: "UKTUB_LAYA_PYTHON", label: "laya", respawnEveryRows: 60 });
+}
+
+/** Pinned Decision 2.0 Eos checkpoint (reviewed custom code; see docs/benchmarks status report). */
+export const EOS_MODEL = "vllm-sr/Decision-2.0-Eos-0.8B";
+export const EOS_REVISION = "3594047d69f476f1d01cf84c593e213fc3a4dfe0";
+
+/**
+ * Eos engine (vllm-sr/Decision-2.0-Eos-0.8B, owner-selected default 2026-10-04): the
+ * resident worker `scripts/decision2_decide.py` loads the PINNED checkpoint once and
+ * answers rows over JSONL (same protocol as the julia worker). Python with torch and
+ * transformers>=5.17 is the user's: `UKTUB_EOS_PYTHON` (default `python3`);
+ * `UKTUB_EOS_MODEL` (local snapshot dir or HF id) and `UKTUB_EOS_REVISION` override the pin.
+ * The worker refuses inputs over the model's 16,384-token limit instead of truncating;
+ * that surfaces as an engine failure for the batch (the default 8,192-token windows leave
+ * ample headroom).
+ */
+export function eosEngine(opts: {
+  env: Record<string, string | undefined>;
+  pythonBin?: string;
+  spawnImpl?: typeof spawn;
+}): ClaimEngine {
+  const env = {
+    ...opts.env,
+    UKTUB_DECISION2_MODEL: opts.env.UKTUB_EOS_MODEL ?? EOS_MODEL,
+    UKTUB_DECISION2_REVISION: opts.env.UKTUB_EOS_REVISION ?? EOS_REVISION,
+  };
+  return workerEngine({ ...opts, env, script: "decision2_decide.py", envName: "UKTUB_EOS_PYTHON", label: "eos" });
 }
 
 /** Shared resident-python JSONL worker: spawn once per run, stream rows, map replies. */
@@ -137,6 +123,17 @@ function workerEngine(opts: {
     current?.reject(new EngineError(message));
   };
 
+  /** Keep the process alive only while a request is outstanding. */
+  const hold = (active: boolean): void => {
+    const c = child;
+    if (c === null) return;
+    const handles: unknown[] = [c, c.stdin, c.stdout, c.stderr];
+    for (const h of handles) {
+      const x = h as { ref?: () => void; unref?: () => void };
+      (active ? x.ref : x.unref)?.call(x);
+    }
+  };
+
   const spawnWorker = () => {
     ready = false;
     buffer = "";
@@ -145,6 +142,10 @@ function workerEngine(opts: {
       stdio: ["pipe", "pipe", "pipe"],
     });
     const current = child;
+    // A resident worker must never keep the host process alive while IDLE, and must not outlive it:
+    // its handles are unref'd (kill on exit); `hold(true)` re-refs them for as long as a request is in flight.
+    process.once("exit", () => current.kill("SIGKILL"));
+    hold(false);
     const timer = setTimeout(() => fail(`${opts.label} engine exceeded the 600 s load+batch limit`), 600_000); // client policy: load + one batch
     const finish = () => {
       clearTimeout(timer);
@@ -189,6 +190,7 @@ function workerEngine(opts: {
           clearTimeout(timer);
           const done = pending;
           pending = null;
+          hold(false);
           done.resolve(done.answers);
           if (opts.respawnEveryRows && ++answeredSinceSpawn >= opts.respawnEveryRows) {
             // Clean retirement: sentinel lets the worker exit between rows —
@@ -229,6 +231,7 @@ function workerEngine(opts: {
         return new Promise((resolveRun, rejectRun) => {
           pending = { rows, resolve: resolveRun, reject: rejectRun, answers: [] };
           child ??= spawnWorker();
+          hold(true);
           // The child answers one line per row; a respawn on the previous
           // failure path may still be loading — replies are matched by count.
           for (const row of rows) child.stdin!.write(JSON.stringify(row) + "\n");
@@ -327,7 +330,6 @@ async function openrouterFetchWithRetry(
   doFetch: typeof fetch,
   url: string,
   init: RequestInit,
-  label: string,
   throttleMs: number,
   lastCallAt: { value: number },
 ): Promise<Response> {
@@ -396,7 +398,6 @@ export function openrouterDecisionsEngine(opts: {
             body: JSON.stringify({ model: opts.model, state: row.state, questions: { c: { type: "noul", instructions: row.instructions } } }),
             signal: AbortSignal.timeout(120_000), // client policy: hosted cold-start outliers
           },
-          `openrouter decisions (${opts.model})`,
           throttleMs,
           lastCallAt,
         ).catch((e: unknown) => {
@@ -456,7 +457,6 @@ export function openrouterChatEngine(opts: {
             }),
             signal: AbortSignal.timeout(120_000),
           },
-          `openrouter chat (${opts.model})`,
           throttleMs,
           lastCallAt,
         ).catch((e: unknown) => {

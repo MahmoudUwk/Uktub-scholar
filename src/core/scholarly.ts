@@ -68,7 +68,7 @@ export interface SearchPapersResult {
    *  lowest-ranked were cut. */
   truncated: boolean;
   /** Feynman adoption: set when the query itself normalizes as a DOI
-   *  (including the `arxiv:` form) — registration via `register_papers` is the
+   *  (including the `arxiv:` form) — registration via `paper_registry` is the
    *  precise instrument for that identifier. The search still ran. */
   hint: string | null;
 }
@@ -168,7 +168,7 @@ export async function searchPapers(
     truncated: merged.length > limit,
     hint: normalizeDoiQuery(query) === null
       ? null
-      : `query is a DOI — register_papers with "${query.trim()}" registers it directly`,
+      : `query is a DOI — paper_registry (action register) with "${query.trim()}" registers it directly`,
   };
 }
 

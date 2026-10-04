@@ -8,26 +8,18 @@ import { Type } from "typebox";
 
 import { WriteQueue } from "../core/queue.ts";
 import { guardToolCall } from "../core/guard.ts";
+import { createSafeDownloader } from "../core/source/download.ts";
 import { CompileDocumentOutput, compileDocumentTool } from "../core/tools/compile.ts";
-import { VerifyClaimsOutput, VerifyClaimsParams, verifyClaimsTool } from "../core/tools/verify.ts";
-import { ListPapersOutput, listPapersTool } from "../core/tools/list.ts";
-import { RegisterPapersOutput, registerPapersTool } from "../core/tools/register.ts";
+import { PaperRegistryOutput, PaperRegistryParams, paperRegistryTool, type PaperRegistryArgs } from "../core/tools/registry.ts";
 import { SearchPapersOutput, searchPapersTool } from "../core/tools/search.ts";
+import { VerifyClaimOutput, VerifyClaimParams, verifyClaimTool, type VerifyClaimArgs } from "../core/tools/verify.ts";
 import { refusalResult, validateContext, type ToolContext, type ToolResult } from "../core/tools/context.ts";
 import { resolve } from "node:path";
 
 /**
- * Uktub Scholar Pi extension (U5, R14, KTD7): registers exactly the four tools
- * (search, register, list, compile_document)
- * and nothing else — no prompt mutation, no commands, no providers — and fails
- * closed at load if the Pi 1.0 API surface is missing.
- *
- * Installed-type notes (they win over the plan's quotes):
- *  - `execute` is 5-arg: `(toolCallId, params, signal, onUpdate, ctx)`; the
- *    plan documented a 4-arg form.
- *  - `ToolDefinition.outputSchema?: TSchema` exists — the core tools' TypeBox
- *    output schemas are declared to the host verbatim.
- *  - `ExtensionToolContext.cwd` exists — used for the one-time root resolution.
+ * Registers the search, paper-registry, compile and verify-claim tools with
+ * their TypeBox schemas. Requires pi.registerTool; execute receives the host's
+ * five arguments, including ExtensionToolContext.cwd.
  */
 
 /** How the model is told each tool fails (R7): the stable refusal shape. */
@@ -63,7 +55,11 @@ const now: ToolContext["now"] = () => new Date();
 /** The package owns write serialization (KTD5): one queue per process. */
 const queue = new WriteQueue();
 
-function toolCtx(rootFor: (ctx: ExtensionToolContext) => string, ctx: ExtensionToolContext): ToolContext | ToolResult<never> {
+/** The one place document bytes are fetched from third-party hosts (HTTPS only,
+ *  public addresses only, bounded, credential-scoped). */
+const download = createSafeDownloader();
+
+function toolCtx(rootFor: (ctx: ExtensionToolContext) => string, ctx: ExtensionToolContext, signal?: AbortSignal): ToolContext | ToolResult<never> {
   const root = rootFor(ctx);
   // R16 enforcement point: the resolved root is validated once, fail-closed —
   // relative roots, `..` traversal, and protected segments refuse before any
@@ -76,7 +72,7 @@ function toolCtx(rootFor: (ctx: ExtensionToolContext) => string, ctx: ExtensionT
     queue,
   });
   if (!check.ok) return refusalResult({ code: "PATH_REFUSED", message: check.message });
-  return { root, fetch: fetchLike, env: liveEnv, now, queue };
+  return { root, fetch: fetchLike, env: liveEnv, now, queue, download, signal };
 }
 
 /** Map a core tool result onto Pi's AgentToolResult (KTD6, KTD7). */
@@ -110,11 +106,11 @@ function registerTool<TParams extends TSchema, TOut>(
     description: def.description,
     parameters: def.parameters,
     outputSchema: def.outputSchema,
-    async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
-      // `signal` is not forwarded: the core FetchLike surface takes no abort
-      // signal in v0; a cancelled call's writes still serialize through the
-      // queue and land or roll back atomically (KTD5).
-      const toolContext = toolCtx(rootFor, ctx);
+    async execute(_toolCallId, params, signal, _onUpdate, ctx) {
+      // The host's cancellation reaches long work (source preparation,
+      // verification) between units; already-committed writes stay committed
+      // and queued sections land or roll back atomically (KTD5).
+      const toolContext = toolCtx(rootFor, ctx, signal);
       if (!("root" in toolContext)) return toPiResult(toolContext);
       return toPiResult(await def.run(toolContext, params));
     },
@@ -168,35 +164,21 @@ export default function uktubScholarExtension(pi: ExtensionAPI): void {
   });
 
   registerTool(pi, rootFor, {
-    name: "register_papers",
-    label: "Register papers by DOI",
+    name: "paper_registry",
+    label: "Manage the paper registry",
     description:
-      "Register papers by DOI (at most 50 per call — client policy): resolves each DOI to provider " +
-      "metadata and provider-supplied BibTeX, writes the local registry, and re-renders " +
-      "refs/references.bib. Returns one outcome per DOI in input order (registered | updated | refused). " +
-      "A paper without provider BibTeX registers as citable: false — BibTeX is never synthesized. " +
-      "Citekeys are pinned once and never re-keyed. " +
+      "Manage the project's paper collection in one tool. action=register: add papers by DOI or arxiv:YYMM.NNNNN " +
+      "(at most 50); every input gets an outcome in order, aliases of one paper register once, a refresh keeps the pinned citekey. " +
+      "action=remove: delete explicit DOIs/citekeys (at most 50; there is no remove-all). " +
+      "action=read: list all papers or an explicit subset with the fields you ask for (default title, year, citable; also authors, venue, " +
+      "bibtex, bibtexSource, abstract, source, refreshedAt), paged with a cursor. " +
+      "action=attach_source: prepare a PDF or GROBID TEI file inside the project as a paper's source (at most 10); the file is neither copied " +
+      "nor deleted and its text is never shown to you. action=sync_bibliography: re-render refs/references.bib from the registry. " +
+      "A paper without provider BibTeX is citable: false — BibTeX is never synthesized. " +
       REFUSAL_SEMANTICS,
-    parameters: Type.Object({
-      dois: Type.Array(Type.String(), { maxItems: 50, description: "DOIs in their 10.xxxx/suffix form" }),
-    }),
-    outputSchema: RegisterPapersOutput,
-    run: (ctx, params) => registerPapersTool(ctx, params as { dois: string[] }),
-  });
-
-  registerTool(pi, rootFor, {
-    name: "list_papers",
-    label: "List registered papers",
-    description:
-      "List every paper in the local registry in citekey order — citekey, DOI, title, authors, year, " +
-      "venue, citability, and BibTeX provenance — so you can pick stable \\cite{} keys. " +
-      "Over the cap the result is explicitly truncated with a remaining count. " +
-      REFUSAL_SEMANTICS,
-    parameters: Type.Object({
-      limit: Type.Optional(Type.Integer({ minimum: 1, description: "Max rows to return (cap 200)" })),
-    }),
-    outputSchema: ListPapersOutput,
-    run: (ctx, params) => listPapersTool(ctx, params as { limit?: number }),
+    parameters: PaperRegistryParams,
+    outputSchema: PaperRegistryOutput,
+    run: (ctx, params) => paperRegistryTool(ctx, params as PaperRegistryArgs),
   });
 
   registerTool(pi, rootFor, {
@@ -219,18 +201,19 @@ export default function uktubScholarExtension(pi: ExtensionAPI): void {
   });
 
   registerTool(pi, rootFor, {
-    name: "verify_claims",
-    label: "Verify claims against a paper",
+    name: "verify_claim",
+    label: "Find support for one claim",
     description:
-      "Check claims against a registered paper's ingested text, chunk-first: every claim is verified " +
-      "against every chunk and the paper verdict is any-chunk-supported / any-chunk-refuted at the " +
-      "configured confidence bar (0.99). The engine comes from verification.engine in " +
-      "config/chunking.yaml — mercury-decide:free via OpenRouter by default (needs OPENROUTER_API_KEY), " +
-      "or a local llama.cpp System One endpoint (verification.engine: llama-cpp, UKTUB_VERIFY_URL). " +
-      "Unverifiable claims come back `unverified` — never guess. " +
+      "Find support for ONE claim in the registered papers: papers is \"all\" or an explicit list of DOIs/citekeys. The package prepares " +
+      "sources, searches and judges internally; you receive only supporting passages with exact pointers (doi@revision#start-end) and four " +
+      "separate coverage reports — sources, candidates, work, output. \"No support found\" is not evidence that the claim is false. An " +
+      "optional query only narrows WHICH passages are checked (the search is then query-limited, not exhaustive). If the response carries a " +
+      "continuation, repeat the same request with it to continue unfinished checking or page more evidence. Rare direct path: " +
+      "passages=[{source: pointer}|{text}] judges exactly those passages; text carries no paper provenance. Engine and bar come from " +
+      "verification.* in config/chunking.yaml or the documented defaults. " +
       REFUSAL_SEMANTICS,
-    parameters: VerifyClaimsParams,
-    outputSchema: VerifyClaimsOutput,
-    run: (ctx, params) => verifyClaimsTool(ctx, params as { doi: string; claims: string[] }),
+    parameters: VerifyClaimParams,
+    outputSchema: VerifyClaimOutput,
+    run: (ctx, params) => verifyClaimTool(ctx, params as VerifyClaimArgs),
   });
 }

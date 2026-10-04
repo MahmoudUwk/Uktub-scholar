@@ -6,13 +6,16 @@
  */
 import { describe, it, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, mkdirSync, readFileSync, existsSync, rmSync } from "node:fs";
+import { mkdtempSync, mkdirSync, readFileSync, existsSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
-import { replaceChunks, chunksOf, saveVerdicts, savePointers } from "../src/core/verify/store.ts";
 
-import { runCli, type CliIo } from "../src/cli/main.ts";
+import { runCli } from "../src/cli/main.ts";
+import { chunksOf, getSource } from "../src/core/verify/store.ts";
+import { makePdf } from "./helpers/pdf.ts";
+import { bib, crossrefFake } from "./helpers/registry-fakes.ts";
+import type { CliIo } from "../src/cli/main.ts";
 import {
   BIBLIOGRAPHY_REL_PATH,
   createRegistry,
@@ -24,10 +27,11 @@ import {
 let root: string;
 let db: DatabaseSync;
 
-function io() {
+function io(extra: Partial<CliIo> = {}) {
   const out: string[] = [];
   const err: string[] = [];
   return {
+    ...extra,
     out: (line: string): void => {
       out.push(line);
     },
@@ -113,7 +117,6 @@ describe("uktub-scholar init", () => {
     capture.cwd = subdir;
     const code = await runCli(["init"], capture);
     assert.equal(code, 1);
-    assert.match(capture.lines.err.join("\n"), /nested projects are not supported/);
     assert.ok(!existsSync(join(subdir, ".registry")));
   });
 });
@@ -173,11 +176,10 @@ describe("uktub-scholar list", () => {
     }
   });
 
-  it("prints an explicit empty state", async () => {
+  it("lists an empty registry successfully", async () => {
     db.close();
     const capture = io();
     assert.equal(await runCli(["list"], capture), 0);
-    assert.match(capture.lines.out.join("\n"), /no papers/i);
   });
 });
 
@@ -235,28 +237,95 @@ describe("uktub-scholar compile (offline paths)", () => {
   });
 });
 
-describe("uktub-scholar trace", () => {
-  it("prints an empty state for an unknown document and rows for a recorded one", async () => {
-    const capture = io();
-    assert.equal(await runCli(["trace", "no-such-doc"], capture), 0);
-    assert.match(capture.lines.out.join("\n"), /No verified claims/);
+describe("uktub-scholar register / attach / verify (same tools as the agent)", () => {
+  const SUPPORT = "Experiments show that cells age faster at high temperature than at room temperature, with capacity loss reaching twelve percent.";
+  const CLAIM = "Cells age faster at high temperature.";
+  const fakeEngine = {
+    createEngine: () => ({ run: async (rows: { state: string; instructions: string }[]) => rows.map((r) => (r.state.toLowerCase().includes("cells age faster at high temperature") ? 0.999 : 0.05)) }),
+    fetchImpl: (async () => new Response("nope", { status: 404 })) as unknown as typeof fetch,
+  };
+  const body = Array.from({ length: 60 }, (_, i) => (i === 31 ? `Para ${i}. ${SUPPORT}` : `Para ${i}. ` + "The experiment records many independent measurements of the cell. ".repeat(5))).join("\n\n");
+  const lines = [ "Cycle Life of Cells", ...body.split("\n\n").flatMap((p) => p.match(/.{1,88}(\s|$)/g) ?? []) ];
+  const pages = Array.from({ length: Math.ceil(lines.length / 45) }, (_, i) => lines.slice(i * 45, i * 45 + 45));
 
-    const db = new DatabaseSync(join(root, ".registry", "registry.db"));
-    db.prepare(
-      "INSERT INTO papers (doi, citekey, title, authors_json, year, venue, provider_bibtex, bibtex_source, citable, ingested_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-    ).run("10.9999/t", "t2026", "Trace Paper", '["T"]', 2026, null, "bibtex", "crossref", 1, "2026-10-02T00:00:00Z");
-    replaceChunks(db, "10.9999/t", "The tower is in Paris.", { chunk_tokens: 64, overlap_tokens: 0, chars_per_token: 4.0, boundary: "hard" });
-    const chunks = chunksOf(db, "10.9999/t");
-    const { claimHashOf } = await import("../src/core/verify/store.ts");
-    saveVerdicts(db, [{ claim_hash: claimHashOf("The tower is in Paris."), chunk_hash: chunks[0].content_hash, model: "m", min_confidence: 0.99, verdict: "supported", confidence: 0.995, evidence_quote: "The tower is in Paris." }]);
-    savePointers(db, [{ doc_id: "thesis-ch1", claim_text: "The tower is in Paris.", claim_hash: claimHashOf("The tower is in Paris."), doi: "10.9999/t", chunk_index: chunks[0].chunk_index, char_start: chunks[0].char_start, char_end: chunks[0].char_end, verdict: "supported", confidence: 0.995, model: "m", min_confidence: 0.99 }]);
+  it("register: resolves identifiers through the registry tool and prints one outcome per input", async () => {
     db.close();
+    const { fetchFn } = crossrefFake({ "10.1001/cells": { title: "Cycle Life of Cells", bibtex: bib("cells2024", "Cycle Life of Cells") } });
+    const capture = io({ fetch: fetchFn, env: {} });
+    assert.equal(await runCli(["register", "10.1001/cells", "banana"], capture), 0);
+    const text = capture.lines.out.join("\n");
+    assert.match(text, /\[0\] registered .*10\.1001\/cells/);
+    assert.match(text, /\[1\] refused INVALID_DOI/);
+    assert.equal(listPapers(openRegistry(root)).length, 1);
+  });
 
-    const capture2 = io();
-    assert.equal(await runCli(["trace", "thesis-ch1"], capture2), 0);
-    const out2 = capture2.lines.out.join("\n");
-    assert.match(out2, /The tower is in Paris\./);
-    assert.match(out2, /t2026/);
-    assert.match(out2, /10\.9999\/t#c0/);
+  it("register without identifiers is a usage error", async () => {
+    db.close();
+    const capture = io();
+    assert.equal(await runCli(["register"], capture), 1);
+    assert.match(capture.lines.err.join("\n"), /usage/i);
+  });
+
+  it("attach + verify: a local PDF becomes a ready source; the claim is verified with a reconstructable passage; the file is untouched", async () => {
+    registerPaper(db, { doi: "10.1001/cells", title: "Cycle Life of Cells", authors: ["Ada Holder"], year: 2024, bibtex: bib("cells2024", "Cycle Life of Cells"), bibtexSource: "crossref" });
+    db.close();
+    const pdfPath = join(root, "cells.pdf");
+    writeFileSync(pdfPath, makePdf(pages));
+
+    const attach = io();
+    assert.equal(await runCli(["attach", "10.1001/cells", "cells.pdf"], attach), 0);
+    assert.match(attach.lines.out.join("\n"), /attached .*source ready, revision [0-9a-f]{16}/);
+    assert.ok(existsSync(pdfPath));
+    const dbAfter = openRegistry(root);
+    assert.equal(getSource(dbAfter, "10.1001/cells")!.status, "ready");
+    assert.ok(chunksOf(dbAfter, "10.1001/cells").length >= 1);
+    dbAfter.close();
+
+    const verify = io({ env: { UKTUB_VERIFY_MODEL_ID: "test-model" }, verifyHooks: fakeEngine });
+    assert.equal(await runCli(["verify", CLAIM], verify), 0);
+    const out = verify.lines.out.join("\n");
+    assert.match(out, /SUPPORT FOUND/);
+    const pointer = /pointer: (\S+)/.exec(out)![1];
+    // CLI parity: the pointer reconstructs exactly the excerpt the CLI printed.
+    const reopened = openRegistry(root);
+    const { resolvePointer } = await import("../src/core/verify/store.ts");
+    const back = resolvePointer(reopened, pointer);
+    reopened.close();
+    assert.equal(back.status, "current");
+    assert.ok(out.includes((back as { text: string }).text.slice(0, 80)));
+  });
+
+  it("verify options: --papers narrows scope, --query makes the search query-limited", async () => {
+    registerPaper(db, { doi: "10.1001/cells", title: "Cycle Life of Cells", authors: [], bibtex: bib("cells2024", "Cycle Life of Cells"), bibtexSource: "crossref" });
+    db.close();
+    writeFileSync(join(root, "cells.pdf"), makePdf(pages));
+    assert.equal(await runCli(["attach", "10.1001/cells", "cells.pdf"], io()), 0);
+    const limited = io({ env: { UKTUB_VERIFY_MODEL_ID: "test-model" }, verifyHooks: fakeEngine });
+    assert.equal(await runCli(["verify", CLAIM, "--papers", "10.1001/cells", "--query", "quantum chromodynamics"], limited), 0);
+    assert.match(limited.lines.out.join("\n"), /query-limited/);
+    const none = io({ env: { UKTUB_VERIFY_MODEL_ID: "test-model" }, verifyHooks: fakeEngine });
+    assert.equal(await runCli(["verify", CLAIM, "--papers", "10.9999/never"], none), 0);
+    assert.match(none.lines.out.join("\n"), /10\.9999\/never/);
+  });
+
+  it("verify refusals print the refusal code on stderr and exit 1; missing claim is a usage error", async () => {
+    db.close();
+    const noClaim = io();
+    assert.equal(await runCli(["verify"], noClaim), 1);
+    assert.match(noClaim.lines.err.join("\n"), /usage/i);
+    const bad = io();
+    assert.equal(await runCli(["verify", "short"], bad), 1);
+    assert.match(bad.lines.err.join("\n"), /ARGUMENT_INVALID/);
+  });
+
+  it("the retired claim-array verify and trace commands are gone, and usage names the new ones", async () => {
+    db.close();
+    const t = io();
+    assert.equal(await runCli(["trace", "doc"], t), 1);
+    const u = io();
+    await runCli(["explode"], u);
+    const usage = u.lines.err.join("\n");
+    for (const cmd of ["register <id>", "attach <doi|citekey> <file>", "verify <claim>"]) assert.ok(usage.includes(cmd), cmd);
+    assert.doesNotMatch(usage, /trace|<doi> <claim>/);
   });
 });

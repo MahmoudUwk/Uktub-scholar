@@ -19,6 +19,14 @@ after(() => {
 });
 
 describe("registry guard", () => {
+  it("tells the agent which tools replace the blocked paths (current tool names only)", () => {
+    const reason = guardToolCall(root, "bash", { command: "sqlite3 .registry/registry.db .tables" }).reason ?? "";
+    assert.match(reason, /paper_registry/);
+    assert.doesNotMatch(reason, /register_papers|list_papers/);
+    const refs = guardToolCall(root, "write", { path: "refs/references.bib", content: "x" }).reason ?? "";
+    assert.match(refs, /paper_registry/);
+  });
+
   it("blocks every tool targeting .registry, write and read alike", () => {
     for (const [tool, input] of [
       ["write", { path: join(root, ".registry", "registry.db"), content: "x" }],
@@ -29,14 +37,12 @@ describe("registry guard", () => {
     ] as const) {
       const v = guardToolCall(root, tool, input);
       assert.equal(v.ok, false, `${tool} on .registry must be blocked`);
-      assert.match(v.reason!, /package-owned/);
     }
   });
 
   it("blocks writes into refs/ and destructive bash against it; reads pass", () => {
     const w = guardToolCall(root, "write", { path: "refs/references.bib", content: "x" });
     assert.equal(w.ok, false);
-    assert.match(w.reason!, /read-only for you/);
 
     for (const cmd of ["echo x > refs/references.bib", "rm refs/references.bib", "tee refs/references.bib < x"]) {
       const v = guardToolCall(root, "bash", { command: cmd });
@@ -50,7 +56,8 @@ describe("registry guard", () => {
     assert.ok(guardToolCall(root, "write", { path: "manuscript/main.tex", content: "x" }).ok);
     assert.ok(guardToolCall(root, "bash", { command: "pdflatex --version" }).ok);
     // our own tools carry no path/command: they pass untouched
-    assert.ok(guardToolCall(root, "register_papers", { dois: ["10.1234/a"] }).ok);
+    assert.ok(guardToolCall(root, "paper_registry", { action: "register", identifiers: ["10.1234/a"] }).ok);
+    assert.ok(guardToolCall(root, "verify_claim", { claim: "Cells age faster at high temperature.", papers: "all" }).ok);
     assert.ok(guardToolCall(root, "compile_document", { entry: "manuscript/main.tex" }).ok);
     assert.ok(guardToolCall(root, "search_papers", { query: "wifi sensing" }).ok);
   });

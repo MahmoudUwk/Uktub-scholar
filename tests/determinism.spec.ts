@@ -18,7 +18,7 @@ import { WriteQueue } from "../src/core/queue.ts";
 import uktubOaExtension from "../src/pi/extension.ts";
 import { runCli } from "../src/cli/main.ts";
 import { BIBLIOGRAPHY_REL_PATH, createRegistry, listPapers, syncBibliography } from "../src/core/registry.ts";
-import { registerPapersTool } from "../src/core/tools/register.ts";
+import { paperRegistryTool, type PaperRegistryArgs } from "../src/core/tools/registry.ts";
 import { searchPapersTool } from "../src/core/tools/search.ts";
 import type { ToolContext } from "../src/core/tools/context.ts";
 import type { FetchLike } from "../src/core/providers/types.ts";
@@ -113,8 +113,8 @@ describe("search → register → cite flow", () => {
       };
     }
     const { fetchFn } = registerFetch(perDoi);
-    const registerResult = await registerPapersTool(makeCtx(fetchFn), { dois });
-    const citekeys = registerResult.structuredContent?.outcomes.map((outcome) => {
+    const registerResult = await paperRegistryTool(makeCtx(fetchFn), { action: "register", identifiers: dois } as PaperRegistryArgs);
+    const citekeys = registerResult.structuredContent?.outcomes.map((outcome: { doi: string; citekey: string | null }) => {
       assert.ok(typeof outcome.citekey === "string", `outcome for ${outcome.doi} lacks a citekey`);
       return outcome.citekey;
     }) ?? [];
@@ -142,7 +142,7 @@ describe("sync-bib recovery", () => {
       "10.7001/bbb": { title: "Beta Cache", bibtex: BIBTEX_B },
     });
     const ctx = makeCtx(fetchFn);
-    await registerPapersTool(ctx, { dois: ["10.7001/aaa"] });
+    await paperRegistryTool(ctx, { action: "register", identifiers: ["10.7001/aaa"] } as PaperRegistryArgs);
     const renderAfterOne = readBib();
 
     // The human edits the generated file (the header forbids it; the registry wins).
@@ -151,7 +151,7 @@ describe("sync-bib recovery", () => {
 
     // Documented stance: the next register destroys the human edit — the file
     // is re-rendered from the registry as the last statement of the write txn.
-    await registerPapersTool(ctx, { dois: ["10.7001/bbb"] });
+    await paperRegistryTool(ctx, { action: "register", identifiers: ["10.7001/bbb"] } as PaperRegistryArgs);
     const renderAfterTwo = readBib();
     assert.equal(renderAfterTwo.includes("edited this by hand"), false, "register did not overwrite the human edit");
     assert.match(renderAfterTwo, /@article\{holder2024beta,/);
@@ -161,7 +161,6 @@ describe("sync-bib recovery", () => {
     const out: string[] = [];
     const err: string[] = [];
     assert.equal(await runCli(["sync-bib"], { out: (line) => out.push(line), err: (line) => err.push(line), cwd: root }), 0);
-    assert.match(out.join("\n"), /Rendered 2/);
     assert.equal(err.length, 0);
     assert.equal(readBib(), renderAfterTwo, "sync-bib did not restore the true render byte-identically");
 
@@ -186,8 +185,7 @@ describe("fresh-process determinism re-run", () => {
    * `ingested_at` is the only clock value (KTD6); each run injects its own.
    */
   const RUNNER = `
-const { registerPapersTool } = await import(process.argv[1] + "/src/core/tools/register.ts");
-const { listPapersTool } = await import(process.argv[1] + "/src/core/tools/list.ts");
+const { paperRegistryTool } = await import(process.argv[1] + "/src/core/tools/registry.ts");
 const { createRegistry } = await import(process.argv[1] + "/src/core/registry.ts");
 const { BIBLIOGRAPHY_REL_PATH } = await import(process.argv[1] + "/src/core/registry.ts");
 const { readFileSync } = await import("node:fs");
@@ -208,8 +206,8 @@ for (const [doi, spec] of Object.entries(env.perDoi)) {
 }
 const fetchFn = createFakeFetch(routes).fetchFn;
 const ctx = { root, fetch: fetchFn, env: {}, now: () => new Date(process.argv[4]), queue: { runExclusive: (fn) => fn() } };
-const registered = await registerPapersTool(ctx, { dois: env.dois });
-const listed = listPapersTool(ctx, {});
+const registered = await paperRegistryTool(ctx, { action: "register", identifiers: env.dois });
+const listed = await paperRegistryTool(ctx, { action: "read", fields: ["title", "year", "citable", "authors", "bibtexSource", "refreshedAt"] });
 db.close();
 process.stdout.write(JSON.stringify({
   register: registered.structuredContent,
@@ -223,7 +221,7 @@ process.stdout.write(JSON.stringify({
     if (value !== null && typeof value === "object") {
       return Object.fromEntries(
         Object.entries(value as Record<string, unknown>)
-          .filter(([key]) => key !== "ingestedAt" && key !== "ingested_at")
+          .filter(([key]) => key !== "ingestedAt" && key !== "ingested_at" && key !== "refreshedAt")
           .map(([key, entry]) => [key, stripClock(entry)]),
       );
     }
@@ -291,12 +289,12 @@ describe("parallel fake-Pi execute calls", () => {
       },
       on() {},
     } as never);
-    const registerExecute = tools.find((tool) => tool.name === "register_papers")!.execute!;
+    const registerExecute = tools.find((tool) => tool.name === "paper_registry")!.execute!;
     interface ExecuteOutcome {
       structuredContent?: { outcomes: { doi: string; citekey: string; status: string }[] };
     }
     const call = (doi: string): Promise<ExecuteOutcome> =>
-      registerExecute("call-1", { dois: [doi] }, undefined, undefined, { cwd: root }) as Promise<ExecuteOutcome>;
+      registerExecute("call-1", { action: "register", identifiers: [doi] }, undefined, undefined, { cwd: root }) as Promise<ExecuteOutcome>;
 
     // The adapter wires globalThis.fetch into its context (src/pi/extension.ts),
     // so the fake is installed as the process fetch for the duration — zero

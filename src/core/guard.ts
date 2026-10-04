@@ -4,7 +4,7 @@
  * turns a verdict into a `tool_call` block. Rules, deterministic by design:
  *
  *  - `.registry/**` is package-owned: NO agent tool touches it, read or write.
- *    Reads are covered by `list_papers`; the threat is arbitrary SQLite writes
+ *    Reads are covered by `paper_registry` (action read); the threat is arbitrary SQLite writes
  *    (e.g. `sqlite3` via bash), which no allow-list can characterize.
  *  - `refs/**` is registry-rendered and read-only for the agent: write tools
  *    are refused outright; bash only when destructive intent is present
@@ -55,8 +55,8 @@ export function guardToolCall(root: string, toolName: string, input: unknown): G
       return {
         ok: false,
         reason:
-          "the .registry/ directory is package-owned (uktub-scholar); use the search_papers, " +
-          "register_papers and list_papers tools for papers and the uktub-scholar CLI for administration",
+          "the .registry/ directory is package-owned (uktub-scholar); use the search_papers and " +
+          "paper_registry tools for papers and the uktub-scholar CLI for administration",
       };
     }
     if (command.includes(`${REFS_SEGMENT}/`) && REFSDestructiveRe.test(command)) {
@@ -64,7 +64,7 @@ export function guardToolCall(root: string, toolName: string, input: unknown): G
         ok: false,
         reason:
           "refs/references.bib is rendered by the registry and read-only for you; change it by " +
-          "registering or deregistering papers, or run `uktub-scholar sync-bib` (human CLI) to re-render",
+          "registering or removing papers with paper_registry (or action sync_bibliography to re-render)",
       };
     }
     return { ok: true };
@@ -75,8 +75,8 @@ export function guardToolCall(root: string, toolName: string, input: unknown): G
       return {
         ok: false,
         reason:
-          "the .registry/ directory is package-owned (uktub-scholar); use the search_papers, " +
-          "register_papers and list_papers tools for papers",
+          "the .registry/ directory is package-owned (uktub-scholar); use the search_papers and " +
+          "paper_registry tools for papers",
       };
     }
     const writeLike = toolName === "write" || toolName === "edit";
@@ -85,7 +85,7 @@ export function guardToolCall(root: string, toolName: string, input: unknown): G
         ok: false,
         reason:
           "refs/references.bib is rendered by the registry and read-only for you; change it by " +
-          "registering or deregistering papers",
+          "registering or removing papers with paper_registry (or action sync_bibliography to re-render)",
       };
     }
   }

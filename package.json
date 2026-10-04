@@ -33,6 +33,8 @@
     "typebox": "^1.3.34"
   },
   "dependencies": {
+    "fast-xml-parser": "^5.11.2",
+    "unpdf": "^1.8.1",
     "yaml": "^2.9.1"
   }
 }

@@ -4,8 +4,8 @@
  * write the registry serialize their TRANSACTIONAL sections here; provider
  * fetches stay outside the queue (they hold no registry state).
  *
- * Host-agnostic: no Pi, no globals. The Pi adapter (and the later MCP host)
- * holds one instance and feeds every write section through `runExclusive`.
+ * Host-agnostic: no Pi, no globals. The Pi adapter holds one instance and
+ * feeds each registry/compile write section through `runExclusive`.
  *
  * FIFO is call-arrival order: each `runExclusive` chains onto the tail of the
  * promise chain at call time, so section N+1 cannot interleave with section N.

@@ -1,8 +1,8 @@
 /**
  * uktub-scholar CLI (U6, R17): the human owns init, removal, bibliography healing,
- * and listing. Every registry operation goes through src/core/registry.ts —
- * the CLI is a second caller of the exact functions the agent tools use
- * (structural parity), so no behavior can drift between the two paths.
+ * and listing; `register`, `attach` and `verify` call the very tool functions
+ * the agent uses (structural parity), so no behavior can drift between the two
+ * paths. Registry operations go through src/core/registry.ts.
  *
  * Arg parsing is by hand (zero dependencies). `console` is the CLI's user
  * interface — the one place in src/ allowed to touch it (the bin shim spawns
@@ -13,6 +13,11 @@
 import { RegistryError, createRegistry, deregisterPapers, findEnclosingProject, listPapers, openRegistry, syncBibliography } from "../core/registry.ts";
 import { compileDocument, describeOutcome, prodSpawn } from "../core/compile/run.ts";
 import { renderRefusal } from "../core/refusals.ts";
+import { WriteQueue } from "../core/queue.ts";
+import { createSafeDownloader } from "../core/source/download.ts";
+import { paperRegistryTool, type PaperRegistryArgs } from "../core/tools/registry.ts";
+import type { ToolContext, ToolResult } from "../core/tools/context.ts";
+import { verifyClaimTool, type VerifyClaimArgs, type VerifyHooks } from "../core/tools/verify.ts";
 
 /** Injected I/O: the bin passes console writers; tests capture arrays. */
 export interface CliIo {
@@ -20,6 +25,11 @@ export interface CliIo {
   err: (line: string) => void;
   /** Project root; defaults to process.cwd() — the bin passes nothing. */
   cwd?: string;
+  /** Test seams; the bin passes none and the real network/env/engine are used. */
+  fetch?: ToolContext["fetch"];
+  download?: ToolContext["download"];
+  env?: Record<string, string | undefined>;
+  verifyHooks?: VerifyHooks;
 }
 
 const USAGE = `usage: uktub-scholar <command>
@@ -31,9 +41,51 @@ commands:
   list                          print registered papers in citekey order
   compile [entry.tex]           compile with tectonic (PDF in build/); entry defaults
                                 to manuscript/main.tex, then main.tex, then a lone .tex
-  verify <doi> <claim>...       verify claims against a paper's chunks with the
-                                configured engine (default mercury via OpenRouter)
-  trace <doc-id>                show verified claims of a document → paper → chunk refs`;
+  register <id>...              register papers by DOI or arxiv:ID (same tool the agent uses)
+  attach <doi|citekey> <file>   prepare a local PDF/TEI inside the project as a paper's source
+  verify <claim> [--papers all|<doi|citekey>,...] [--query <words>] [--continuation <token>]
+                                find supporting passages for ONE claim (default: all papers)`;
+
+/** The same context the Pi adapter builds: real network, env and clock unless a test injects them. */
+function toolContext(io: CliIo, root: string): ToolContext {
+  return {
+    root,
+    fetch: io.fetch ?? ((...a) => globalThis.fetch(...a)),
+    env: io.env ?? (process.env as Record<string, string | undefined>),
+    now: () => new Date(),
+    queue: new WriteQueue(),
+    download: io.download ?? createSafeDownloader(),
+  };
+}
+
+/** Print a tool result exactly as the agent reads it; a refusal goes to stderr, exit 1. */
+function reportTool(result: ToolResult<unknown>, io: CliIo): number {
+  const text = result.content.map((c) => c.text).join("\n");
+  if (result.details["refused"] !== undefined) {
+    io.err(`error: ${text}`);
+    return 1;
+  }
+  io.out(text);
+  return 0;
+}
+
+function parseVerifyArgs(args: string[]): VerifyClaimArgs | null {
+  const claimParts: string[] = [];
+  let papers: "all" | string[] = "all";
+  let query: string | undefined;
+  let continuation: string | undefined;
+  for (let i = 0; i < args.length; i++) {
+    const a = args[i];
+    if (a === "--papers" && args[i + 1] !== undefined) {
+      const v = args[++i];
+      papers = v === "all" ? "all" : v.split(",").filter((h) => h.length > 0);
+    } else if (a === "--query" && args[i + 1] !== undefined) query = args[++i];
+    else if (a === "--continuation" && args[i + 1] !== undefined) continuation = args[++i];
+    else claimParts.push(a);
+  }
+  if (claimParts.length === 0) return null;
+  return { claim: claimParts.join(" "), papers, ...(query !== undefined ? { query } : {}), ...(continuation !== undefined ? { continuation } : {}) } as VerifyClaimArgs;
+}
 
 /** One CLI run: returns the process exit code (0 success, 1 refusal/error).
  * Async because `compile` spawns the engine; callers await. */
@@ -99,7 +151,7 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
         try {
           const rows = listPapers(db);
           if (rows.length === 0) {
-            out("No papers in the registry. Register with an agent's register_papers tool.");
+            out("No papers in the registry. Register with `uktub-scholar register <id>` or an agent's paper_registry tool.");
             return 0;
           }
           out(["citekey", "year", "title", "venue", "citable", "via"].join("\t"));
@@ -137,56 +189,28 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
         out(describeOutcome(outcome));
         return outcome.kind === "compiled" ? 0 : 1;
       }
-      case "verify": {
-        const [doi, ...claims] = args;
-        if (!doi || claims.length === 0) {
-          err(`error: verify needs a DOI and at least one claim\n${USAGE}`);
+      case "register": {
+        if (args.length === 0) {
+          err(`error: register needs at least one DOI or arxiv:ID\n${USAGE}`);
           return 1;
         }
-        const { runVerifyClaims } = await import("../core/tools/verify.ts");
-        try {
-          const structured = await runVerifyClaims(
-            { root, env: process.env as Record<string, string | undefined> },
-            { doi, claims },
-          );
-          for (const r of structured.results) {
-            out(`${r.verdict.toUpperCase()} (p=${r.confidence.toFixed(3)}, chunk ${r.bestChunkIndex ?? "-"}): ${r.claim}`);
-          }
-          out(`engine: ${structured.model}`);
-          return 0;
-        } catch (e) {
-          err(`error: ${(e as Error).message}`);
-          return 1;
-        }
+        return reportTool(await paperRegistryTool(toolContext(io, root), { action: "register", identifiers: args } as PaperRegistryArgs), io);
       }
-      case "trace": {
-        const [docId] = args;
-        if (!docId) {
-          err(`error: trace needs a document id\n${USAGE}`);
+      case "attach": {
+        const [handle, file] = args;
+        if (!handle || !file || args.length !== 2) {
+          err(`error: attach needs a DOI or citekey and one file\n${USAGE}`);
           return 1;
         }
-        const db = openRegistry(root);
-        try {
-          const { traceDocument } = await import("../core/verify/store.ts");
-          const rows = traceDocument(db, docId);
-          if (rows.length === 0) {
-            out(`No verified claims recorded for document "${docId}".`);
-            return 0;
-          }
-          for (const r of rows) {
-            out(
-              [
-                r.claim_text,
-                `  → ${r.verdict} (${r.confidence.toFixed(3)} via ${r.model} @ ${r.min_confidence})`,
-                `  → ${r.citekey} — ${r.title}`,
-                `  → ${r.chunk_id} chars ${r.char_start}–${r.char_end}${r.evidence_quote ? `\n  → "${r.evidence_quote}"` : ""}`,
-              ].join("\n"),
-            );
-          }
-          return 0;
-        } finally {
-          db.close();
+        return reportTool(await paperRegistryTool(toolContext(io, root), { action: "attach_source", attachments: [{ handle, path: file }] } as PaperRegistryArgs), io);
+      }
+      case "verify": {
+        const parsed = parseVerifyArgs(args);
+        if (parsed === null) {
+          err(`error: verify needs a claim\n${USAGE}`);
+          return 1;
         }
+        return reportTool(await verifyClaimTool(toolContext(io, root), parsed, io.verifyHooks), io);
       }
       default:
         err(command === undefined ? USAGE : `error: unknown command "${command}"\n${USAGE}`);

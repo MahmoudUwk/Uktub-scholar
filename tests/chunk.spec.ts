@@ -7,7 +7,7 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 
-import { chunkId, chunkText, targetChars, overlapChars, type ChunkTextConfig } from "../src/core/chunk.ts";
+import { chunkText, targetChars, overlapChars, type ChunkTextConfig } from "../src/core/chunk.ts";
 
 const CFG: ChunkTextConfig = { chunk_tokens: 1024, overlap_tokens: 128, chars_per_token: 4.0, boundary: "paragraph" };
 
@@ -65,8 +65,56 @@ describe("chunkText", () => {
     assert.equal(one.length, 1);
     assert.equal(one[0].text, "A short paragraph.");
   });
+});
 
-  it("chunkId composes doi and index", () => {
-    assert.equal(chunkId("10.1234/a.b", 3), "10.1234/a.b#c3");
+describe("chunkText — cuts that preserve evidence (KTD7)", () => {
+  const SMALL: ChunkTextConfig = { chunk_tokens: 100, overlap_tokens: 10, chars_per_token: 1, boundary: "paragraph" }; // 100-char windows
+
+  it("a paragraph longer than the window is cut at a sentence end, not mid-sentence or mid-number", () => {
+    const text = "Capacity fades slowly over the first cycles of operation. Under load the loss reaches 12.5 % per hundred cycles at 45 °C. After that the cell is stable.";
+    const chunks = chunkText(text, SMALL);
+    assert.ok(chunks.length >= 2);
+    for (const c of chunks.slice(0, -1)) assert.match(c.text.trimEnd(), /[.!?]$/, `cut inside a sentence: ${JSON.stringify(c.text)}`);
+    assert.ok(chunks.some((c) => c.text.includes("12.5 % per hundred cycles at 45 °C.")), "the number stays with its unit and qualifier");
+  });
+
+  it("with no sentence end available it still never splits a word", () => {
+    const text = "alpha beta gamma delta epsilon zeta eta theta iota kappa lambda mu nu xi omicron pi rho sigma tau upsilon phi chi psi omega ".repeat(3);
+    for (const c of chunkText(text, SMALL).slice(0, -1)) assert.match(c.text, /\s$/, `cut mid-word: ${JSON.stringify(c.text.slice(-12))}`);
+  });
+
+  it("a table block (header and rows on single newlines) stays whole when it fits the window", () => {
+    const table = "Table 2. Cycle life\nTemp (°C) | Cycles | Loss (%)\n25 | 800 | 8\n45 | 400 | 20";
+    const text = `${"Intro sentence here. ".repeat(3)}\n\n${table}\n\n${"Closing remarks follow. ".repeat(3)}`;
+    assert.ok(chunkText(text, { ...SMALL, chunk_tokens: 140 }).some((c) => c.text.includes(table)), "header and its rows share a chunk");
+  });
+
+  it("snapped chunks still index the original text, cover it, make progress, and are deterministic", () => {
+    const text = Array.from({ length: 30 }, (_, i) => `Sentence ${i} states that value ${i * 3} holds at 45 °C.`).join(" ");
+    const a = chunkText(text, SMALL);
+    assert.deepEqual(a, chunkText(text, SMALL));
+    const seen = new Array(text.length).fill(false);
+    for (let i = 0; i < a.length; i++) {
+      assert.equal(a[i].text, text.slice(a[i].char_start, a[i].char_end));
+      if (i > 0) assert.ok(a[i].char_start > a[i - 1].char_start);
+      for (let o = a[i].char_start; o < a[i].char_end; o++) seen[o] = true;
+    }
+    assert.ok(seen.every(Boolean));
+  });
+
+  it("astral characters are never split from their surrogate pair", () => {
+    const text = "😀".repeat(120);
+    for (const c of chunkText(text, { ...SMALL, boundary: "paragraph" })) {
+      assert.ok(!/^[\uDC00-\uDFFF]/.test(c.text) && !/[\uD800-\uDBFF]$/.test(c.text), "lone surrogate at a chunk edge");
+    }
+  });
+});
+
+describe("chunkText — degenerate configurations", () => {
+  it("never loops or exhausts memory when the window rounds to zero characters", () => {
+    const cfg: ChunkTextConfig = { chunk_tokens: 256, overlap_tokens: 0, chars_per_token: 0.001, boundary: "paragraph" };
+    const chunks = chunkText("abc def ghi", cfg);
+    assert.ok(chunks.length >= 1 && chunks.length <= 11);
+    assert.equal(chunks.map((c) => c.text).join(""), "abc def ghi");
   });
 });

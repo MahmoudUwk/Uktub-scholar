@@ -31,7 +31,7 @@ export default function registryWidget(pi: ExtensionAPI): void {
           const total = countPapers(db);
           if (total === 0) {
             ctx.ui.setWidget("uktub-registry", [
-              "📖 uktub registry: empty — register papers with register_papers",
+              "📖 uktub registry: empty — register papers with paper_registry",
             ], { placement: "belowEditor" });
             return;
           }

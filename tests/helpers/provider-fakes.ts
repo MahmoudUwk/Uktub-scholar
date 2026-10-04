@@ -55,17 +55,6 @@ export function createFakeFetch(routes: FakeRoute[]): { fetchFn: FetchLike; requ
   return { fetchFn: fake, requests };
 }
 
-/** Injected sleep: records the requested delay instead of waiting it out. */
-export function createFakeSleep(): { sleep: (ms: number) => Promise<void>; slept: number[] } {
-  const slept: number[] = [];
-  return {
-    slept,
-    sleep: async (ms: number) => {
-      slept.push(ms);
-    },
-  };
-}
-
 /** Minimal candidate builder: only the fields a test cares about. */
 export function candidate(overrides: Partial<PaperCandidate> & { title: string }): PaperCandidate {
   const { title, doi: requestedDoi, endpoint, ...rest } = overrides;
@@ -190,6 +179,8 @@ export function crossrefWorkEnvelope(overrides: {
   year?: number;
   venue?: string;
   citations?: number;
+  /** JATS abstract as Crossref ships it. */
+  abstract?: string;
 }): string {
   return JSON.stringify({
     message: {
@@ -199,6 +190,7 @@ export function crossrefWorkEnvelope(overrides: {
       ...(overrides.year !== undefined ? { issued: { "date-parts": [[overrides.year]] } } : {}),
       ...(overrides.venue !== undefined ? { "container-title": [overrides.venue] } : {}),
       ...(overrides.citations !== undefined ? { "is-referenced-by-count": overrides.citations } : {}),
+      ...(overrides.abstract !== undefined ? { abstract: overrides.abstract } : {}),
     },
   });
 }

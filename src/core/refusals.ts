@@ -2,8 +2,8 @@
  * Single refusal table (KTD6). Two classes:
  *  - refusal class: rendered to the model as `Refused: CODE — <message>. Next: <next>.`
  *  - warning class: attached to SUCCESSFUL outcomes (never rendered as refusals).
- * `code` and `next` are stable and test-pinned (R7, R18); `message` is free-form.
- * Completeness is enforced by a static scan over `src/` (tests/refusals.spec.ts, U4).
+ * `code` and `next` are stable; `message` is free-form. Typed table keys
+ * enforce completeness; tests cover non-empty hints and the rendered envelope.
  */
 
 export type RefusalCode =
@@ -22,6 +22,9 @@ export type RefusalCode =
   | "COMPILE_TIMEOUT"
   | "VERIFY_ENGINE_MISSING"
   | "CONFIG_INVALID"
+  | "ARGUMENT_INVALID"
+  | "CONTINUATION_INVALID"
+  | "SOURCE_UNUSABLE"
   | "PI_EXTENSION_API_UNAVAILABLE";
 
 export type WarningCode = "BIBTEX_UNAVAILABLE" | "DOI_TITLE_MISMATCH";
@@ -45,22 +48,22 @@ export const REFUSALS: Record<RefusalCode, RefusalEntry> = {
     next: "another process holds the registry write lock; retry after it finishes",
   },
   INVALID_DOI: {
-    next: "check the identifier — DOIs look like 10.xxxx/suffix; bare arXiv IDs are not DOIs, use their 10.48550/arxiv.XXXX.NNNNN form",
+    next: "check the identifier — DOIs look like 10.xxxx/suffix; write arXiv papers as arxiv:YYMM.NNNNN or their 10.48550/arxiv.YYMM.NNNNN form",
   },
   DOI_NOT_FOUND: {
-    next: "verify the DOI resolves (doi.org) or re-run search_papers and register from the result's DOI",
+    next: "verify the DOI resolves (doi.org), or re-run search_papers and register that result with paper_registry",
   },
   QUERY_REQUIRED: {
     next: "provide a search query — search_papers requires non-empty query text",
   },
   PATH_REFUSED: {
-    next: "operate inside the project directory; .registry and .git are protected system segments and path traversal is refused",
+    next: "use a file inside the project directory; .registry and .git are protected system segments, and traversal, symlink escapes and non-files are refused",
   },
   SEARCH_UNAVAILABLE: {
     next: "retry later; no scholarly provider answered — check network connectivity or provider status",
   },
   BATCH_TOO_LARGE: {
-    next: "split the batch: at most 50 DOIs per register_papers call",
+    next: "split the batch into calls within the limit named in the message",
   },
   COMPILE_ENGINE_MISSING: {
     next: "install tectonic (tectonic-typesetting.github.io) or set UKTUB_TECTONIC_BIN to the binary path, then retry",
@@ -72,10 +75,19 @@ export const REFUSALS: Record<RefusalCode, RefusalEntry> = {
     next: "simplify the document or raise the budget via UKTUB_COMPILE_TIMEOUT_S (seconds), then retry",
   },
   VERIFY_ENGINE_MISSING: {
-    next: "install a verdict engine — Julia-1 (python3 with the julia package and UKTUB_JULIA_MODEL set to the checkpoint) or a llama.cpp server for a generative model — then retry",
+    next: "start the verification engine (OpenRouter needs OPENROUTER_API_KEY; engine llama-cpp needs UKTUB_VERIFY_URL pointing at a local System One server) or switch verification.engine in config/chunking.yaml, then retry",
   },
   CONFIG_INVALID: {
     next: "fix the reported key in config/chunking.yaml (or the file named by UKTUB_CHUNK_CONFIG), then retry",
+  },
+  ARGUMENT_INVALID: {
+    next: "fix the named argument and retry; the message lists what the action accepts",
+  },
+  CONTINUATION_INVALID: {
+    next: "the continuation token does not match this request or the registry changed; repeat the request without a token",
+  },
+  SOURCE_UNUSABLE: {
+    next: "attach a text-based PDF or GROBID TEI of this exact paper (image-only scans need OCR first), or retry once an open-access copy exists",
   },
   PI_EXTENSION_API_UNAVAILABLE: {
     next: "upgrade Pi to >= 1.0.0, which exposes pi.registerTool",

@@ -110,7 +110,7 @@ export async function searchPapersTool(
       structuredContent: structured,
       details: {
         // Feynman adoption (KTD3): a DOI-shaped query is not an error and not
-        // re-routed — register_papers is the precise instrument for it.
+        // re-routed — paper_registry is the precise instrument for it.
         hint: result.hint,
       },
     };

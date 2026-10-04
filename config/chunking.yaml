@@ -1,11 +1,11 @@
 # uktub-scholar chunking + claim verification (every limit names its source)
 chunking:
-  chunk_tokens: 8192      # decision-model input window (owner directive, 2026-10-02)
-  overlap_tokens: 128     # carried into the next chunk (continuity, not context)
+  chunk_tokens: 1024      # measured window (recall plateaus here; docs/benchmarks window sweep, 2026-10-04)
+  overlap_tokens: 16      # carried into the next chunk (continuity, not context)
   chars_per_token: 2.8    # calibrated on this corpus with the mmBERT tokenizer (median 4.1, densest paper 3.10; 0.9 headroom so strict_encoding never raises)
   boundary: paragraph     # paragraph | hard
 verification:
-  engine: openrouter      # ClaimEngine registry in src/core/verify/engines.ts (openrouter | llama-cpp | k2 | bev | lumma | julia | laya)
-  min_confidence: 0.99    # base bar; env UKTUB_VERIFY_MIN_CONFIDENCE overrides (existing contract)
-  workers: 4              # resident engine processes (each loads the checkpoint once)
-  record_negative_pointers: false   # pointers are written for supported chunks only
+  engine: eos             # ClaimEngine registry in src/core/verify/engines.ts (eos | openrouter | llama-cpp | k2 | bev | lumma | julia | laya)
+  min_confidence: 0.99    # client policy: scientific-writing confidence bar
+  workers: 4              # concurrent chunk-verification lanes
+  max_judgments: 120      # client policy: fresh judgments per call (≈ 7 min on a 20-requests/minute hosted tier)

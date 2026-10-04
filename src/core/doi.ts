@@ -1,7 +1,7 @@
 /**
  * DOI normalization and arXiv forms, inlined from the product's
- * `@uktubai/shared` (packages/shared/src/doi.ts + hash.ts) so the package
- * ships with zero runtime dependencies (KTD3). Contract restated verbatim.
+ * `@uktubai/shared` (packages/shared/src/doi.ts + hash.ts), using only
+ * node built-ins. Contract restated verbatim.
  */
 import { createHash } from "node:crypto";
 

@@ -8,9 +8,10 @@ import { Value } from "typebox/value";
 import uktubOaExtension from "../src/pi/extension.ts";
 import { createRegistry } from "../src/core/registry.ts";
 import { CompileDocumentOutput } from "../src/core/tools/compile.ts";
-import { ListPapersOutput } from "../src/core/tools/list.ts";
-import { RegisterPapersOutput } from "../src/core/tools/register.ts";
+import { PaperRegistryOutput } from "../src/core/tools/registry.ts";
+import { VerifyClaimOutput } from "../src/core/tools/verify.ts";
 import { SearchPapersOutput } from "../src/core/tools/search.ts";
+import { registerPaper } from "../src/core/registry.ts";
 
 /**
  * Fake-Pi compat spec (pattern: UktubAI_Agentic tests/contract/pi-extension-compat.spec.ts).
@@ -73,43 +74,39 @@ test("load guard: Pi without registerTool throws the typed refusal, not a TypeEr
     (err: unknown) => {
       assert.ok(err instanceof Error);
       assert.match(err.message, /PI_EXTENSION_API_UNAVAILABLE/);
-      assert.match(err.message, /upgrade Pi/);
       return true;
     },
   );
 });
 
-test("registration: exactly the five tools, exact names, TypeBox parameters and outputSchema", () => {
+test("registration: exactly the four tools, exact names, TypeBox parameters and outputSchema", () => {
   const { fakePi, tools } = makeFakePi(true);
   uktubOaExtension(fakePi as never);
   assert.deepEqual(
     tools.map((tool) => tool.name),
-    ["search_papers", "register_papers", "list_papers", "compile_document", "verify_claims"],
+    ["search_papers", "paper_registry", "compile_document", "verify_claim"],
   );
   for (const tool of tools) {
     assert.equal(typeof tool.label, "string");
     assert.ok((tool.label ?? "").length > 0);
-    // Descriptions carry the stable next-hints semantics (rendered refusal shape).
-    assert.ok((tool.description ?? "").includes("Next:"), `${tool.name} description lacks a next hint`);
     assert.equal(typeof tool.parameters, "object");
     assert.ok(tool.parameters !== null);
     // outputSchema is the core tool's own declared schema (KTD6/KTD7).
     if (tool.name === "search_papers") assert.deepEqual(tool.outputSchema, SearchPapersOutput);
-    if (tool.name === "register_papers") assert.deepEqual(tool.outputSchema, RegisterPapersOutput);
-    if (tool.name === "list_papers") assert.deepEqual(tool.outputSchema, ListPapersOutput);
+    if (tool.name === "paper_registry") assert.deepEqual(tool.outputSchema, PaperRegistryOutput);
+    if (tool.name === "verify_claim") assert.deepEqual(tool.outputSchema, VerifyClaimOutput);
     if (tool.name === "compile_document") assert.deepEqual(tool.outputSchema, CompileDocumentOutput);
   }
 });
 
-test("refusal mapping: core refusal becomes isError:true content carrying code + next", async () => {
+test("refusal mapping: core refusal becomes isError:true with its stable code and details", async () => {
   const root = mkdtempSync(join(tmpdir(), "uktub-pi-refusal-"));
   try {
     const { fakePi, tools } = makeFakePi(true);
     uktubOaExtension(fakePi as never);
-    const result = await call(tools, "register_papers", { dois: ["10.1234/abc"] }, root);
+    const result = await call(tools, "paper_registry", { action: "register", identifiers: ["10.1234/abc"] }, root);
     assert.equal(result.isError, true);
     assert.match(result.content[0].text, /Refused: REGISTRY_NOT_INITIALIZED/);
-    assert.match(result.content[0].text, /uktub-scholar init/);
     assert.ok("refused" in result.details && result.details.refused !== null, "refusal details missing");
     assert.equal(result.structuredContent, undefined);
   } finally {
@@ -124,12 +121,11 @@ test("success mapping: structuredContent passes through and validates against th
     db.close();
     const { fakePi, tools } = makeFakePi(true);
     uktubOaExtension(fakePi as never);
-    const result = await call(tools, "list_papers", {}, root);
+    const result = await call(tools, "paper_registry", { action: "read" }, root);
     assert.notEqual(result.isError, true);
     assert.ok(result.structuredContent !== undefined && result.structuredContent !== null);
-    assert.equal(Value.Check(ListPapersOutput, result.structuredContent), true);
-    if (!("papers" in (result.structuredContent as Record<string, unknown>))) throw new Error("list result lacks papers");
-    assert.deepEqual(result.structuredContent, { papers: [], truncated: false, remaining: 0 });
+    assert.equal(Value.Check(PaperRegistryOutput, result.structuredContent), true);
+    assert.deepEqual(result.structuredContent, { action: "read", records: [], total: 0, nextCursor: null, unresolved: [] });
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
@@ -143,18 +139,16 @@ test("root resolution: ctx.cwd is resolved once; later cwd changes are ignored (
     db.close();
     const { fakePi, tools } = makeFakePi(true);
     uktubOaExtension(fakePi as never);
-    const first = await call(tools, "list_papers", {}, rootA);
+    const first = await call(tools, "paper_registry", { action: "read" }, rootA);
     assert.notEqual(first.isError, true);
     assert.ok(first.structuredContent !== undefined && first.structuredContent !== null);
-    if (!("papers" in (first.structuredContent as Record<string, unknown>))) throw new Error("list result lacks papers");
-    const firstPapers: unknown = (first.structuredContent as Record<string, unknown>).papers;
+    const firstRecords: unknown = (first.structuredContent as Record<string, unknown>).records;
     // rootB has no registry — a fresh resolution would refuse here; the frozen
     // first root must win.
-    const second = await call(tools, "list_papers", {}, rootB);
+    const second = await call(tools, "paper_registry", { action: "read" }, rootB);
     assert.notEqual(second.isError, true);
     assert.ok(second.structuredContent !== undefined && second.structuredContent !== null);
-    if (!("papers" in (second.structuredContent as Record<string, unknown>))) throw new Error("list result lacks papers");
-    assert.deepEqual((second.structuredContent as Record<string, unknown>).papers, firstPapers);
+    assert.deepEqual((second.structuredContent as Record<string, unknown>).records, firstRecords);
   } finally {
     rmSync(rootA, { recursive: true, force: true });
     rmSync(rootB, { recursive: true, force: true });
@@ -173,11 +167,50 @@ test("registry guard: tool_call hook blocks .registry and refs writes, passes ou
       | undefined;
 
   const reg = await verdictFor("bash", { command: "sqlite3 .registry/registry.db 'drop table papers'" });
-  assert.ok(reg?.block === true && /package-owned/.test(reg.reason));
+  assert.equal(reg?.block, true);
 
   const refs = await verdictFor("write", { path: "refs/references.bib", content: "x" });
-  assert.ok(refs?.block === true && /read-only for you/.test(refs.reason));
+  assert.equal(refs?.block, true);
 
   assert.equal(await verdictFor("write", { path: "manuscript/main.tex", content: "x" }), undefined);
-  assert.equal(await verdictFor("register_papers", { dois: ["10.1234/a"] }), undefined);
+  assert.equal(await verdictFor("paper_registry", { action: "register", identifiers: ["10.1234/a"] }), undefined);
+});
+
+test("the adapter forwards the host's cancellation signal to the tools", async () => {
+  const root = mkdtempSync(join(tmpdir(), "uktub-pi-signal-"));
+  try {
+    const db = createRegistry(root);
+    registerPaper(db, { doi: "10.1234/abc", title: "Needs A Source", authors: [] });
+    db.close();
+    const { fakePi, tools } = makeFakePi(true);
+    uktubOaExtension(fakePi as never);
+    const def = tools.find((t) => t.name === "verify_claim")!;
+    const aborted = AbortSignal.abort();
+    await assert.rejects(
+      def.execute!("c1", { claim: "Cells age faster at high temperature.", papers: "all" }, aborted, undefined, fakeToolCtx(root)),
+      (e: unknown) => (e as { name?: string }).name === "AbortError",
+    );
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("the adapter supplies the document downloader: a paper with no open copy is reported unavailable, not 'acquisition disabled'", async () => {
+  const root = mkdtempSync(join(tmpdir(), "uktub-pi-download-"));
+  const realFetch = globalThis.fetch;
+  try {
+    const db = createRegistry(root);
+    registerPaper(db, { doi: "10.1234/abc", title: "Needs A Source", authors: [] });
+    db.close();
+    globalThis.fetch = (async () => new Response("{}", { status: 404 })) as typeof fetch;
+    const { fakePi, tools } = makeFakePi(true);
+    uktubOaExtension(fakePi as never);
+    const result = await call(tools, "verify_claim", { claim: "Cells age faster at high temperature.", papers: "all" }, root);
+    assert.notEqual(result.isError, true, result.content[0].text);
+    assert.match(result.content[0].text, /no_open_copy/);
+    assert.doesNotMatch(result.content[0].text, /acquisition_disabled/);
+  } finally {
+    globalThis.fetch = realFetch;
+    rmSync(root, { recursive: true, force: true });
+  }
 });

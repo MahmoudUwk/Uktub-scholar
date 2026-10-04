@@ -9,4 +9,4 @@ verification:
   engine: bev
   min_confidence: 0.99
   workers: 4
-  record_negative_pointers: false
+  max_judgments: 120

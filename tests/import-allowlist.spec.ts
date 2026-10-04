@@ -5,9 +5,9 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 /**
- * Static import allowlist (KTD1): src/core/** may import only node:* built-ins and
- * package-internal modules. src/pi may import the Pi peer package. Enforced from U1
- * onward; tightened as units land.
+ * Core stays host-independent: built-ins, internal modules, TypeBox, YAML and the
+ * two document parsers (unpdf for PDF, fast-xml-parser for GROBID TEI).
+ * Only src/pi may import the Pi peer package.
  */
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..", "src");
@@ -22,8 +22,8 @@ function listTsFiles(dir: string): string[] {
   return out;
 }
 
-const CORE_ALLOW_PREFIXES = ["node:", ".", "/", "typebox", "yaml"]; // built-ins, package-internal, absolute fs paths in tests only; typebox is a host-agnostic JSON Schema builder and a declared peer dep (plan U4); yaml is the sole runtime dep (chunking config, owner directive 2026-10-02)
-const CORE_DENY = ["@earendil-works"]; // Pi host package: adapter-only (typebox is a host-agnostic JSON Schema builder and a declared peer dep, allowed anywhere)
+const CORE_ALLOW_PREFIXES = ["node:", ".", "/", "typebox", "yaml", "unpdf", "fast-xml-parser"];
+const CORE_DENY = ["@earendil-works"];
 
 test("src/core imports nothing Pi-specific", () => {
   const coreDir = join(root, "core");

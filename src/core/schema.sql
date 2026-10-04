@@ -1,104 +1,166 @@
 -- The uktub-scholar registry: one self-contained SQLite file at
--- `.registry/registry.db` beside the LaTeX project (R9). Journal mode stays
+-- `.registry/registry.db` beside the LaTeX project. Journal mode stays
 -- DELETE (set at open in registry.ts): one file is the whole registry, and
--- backup = copy one file (KTD2).
+-- backup = copy one file.
 --
--- Minimal v0 schema (KTD4, R10): a single table; every column has a named v0
--- consumer. Everything the product schema carried without one — source_digest,
--- acquisition_*, verification_*, citation_count, abstract, and the
--- chunks/fts_chunks/claims/paper_summaries/workflow tables — is dropped.
+-- `doi` is the PRIMARY KEY: DOIs are case-insensitive, and the canonical
+-- lowercase form is what makes the uniqueness meaningful.
 --
--- `doi` is the PRIMARY KEY: v0 registration is DOI-only (KTD8), DOIs are
--- case-insensitive, and the canonical lowercase form is what makes the
--- uniqueness meaningful.
+-- Version 3 (current). Migration from v1/v2 is explicit in registry.ts; this
+-- file is the whole current schema and is idempotent (IF NOT EXISTS).
+-- Every column names its consumer.
 
 CREATE TABLE IF NOT EXISTS papers (
-  -- Identity + dedupe (R5); the \cite source of truth.
+  -- Identity + dedupe; the \cite source of truth.
   doi TEXT PRIMARY KEY,
-  -- \cite target (R11), pinned once at first registration, never recomputed;
-  -- list_papers order (R6).
+  -- \cite target, pinned once at first registration, never recomputed;
+  -- paper_registry read order.
   citekey TEXT NOT NULL UNIQUE,
-  -- list_papers display; registration title-match warning (KTD8).
+  -- paper_registry read (default projection); title-match warning.
   title TEXT NOT NULL,
-  -- Citekey generation (R11); list_papers display.
+  -- Citekey generation; paper_registry read (authors).
   authors_json TEXT NOT NULL,
-  -- Citekey generation; list_papers display.
+  -- Citekey generation; paper_registry read (default projection).
   year INTEGER,
-  -- list_papers display.
+  -- paper_registry read (venue).
   venue TEXT,
   -- references.bib entry body; NULL (or a head the render cannot re-key)
-  -- means uncitable (R13). BibTeX is never synthesized or repaired.
+  -- means uncitable. BibTeX is never synthesized or repaired.
   provider_bibtex TEXT,
-  -- Provenance of the BibTeX pair, displayed as "via crossref"/"via datacite";
-  -- stored only alongside citable BibTeX.
+  -- Provenance of the BibTeX pair; stored only alongside citable BibTeX.
   bibtex_source TEXT,
-  -- Eligibility marker in every tool result (R12, R13): 1 only when the row
-  -- holds re-keyable provider BibTeX. Only improves (MAX rule, KTD8).
+  -- Eligibility marker in every tool result: 1 only when the row holds
+  -- re-keyable provider BibTeX. Only improves (MAX rule).
   citable INTEGER NOT NULL DEFAULT 0,
-  -- The only clock value in the registry (KTD6): last-write time, injected.
-  ingested_at TEXT NOT NULL
+  -- Registration last-write time (metadata refresh time), injected by the caller.
+  ingested_at TEXT NOT NULL,
+  -- Provider abstract (paper_registry read: literature triage). NULL when the
+  -- provider shipped none; never invented, never generated.
+  abstract TEXT,
+  -- Provider that supplied `abstract` (its provenance).
+  abstract_source TEXT
 );
 
--- ── v2 additions: chunks + claim verdict cache + traceability pointers ──────
--- Every column names its consumer (AGENTS.md). Additive migration v1→v2 runs
--- this whole file (CREATE IF NOT EXISTS) inside one transaction in
--- registry.ts; user_version below is the migration's final statement.
+-- Source readiness + the captured extraction (KTD4). A paper with no row is
+-- metadata-only. `status` 'ready' rows carry the one current captured text;
+-- 'unavailable' / 'failed' rows record why no usable text exists (acquisition
+-- recovery). Nothing here holds credentials: `ref` is a nonsecret reference.
+CREATE TABLE IF NOT EXISTS paper_sources (
+  doi TEXT PRIMARY KEY REFERENCES papers(doi) ON DELETE CASCADE,
+  status TEXT NOT NULL CHECK (status IN ('ready','unavailable','failed')),
+  -- openalex-pdf-url | openalex-content-tei | openalex-content-pdf | local-file
+  kind TEXT,
+  -- Nonsecret origin: URL without credentials, or project-relative file path.
+  ref TEXT,
+  -- Rights note carried from the provider location, when stated.
+  license TEXT,
+  -- sha256 of the acquired bytes: source half of the pointer revision.
+  digest TEXT,
+  -- Extractor identity + version: extraction half of the pointer revision.
+  extraction TEXT,
+  -- Pointer revision = H(digest, extraction, sha256(text)). Evidence binds here.
+  revision TEXT,
+  -- Chunk policy the derived chunks were built with (rechunk trigger).
+  chunk_policy TEXT,
+  -- Captured extracted text; evidence spans index it (UTF-16 offsets).
+  text TEXT,
+  -- JSON array of page start offsets when the extractor grounds pages.
+  page_starts_json TEXT,
+  prepared_at TEXT NOT NULL,
+  -- Normalized failure reason (never a raw fetch exception) + short detail.
+  failure_code TEXT,
+  failure_detail TEXT
+);
 
+-- Derived chunks (rebuildable from paper_sources.text + chunk policy).
+-- chunk_id is content-addressed: never reuse an ordinal as identity.
 CREATE TABLE IF NOT EXISTS chunks (
-  -- Owner paper; deregister cascades (paper removal removes its chunks).
-  doi          TEXT    NOT NULL REFERENCES papers(doi) ON DELETE CASCADE,
-  -- Emission order (0-based); positional half of the chunk reference.
-  chunk_index  INTEGER NOT NULL,
-  -- Stable display id '{doi}#c{index}' (trace CLI, doc pointers).
-  chunk_id     TEXT    NOT NULL UNIQUE,
-  -- Authoritative evidence offsets into the ORIGINAL extracted text.
-  char_start   INTEGER NOT NULL,
-  char_end     INTEGER NOT NULL,
-  -- Advisory engine-window budget (chars_per_token estimate).
-  est_tokens   INTEGER NOT NULL,
-  -- Content address: verdict-cache join + structural invalidation.
-  content_hash TEXT    NOT NULL,
-  -- The chunk text itself; ClaimPair.chunk input.
-  text         TEXT    NOT NULL,
+  doi TEXT NOT NULL REFERENCES papers(doi) ON DELETE CASCADE,
+  chunk_index INTEGER NOT NULL,
+  -- H(doi, revision, policy, char_start, char_end): the same document may back two papers.
+  chunk_id TEXT NOT NULL UNIQUE,
+  revision TEXT NOT NULL,
+  char_start INTEGER NOT NULL,
+  char_end INTEGER NOT NULL,
+  est_tokens INTEGER NOT NULL,
+  -- Judgment-cache join key.
+  content_hash TEXT NOT NULL,
+  -- The chunk text: judged passage and FTS content.
+  text TEXT NOT NULL,
   PRIMARY KEY (doi, chunk_index)
 );
-
 CREATE INDEX IF NOT EXISTS idx_chunks_hash ON chunks(content_hash);
 
--- Content-addressed verdict cache. Keyed by claim+chunk content, model, and
--- the decision bar in force. Pure compute cache: nothing else reads it.
-CREATE TABLE IF NOT EXISTS claim_verdicts (
-  claim_hash     TEXT NOT NULL,  -- sha256 of whitespace-normalized claim
-  chunk_hash     TEXT NOT NULL,  -- = chunks.content_hash at decision time
-  model          TEXT NOT NULL,  -- stable engine+weights id
-  min_confidence REAL NOT NULL,  -- decision bar in force (part of the key)
-  verdict        TEXT NOT NULL CHECK (verdict IN ('supported','refuted','unverified')),
-  confidence     REAL NOT NULL,  -- raw engine probability
-  evidence_quote TEXT,           -- trace display; dataset/bench fills when present
-  decided_at     TEXT NOT NULL,  -- metadata only (ISO), never logic
-  PRIMARY KEY (claim_hash, chunk_hash, model, min_confidence)
+-- Locator index (KTD6): derived, kept consistent by triggers (FK cascades fire them).
+CREATE VIRTUAL TABLE IF NOT EXISTS chunk_fts USING fts5(
+  text, content='chunks', content_rowid='rowid', tokenize='porter unicode61 remove_diacritics 2'
+);
+CREATE TRIGGER IF NOT EXISTS chunks_fts_ai AFTER INSERT ON chunks BEGIN
+  INSERT INTO chunk_fts(rowid, text) VALUES (new.rowid, new.text);
+END;
+CREATE TRIGGER IF NOT EXISTS chunks_fts_ad AFTER DELETE ON chunks BEGIN
+  INSERT INTO chunk_fts(chunk_fts, rowid, text) VALUES ('delete', old.rowid, old.text);
+END;
+
+-- Reusable judgment compute cache. Pure cache: nothing reads evidence from it.
+-- Key = effective decision identity: claim, passage content, model identity,
+-- decision protocol. The confidence bar is policy applied on read, not a key.
+CREATE TABLE IF NOT EXISTS claim_judgments (
+  claim_hash TEXT NOT NULL,
+  passage_hash TEXT NOT NULL,
+  model_id TEXT NOT NULL,
+  protocol TEXT NOT NULL,
+  p_true REAL NOT NULL,
+  decided_at TEXT NOT NULL,
+  PRIMARY KEY (claim_hash, passage_hash, model_id, protocol)
 );
 
--- Traceability pointers: one row per (document, claim, supporting chunk).
--- Written for supported chunks (negatives live only in the cache); fields
--- snapshot the verdict so trace never depends on cache rows.
-CREATE TABLE IF NOT EXISTS claim_pointers (
-  doc_id       TEXT    NOT NULL,  -- generated document id (manuscript path stem)
-  claim_text   TEXT    NOT NULL,  -- exact claim as reviewed (trace display)
-  claim_hash   TEXT    NOT NULL,  -- dedupe half of the key
-  doi          TEXT    NOT NULL REFERENCES papers(doi) ON DELETE CASCADE,
-  chunk_index  INTEGER NOT NULL,  -- positional reference
-  char_start   INTEGER NOT NULL,  -- snapshot copied from chunks at write time
-  char_end     INTEGER NOT NULL,
-  verdict      TEXT    NOT NULL,
-  confidence   REAL    NOT NULL,
-  model        TEXT    NOT NULL,
-  min_confidence REAL  NOT NULL,
-  created_at   TEXT    NOT NULL,
-  PRIMARY KEY (doc_id, claim_hash, doi, chunk_index),
-  FOREIGN KEY (doi, chunk_index) REFERENCES chunks(doi, chunk_index) ON DELETE CASCADE
+-- One verification run = a fresh verify_claim call plus its continuations. The
+-- row captures the selection (papers at their revisions and chunk policy, the
+-- locator query, the decision identity) so a continuation can be refused when
+-- anything it depends on changed, and holds the index of the first unchecked
+-- candidate (NULL when the work is complete).
+CREATE TABLE IF NOT EXISTS verify_runs (
+  run_id TEXT PRIMARY KEY,
+  claim_hash TEXT NOT NULL,
+  snapshot_json TEXT NOT NULL,
+  next_work INTEGER,
+  -- Findings of the run's first call that every later page must repeat
+  -- (sources without a usable source, unresolved handles, discarded stale evidence).
+  carry_json TEXT NOT NULL,
+  created_at TEXT NOT NULL
 );
 
-CREATE INDEX IF NOT EXISTS idx_pointers_doc ON claim_pointers(doc_id);
+-- Supporting evidence of a run, bound to the source revision it was judged
+-- against and carrying its own decision, so it is reconstructable without any
+-- judgment-cache row. Deleted with its run, its paper, or its revision.
+CREATE TABLE IF NOT EXISTS claim_evidence (
+  run_id TEXT NOT NULL REFERENCES verify_runs(run_id) ON DELETE CASCADE,
+  doi TEXT NOT NULL REFERENCES papers(doi) ON DELETE CASCADE,
+  revision TEXT NOT NULL,
+  char_start INTEGER NOT NULL,
+  char_end INTEGER NOT NULL,
+  -- Grounded page number (1-based) when the extractor maps pages.
+  page INTEGER,
+  chunk_id TEXT NOT NULL,
+  model_id TEXT NOT NULL,
+  protocol TEXT NOT NULL,
+  min_confidence REAL NOT NULL,
+  p_true REAL NOT NULL,
+  -- NULL until the record was delivered to the agent; then the excerpt characters
+  -- released (0 = pointer only). Delivery is exactly-once and counts against the
+  -- per-source release budget across every page of the run.
+  released_chars INTEGER,
+  created_at TEXT NOT NULL,
+  PRIMARY KEY (run_id, doi, revision, char_start, char_end)
+);
 
-PRAGMA user_version = 2;
+-- Single-row change counter: continuation tokens reject a registry that
+-- changed since they were issued.
+CREATE TABLE IF NOT EXISTS registry_state (
+  id INTEGER PRIMARY KEY CHECK (id = 1),
+  generation INTEGER NOT NULL
+);
+INSERT OR IGNORE INTO registry_state (id, generation) VALUES (1, 0);
+
+PRAGMA user_version = 3;

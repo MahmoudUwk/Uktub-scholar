@@ -15,7 +15,7 @@
  * `ingested_at` is the only clock value and arrives through the injected
  * `now` (KTD6).
  */
-import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join, parse, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import type { SQLInputValue, StatementSync } from "node:sqlite";
@@ -23,7 +23,7 @@ import type { SQLInputValue, StatementSync } from "node:sqlite";
 import type { RefusalCode, WarningCode } from "./refusals.ts";
 import { firstFreeCitekey, generateCitekey } from "./citekey.ts";
 import { isRekeyableBibtex, renderBibliography } from "./bibrender.ts";
-import { normalizeRegistryDoi } from "./doi.ts";
+import { arxivDoi, normalizeRegistryDoi } from "./doi.ts";
 
 /** The project's canonical paper registry, created by `init` (R9). */
 export const REGISTRY_REL_PATH = ".registry/registry.db";
@@ -32,7 +32,7 @@ export const REGISTRY_REL_PATH = ".registry/registry.db";
 export const BIBLIOGRAPHY_REL_PATH = "refs/references.bib";
 
 /** The only schema version this package speaks (KTD4). */
-export const REGISTRY_SCHEMA_VERSION = 2;
+export const REGISTRY_SCHEMA_VERSION = 3;
 
 /**
  * R15/KTD5: cross-process writes serialize through SQLite's busy wait. The
@@ -91,14 +91,42 @@ function readUserVersion(db: DatabaseSync): number {
   return getRow<{ user_version: number }>(db.prepare("PRAGMA user_version"))?.user_version ?? 0;
 }
 
-/** Additive in-place migration: v1 registries gain the v2 tables (chunks,
- * claim_verdicts, claim_pointers) by re-running the idempotent schema file
- * inside one transaction. Never rewrites rows; refuses anything newer. */
-function migrateIfV1(db: DatabaseSync): void {
-  if (readUserVersion(db) !== 1) return;
+const SCHEMA_SQL = (): string => readFileSync(new URL("./schema.sql", import.meta.url), "utf8");
+
+/** Legacy tables v2 added. Their rows carry no source provenance, so v3 drops
+ *  them: evidence must name an attested source revision (KTD4). */
+const LEGACY_V2_TABLES = ["claim_pointers", "claim_verdicts", "chunks"] as const;
+
+function tableExists(db: DatabaseSync, name: string): boolean {
+  return getRow(db.prepare("SELECT 1 AS x FROM sqlite_master WHERE type='table' AND name = ?"), name) !== undefined;
+}
+
+/**
+ * Explicit in-place migration of the known package schemas (v1, v2) to the
+ * current version, inside one transaction. Papers and citekeys are never
+ * rewritten. v2's chunk/verdict/pointer rows are dropped (unsourced); when any
+ * exist the whole file is copied to `<db>.v2.bak` first (backup = copy one
+ * file). Anything else — foreign or newer — is refused by the callers.
+ */
+export function migrateLegacy(db: DatabaseSync, file: string, from: 1 | 2): void {
+  if (from === 2) {
+    const held = LEGACY_V2_TABLES.some(
+      (t) => tableExists(db, t) && Number(getRow<{ n: number }>(db.prepare(`SELECT COUNT(*) AS n FROM ${t}`))?.n ?? 0) > 0,
+    );
+    if (held) copyFileSync(file, `${file}.v2.bak`);
+  }
   db.exec("BEGIN IMMEDIATE");
   try {
-    db.exec(readFileSync(new URL("./schema.sql", import.meta.url), "utf8"));
+    // Another process may have migrated while this one waited for the write lock.
+    if (readUserVersion(db) === REGISTRY_SCHEMA_VERSION) {
+      db.exec("ROLLBACK");
+      return;
+    }
+    const cols = allRows<{ name: string }>(db.prepare("PRAGMA table_info(papers)")).map((c) => c.name);
+    if (!cols.includes("abstract")) db.exec("ALTER TABLE papers ADD COLUMN abstract TEXT");
+    if (!cols.includes("abstract_source")) db.exec("ALTER TABLE papers ADD COLUMN abstract_source TEXT");
+    for (const t of LEGACY_V2_TABLES) db.exec(`DROP TABLE IF EXISTS ${t}`);
+    db.exec(SCHEMA_SQL());
     db.exec("COMMIT");
   } catch (err) {
     try {
@@ -110,11 +138,33 @@ function migrateIfV1(db: DatabaseSync): void {
   }
 }
 
-function openDatabaseFile(abs: string): DatabaseSync {
+function unsupported(version: number, verb: string): RegistryError {
+  return new RegistryError(
+    "REGISTRY_SCHEMA_UNSUPPORTED",
+    `${verb} a registry of schema version ${version} is not supported (this package speaks version ${REGISTRY_SCHEMA_VERSION}, and migrates 1 and 2)`,
+  );
+}
+
+/**
+ * Open the database file and settle its schema version BEFORE any pragma that
+ * could write: a foreign or newer database is refused byte-for-byte unchanged
+ * (setting `journal_mode` on a WAL database would rewrite it). Known legacy
+ * versions migrate; version 0 is accepted only when `allowFresh` (init).
+ */
+function openDatabaseFile(abs: string, allowFresh: boolean): DatabaseSync {
   let opened: DatabaseSync | undefined;
   try {
     opened = new DatabaseSync(abs, { timeout: BUSY_TIMEOUT_MS });
+    const version = readUserVersion(opened);
+    // A database that never set user_version is ours to initialise only when it is EMPTY;
+    // someone else's tables are refused untouched.
+    const empty = getRow<{ n: number }>(opened.prepare("SELECT COUNT(*) AS n FROM sqlite_master WHERE name NOT LIKE 'sqlite_%'"))?.n === 0;
+    const fresh = version === 0 && allowFresh && empty;
+    if (!fresh && version !== REGISTRY_SCHEMA_VERSION && version !== 1 && version !== 2) {
+      throw unsupported(version, allowFresh ? "refusing to re-initialize" : "opening");
+    }
     opened.exec(OPEN_PRAGMAS);
+    if (version === 1 || version === 2) migrateLegacy(opened, abs, version);
     return opened;
   } catch (err) {
     try {
@@ -146,56 +196,40 @@ export function findEnclosingProject(root: string): string | null {
 /**
  * Open the project registry for an existing project; refuses a missing file
  * (REGISTRY_NOT_INITIALIZED — `init` creates it), non-SQLite bytes
- * (REGISTRY_CORRUPT) and a foreign schema version
- * (REGISTRY_SCHEMA_UNSUPPORTED).
+ * (REGISTRY_CORRUPT) and a foreign or newer schema version
+ * (REGISTRY_SCHEMA_UNSUPPORTED, without touching the file). Known older
+ * versions migrate in place.
  */
 export function openRegistry(root: string): DatabaseSync {
   const abs = join(root, REGISTRY_REL_PATH);
   if (!existsSync(abs)) {
     throw new RegistryError("REGISTRY_NOT_INITIALIZED", `no registry at ${REGISTRY_REL_PATH} under ${root}`);
   }
-  const db = openDatabaseFile(abs);
-  const version = readUserVersion(db);
-  if (version === 1) {
-    // Additive in-place migration to the current schema (v2: chunks,
-    // claim_verdicts, claim_pointers). Existing rows are never rewritten.
-    try {
-      migrateIfV1(db);
-    } catch (err) {
-      db.close();
-      throw asRegistryError(err);
-    }
-  } else if (version !== REGISTRY_SCHEMA_VERSION) {
-    db.close();
-    throw new RegistryError(
-      "REGISTRY_SCHEMA_UNSUPPORTED",
-      `registry schema version ${version} is not supported (this package speaks version ${REGISTRY_SCHEMA_VERSION})`,
-    );
-  }
-  return db;
+  return openDatabaseFile(abs, false);
 }
 
 /**
  * Create (or idempotently re-open and re-validate) the registry for a project
- * and render the header-only bibliography — `init`'s core (A3). An existing
- * uninitialized (version 0) or current-version database is kept and its
- * schema re-applied (every statement is IF NOT EXISTS); a foreign or newer
- * version is never silently rewritten. Returns the open handle.
+ * and render the header-only bibliography — `init`'s core. An uninitialized
+ * (version 0) database gets the schema; a current one re-applies it (every
+ * statement is IF NOT EXISTS); a known legacy one migrates; a foreign or newer
+ * version is refused unchanged. Returns the open handle.
  */
 export function createRegistry(root: string): DatabaseSync {
   const abs = join(root, REGISTRY_REL_PATH);
   mkdirSync(dirname(abs), { recursive: true });
   let db: DatabaseSync | undefined;
   try {
-    db = openDatabaseFile(abs); // creates the file when missing; maps corrupt/busy
-    const version = readUserVersion(db);
-    if (version !== 0 && version !== REGISTRY_SCHEMA_VERSION) {
-      throw new RegistryError(
-        "REGISTRY_SCHEMA_UNSUPPORTED",
-        `refusing to re-initialize a registry of schema version ${version} (this package speaks version ${REGISTRY_SCHEMA_VERSION})`,
-      );
+    db = openDatabaseFile(abs, true); // creates the file when missing; maps corrupt/busy
+    // One transaction: an interrupted init leaves an empty database, never half a schema.
+    db.exec("BEGIN IMMEDIATE");
+    try {
+      db.exec(SCHEMA_SQL());
+      db.exec("COMMIT");
+    } catch (err) {
+      rollbackQuietly(db);
+      throw err;
     }
-    db.exec(readFileSync(new URL("./schema.sql", import.meta.url), "utf8"));
     syncBibliography(db);
     return db;
   } catch (err) {
@@ -206,6 +240,15 @@ export function createRegistry(root: string): DatabaseSync {
     }
     throw asRegistryError(err);
   }
+}
+
+/** Registry change counter: continuation tokens carry it and are refused once
+ *  it moves. Bumped inside every transaction that changes papers or sources. */
+export function generationOf(db: DatabaseSync): number {
+  return Number(getRow<{ generation: number }>(db.prepare("SELECT generation FROM registry_state WHERE id = 1"))?.generation ?? 0);
+}
+export function bumpGeneration(db: DatabaseSync): void {
+  db.prepare("UPDATE registry_state SET generation = generation + 1 WHERE id = 1").run();
 }
 
 // ── registration ───────────────────────────────────────────────────────────
@@ -221,6 +264,10 @@ export interface PaperRecord {
   bibtex?: string | null;
   /** Provenance of `bibtex` (e.g. "crossref"); stored only alongside citable BibTeX. */
   bibtexSource?: string | null;
+  /** Provider abstract (plain text); never generated. Kept when a refresh brings none. */
+  abstract?: string | null;
+  /** Provider that supplied `abstract`. */
+  abstractSource?: string | null;
 }
 
 export interface RegisterOptions {
@@ -247,8 +294,8 @@ export interface RegisterOutcome {
  * paper except deregistration. All other metadata is latest-wins.
  */
 const UPSERT_PAPER_SQL = `INSERT INTO papers
-  (doi, citekey, title, authors_json, year, venue, provider_bibtex, bibtex_source, citable, ingested_at)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  (doi, citekey, title, authors_json, year, venue, provider_bibtex, bibtex_source, citable, ingested_at, abstract, abstract_source)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(doi) DO UPDATE SET
   title = excluded.title,
   authors_json = excluded.authors_json,
@@ -257,7 +304,9 @@ ON CONFLICT(doi) DO UPDATE SET
   provider_bibtex = CASE WHEN excluded.citable = 1 THEN excluded.provider_bibtex ELSE papers.provider_bibtex END,
   bibtex_source = CASE WHEN excluded.citable = 1 THEN excluded.bibtex_source ELSE papers.bibtex_source END,
   citable = MAX(papers.citable, excluded.citable),
-  ingested_at = excluded.ingested_at`;
+  ingested_at = excluded.ingested_at,
+  abstract = COALESCE(excluded.abstract, papers.abstract),
+  abstract_source = CASE WHEN excluded.abstract IS NOT NULL THEN excluded.abstract_source ELSE papers.abstract_source END`;
 
 /** `ingested_at` storage form: second precision, no milliseconds. */
 function toIsoSeconds(date: Date): string {
@@ -283,6 +332,7 @@ export function registerPaper(db: DatabaseSync, record: PaperRecord, options: Re
   const incomingCitable = bibtex !== null && isRekeyableBibtex(bibtex) ? 1 : 0;
   const bibtexSource = incomingCitable === 1 ? (record.bibtexSource ?? null) : null;
   const ingestedAt = toIsoSeconds(options.now?.() ?? new Date());
+  const abstract = typeof record.abstract === "string" && record.abstract.trim().length > 0 ? record.abstract.trim() : null;
 
   try {
     db.exec("BEGIN IMMEDIATE;");
@@ -310,6 +360,8 @@ export function registerPaper(db: DatabaseSync, record: PaperRecord, options: Re
       bibtexSource,
       incomingCitable,
       ingestedAt,
+      abstract,
+      abstract === null ? null : (record.abstractSource ?? null),
     );
 
     // The STORED row's state, read after the upsert: a re-registration that
@@ -320,6 +372,7 @@ export function registerPaper(db: DatabaseSync, record: PaperRecord, options: Re
       doi,
     );
     if (stored === undefined) throw new Error(`registered row vanished for ${doi}`);
+    bumpGeneration(db);
 
     bibliographyStarted = true;
     writeBibliography(db);
@@ -393,11 +446,81 @@ export function listPapers(db: DatabaseSync, limit?: number): PaperRow[] {
   }));
 }
 
-/** Total registry size — the truncation arithmetic behind `list_papers`'s
+/** Total registry size — the total behind `paper_registry` read's
  *  `remaining` marker without materializing every row. */
 export function countPapers(db: DatabaseSync): number {
   const row = db.prepare("SELECT COUNT(*) AS n FROM papers").get() as { n: number };
   return Number(row.n);
+}
+
+// ── handles ────────────────────────────────────────────────────────────────
+
+/** Canonical DOI for a handle written as a DOI, `doi:`/URL form, or explicit `arxiv:<id>`; else null. */
+export function canonicalDoiOf(handle: string): string | null {
+  return normalizeRegistryDoi(handle) ?? (/^arxiv:/i.test(handle.trim()) ? arxivDoi(handle) : null);
+}
+
+export interface RegistryHandleRow {
+  doi: string;
+  citekey: string;
+  title: string;
+}
+
+/** Resolve one DOI-form or citekey handle to its registered paper, or null. Never guesses. */
+export function resolveHandle(db: DatabaseSync, handle: string): RegistryHandleRow | null {
+  const doi = canonicalDoiOf(handle);
+  const row =
+    doi !== null
+      ? getRow<RegistryHandleRow>(db.prepare("SELECT doi, citekey, title FROM papers WHERE doi = ?"), doi)
+      : getRow<RegistryHandleRow>(db.prepare("SELECT doi, citekey, title FROM papers WHERE citekey = ?"), handle.trim());
+  return row ?? null;
+}
+
+/** One registry row with every stored column the read projection can name. */
+export interface PaperDetail extends PaperRow {
+  providerBibtex: string | null;
+  abstract: string | null;
+  abstractSource: string | null;
+}
+
+/** Papers in citekey order after `afterCitekey`, optionally restricted to `dois`; `limit` rows. */
+export function selectPapers(db: DatabaseSync, opts: { dois?: string[]; afterCitekey?: string; limit: number }): PaperDetail[] {
+  const where: string[] = [];
+  const params: SQLInputValue[] = [];
+  if (opts.dois !== undefined) {
+    if (opts.dois.length === 0) return [];
+    where.push(`doi IN (${opts.dois.map(() => "?").join(",")})`);
+    params.push(...opts.dois);
+  }
+  if (opts.afterCitekey !== undefined) {
+    where.push("citekey > ?");
+    params.push(opts.afterCitekey);
+  }
+  const rows = allRows<{
+    doi: string; citekey: string; title: string; authors_json: string; year: number | null; venue: string | null;
+    bibtex_source: string | null; citable: number; ingested_at: string; provider_bibtex: string | null; abstract: string | null; abstract_source: string | null;
+  }>(
+    db.prepare(
+      `SELECT doi, citekey, title, authors_json, year, venue, bibtex_source, citable, ingested_at, provider_bibtex, abstract, abstract_source
+       FROM papers ${where.length > 0 ? `WHERE ${where.join(" AND ")}` : ""} ORDER BY citekey ASC LIMIT ?`,
+    ),
+    ...params,
+    opts.limit,
+  );
+  return rows.map((row) => ({
+    doi: row.doi,
+    citekey: row.citekey,
+    title: row.title,
+    authors: JSON.parse(row.authors_json) as string[],
+    year: row.year ?? null,
+    venue: row.venue ?? null,
+    bibtexSource: row.bibtex_source ?? null,
+    citable: Number(row.citable) === 1,
+    ingestedAt: row.ingested_at,
+    providerBibtex: row.provider_bibtex ?? null,
+    abstract: row.abstract ?? null,
+    abstractSource: row.abstract_source ?? null,
+  }));
 }
 
 // ── deregistration ─────────────────────────────────────────────────────────
@@ -408,20 +531,34 @@ export interface RemovedPaper {
   title: string;
 }
 
+/** One outcome per input handle, in input order. */
+export interface RemoveOutcome {
+  input: string;
+  /** removed: this input caused the deletion; duplicate: names a paper an earlier input already removed;
+   *  absent: no such paper (already gone); refused: blank handle. */
+  status: "removed" | "duplicate" | "absent" | "refused";
+  doi: string | null;
+  citekey: string | null;
+  duplicateOf: number | null;
+}
+
 export interface DeregisterResult {
   removed: RemovedPaper[];
   missing: string[];
+  outcomes: RemoveOutcome[];
 }
 
 /**
- * Remove papers by DOI or citekey in ONE `BEGIN IMMEDIATE` transaction — the
- * same write contract as registration: rows and re-render land together, and
- * a failure restores the file to the unchanged registry's image.
+ * Remove papers by DOI, DOI alias or citekey in ONE `BEGIN IMMEDIATE`
+ * transaction — the same write contract as registration: rows and re-render
+ * land together, and a failure restores the file to the unchanged registry's
+ * image. Aliases of one paper cause one deletion; every input keeps an outcome.
+ * There is no all-delete selector: a handle names one paper or nothing.
  */
 export function deregisterPapers(db: DatabaseSync, handles: string[]): DeregisterResult {
   const removed: RemovedPaper[] = [];
   const missing: string[] = [];
-  const seen = new Set<string>();
+  const outcomes: RemoveOutcome[] = [];
   try {
     db.exec("BEGIN IMMEDIATE;");
   } catch (err) {
@@ -429,23 +566,32 @@ export function deregisterPapers(db: DatabaseSync, handles: string[]): Deregiste
   }
   let bibliographyStarted = false;
   try {
+    // Resolve every handle against the registry as it stands, THEN delete: two
+    // handles naming one paper (DOI alias, citekey) resolve to the same row.
     const del = db.prepare("DELETE FROM papers WHERE doi = ?");
-    for (const handle of handles) {
-      if (seen.has(handle)) continue;
-      seen.add(handle);
-      // DOIs are matched first (they are the primary key), then citekeys.
-      const normalized = normalizeRegistryDoi(handle);
-      const row =
-        normalized !== null
-          ? getRow<RemovedPaper>(db.prepare("SELECT doi, citekey, title FROM papers WHERE doi = ?"), normalized)
-          : getRow<RemovedPaper>(db.prepare("SELECT doi, citekey, title FROM papers WHERE citekey = ?"), handle);
-      if (row === undefined) {
-        missing.push(handle);
-        continue;
+    const firstIndexOf = new Map<string, number>();
+    handles.forEach((handle, index) => {
+      if (handle.trim().length === 0) {
+        outcomes.push({ input: handle, status: "refused", doi: null, citekey: null, duplicateOf: null });
+        return;
       }
-      del.run(row.doi);
+      const row = resolveHandle(db, handle);
+      if (row === null) {
+        missing.push(handle);
+        outcomes.push({ input: handle, status: "absent", doi: canonicalDoiOf(handle), citekey: null, duplicateOf: null });
+        return;
+      }
+      const earlier = firstIndexOf.get(row.doi);
+      if (earlier !== undefined) {
+        outcomes.push({ input: handle, status: "duplicate", doi: row.doi, citekey: row.citekey, duplicateOf: earlier });
+        return;
+      }
+      firstIndexOf.set(row.doi, index);
       removed.push({ doi: row.doi, citekey: row.citekey, title: row.title });
-    }
+      outcomes.push({ input: handle, status: "removed", doi: row.doi, citekey: row.citekey, duplicateOf: null });
+    });
+    for (const r of removed) del.run(r.doi);
+    if (removed.length > 0) bumpGeneration(db);
     bibliographyStarted = true;
     writeBibliography(db);
     db.exec("COMMIT;");
@@ -453,7 +599,7 @@ export function deregisterPapers(db: DatabaseSync, handles: string[]): Deregiste
     abandonWrite(db, bibliographyStarted);
     throw asRegistryError(err);
   }
-  return { removed, missing };
+  return { removed, missing, outcomes };
 }
 
 // ── the bibliography render (R12) ──────────────────────────────────────────

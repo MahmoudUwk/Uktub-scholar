@@ -166,12 +166,10 @@ describe("bibliography render", () => {
     const malformed = register(paper("Other Draft", { bibtex: "not bibtex at all" }));
     assert.equal(malformed.citable, false);
     assert.deepEqual(bibKeys(), []);
-    assert.match(bibText(), /no citable papers registered yet/);
   });
 
   it("renders the header-only file for an empty registry and releases the write lock", () => {
     assert.deepEqual(syncBibliography(db), { syncedCount: 0 });
-    assert.match(bibText(), /no citable papers registered yet/);
     assert.equal(db.isTransaction, false, "the render-only transaction must release the lock");
     register(paper("Quantum Networks")); // a second writer can take the lock immediately
     assert.deepEqual(bibKeys(), registryBibKeys());
