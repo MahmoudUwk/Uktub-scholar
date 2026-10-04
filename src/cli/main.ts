@@ -18,6 +18,7 @@ import { createSafeDownloader } from "../core/source/download.ts";
 import { paperRegistryTool, type PaperRegistryArgs } from "../core/tools/registry.ts";
 import type { ToolContext, ToolResult } from "../core/tools/context.ts";
 import { verifyClaimTool, type VerifyClaimArgs, type VerifyHooks } from "../core/tools/verify.ts";
+import { searchPassagesTool, type SearchPassagesArgs } from "../core/tools/passages.ts";
 
 /** Injected I/O: the bin passes console writers; tests capture arrays. */
 export interface CliIo {
@@ -44,7 +45,10 @@ commands:
   register <id>...              register papers by DOI or arxiv:ID (same tool the agent uses)
   attach <doi|citekey> <file>   prepare a local PDF/TEI inside the project as a paper's source
   verify <claim> [--papers all|<doi|citekey>,...] [--query <words>] [--continuation <token>]
-                                find supporting passages for ONE claim (default: all papers)`;
+                                find supporting passages for ONE claim (default: all papers)
+  search <query> [--papers all|<doi|citekey>,...] [--limit <n>]
+                                find the passages that best match a topic or question (keyword,
+                                plus semantic when UKTUB_EMBED_URL names an embedding server)`;
 
 /** The same context the Pi adapter builds: real network, env and clock unless a test injects them. */
 function toolContext(io: CliIo, root: string): ToolContext {
@@ -85,6 +89,22 @@ function parseVerifyArgs(args: string[]): VerifyClaimArgs | null {
   }
   if (claimParts.length === 0) return null;
   return { claim: claimParts.join(" "), papers, ...(query !== undefined ? { query } : {}), ...(continuation !== undefined ? { continuation } : {}) } as VerifyClaimArgs;
+}
+
+function parseSearchArgs(args: string[]): SearchPassagesArgs | null {
+  const words: string[] = [];
+  let papers: "all" | string[] | undefined;
+  let limit: number | undefined;
+  for (let i = 0; i < args.length; i++) {
+    const a = args[i];
+    if (a === "--papers" && args[i + 1] !== undefined) {
+      const v = args[++i];
+      papers = v === "all" ? "all" : v.split(",").filter((h) => h.length > 0);
+    } else if (a === "--limit" && args[i + 1] !== undefined) limit = Number(args[++i]);
+    else words.push(a);
+  }
+  if (words.length === 0) return null;
+  return { query: words.join(" "), ...(papers !== undefined ? { papers } : {}), ...(limit !== undefined ? { limit } : {}) } as SearchPassagesArgs;
 }
 
 /** One CLI run: returns the process exit code (0 success, 1 refusal/error).
@@ -211,6 +231,14 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
           return 1;
         }
         return reportTool(await verifyClaimTool(toolContext(io, root), parsed, io.verifyHooks), io);
+      }
+      case "search": {
+        const parsed = parseSearchArgs(args);
+        if (parsed === null) {
+          err(`error: search needs a query\n${USAGE}`);
+          return 1;
+        }
+        return reportTool(await searchPassagesTool(toolContext(io, root), parsed), io);
       }
       default:
         err(command === undefined ? USAGE : `error: unknown command "${command}"\n${USAGE}`);

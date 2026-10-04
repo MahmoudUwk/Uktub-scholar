@@ -13,6 +13,7 @@ import { CompileDocumentOutput, compileDocumentTool } from "../core/tools/compil
 import { PaperRegistryOutput, PaperRegistryParams, paperRegistryTool, type PaperRegistryArgs } from "../core/tools/registry.ts";
 import { SearchPapersOutput, searchPapersTool } from "../core/tools/search.ts";
 import { VerifyClaimOutput, VerifyClaimParams, verifyClaimTool, type VerifyClaimArgs } from "../core/tools/verify.ts";
+import { SearchPassagesOutput, SearchPassagesParams, searchPassagesTool, type SearchPassagesArgs } from "../core/tools/passages.ts";
 import { refusalResult, validateContext, type ToolContext, type ToolResult } from "../core/tools/context.ts";
 import { resolve } from "node:path";
 
@@ -215,5 +216,20 @@ export default function uktubScholarExtension(pi: ExtensionAPI): void {
     parameters: VerifyClaimParams,
     outputSchema: VerifyClaimOutput,
     run: (ctx, params) => verifyClaimTool(ctx, params as VerifyClaimArgs),
+  });
+
+  registerTool(pi, rootFor, {
+    name: "search_passages",
+    label: "Search the registered papers",
+    description:
+      "Exploratory retrieval over the registered papers' full text: describe a topic, question or phrase and get the best-matching passages, " +
+      "each with its paper, section, page, an exact pointer (doi@revision#start-end) and a verbatim excerpt (withheld, with its reason, when it " +
+      "would export too much of one paper — the pointer still identifies it). papers is \"all\" (default) or an explicit list of DOIs/citekeys; " +
+      "limit at most 10. Search is keyword (BM25) and, when an embedding server is configured (UKTUB_EMBED_URL), semantic as well; a failing " +
+      "embedder degrades to keyword results and says so. Results are retrieval, not verification: check a claim with verify_claim before you cite it. " +
+      REFUSAL_SEMANTICS,
+    parameters: SearchPassagesParams,
+    outputSchema: SearchPassagesOutput,
+    run: (ctx, params) => searchPassagesTool(ctx, params as SearchPassagesArgs),
   });
 }

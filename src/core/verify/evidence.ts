@@ -68,7 +68,14 @@ export type PriorDelivery = Map<string, { released: number; spans: { start: numb
  * never releases more than one call would. Every supporting pointer is returned,
  * in reading order.
  */
-export function containEvidence(passages: SupportedPassage[], sourceLength: (doi: string) => number, prior: PriorDelivery = new Map()): ContainedEvidence[] {
+export function containEvidence(
+  passages: SupportedPassage[],
+  sourceLength: (doi: string) => number,
+  prior: PriorDelivery = new Map(),
+  /** "reading" (default) releases in text order so a paged run never exceeds one call; "strength" spends the
+   *  budget on the strongest passages first and is only for callers that do not page (search). */
+  releaseOrder: "reading" | "strength" = "reading",
+): ContainedEvidence[] {
   const byDoi = new Map<string, SupportedPassage[]>();
   for (const p of passages) (byDoi.get(p.doi) ?? byDoi.set(p.doi, []).get(p.doi)!).push(p);
   const out: ContainedEvidence[] = [];
@@ -78,12 +85,12 @@ export function containEvidence(passages: SupportedPassage[], sourceLength: (doi
     const strongestFirst = [...fresh].sort((a, b) => b.pTrue - a.pTrue || a.start - b.start);
     const kept: SupportedPassage[] = [];
     for (const p of strongestFirst) if (!kept.some((k) => p.start < k.end && k.start < p.end)) kept.push(p);
-    kept.sort((a, b) => a.start - b.start);
+    const sequence = releaseOrder === "strength" ? kept : [...kept].sort((a, b) => a.start - b.start);
 
     const length = sourceLength(doi);
     let released = before.released;
     let shareExhausted = false;
-    for (const p of kept) {
+    for (const p of sequence) {
       const span = p.end - p.start;
       const { text, ...pointer } = p;
       let withheld: WithheldReason | null = null;

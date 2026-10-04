@@ -5,6 +5,7 @@
  * identity that keys stored vectors. A malformed vector is never returned: it would silently corrupt
  * retrieval, which is worse than failing (the caller falls back to lexical search).
  */
+import type { FetchLike } from "../providers/types.ts";
 import { agentSafeDetail } from "../safe-detail.ts";
 
 export class EmbedError extends Error {
@@ -42,9 +43,12 @@ export const EMBED_TIMEOUT_MS = 120_000;
 
 export function createHttpEmbedder(o: {
   url: string;
+  /** Model name sent in the request. */
   model: string;
+  /** Identity of the served model when it differs from the request name (e.g. fingerprinted); defaults to `model`. */
+  identity?: string;
   profile: EmbedProfile;
-  fetch: typeof fetch;
+  fetch: FetchLike;
   batchSize?: number;
   timeoutMs?: number;
 }): Embedder {
@@ -61,7 +65,7 @@ export function createHttpEmbedder(o: {
   let dimension: number | null = null;
 
   async function request(inputs: string[], signal: AbortSignal | undefined): Promise<Float32Array[]> {
-    let res: Response;
+    let res: Awaited<ReturnType<FetchLike>>;
     try {
       res = await o.fetch(endpoint, {
         method: "POST",
@@ -73,13 +77,13 @@ export function createHttpEmbedder(o: {
       if (err instanceof Error && (err.name === "AbortError" || err.name === "TimeoutError")) throw new EmbedError("the embedding request was cancelled or timed out");
       throw new EmbedError(`the embedding server is unreachable (${agentSafeDetail(err, inputs)})`);
     }
-    if (!res.ok) {
+    if (res.status < 200 || res.status >= 300) {
       const body = await res.text().catch(() => "");
       throw new EmbedError(`the embedding server answered HTTP ${res.status}: ${agentSafeDetail(body, inputs)}`);
     }
     let json: unknown;
     try {
-      json = await res.json();
+      json = JSON.parse(await res.text());
     } catch {
       throw new EmbedError("the embedding server did not return JSON");
     }
@@ -121,7 +125,7 @@ export function createHttpEmbedder(o: {
   }
 
   return {
-    id: `${o.model}|${o.profile.name}`,
+    id: `${o.identity ?? o.model}|${o.profile.name}`,
     async embedQuery(text, signal) {
       return (await embed([text], o.profile.queryPrefix, signal))[0];
     },

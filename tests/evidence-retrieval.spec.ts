@@ -178,6 +178,20 @@ describe("containEvidence", () => {
     assert.ok(Math.max(...releasedStarts) < Math.min(...withheldStarts), "text is released in reading order, so a continuation can never release more than one call would");
   });
 
+  it("release order 'strength' (unpaged callers, e.g. search) spends the budget on the strongest passages first, not the earliest", () => {
+    const len = 10_000;
+    // 20 passages in reading order whose strength INCREASES with position: the last ones are the best
+    const passages = Array.from({ length: 20 }, (_, i) => p({ start: i * 500, end: i * 500 + 400, text: "z".repeat(400), pTrue: 0.9 + i / 1000, chunkId: `c${i}` }));
+    const byReading = containEvidence(passages, () => len);
+    const byStrength = containEvidence(passages, () => len, new Map(), "strength");
+    const releasedIds = (out: typeof byReading): string[] => out.filter((e) => e.excerpt !== null).map((e) => e.chunkId);
+    assert.ok(releasedIds(byReading).includes("c0") && !releasedIds(byReading).includes("c19"), "default: reading order releases the earliest");
+    assert.ok(releasedIds(byStrength).includes("c19") && !releasedIds(byStrength).includes("c0"), "strength: the strongest are released");
+    const total = byStrength.filter((e) => e.excerpt !== null).reduce((n, e) => n + e.excerpt!.length, 0);
+    assert.ok(total <= SOURCE_SHARE_MAX * len);
+    assert.equal(byStrength.length, 20, "every pointer is still reported");
+  });
+
   it("an oversize span is withheld as excerpt_cap, never clipped", () => {
     const [e] = containEvidence([p({ start: 0, end: 20_000, text: "q".repeat(20_000) })], () => 1_000_000);
     assert.deepEqual([e.withheld, e.excerpt], ["excerpt_cap", null]);

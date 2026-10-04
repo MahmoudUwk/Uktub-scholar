@@ -308,6 +308,38 @@ describe("uktub-scholar register / attach / verify (same tools as the agent)", (
     assert.match(none.lines.out.join("\n"), /10\.9999\/never/);
   });
 
+  it("search: prints ranked passages with pointers that resolve to the printed excerpt; --papers and --limit apply", async () => {
+    registerPaper(db, { doi: "10.1001/cells", title: "Cycle Life of Cells", authors: [], bibtex: bib("cells2024", "Cycle Life of Cells"), bibtexSource: "crossref" });
+    db.close();
+    writeFileSync(join(root, "cells.pdf"), makePdf(pages));
+    assert.equal(await runCli(["attach", "10.1001/cells", "cells.pdf"], io()), 0);
+    const found = io({ env: {} });
+    assert.equal(await runCli(["search", "cells", "age", "faster", "temperature", "--limit", "2"], found), 0);
+    const out = found.lines.out.join("\n");
+    assert.match(out, /PASSAGE\(S\) from 1 paper\(s\)/);
+    assert.match(out, /lexical search/);
+    const pointer = /pointer: (\S+)/.exec(out)![1];
+    const reopened = openRegistry(root);
+    const { resolvePointer } = await import("../src/core/verify/store.ts");
+    const back = resolvePointer(reopened, pointer);
+    reopened.close();
+    assert.equal(back.status, "current");
+    assert.ok((out.match(/pointer: /g) ?? []).length <= 2, "--limit bounds the passages");
+    const none = io({ env: {} });
+    assert.equal(await runCli(["search", "cells", "--papers", "10.9999/never"], none), 0);
+    assert.match(none.lines.out.join("\n"), /not registered|none of the named papers/i);
+  });
+
+  it("search without a query is a usage error; a refusal prints its code on stderr", async () => {
+    db.close();
+    const usage = io();
+    assert.equal(await runCli(["search"], usage), 1);
+    assert.match(usage.lines.err.join("\n"), /search needs a query/);
+    const refused = io();
+    assert.equal(await runCli(["search", "cells", "--limit", "99"], refused), 1);
+    assert.match(refused.lines.err.join("\n"), /ARGUMENT_INVALID/);
+  });
+
   it("verify refusals print the refusal code on stderr and exit 1; missing claim is a usage error", async () => {
     db.close();
     const noClaim = io();

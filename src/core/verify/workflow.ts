@@ -18,7 +18,7 @@ import { createHash, randomBytes } from "node:crypto";
 import type { DatabaseSync } from "node:sqlite";
 
 import { ConfigError, loadChunkConfig, type ChunkConfig } from "../config.ts";
-import { resolveHandle, selectPapers } from "../registry.ts";
+import { selectPapers } from "../registry.ts";
 import type { RefusalCode } from "../refusals.ts";
 import { acquireSource } from "../source/prepare.ts";
 import type { SourceFailureCode } from "../source/extract.ts";
@@ -28,6 +28,7 @@ import { createConfiguredEngine, resolveEngineIdentity, type EngineIdentity } fr
 import { EXCERPT_MAX_CHARS, containEvidence, localizePassages, type ContainedEvidence, type PriorDelivery, type SupportedPassage } from "./evidence.ts";
 import { isSupported, judgePassages, type JudgeResult } from "./judge.ts";
 import { locatorTokens, selectCandidates, type Candidate } from "./retrieve.ts";
+import { resolveScope, type ScopePaper } from "./scope.ts";
 import {
   chunkPolicyOf,
   createRun,
@@ -81,13 +82,6 @@ export type WorkflowOutcome =
   | { kind: "refused"; code: RefusalCode; message: string };
 
 const refuse = (code: RefusalCode, message: string): WorkflowOutcome => ({ kind: "refused", code, message });
-
-interface ScopePaper {
-  doi: string;
-  citekey: string;
-  title: string;
-  citable: boolean;
-}
 
 // ── continuation tokens ─────────────────────────────────────────────────────
 
@@ -175,23 +169,7 @@ async function registryWorkflow(
   const requested: "all" | "ids" = req.papers === "all" ? "all" : "ids";
 
   // The requested selection, resolved NOW: used to key a new run and to check a continuation against it.
-  let selected: ScopePaper[] = [];
-  const unresolved: { handle: string; reason: string }[] = [];
-  if (req.papers === "all") {
-    selected = selectPapers(db, { limit: 1_000_000 }).map((p) => ({ doi: p.doi, citekey: p.citekey, title: p.title, citable: p.citable }));
-  } else {
-    const dois = new Set<string>();
-    const seenHandles = new Set<string>();
-    for (const h of req.papers ?? []) {
-      if (seenHandles.has(h)) continue;
-      seenHandles.add(h);
-      const row = resolveHandle(db, h);
-      if (row === null) unresolved.push({ handle: h, reason: "not_registered" });
-      else dois.add(row.doi);
-    }
-    const details = new Map(selectPapers(db, { dois: [...dois], limit: Math.max(1, dois.size) }).map((p) => [p.doi, { doi: p.doi, citekey: p.citekey, title: p.title, citable: p.citable }]));
-    selected = [...details.values()].sort((a, b) => (a.citekey < b.citekey ? -1 : 1));
-  }
+  const { selected, unresolved } = resolveScope(db, req.papers);
   const scopeKey = requested === "all" ? "all" : digest12(`${selected.map((p) => p.doi).sort().join(",")}|${unresolved.map((u) => u.handle).sort().join(",")}`);
 
   const detailsOf = (dois: string[]): Map<string, ScopePaper> =>
