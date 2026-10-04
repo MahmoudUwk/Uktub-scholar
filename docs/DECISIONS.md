@@ -1,9 +1,113 @@
 # Decision log
 
-Verdicts on design proposals, newest first. A falsified proposal is never
-re-proposed without new evidence (RRSI discipline: the edit history exists so
-dead hypotheses are not redrawn). Entries record the verdict, the reason, and
-the evidence that would reopen the question.
+Dated rationale and benchmark decisions, newest first; preserve superseded
+entries as history, not current instructions. [README](../README.md) owns
+current behavior; [BACKLOG](BACKLOG.md) owns deferred work; raw benchmark
+evidence lives in [benchmarks/](benchmarks/). Reopen rejected proposals only
+with new evidence. Benchmark rejection does not remove selectable adapters.
+
+Current engine choice: Decision 2.0 Eos (local, owner decision 2026-10-04), bar
+0.99; OpenRouter Mercury Decide remains the best-measured hosted option; K2 a
+local alternative. Earlier “primary” choices and Stage-D candidate lists below
+are superseded. Recorded live/benchmark runs are historical; the latest
+Mercury CLI attempt was quota-blocked, not a new successful live verification.
+
+## 2026-10-04 (paper registry and supporting evidence)
+
+Measured choices; numbers live in the dated reports in [benchmarks/](benchmarks/).
+Plan: [the unified plan](plans/2026-10-04-0746-feat-paper-registry-evidence-plan.md).
+
+- **Two tools, one claim.** `paper_registry` replaces register/list; `verify_claim` replaces
+  the claim-array tool. The agent never loads papers or writes chunks, receives only supporting
+  passages with exact pointers, and no response says a claim is false ("no support found" is
+  not refutation; the two-sided verdict helpers were deleted).
+- **PDF parser: `unpdf`, not `pdftotext`.** On the 8 of 14 benchmark papers whose PDFs match the
+  dataset names, `pdftotext` recovers 75/75 gold quotes verbatim and `unpdf` 60/75 (73/75 once
+  line-end hyphenation is undone). The quotes were authored from `pdftotext` output, so the
+  comparison favors it; every `unpdf` miss was hyphenation, not lost text. `unpdf` wins on being
+  pure JS (no system binary in the sandbox image) and on grounded per-page text. All 14 real PDFs
+  extract in 21–239 ms. `unpdf` yields one "paragraph" per page, so sentence-aware cuts, not
+  paragraph boundaries, do the real chunking work. No OCR: image-only PDFs are refused.
+- **TEI: `fast-xml-parser`** (maintained, MIT) with entity processing off and DOCTYPE/ENTITY
+  refused before parsing; gzip bodies are bounded while decoding.
+- **Provenance.** One captured text per ready paper; revision = H(source digest, extraction
+  identity, text). Pointers are `doi@revision#start-end` in zero-based, end-exclusive UTF-16
+  offsets. A replaced source gets a new revision and old pointers resolve as stale. Evidence is
+  stored with its own decision (model identity, protocol, bar) so it survives cache loss, and is
+  freshness-checked inside the write transaction. Chunk ids are bound to the paper (a
+  live-smoke finding: one document can back two registered papers).
+- **Judgment reuse needs an effective identity.** Key = claim, passage, model identity, protocol;
+  the bar is applied on read. Hosted: the model slug. Local endpoints: whatever `/v1/models`
+  reports, else no reuse unless declared with `UKTUB_VERIFY_MODEL_ID`. A URL is never an identity.
+- **Two-stage judgment.** A stage-1 chunk (engine window) that supports the claim is localized into
+  ≈1,200-character passages, each re-judged by the engine; only passages that themselves pass the
+  bar are returned. Unfinished localization is continuable work, never a vague pointer.
+- **Containment (client policies, per output).** Excerpt ≤ 1,500 characters; withheld when it is
+  ≥ 50 % of its source; ≤ 25 % of one source released across a run (paged runs count earlier
+  pages); pointers always kept. Delivery is exactly-once and stored with the run.
+- **Identity of an acquired document** must be attested on the first page (≈ 6,000 characters): the
+  DOI, an arXiv stamp, or the registered title as an ORDERED near-contiguous phrase (≥ 85 %).
+  Unordered title-word overlap and identifiers in reference lists both admitted a wrong paper in
+  the live CLI smoke (a same-authors paper citing the other).
+- **Acquisition reality (live, free-tier).** OpenAlex records for a gold-OA paper and an arXiv
+  preprint had landing pages only; a J-STAGE record with a `pdf_url` downloaded, parsed and passed
+  the identity check; a JBC download was refused by the publisher. Landing pages are not scraped, so
+  key-less coverage is partial by design (see BACKLOG).
+- **Retrieval.** SQLite FTS5/BM25 (porter + unicode61), query reduced to quoted words; 5 candidates
+  per paper. Claim-as-locator recall ([report](benchmarks/evidence-retrieval-2026-10-04.md)): with
+  1,024-token windows K=5 gives 97.3 % candidate recall on both source-split halves at 19–34 % of
+  the chunks; with the default 8,192-token windows a paper has 3–4 chunks, K=5 selects 93–100 % of
+  them and a locator saves nothing.
+- **Chunk window — measured with Eos 0.8B at bar 0.99** ([full runs](benchmarks/evidence-quality-end-to-end-2026-10-04.md),
+  [window sweep](benchmarks/evidence-window-sweep-2026-10-04.md)). Full runs, tuning → held-out: 8,192 tokens recall
+  45.9 % → 64.9 %; 2,048 tokens 67.6 % → 78.4 % (about 40 % fewer judgments with a locator). Sweep on one fixed
+  subset (25 true, 21 false claims): 8,192 → 52 %, 2,048 → 76 %, **1,024 → 84 %**, 512 → 84 %; own-paper false
+  supports 0/21 at 8,192 and 2/21 at every smaller window; with a locator 1,024 needs 7.9 judgments/claim
+  (0.9 s) against 30.5 exhaustive. **Decision (owner delegated, 2026-10-04): the default is 1,024 tokens, overlap
+  16.** Recall stops improving below it, and the research agent's literature check agrees (retrieval units of
+  256–512 tokens, verification windows of about 1,024; one size does not serve both jobs well). Samples are
+  small; the direction is consistent across both experiments. The previous default (8,192) was the engine window,
+  not a measured optimum.
+- **Default engine: Decision 2.0 Eos (owner decision 2026-10-04).** Implemented as an in-package resident worker
+  (`eos`, pinned reviewed revision, one worker shared per process, never keeps the host process alive while idle
+  but is waited for while a request is in flight). Two defects found while dogfooding it: the CLI hung for the
+  full timeout because the worker held the event loop, and unref'ing it naively made the CLI exit silently on the
+  second engine call. Both have regression tests. Mercury stays selectable and remains the best measured engine
+  (54 supports, 0 false) — Eos is the local, free, offline choice (37 supports, 1 false in the benchmark).
+- **Research notes (Hermes agent, 2026-10-04; claims to be re-verified before relying on them).**
+  LiteParse: do not switch from `unpdf` (native Rust/PDFium addon with a process-global lock, OCR on by default,
+  no character offsets, equations score 0, heavy churn); optional scanned-PDF fallback only. Window: a two-level
+  scheme (small retrieval units, ~1,024-token verification windows expanded at query time, no index-time overlap)
+  is the norm; its warning that 37-claim cells are noisy is right, which is why conclusions here are framed as
+  direction, not significance.
+- **`whatisit-nl2sh` is not a retrieval or entailment tool** (natural language → shell commands with a fine-tuned
+  Qwen2.5-Coder-1.5B on llama.cpp). Not adopted. The owner's `GRC_Agent` borrowed its llama.cpp runtime manager to
+  serve an embedding model; that pattern is recorded in BACKLOG for a future RAG vector leg.
+- **Independent evidence review** ([report](benchmarks/evidence-review-2026-10-04.md)): a fresh Claude
+  reviewer, blind to scores, gold and mode, rated 94 returned excerpts (an LLM review, not a human one).
+  Excerpts overlapping the gold quote: 45/45 support. Other returned support in the same paper: 26 support,
+  18 partial, 0 unsupported. Support returned for FALSE (fabricated) claims: 5 excerpts, 1 a genuine statement
+  elsewhere, 4 not supporting — the real false-support events (≈ 3 % of 122 FALSE-claim runs). Precision
+  of what is returned is therefore high; the limitation is recall (0.65–0.78) and the rare false support.
+
+- **Decision 2.0 (Kai 0.6B, Eos 0.8B) on `claim-verification-v1`**, pinned revisions, local GPU
+  ([status](benchmarks/decision2-evaluation-status-2026-10-04.md)): chunked tie-correct AUC Kai
+  0.955, Eos 0.968 (difference not significant). At the 0.99 bar Kai supports nothing (its
+  probabilities never exceed 0.931); Eos supports 38 claims, 37 true, precision 0.97, recall 0.50.
+  Neither is adopted and no default changed; Eos runs behind the existing `llama-cpp` path via
+  `scripts/system-one-server.ts`. Runner defects fixed first: AUC without tie correction, cached and
+  fresh scores misaligned by chunk position, empty fresh batches crashing, sweeps reusing stale verdicts.
+- **Defaults.** `chars_per_token` default is the calibrated 2.8 (it was 4.0, which makes an
+  "8,192-token" window overflow real text). Config resolves on one path with or without YAML;
+  `max_judgments` 120 per call is a client policy (≈ 7 minutes on the free hosted tier).
+- **Schema v3.** v1/v2 migrate explicitly; v2's unsourced chunk/verdict/pointer rows are dropped after a
+  `.v2.bak` copy because they cannot be evidence. Foreign and newer files are refused without being opened
+  for writing; `init` initialises only an empty database.
+- **Found by independent review and fixed:** output paging that skipped or duplicated evidence after a
+  work continuation; a direct pointer path that could read arbitrary spans; continuations that forgot the
+  first call's limitations or accepted a different id list; recomputed BM25 candidates drifting when another
+  paper was registered; a migration race; signed redirect URLs persisted as references; a failed local attach
+  throttling acquisition; unbounded source preparation. Each has a regression test.
 
 ## 2026-10-03 (bev-decider / Lumma-fev)
 

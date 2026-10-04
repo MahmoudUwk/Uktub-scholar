@@ -1,74 +1,89 @@
 ---
 name: uktub-research
-description: Guidance for using uktub-scholar scholarly tools — when to search versus register, citekey usage, uncitable papers, batch limits, LaTeX compilation with the local Tectonic engine, and registry hygiene for bibliographies.
+description: Using uktub-scholar's four tools for scholarly search, the paper registry (register, read, remove, attach, sync), citekeys, LaTeX compilation, and one-claim evidence retrieval.
 ---
 
 # Scholarly research with uktub-scholar
 
-Four tools manage a local paper registry, a rendered `references.bib`, and
-LaTeX compilation beside the user's project: `search_papers`,
-`register_papers`, `list_papers`, `compile_document`. The registry is the
-source of truth; the bibliography is derived from it; the PDF is derived from
-the user's own sources.
+Four tools operate beside the user's project: `search_papers`, `paper_registry`,
+`compile_document`, and `verify_claim`. The SQLite registry is canonical.
+`refs/references.bib` is rendered from it. The PDF is derived from the user's own LaTeX sources.
 
 ## Search versus register
 
-- **The registry is the bibliography.** Any paper your answer relies on —
-  cited, compared, or summarized — must be registered first. A literature
-  review with unregistered sources is incomplete work: search, pick the
-  strongest candidates, and register them before writing.
-- If a system or paper the user named has no search hits, say so explicitly in
-  the answer ("no indexed records found for X") — never silently drop it or
-  substitute a different work.
-- Use `search_papers` when the topic is open-ended: given a rough query, it
-  returns merged candidates from OpenAlex, Crossref, and Semantic Scholar in
-  relevance order, each with a DOI when one exists. Candidate DOIs appear in
-  the tool result text.
-- Use `register_papers` once you have DOIs — from search results, from the
-  user's own list, or from a paper's page. Do not register on the user's
-  behalf without checking the titles match what they asked for.
-- `search_papers` with a DOI-shaped query still searches; prefer registering
-  that DOI directly instead.
-- To check what is already registered before searching again, use
-  `list_papers` rather than guessing.
+- **The registry is the bibliography.** Register every paper your answer relies on
+  before you write. A literature review with unregistered sources is incomplete work.
+- If a paper the user named has no search hits, say so ("no indexed records found for X").
+  Never drop it or substitute another work.
+- Use `search_papers` for open-ended topics. It returns merged candidates in relevance
+  order, each with a DOI when one exists. The DOIs are in the result text.
+- Use `paper_registry` with `action: "register"` once you have DOIs or `arxiv:YYMM.NNNNN`
+  identifiers. Check that the titles match what the user asked for.
+- A DOI-shaped query to `search_papers` still searches. Register that DOI directly instead.
+- To see what is registered, use `paper_registry` with `action: "read"`. Do not guess.
+
+## The registry tool
+
+- `register`: at most 50 identifiers. You get one outcome per input, in input order.
+  Aliases of one paper register once; the later ones report `duplicate`.
+- `read`: default fields are title, year and citable. Ask for `authors`, `venue`, `bibtex`,
+  `abstract`, `source` or `refreshedAt` only when you need them. A long registry comes in pages:
+  repeat the same request with the `cursor` from the previous page.
+- `remove`: name the DOIs or citekeys. There is no remove-all. Remove only when the user asks.
+- `attach_source`: prepare a PDF or GROBID TEI file that is inside the project as a paper's
+  source. You never see the file's text.
+- `sync_bibliography`: re-render `refs/references.bib` if it is damaged or stale.
 
 ## Citekeys
 
-- Registration returns a pinned citekey. In LaTeX, cite it exactly as returned:
-  `\cite{<citekey>}`. Never invent, shorten, or "fix" a citekey — collisions
-  are resolved with a base-26 suffix at registration and the key is never
-  recomputed afterwards.
-- If a paper was deregistered and re-registered, it may hold a different
-  citekey; re-run `list_papers` rather than assuming.
+- Registration returns a pinned citekey. Cite it exactly: `\cite{<citekey>}`.
+  Never invent, shorten or "fix" a citekey. The key is never recomputed.
+- If a paper was removed and registered again, its citekey may differ. Read it again.
 
 ## Uncitable papers
 
-- A paper without provider-supplied BibTeX registers with `citable: false` and
-  a `BIBTEX_UNAVAILABLE` warning. It exists in the registry but does not appear
-  in `references.bib` yet.
-- That is not an error. Re-registering the same DOI later, once the provider
-  supplies BibTeX, upgrades it in place and keeps the citekey. BibTeX is never
-  synthesized or repaired.
-
-## Batches
-
-- `register_papers` accepts at most 50 DOIs per call (the schema refuses more).
-  Batch results return in input DOI order — prefer one batch call over several
-  parallel ones when order matters to you.
+- A paper without provider BibTeX registers with `citable: false` and a `BIBTEX_UNAVAILABLE`
+  warning. It is in the registry but not in `references.bib` yet.
+- That is not an error. Registering the same DOI later can upgrade it and keeps the citekey.
+  BibTeX is never synthesized or repaired.
 
 ## Running a review
 
-- Agree the mode first: a related-work pass (fast, coverage-best-effort) or a
-  systematic review (explicit query set, PRISMA-style screening, reported
-  counts). Never present a best-effort pass as systematic.
-- Budget the loop: bounded `search_papers` calls (cap 20 per call), dedup by
-  DOI across queries, rank by topical fit to the stated question.
-- Read the load-bearing papers — the ones the ranking keeps surfacing — before
-  writing; register everything the answer will rely on.
-- For review-style answers, mark each claim: supported / partially supported /
-  unsupported by the registered sources. A provenance table (claim → citekey)
-  is the deliverable, not prose alone. Never attach a source that is not in
-  the registry; if the registry lacks a source, say so.
+- Agree the mode first: a related-work pass (fast, best-effort coverage) or a systematic
+  review (explicit query set, screening, reported counts). Never present the first as the second.
+- Budget the loop: bounded `search_papers` calls, dedupe by DOI, rank by fit to the question.
+- Register everything the answer will rely on.
+- For each claim, say supported, partly supported, or not supported by the registered sources.
+  The deliverable is a table of claim → citekey, not prose alone. Never attach a source that is not
+  registered.
+
+## Finding support for a claim
+
+- `verify_claim` takes **one** claim and a scope: `papers: "all"`, or a list of DOIs or citekeys.
+  Write the claim as one plain sentence. The package passes it to the verifier unchanged.
+- You do not load papers and you do not prepare passages. The package prepares sources,
+  searches, and judges. You receive only supporting passages, each with an excerpt and an exact
+  pointer `doi@revision#start-end`.
+- Read the four coverage lines before you trust a result:
+  - **sources**: some papers may have no usable source. Say so. Do not call them "checked".
+  - **candidates**: `exhaustive` checks every passage. `query-limited` checks only passages
+    that match your optional `query`.
+  - **work**: if the work was interrupted, passages were not checked.
+    Repeat the same request with the `continuation` token to continue.
+  - **output**: more evidence may exist than one response shows. Use the same token.
+- **No support found does not mean the claim is false.** Report it as "no support found in
+  these papers under this search". Never write that a paper contradicts a claim because of this tool.
+- A `query` only narrows what is checked. A query that finds nothing is a statement about the
+  search, not about the papers. Run the exhaustive request before you conclude anything.
+- A withheld excerpt still has a pointer. Cite the paper by its citekey; do not quote text
+  you were not given.
+- The score is the engine's output at a configured bar. Do not present it as a probability
+  that the claim is true. Checking more papers can raise false supports. Check the excerpt yourself.
+- Rare direct path: `passages` judges exactly the passages you give. A `{text}` passage has no
+  paper provenance. Never cite a paper for it.
+- If a source cannot be prepared, the result names the reason (`no_open_copy`, `no_credential`,
+  `identity_mismatch`, `no_text_layer`, and others). Ask the user to attach a file with
+  `paper_registry` `attach_source`, or to set `OPENALEX_API_KEY` for open-access content.
 
 ## Compiling the document
 
@@ -93,10 +108,9 @@ the user's own sources.
 ## Registry hygiene
 
 - Never hand-edit `refs/references.bib`. It is rendered by the registry and is
-  overwritten on the next registry write. If it diverges or is damaged, run
-  `uktub-scholar sync-bib` to re-render it from the registry.
-- Removing papers is a human CLI action: `uktub-scholar deregister <doi|citekey>...`.
-  Run it via the shell only when the user asks for removal.
+  overwritten on the next registry write. If it diverges or is damaged, use `paper_registry`
+  `action: "sync_bibliography"` to re-render it from the registry.
+- Remove papers with `paper_registry` `action: "remove"`, only when the user asks.
 - All tools operate inside the project directory; `.registry` and `.git` are
   protected and path traversal is refused.
 - Failures arrive as `Refused: CODE — <what happened>. Next: <what to do>` —

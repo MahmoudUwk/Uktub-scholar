@@ -1,192 +1,229 @@
 # uktub-scholar
 
-Local-first scholarly research tools for coding agents: paper search, a citation
-registry, and a rendered `references.bib`. Ships as a Pi 1.0 package; the core is
-host-agnostic so later hosts (MCP servers for Claude Code / Codex) attach around the
-same core.
+Local-first scholarly tools for [Pi](https://github.com/earendil-works/pi): paper
+search, a paper registry, a rendered bibliography, LaTeX compilation, and
+evidence retrieval for claims. The core is host-agnostic; other host adapters
+are not implemented.
 
-## Install
+## Start here
 
-Pi package (working name `uktub-scholar`; the final npm name is still open):
+- This README: current setup and behavior.
+- [AGENTS.md](AGENTS.md): contributor rules.
+- [Vision](docs/VISION.md): product direction; [backlog](docs/BACKLOG.md): deferred work.
+- [Decisions](docs/DECISIONS.md): dated rationale, not current setup instructions.
+- [Benchmarks](benchmarks/README.md): datasets, runner, and historical evidence.
+- [Research skill](skills/uktub-research/SKILL.md): agent usage guidance.
 
-```
-pi install npm:uktub-scholar
-```
+## Development install
 
-The extension registers exactly five tools: `search_papers`, `register_papers`,
-`list_papers`, `compile_document`, `verify_claims`. It fails closed at load if the Pi 1.0 API surface is missing.
+The package is private; `pi install npm:uktub-scholar` is not a published install path.
+From this checkout:
 
-CLI (development install — the package is currently `private`):
-
-```
+```sh
 pnpm install
-pnpm exec uktub-scholar --help   # bin shim runs the TypeScript CLI directly (adds
-                      # --experimental-strip-types on Node 22.x)
+pi install .
+pnpm exec uktub-scholar --help
 ```
 
-CLI commands: `init` (create the registry and an empty `refs/references.bib`),
-`deregister <doi|citekey>...`, `sync-bib` (re-render the bibliography), `list`,
-`compile [entry.tex]` (Tectonic build; PDF in `build/`),
-`verify <doi> <claim>...` (chunk-first claim verification).
+Requires Node >= 22.19 and Pi >= 1.0.0 (`@earendil-works/pi-coding-agent`).
+The bin shim runs TypeScript directly, adding `--experimental-strip-types` on
+Node 22. Compilation needs a local [Tectonic](https://tectonic-typesetting.github.io)
+>= 0.15.0 on `PATH` or at `UKTUB_TECTONIC_BIN`; no engine is downloaded or bundled.
 
-## Requirements
+Run `uktub-scholar init` in the research project to create `.registry/registry.db`
+and `refs/references.bib`. Nested projects are refused. The user owns layout,
+LaTeX sources, git, backups, and toolchains; sandboxing is optional.
 
-- Node >= 22.19 (`engines` floor; Pi 1.0 floor). `node:sqlite` verified loading
-  without flags on Node 22.21.1, 22.23.0, and 26.3.1; an ExperimentalWarning on
-  22.x is expected.
-- Pi >= 1.0.0 (`@earendil-works/pi-coding-agent`), which exposes `pi.registerTool`.
-- `compile_document` / `uktub-scholar compile` need a local
-  [Tectonic](https://tectonic-typesetting.github.io) >= 0.15.0 — on `PATH` or at
-  `UKTUB_TECTONIC_BIN`. The engine is never downloaded or bundled; without it
-  the compile tools refuse (`COMPILE_ENGINE_MISSING`) and everything else works.
+## Four Pi tools
 
-## Tools and limits
-| Tool | Limits | Source |
+| Tool | Behavior / limits |
+|---|---|
+| `search_papers(query, limit?)` | OpenAlex + Crossref + Semantic Scholar, merged by RRF; default 5, maximum 20 |
+| `paper_registry(action, …)` | Register, remove, read, attach a source, sync the bibliography — one tool, below |
+| `compile_document(entry?)` | Local Tectonic, PDF in `build/`; 120 s budget, maximum 50 diagnostics |
+| `verify_claim(claim, papers \| passages, query?, continuation?)` | One claim over all or selected papers; supporting passages plus coverage, below |
+
+Caps are client policies unless a source is named (search/registration informed
+by the recorded Feynman incident). `UKTUB_COMPILE_TIMEOUT_S` overrides the
+compile budget (seconds, minimum 5). Missing Tectonic refuses compilation only.
+Entry defaults to `manuscript/main.tex`, then `main.tex`, then a lone top-level
+`.tex`; ambiguous candidates require an explicit entry.
+
+Search provider failures become warnings; all providers failing refuses with
+`SEARCH_UNAVAILABLE`. Optional keys, read at call time: `OPENALEX_API_KEY`,
+`SEMANTIC_SCHOLAR_API_KEY`, `CROSSREF_MAILTO`. DataCite resolves arXiv DOIs during
+registration.
+
+### `paper_registry`
+
+| `action` | Input | Result |
 |---|---|---|
-| `search_papers(query, limit?)` | `limit` default 5, clamped to max 20 | Feynman-incident-derived tool cap (labelled, R19) |
-| `register_papers(dois[])` | at most 50 DOIs per call; the whole call refuses `BATCH_TOO_LARGE` above the cap | client policy, Feynman-incident-informed (labelled, R19) |
-| `list_papers(limit?)` | cap 200; `truncated` + `remaining` returned at the cap | client policy (labelled, R19) |
-| `compile_document(entry?)` | 120 s engine budget (`UKTUB_COMPILE_TIMEOUT_S` overrides, seconds, min 5); diagnostics capped at 50 | client policy (labelled) |
-| `verify_claims(doi, claims[])` | at most 8 claims/call, 2,000 chars/claim; every claim is verified against every chunk of the paper; verdicts cached content-addressed | client policy (labelled) |
+| `register` | `identifiers[]` (≤ 50): DOIs in any common form, or `arxiv:YYMM.NNNNN` | One ordered outcome per input. Aliases of one paper register once (later ones report `duplicate`); a refresh keeps the pinned citekey and provider BibTeX; unknown or invalid inputs are refused per item |
+| `remove` | `handles[]` (≤ 50): explicit DOIs or citekeys | `removed` / `duplicate` / `absent` / `refused` per input, one transaction, bibliography re-rendered. There is no remove-all |
+| `read` | optional `handles[]`, `fields[]`, `limit`, `cursor` | Citekey-ordered records. Default fields: DOI, citekey, title, year, citable. Optional: `authors`, `venue`, `bibtex`, `bibtexSource`, `abstract`, `source`, `refreshedAt`. Unsupported fields are refused. A page holds ≤ 100 light rows or ≤ 25 with abstract/BibTeX; `cursor` continues the same request and is refused if the registry changed |
+| `attach_source` | `attachments[]` (≤ 10): `{handle, path}` to a PDF or GROBID TEI inside the project | Source readiness, revision and counts. The file is neither copied nor deleted; its text is never returned |
+| `sync_bibliography` | — | Re-renders `refs/references.bib` from the registry (human edits are not imported) |
 
-Claim verification engines (`verification.engine` in `config/chunking.yaml`,
-override per run with `UKTUB_VERIFY_ENGINE`): `openrouter` — default,
-`inception/mercury-decide:free` via the System One decisions API (needs
-`OPENROUTER_API_KEY`; free tier is 20 req/min and ~1,000 calls/day — the
-engine throttles and fails fast with the reset time); `llama-cpp` — any
-local llama.cpp build serving `/v1/systemone` (point `UKTUB_VERIFY_URL`,
-default `http://127.0.0.1:8080`; decision GGUFs: ggml-org/Laya-GGUF,
-ggml-org/Julia-1-GGUF; serve with `--batch-size 8192 --ubatch-size 8192`);
-plus `k2`, `bev`, `lumma`, `julia`, `laya` adapters. Measured engines:
-docs/benchmarks/.
+A paper without provider BibTeX registers as `citable: false` (`BIBTEX_UNAVAILABLE`);
+a later registration can upgrade it without moving the citekey. Citekeys are never
+synthesized by the agent. Abstracts are the provider's own, bounded (1,500 characters)
+and labelled with their provider; a missing abstract is stated, never invented. Nothing
+is summarized at read time.
 
-Search merges OpenAlex, Crossref, and Semantic Scholar (DataCite serves arXiv DOIs
-at registration) in RRF relevance order; a per-provider failure degrades the result
-into warnings — only when every provider fails does the call refuse
-(`SEARCH_UNAVAILABLE`).
+### `verify_claim`
 
-Optional environment keys, read live at call time, never required:
+Give **one** claim (8–2,000 characters, passed to the verifier unchanged) and a scope:
+`papers: "all"` or an explicit list of DOIs/citekeys (≤ 100; an empty list is refused,
+never read as all). The package prepares the sources, selects passages, judges them,
+and returns only **supporting** passages — each with a verbatim excerpt and an exact
+pointer `doi@revision#start-end` (zero-based, end-exclusive UTF-16 offsets into the
+captured text; the page is included when the extractor grounds it). Non-supporting text
+never reaches the agent.
 
-- `OPENALEX_API_KEY` — OpenAlex `api_key` parameter
-- `SEMANTIC_SCHOLAR_API_KEY` — Semantic Scholar `x-api-key` header (anonymous callers are
-  rate-limited hard)
-- `CROSSREF_MAILTO` — Crossref polite-pool contact
+Four coverage reports are kept apart, so a success never implies the rest was checked:
 
-## Registry guard
+1. **sources** — which selected papers have a usable captured source, and why the rest do not;
+2. **candidates** — exhaustive (every usable passage) or **query-limited** (an optional
+   `query` only narrows which passages are checked; it never replaces the claim);
+3. **work** — passages judged (new vs reused), and any interruption (work budget,
+   cancellation, engine failure) with the unchecked remainder;
+4. **output** — supporting records available vs shown, and any excerpt text withheld.
 
-The extension installs a `tool_call` hook that makes the package contract hold
-against the host's own tools, not just ours:
+A `continuation` token in the response resumes unfinished checking and/or pages more
+evidence: repeat the same request with it. The token names a stored run that captured the
+selection: the exact papers at their revisions, the exact locator candidates, the model identity
+and the bar. It is refused when a source, claim, exact id list, locator, model or bar changed,
+and expires after 24 hours. Each evidence record is delivered exactly once across pages, and
+excerpt text counts against the per-source release budget across the whole run. Findings of the
+first call (papers without a usable source, unresolved handles) are repeated on every page.
+If localizing a supported chunk is interrupted, that chunk is unfinished work for the
+continuation — it is never reported as a vague chunk-sized pointer.
 
-- **`.registry/**` is package-owned** — no agent tool (including bash) touches
-  it, read or write; papers go through the tools. Blocking bash mentions is
-  deliberate: the threat is arbitrary SQLite writes (`sqlite3`), which no
-  allow-list can characterize.
-- **`refs/references.bib` is agent-read-only** — write/edit are refused;
-  bash passes only non-destructive reads (`cat`, `grep`), never redirects,
-  `rm`/`mv`/`tee`/`sed -i`/`truncate`.
+**No support found is not a finding that the claim is false.** A low score is only the
+absence of support; the package never reports refutation. Scores are engine outputs under
+a configured bar, not calibrated probabilities; checking more passages can raise false
+supports.
 
-Honest limits: the bash rule scans the command text, not a shell parse — the
-sandbox remains the hard boundary; this is the seatbelt. Removing the
-extension removes the guard (trust-the-user: no hidden knobs).
+A pointer is current only while its source revision is. A replaced source gets a new
+revision, so an old pointer resolves as stale instead of pointing at new text. Evidence is
+stored with the decision that produced it (model identity, protocol, bar) and survives
+loss of the judgment cache. A judgment is reused only for the same claim, passage, model
+identity and protocol; when the engine cannot report what model answers (a bare URL is not
+an identity) reuse is disabled, unless you declare one with `UKTUB_VERIFY_MODEL_ID`.
 
-## Project conventions (optional)
+**Full-text containment (a package output contract).** Excerpts are verbatim passages of
+at most 1,500 characters. A passage that is half or more of its source, or text beyond 25 %
+of one source across a verification, is withheld — the pointer stays. This keeps support
+from becoming a full-text export through the package's own responses; it does not stop an
+agent with host filesystem access from reading a user-owned PDF (the guard below is advisory).
 
-Pi loads hierarchical instruction files (`AGENTS.md`, `SYSTEM.md`). For a
-research project, drop this into the project's `AGENTS.md` (never written by
-`init` — the folder stays yours):
+Direct path (rare): `passages: [{source: pointer} | {text}]` judges exactly those passages
+(≤ 8). A `source` must be a pointer this package issued as evidence (within the last 24 hours)
+and is checked against its current revision, so the direct path cannot be used to read
+arbitrary spans; `text` carries **no authenticated paper provenance** and can never claim a DOI.
 
-```markdown
-- This is a uktub-scholar project (registry at .registry/, bibliography in refs/).
-- Papers: only via the uktub-scholar tools; cite only citekeys from list_papers.
-- Never hand-edit refs/references.bib; it is rendered by the registry.
-- LaTeX sources live in manuscript/; compile with compile_document (PDF in build/).
-```
+### Sources
 
-`SYSTEM.md` (project system prompt) works too if you want the framing in every
-session's leading prompt.
+Registration stores metadata only. `verify_claim` prepares sources on demand, from
+OpenAlex only (Unpaywall is deprecated into it): open-access `pdf_url` candidates from the
+work record, then the OpenAlex Content API at the record's own `content_urls` (GROBID TEI,
+then PDF; **needs `OPENALEX_API_KEY` and costs about $0.01 per download**). URLs are never
+synthesized and landing pages are never scraped. Downloads are HTTPS-only to public
+addresses (re-checked after every redirect, connection pinned to the checked address),
+credential-scoped to the Content API origin, bounded in size (64 MiB) and time, and the
+extracted text must match the registered paper's title or DOI. PDFs come from
+[`unpdf`](https://github.com/unjs/unpdf) and TEI from `fast-xml-parser` (DOCTYPE/entity
+declarations refused); scanned PDFs have no text layer and are refused — there is no OCR.
+At most 20 papers are acquired per call (never-attempted first); the rest are reported as
+`deferred` and reached by repeating the request. A failed acquisition is not retried for 24
+hours (a retry can cost a download); a failed local attach never throttles acquisition. Use
+`paper_registry` `attach_source` to supply your own file instead. A write that waits out the
+5-second SQLite lock is refused as `REGISTRY_BUSY`.
 
-## Registry and bibliography
+Key-less acquisition succeeds only for papers whose OpenAlex record carries a direct `pdf_url`
+(for example a J-STAGE PDF downloaded live); OpenAlex often lists landing pages only (a
+PeerJ paper and an arXiv preprint did), which are not scraped — attach a file or set the key.
 
-- The registry is a single SQLite file at `.registry/registry.db` beside the LaTeX
-  project, created by `uktub-scholar init`.
-- `refs/references.bib` is **derived state**: rendered only by the registry,
-  re-rendered inside every registry write, agent-write-protected. Hand edits are
-  overwritten by the next registry write; `uktub-scholar sync-bib` restores it
-  idempotently after any divergence.
-- Citekeys are pinned once at first registration (first-author family + year +
-  first significant title word, base-26 suffix on collision) and never recomputed.
-- Only provider-supplied BibTeX makes a paper citable. A paper without it
-  registers with `citable: false` and a `BIBTEX_UNAVAILABLE` warning, and stays
-  out of `references.bib`; a later citable re-register upgrades it in place
-  without moving the citekey.
+## CLI
 
-## Refusals and warnings
+`uktub-scholar` exposes `init`, `register <id>...`, `attach <doi|citekey> <file>`,
+`verify <claim> [--papers all|<handle>,… ] [--query <words>] [--continuation <token>]`,
+`deregister <doi|citekey>...`, `sync-bib`, `list`, and `compile [entry.tex]`.
+`register`, `attach` and `verify` call the same tool functions the agent uses and print
+exactly what the agent reads.
 
-Every tool failure is a typed refusal rendered as
-`Refused: CODE — <message>. Next: <next>.`; warnings attach to successful
-outcomes instead. Codes: `REGISTRY_NOT_INITIALIZED`, `REGISTRY_CORRUPT`,
-`REGISTRY_SCHEMA_UNSUPPORTED`, `REGISTRY_BUSY`, `INVALID_DOI`, `DOI_NOT_FOUND`,
-`QUERY_REQUIRED`, `PATH_REFUSED`, `SEARCH_UNAVAILABLE`, `BATCH_TOO_LARGE`,
-`PI_EXTENSION_API_UNAVAILABLE`. Warnings: `BIBTEX_UNAVAILABLE`,
-`DOI_TITLE_MISMATCH`. Paths are confined to the project root; `.registry` and
-`.git` are protected segments.
+## Configuration
 
-## Verification
+Resolved on one path: the project's `config/chunking.yaml` (or the file named by
+`UKTUB_CHUNK_CONFIG`) when present, the documented defaults otherwise, then env overrides.
+Malformed or unknown supplied configuration fails with `CONFIG_INVALID`.
 
-```
+| Key | Default | Source |
+|---|---|---|
+| `chunking.chunk_tokens` | 1024 | measured: recall plateaus here ([window sweep](docs/benchmarks/evidence-window-sweep-2026-10-04.md)); the engine window is the ceiling |
+| `chunking.overlap_tokens` | 16 | continuity across paragraph boundaries (the measured setting) |
+| `chunking.chars_per_token` | 2.8 | calibrated on the benchmark corpus (densest paper 3.10; 0.9 headroom) |
+| `chunking.boundary` | `paragraph` | `paragraph` \| `hard` |
+| `verification.engine` | `eos` | owner decision 2026-10-04; env `UKTUB_VERIFY_ENGINE` overrides |
+| `verification.min_confidence` | 0.99 | client policy; env `UKTUB_VERIFY_MIN_CONFIDENCE` overrides |
+| `verification.workers` | 4 | client policy: concurrent engine calls |
+| `verification.max_judgments` | 120 | client policy: fresh judgments per call (≈ 7 min on the hosted free tier) |
+
+Engines:
+
+- `eos` (default): [Decision 2.0 Eos 0.8B](https://huggingface.co/vllm-sr/Decision-2.0-Eos-0.8B), a
+  resident local worker (`scripts/decision2_decide.py`) on the pinned reviewed revision. One
+  worker is shared per process (a long-lived Pi session loads the model once). It needs a Python
+  environment you provide — `torch` (CUDA recommended; it ran on an 8 GB laptop GPU at about 3 GB),
+  `transformers>=5.17`, `safetensors` — selected with `UKTUB_EOS_PYTHON` (default `python3`).
+  `UKTUB_EOS_MODEL` (a local snapshot directory or the HF id) and `UKTUB_EOS_REVISION` override the pin;
+  the judgment identity includes the revision and a fingerprint of local files. At the 0.99 bar it
+  measured precision 0.97 and recall 0.84 at the default 1,024-token window (0.52 at 8,192)
+  ([evidence](docs/benchmarks/evidence-quality-end-to-end-2026-10-04.md)); a missing environment is a
+  `VERIFY_ENGINE_MISSING` refusal naming the cause.
+- `openrouter`: `inception/mercury-decide:free`, System One decisions API;
+  needs `OPENROUTER_API_KEY`; `UKTUB_OPENROUTER_MODEL` selects another compatible model.
+- `llama-cpp`: local `/v1/systemone` endpoint (`UKTUB_VERIFY_URL`, default
+  `http://127.0.0.1:8080`); its served model id (`/v1/models`) is the judgment identity.
+- `k2`, `bev`, `lumma`, `julia`, `laya`: retained adapters; selection is not an
+  endorsement. Setup lives in [engines.ts](src/core/verify/engines.ts), quality and
+  license decisions in the dated [benchmark reports](docs/benchmarks/).
+
+The package never reads credentials from retired repositories, and offline tests never
+spend provider quota.
+
+## Ownership and guard
+
+The SQLite registry is canonical; `refs/references.bib` is derived and re-rendered
+on registry writes. Human edits to it are overwritten; `sync-bib` restores it.
+The Pi `tool_call` guard blocks agent access to `.registry/**` and agent writes
+to `refs/references.bib`; bibliography reads are allowed. Bash guarding scans
+command text, not shell syntax: it is advisory protection, not a security sandbox.
+Removing the extension removes the guard.
+
+Optional project `AGENTS.md` guidance (never written by `init`): use the scholarly
+tools for papers, cite only citable registered keys, never hand-edit the rendered
+bibliography, and compile user-owned LaTeX with `compile_document`.
+
+Registry schema version 3. Version 1 and 2 registries migrate in place on open (papers and
+citekeys intact); version 2's unsourced chunk, verdict and pointer rows are dropped, after
+a `registry.db.v2.bak` copy. A foreign or newer schema is refused byte-for-byte unchanged.
+
+## Checks and evidence
+
+```sh
 pnpm typecheck
 pnpm test
 ```
 
-Tests are fully offline: provider fakes are the only search path. Evidence tiers
-(fake-driven specs, real-Pi smoke, live API) are never mixed in one run.
+The test suite uses offline provider fakes. Real-Pi smoke and live API evidence
+are separate tiers; the exercised checkout evidence is in [handoff](docs/handoff.md).
+[Dated benchmark reports](docs/benchmarks/) preserve measurements of engines and
+evidence quality; a score is evidence about one dataset, not a guarantee.
 
-## Interactive sandbox
+`scripts/test-sandbox.sh` runs an optional Docker Pi TUI, mounts the package and
+read-only ADC, and persists project/session data in `../uktub-sandbox/`.
+`--fresh` deletes that persisted data. The TUI registry panel refreshes after tool calls.
 
-`scripts/test-sandbox.sh` — disposable Docker Pi TUI with the live package
-mounted, ADC mounted read-only. Project data (registry, bibliography) and Pi
-session transcripts persist on the host next to the repo (`../uktub-sandbox/`)
-for direct inspection; `--fresh` wipes both. The TUI also shows a registry
-panel (below the editor) that refreshes after every tool call.
-
-## Design principles
-
-Trust the technical user — conventions over enforcement; the package owns only
-`.registry/` and `refs/references.bib`, the user owns everything else (git,
-layout, toolchains). The project folder is the whole world: no global index,
-no parallel session store (Pi owns sessions), nested projects are refused.
-`references.bib` is canonical; the SQLite registry is a derived agent-side
-cache with one-way sync. Sandboxing is opt-in; a future UI layer may enforce
-more for non-technical users, above the package, never inside it. See
-`docs/VISION.md` and `AGENTS.md`.
-
-## Companion skills
-
-Chart/figure work (papers, grant proposals): we recommend installing
-[evident-charts](https://github.com/rhiever/evident-charts) (MIT) alongside
-this package — it teaches the agent clear, honest chart-making with
-rendered-image review, and installs host-side in one command
-(`npx skills add rhiever/evident-charts` for Agent-Skills agents). We do not
-bundle it: the skill evolves upstream and belongs to the host, not the
-package. A LaTeX/PGF-flavoured `paper-figures` skill of our own is on the
-roadmap once figure workflows justify it.
-
-## Next steps
-
-Active direction lives in `docs/BACKLOG.md` — every deferred capability
-(slides via open-slide, GenOffice deliverables, Europe PMC, paper-figures,
-grant support, host adapters, the UI workbench) is recorded there with the
-trigger that reopens it. Near-term: Europe PMC source, host adapters,
-`paper-figures` skill.
-
-## Attribution
-
-Borrowed-code provenance is recorded per file in `NOTICE.md`. Licence:
-AGPL-3.0-only;
-Apache-2.0 attribution obligations are tracked there as well.
-
-## Out of scope (v0)
-
-No PDF acquisition, no evidence retrieval, no drafting/writing tools — the
-package is tailored tools, not workflows. `compile_document` covers
-build-and-diagnostics only; thesis-scale orchestration stays with the user.
+[NOTICE.md](NOTICE.md) records borrowed-code provenance. License: AGPL-3.0-only.
+Companion research/deliverable skills and their adoption triggers live in the backlog.

@@ -1,0 +1,86 @@
+---
+title: "Uktub-scholar — paper registry and supporting evidence"
+created_at: "2026-10-04"
+resume_focus: "Owner review of the evidence workflow; decide engine default, acquisition route, and shipping"
+---
+# Handoff
+
+Owner direction: minimal CLI-first scholarly package; Pi first, other adapters later. No cloud-product
+cutover. Everything is uncommitted on `main`; nothing is pushed, committed or deployed.
+
+Read `AGENTS.md` for rules, `README.md` for shipped behavior, `docs/DECISIONS.md` (2026-10-04 entry) for
+the measured choices, `docs/BACKLOG.md` for verified limits. The plan is
+`docs/plans/2026-10-04-0746-feat-paper-registry-evidence-plan.md`.
+
+## What exists
+
+Four Pi tools (`search_papers`, `paper_registry`, `compile_document`, `verify_claim`) and a CLI whose
+`register`, `attach` and `verify` call the same tool functions. Registry schema v3 (v1/v2 migrate).
+`paper_registry` registers, removes, reads (projected, paged), attaches a local source, and syncs the
+bibliography. `verify_claim` checks one claim over all or selected papers: it prepares sources, retrieves,
+judges, localizes, and returns only supporting passages with `doi@revision#start-end` pointers plus four
+separate coverage reports. Retired: `register_papers`, `list_papers`, `verify_claims`, `trace`, the two-sided
+verdict helpers.
+
+## Evidence exercised on this checkout (2026-10-04)
+
+Method: behavior-first TDD. Each unit's tests were written and run red against stubs or old code, then
+green (red observations are in the session record; the migration spec first showed the old code flipping a
+foreign WAL database to journal mode DELETE before refusing it).
+
+- `pnpm exec tsc --noEmit` clean; `node --test "tests/*.spec.ts"`: 432 tests, 430 passed, 0 failed, 2
+  env-gated runtime tests skipped (Julia worker). All offline.
+- **Real CLI** (disposable project, live free-tier DataCite/OpenAlex metadata, local PDFs from the owner's
+  library): `init`; `register arxiv:2411.09996 arxiv:2504.14100 …` (alias collapsed, `banana` refused);
+  `attach` of the right PDFs; `attach` of the wrong PDF refused `identity_mismatch` with the existing ready
+  source kept; path escape refused; `verify` against the real local Eos 0.8B engine behind the `llama-cpp`
+  path: 3 supporting passages with exact pointers; a repeat took 0.19 s with 0 new judgments (cache by
+  served-model identity); a 12-judgment budget gave an interrupted page with a continuation and a
+  completing second page.
+- **Real Pi host** (Pi 1.0.0, Vertex `google-vertex/gemini-3.5-flash-lite`, `GOOGLE_CLOUD_LOCATION=global`,
+  env-only): a 7-step `paper_registry` session (register, projected reads, subset read, attach, source
+  read, remove, sync) — every tool result was actionable text with identities and requested fields and no
+  source text; `verify_claim` through Pi against the same Eos endpoint returned the same pointer as the
+  CLI.
+- **Live acquisition** (free, no key): a J-STAGE `pdf_url` was downloaded through the SSRF-safe path,
+  parsed (7 pages) and identity-checked; a JBC download was refused by the publisher; a gold-OA paper and an
+  arXiv preprint had landing pages only (`no_open_copy`).
+- **Real-corpus extraction**: all 14 owner PDFs extract in 21–239 ms.
+- **Locator retrieval, end-to-end evidence, independent review**: `docs/benchmarks/evidence-retrieval-*`,
+  `evidence-quality-end-to-end-*`, `evidence-review-*`. Eos 0.8B, bar 0.99, papers split by source.
+  Held-out: support recall 64.9 % (8,192-token windows) / 78.4 % (2,048), gold-hit precision ≈ 88 %,
+  14–15 fresh judgments per claim (≈ 9 with a locator at 2,048), own-paper false supports 1/30 and 2/30.
+  Blind LLM review of 94 returned excerpts: gold-hit 45/45 support; other same-paper support 26 support,
+  18 partial, 0 unsupported; 4 of 5 supports returned for fabricated claims were not supporting.
+- **Decision 2.0** (Kai 0.6B, Eos 0.8B) on all 135 claims, pinned revisions:
+  `docs/benchmarks/decision2-evaluation-status-2026-10-04.md`. Neither is adopted.
+- **Independent code review** (fresh read-only agent) found 14 issues; the reproducible ones are fixed with
+  regression tests (see DECISIONS); the low ones are accepted in BACKLOG.
+- **Bugs the live smokes found that the offline suite missed** (all fixed, with tests): title-word identity
+  admitted a related paper; an identifier in a reference list attested identity; chunk ids collided when one
+  document backs two papers; the experiment runner crashed on a schema change made mid-run.
+
+## Not exercised — do not assume
+
+- The OpenAlex **Content API tier and the TEI path** live (needs `OPENALEX_API_KEY`, ~$0.01 per download).
+- The default **OpenRouter Mercury** engine (no key; no quota spent). All real-engine evidence is Eos.
+- The Pi **TUI registry widget** and the Docker sandbox image (code reads the same registry; not launched).
+- A human review of returned excerpts (the review above is an LLM).
+- Other prompt wordings, CPU/ROCm, and Eos's optimized kernels (the runs used the PyTorch fallback).
+- Cross-platform behavior (Linux only).
+
+## Owner decisions taken (2026-10-04)
+
+- **Default engine is local Eos** (in-package resident worker; needs your Python env — README). Mercury remains
+  selectable and is still the best measured engine.
+- **Default window is 1,024 tokens** (overlap 16), chosen from the sweep (recall 84 % vs 52 % at 8,192).
+- **Full-text download for OA papers is deferred**; the local `test_papers` library plus `attach_source` is the
+  working path.
+- **Git: commit and push directly to `main`** (documented in AGENTS.md).
+
+## Open for the owner
+
+1. RAG and section-aware shared chunking are not implemented (BACKLOG has the design note and the pattern from
+   `GRC_Agent`): say when to start.
+2. The "citation node-like system" is logged for the very end; please confirm the intended scope (BACKLOG).
+3. The workspace-root `AGENTS.md` still says "push only when authorized"; this repo's file says otherwise.

@@ -2,8 +2,9 @@
 
 **Uktub Scholar** is a local-first scholarly research package for coding
 agents (Pi first): find papers, register sources, keep a clean bibliography,
-write citation-grounded LaTeX — and verify claims against the sources that
-support them with a local decision model — inside the project folder the
+write citation-grounded LaTeX — and find supporting passages for a claim, with
+exact pointers and honest coverage, using a configurable decision engine —
+inside the project folder the
 researcher already owns. The long arc is broader than literature work:
 support all kinds of research output — data analysis, figures, grant
 proposals — one adopted capability at a time, each earning its place with
@@ -44,8 +45,9 @@ dedicated thin workbench above this package — never an adopted office suite.
 
 ## Non-goals (v0)
 
-PDF acquisition, citation-checking, and drafting/writing tools.
-`compile_document` covers build-and-diagnostics only; thesis-scale
-orchestration stays with the user. Model gateways, accounts, and any UI are
-out. Host integrations for Claude Code / Codex are future adapters; the core
-stays host-agnostic.
+Drafting/writing tools, manuscript-wide review, and OCR. The package returns supporting
+evidence for ONE claim at a time (never a verdict that a claim is false) and keeps full
+paper text internal. Source acquisition is OpenAlex-only and lawful; scanned documents are
+refused. `compile_document` covers build-and-diagnostics only; thesis-scale orchestration
+stays with the user.
+Accounts and a UI are out. Claude Code / Codex integrations are future adapters.
