@@ -1,18 +1,58 @@
 {
   "schema": 1,
-  "comment": "Pinned artifacts for the managed embedding runtime. Every download is verified against its sha256 and size before use; a changed pin is a reviewed change to this file. Parity of this exact pair (runtime build + model file) against sentence-transformers was measured on 2026-10-04: mean cosine 0.990, pairwise-similarity correlation 0.995 (docs/benchmarks/rag-search-section-512-2026-10-04.md, docs/DECISIONS.md).",
+  "comment": "Pinned artifacts for the managed embedding runtime. Every download is verified against its sha256 and size before use; a changed pin is a reviewed change to this file, re-run through the parity gate (docs/handoff.md). Platform keys are node's process.platform-process.arch. The build tag is the newest llama.cpp release with binaries when pinned (the v0.x semver releases carry no assets). Linux x64 is verified by running the server; the other five are digest-pinned and extraction-verified.",
   "runtime": {
     "name": "llama.cpp",
-    "version": "b11160",
+    "version": "b11398",
     "license": "MIT",
     "assets": {
       "linux-x64": {
-        "name": "llama-b11160-bin-ubuntu-x64.tar.gz",
-        "url": "https://github.com/ggml-org/llama.cpp/releases/download/b11160/llama-b11160-bin-ubuntu-x64.tar.gz",
-        "sha256": "48ece24283876fc3401b737724008c03cbc4c7ba335b6c1aa2a7b6ce2d49e435",
-        "size": 17002550,
-        "dir": "llama-b11160",
+        "name": "llama-b11398-bin-ubuntu-x64.tar.gz",
+        "url": "https://github.com/ggml-org/llama.cpp/releases/download/b11398/llama-b11398-bin-ubuntu-x64.tar.gz",
+        "sha256": "9edc269fd4cbedb22e3cd138eb9f93dbf2877f0d5fc2706b4828b5b113bea6ed",
+        "size": 17672071,
+        "dir": "llama-b11398",
         "binary": "llama-server"
+      },
+      "linux-arm64": {
+        "name": "llama-b11398-bin-ubuntu-arm64.tar.gz",
+        "url": "https://github.com/ggml-org/llama.cpp/releases/download/b11398/llama-b11398-bin-ubuntu-arm64.tar.gz",
+        "sha256": "2aef102af7bc6d0712d85f09c3427e014328e50d60d87938fc10279900b7e897",
+        "size": 13668657,
+        "dir": "llama-b11398",
+        "binary": "llama-server"
+      },
+      "darwin-arm64": {
+        "name": "llama-b11398-bin-macos-arm64.tar.gz",
+        "url": "https://github.com/ggml-org/llama.cpp/releases/download/b11398/llama-b11398-bin-macos-arm64.tar.gz",
+        "sha256": "b4dc2c5525f1490dc3760a262ad1b0bdd4efb7d33889294cee3e86c1a5441f6d",
+        "size": 11915818,
+        "dir": "llama-b11398",
+        "binary": "llama-server"
+      },
+      "darwin-x64": {
+        "name": "llama-b11398-bin-macos-x64.tar.gz",
+        "url": "https://github.com/ggml-org/llama.cpp/releases/download/b11398/llama-b11398-bin-macos-x64.tar.gz",
+        "sha256": "a55cfa849bb53b978b4c2d2d20de98e316fe10f4737d46b0bb48998895d8a08f",
+        "size": 11475102,
+        "dir": "llama-b11398",
+        "binary": "llama-server"
+      },
+      "win32-x64": {
+        "name": "llama-b11398-bin-win-cpu-x64.zip",
+        "url": "https://github.com/ggml-org/llama.cpp/releases/download/b11398/llama-b11398-bin-win-cpu-x64.zip",
+        "sha256": "a5b932cb28b2f17da93bf7111c7cbd1324cffa3a6f474aa10b616908868037a2",
+        "size": 19386495,
+        "dir": "",
+        "binary": "llama-server.exe"
+      },
+      "win32-arm64": {
+        "name": "llama-b11398-bin-win-cpu-arm64.zip",
+        "url": "https://github.com/ggml-org/llama.cpp/releases/download/b11398/llama-b11398-bin-win-cpu-arm64.zip",
+        "sha256": "f30b8980c152f14e43493983e65b54f2bcfb16bb31e0c259192425b5eec8ba72",
+        "size": 12215111,
+        "dir": "",
+        "binary": "llama-server.exe"
       }
     }
   },
@@ -25,6 +65,18 @@
     "license": "gemma",
     "terms": "https://ai.google.dev/gemma/terms",
     "profile": "embeddinggemma",
-    "serverArgs": ["--embeddings", "--pooling", "mean", "-c", "2048", "-b", "2048", "-ub", "2048", "--parallel", "1"]
+    "serverArgs": [
+      "--embeddings",
+      "--pooling",
+      "mean",
+      "-c",
+      "2048",
+      "-b",
+      "2048",
+      "-ub",
+      "2048",
+      "--parallel",
+      "1"
+    ]
   }
 }

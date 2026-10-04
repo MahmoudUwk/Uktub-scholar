@@ -21,13 +21,16 @@ real corpus and recorded. Status is updated in place.
    - Scanned/multi-column layouts: a heading split across lines is not detected; headings are lost, text is not.
    - Exhaustive verification at 512 costs ≈ 1.7× the judgments of a 1,024 window; pass a `query` (5.0
      judgments per claim measured) for large corpora. Consider defaulting the locator to the claim.
-2. **Local model runtime: llama.cpp for embeddings — done for Linux x64 (2026-10-04).** Owner decision: a pinned
+2. **Local model runtime: llama.cpp for embeddings — done; pinned for six platforms, run on one (2026-10-04).** Owner decision: a pinned
    official `llama-server` fetched on first use (sha256-verified, safe extraction) and supervised as a child process;
    EmbeddingGemma from the cduk dense-modules GGUF pinned by sha256; explicit `embed install --yes` (Gemma terms
    shown), never downloaded by a search; your own server via `UKTUB_EMBED_URL` always wins
    ([decision](DECISIONS.md)). Open items:
-   - Only `linux-x64` is pinned and tested; macOS/Windows/arm64 need their release assets pinned with their digests
-     (archive formats differ: `.zip` on Windows needs another extractor) and a live run on each platform.
+   - Pinned for linux/darwin/win32 × x64/arm64 (`b11398`). Only **linux-x64 has run the server**; the other five were
+     downloaded, digest-verified and extracted by the real code path (right executable type) but never executed: run
+     `embed install --yes` + a search + `scripts/embed-parity.py` on a Mac, a Windows machine and an arm64 Linux box.
+     Unknowns there: macOS Gatekeeper/quarantine on a downloaded binary, Windows child-process termination and
+     path handling, macOS `libggml-metal` GPU selection.
    - CPU build only. A Vulkan/CUDA asset would speed a large first index; not needed at the measured 20 s for 700
      passages.
    - The pinned GGUF is a third-party conversion (hash-pinned, parity-gated); a first-party conversion from the
@@ -44,9 +47,14 @@ real corpus and recorded. Status is updated in place.
 4. **OCR fallback for scanned PDFs** (optional; LiteParse was reviewed and not adopted as the primary parser).
 5. **Full-text download for open-access papers** (deferred by the owner): Content API with the existing key,
    other lawful routes.
-6. **Citation node-like system — the very end.** Working reading, to confirm with the owner: a graph whose
-   nodes are claims, supporting passages (pointers) and registered papers (citekeys), edges "supported by" /
-   "cites", so each manuscript sentence is traceable to exact evidence.
+6. **Citation node-like system — the very last thing to build.** Owner wording: "something like PaperRabbit" (most
+   likely ResearchRabbit: an interactive graph of papers explored outward from a seed collection — citations,
+   references, related and similar works, authors). Working reading, to confirm with the owner before any design:
+   a graph over the project's registered papers whose nodes are papers (citekeys), claims and supporting passages
+   (the `doi@revision#start-end` pointers), with edges "cites / cited by" (from OpenAlex), "similar to" (from the passage
+   vectors) and "supported by", so a manuscript sentence is traceable to evidence and the user can discover what to read
+   next. The registry, pointers, verification runs and passage vectors already hold the raw material. Not started;
+   nothing else is blocked on it.
 
 ## Owner-directed notes (2026-10-04)
 
@@ -54,11 +62,7 @@ real corpus and recorded. Status is updated in place.
   local library (`../test_papers`, attached with `paper_registry` `attach_source`). Complicated
   OpenAlex/OA acquisition (Content API with the key already in `UktubAI_Agentic/.env`, other
   lawful routes) waits until the owner re-opens it. Only direct `pdf_url` downloads work today.
-- **Citation node-like system — build at the very end.** Owner wording: "a citation node-like
-  system". Working reading (to confirm with the owner before building): a graph whose nodes are
-  claims, supporting passages (the `doi@revision#start-end` pointers) and registered papers
-  (citekeys), with edges for "supported by" and "cites", so every sentence of a manuscript is
-  traceable to the exact evidence. The pointer and run tables already hold the raw material.
+- **Citation node-like system — the very last item (roadmap 6).** Owner: "something like PaperRabbit"; see roadmap item 6 for the working reading, which still needs the owner's confirmation.
 - **RAG (exploratory retrieval) — not implemented and not planned in this package's docs.**
   The retrieval half exists as a by-product: one `chunks` table with an external-content FTS5/BM25
   index, shared by claim verification. The owner's own `GRC_Agent` project shows the pattern to

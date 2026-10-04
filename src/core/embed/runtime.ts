@@ -10,7 +10,9 @@
  * verification. The cache is shared across projects (model weights are not project state) and removable at any
  * time — the next install fetches again.
  *
- * Linux x64 is the pinned and tested platform; others report `unsupported_platform` and use UKTUB_EMBED_URL.
+ * Pinned for Linux, macOS and Windows on x64 and arm64 (`.tar.gz` and `.zip` builds). Linux x64 is verified by running the
+ * server; the others are digest-pinned and extraction-verified (docs/handoff.md). An unpinned platform reports
+ * `unsupported_platform` and uses UKTUB_EMBED_URL.
  */
 import { createHash } from "node:crypto";
 import { spawn } from "node:child_process";
@@ -19,6 +21,7 @@ import { createServer } from "node:net";
 import { dirname, isAbsolute, join, normalize, sep } from "node:path";
 import { Readable, Transform } from "node:stream";
 import { pipeline } from "node:stream/promises";
+import { unzipSync } from "fflate";
 import { extract } from "tar";
 
 export type RuntimeErrorCode =
@@ -46,7 +49,7 @@ export interface Asset {
   url: string;
   sha256: string;
   size: number;
-  /** Top-level directory inside the archive. */
+  /** Top-level directory inside the archive ("" when the files sit at the archive root, as in the Windows zips). */
   dir: string;
   /** Server executable inside `dir`. */
   binary: string;
@@ -84,6 +87,8 @@ const https = (o: Record<string, unknown>, k: string): string => {
 const digest = (o: Record<string, unknown>, k: string): string => (HEX64.test(str(o, k)) ? (o[k] as string) : bad(`${k} must be 64 lower-case hex characters`));
 const size = (o: Record<string, unknown>, k: string): number => (Number.isSafeInteger(o[k]) && (o[k] as number) > 0 ? (o[k] as number) : bad(`${k} must be a positive integer`));
 const part = (o: Record<string, unknown>, k: string): string => (PART.test(str(o, k)) ? (o[k] as string) : bad(`${k} must be one plain path component`));
+const archiveName = (o: Record<string, unknown>): string => (/\.(tar\.gz|zip)$/.test(part(o, "name")) ? (o.name as string) : bad("name must be a .tar.gz or .zip archive"));
+const archiveDir = (o: Record<string, unknown>): string => (o.dir === "" ? "" : part(o, "dir"));
 
 export function validateLock(x: unknown): RuntimeLock {
   if (!isObj(x) || x.schema !== 1) return bad("schema must be 1");
@@ -92,7 +97,7 @@ export function validateLock(x: unknown): RuntimeLock {
   const assets: Record<string, Asset> = {};
   for (const [key, raw] of Object.entries(assetsIn)) {
     const a = isObj(raw) ? raw : bad(`asset ${key} is not an object`);
-    assets[key] = { name: part(a, "name"), url: https(a, "url"), sha256: digest(a, "sha256"), size: size(a, "size"), dir: part(a, "dir"), binary: part(a, "binary") };
+    assets[key] = { name: archiveName(a), url: https(a, "url"), sha256: digest(a, "sha256"), size: size(a, "size"), dir: archiveDir(a), binary: part(a, "binary") };
   }
   const em = isObj(x.embedding) ? x.embedding : bad("embedding missing");
   const args = Array.isArray(em.serverArgs) && em.serverArgs.every((a) => typeof a === "string") ? (em.serverArgs as string[]) : bad("embedding.serverArgs must be a list of strings");
@@ -195,6 +200,64 @@ const sha256File = (path: string): string | null => {
   }
 };
 
+// ── extraction ──────────────────────────────────────────────────────────────
+
+/** Client policy: most bytes an archive may unpack to (the largest pinned CPU build is under 100 MB unpacked). */
+export const MAX_UNPACKED_BYTES = 1024 * 1024 * 1024;
+
+/** A zip entry name that stays inside the install directory: no NUL, backslash, drive letter, absolute path or `..` segment. */
+function safeZipName(name: string): boolean {
+  return !(name.includes("\0") || name.includes("\\") || name.startsWith("/") || /^[A-Za-z]:/.test(name) || name.split("/").includes(".."));
+}
+
+function extractZip(file: string, into: string, maxBytes: number): void {
+  let total = 0;
+  // the declared size is checked per entry BEFORE it is inflated, so a zip bomb never gets to allocate
+  const entries = unzipSync(readFileSync(file), {
+    filter: (f) => {
+      total += f.originalSize;
+      if (total > maxBytes) throw new Error(`the archive unpacks to something larger than ${maxBytes} bytes`);
+      if (!safeZipName(f.name)) throw new Error(`unsafe entry name "${f.name}"`);
+      return true;
+    },
+  });
+  for (const [name, data] of Object.entries(entries)) {
+    const target = join(into, name);
+    if (name.endsWith("/")) mkdirSync(target, { recursive: true });
+    else {
+      mkdirSync(dirname(target), { recursive: true });
+      writeFileSync(target, data);
+    }
+  }
+}
+
+async function extractTarGz(archive: string, staging: string): Promise<void> {
+  // Regular files and directories go through tar in strict mode (it refuses `..`, absolute paths and links that escape).
+  // Symlinks are collected and recreated after validation: a release archive legitimately carries chains of
+  // same-directory library links (libx.so → libx.so.0 → libx.so.0.5.0) that tar's own link guard rejects in some orders.
+  const links: { path: string; target: string }[] = [];
+  await extract({
+    file: archive,
+    cwd: staging,
+    strict: true,
+    filter: (path, entry) => {
+      if ((entry as { type?: string }).type !== "SymbolicLink") return true;
+      links.push({ path, target: (entry as { linkpath?: string }).linkpath ?? "" });
+      return false;
+    },
+  });
+  for (const l of links) {
+    const rel = normalize(l.path);
+    // the link must sit inside the staging directory (checked on the RAW path: normalising would hide a `..`) and point at a
+    // plain sibling name: nothing it can resolve to leaves the directory
+    if (isAbsolute(l.path) || isAbsolute(rel) || l.path.split(/[\\/]/).includes("..") || rel === ".." || rel.startsWith(`..${sep}`) || !PART.test(l.target)) {
+      throw new Error(`unsafe symbolic link "${l.path}" -> "${l.target}"`);
+    }
+    mkdirSync(dirname(join(staging, rel)), { recursive: true });
+    symlinkSync(l.target, join(staging, rel));
+  }
+}
+
 // ── install ─────────────────────────────────────────────────────────────────
 
 export async function installRuntime(o: {
@@ -202,6 +265,7 @@ export async function installRuntime(o: {
   cacheDir: string;
   platform: string;
   fetch: typeof fetch;
+  maxUnpackedBytes?: number;
 }): Promise<{ paths: InstallPaths; downloaded: ("model" | "runtime")[] }> {
   const { lock, cacheDir } = o;
   const asset = lock.runtime.assets[o.platform];
@@ -228,35 +292,13 @@ export async function installRuntime(o: {
     mkdirSync(staging, { recursive: true });
     try {
       try {
-        // Regular files and directories go through tar in strict mode (it refuses `..`, absolute paths and links that escape).
-        // Symlinks are collected and recreated below, after validation: a release archive legitimately carries chains of
-        // same-directory library links (libx.so → libx.so.0 → libx.so.0.5.0) that tar's own link guard rejects in some orders.
-        const links: { path: string; target: string }[] = [];
-        await extract({
-          file: archive,
-          cwd: staging,
-          strict: true,
-          filter: (path, entry) => {
-            if ((entry as { type?: string }).type !== "SymbolicLink") return true;
-            links.push({ path, target: (entry as { linkpath?: string }).linkpath ?? "" });
-            return false;
-          },
-        });
-        for (const l of links) {
-          const rel = normalize(l.path);
-          // the link must sit inside the staging directory (checked on the RAW path: normalising would hide a `..`) and point at a
-          // plain sibling name: nothing it can resolve to leaves the directory
-          if (isAbsolute(l.path) || isAbsolute(rel) || l.path.split(/[\\/]/).includes("..") || rel === ".." || rel.startsWith(`..${sep}`) || !PART.test(l.target)) {
-            throw new Error(`unsafe symbolic link "${l.path}" -> "${l.target}"`);
-          }
-          mkdirSync(dirname(join(staging, rel)), { recursive: true });
-          symlinkSync(l.target, join(staging, rel));
-        }
+        if (asset.name.endsWith(".zip")) extractZip(archive, staging, o.maxUnpackedBytes ?? MAX_UNPACKED_BYTES);
+        else await extractTarGz(archive, staging);
       } catch (err) {
         throw new RuntimeError("unsafe_archive", `the runtime archive was refused: ${err instanceof Error ? err.message : String(err)}`);
       }
       const binary = join(staging, asset.dir, asset.binary);
-      if (fileSize(binary) === null) throw new RuntimeError("missing_binary", `the runtime archive has no ${asset.dir}/${asset.binary}`);
+      if (fileSize(binary) === null) throw new RuntimeError("missing_binary", `the runtime archive has no ${asset.dir === "" ? "" : `${asset.dir}/`}${asset.binary}`);
       chmodSync(binary, 0o755);
       writeFileSync(join(staging, RECEIPT), JSON.stringify({ sha256: asset.sha256, version: lock.runtime.version }));
       rmSync(finalDir, { recursive: true, force: true });

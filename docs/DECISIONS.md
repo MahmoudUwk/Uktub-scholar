@@ -62,13 +62,13 @@ EmbeddingGemma was asked about.
   binding: a native crash or a CPU-bound batch must not take the agent host down), plus the cduk dense-modules
   EmbeddingGemma GGUF pinned by sha256. Facts found while building it: the research report's advice to pin the
   semver tag `v0.5.0` does not hold — that release has **no binary assets**; binaries exist only under the `b…`
-  build tags, so `b11160` is pinned (the upstream build the parity test ran on; digest published by GitHub equals
-  the downloaded file's). The pinned pair was re-measured end to end (mean cosine 0.990 against sentence-transformers).
+  build tags, so a `b…` tag is pinned (first `b11160`, then, on the owner's request for the latest build, `b11398`; the digest
+  published by GitHub equals the downloaded file's, and each pin re-ran the parity gate). The pinned pair was re-measured end to end (mean cosine 0.990 against sentence-transformers).
   Install is an explicit CLI step with the Gemma terms shown and `--yes` required; a search never downloads. The
   live install found a defect the unit tests could not: the real archive carries chains of same-directory library
   symlinks that node-tar's strict mode rejects in some orders, so symlinks are validated (plain sibling names,
   nothing absolute or `..`) and recreated by the package while files and directories still go through `tar`'s strict
-  extraction. Only linux-x64 is pinned and tested; the CPU build is used (700 passages embed in ≈ 20 s).
+  extraction. The CPU build is used everywhere (700 passages embed in ≈ 20 s). Owner request (2026-10-04): runnable on every system — pinned for linux/darwin/win32 × x64/arm64 (six builds; Windows ships `.zip` with the files at the archive root, extracted with `fflate` under per-entry name validation and a declared-size cap checked before inflating). Only linux-x64 was run; the other five were downloaded with their digests verified and extracted by the real code path, and each yields the right executable type. `scripts/embed-parity.py` is the committed gate (it fails the ggml-org GGUF at mean cosine 0.013 and passes the pinned one at 0.990).
 - **Independent review (fresh agent, 12 verified findings, all fixed with regression tests)** — high: a TEI `<head>`
   with no length cap left the source through the `section` label past output containment (labels are now clipped to
   200 characters in the splitter and the tool, and over-long TEI heads are text, not marks); medium: the error-echo guard

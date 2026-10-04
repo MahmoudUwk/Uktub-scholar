@@ -21,6 +21,7 @@ import { fileURLToPath } from "node:url";
 
 import { RuntimeError, installRuntime, installedPaths, platformKey, readLock, startServer, validateLock, type RuntimeLock } from "../src/core/embed/runtime.ts";
 import { makeTarGz, type TarEntry } from "./helpers/tar.ts";
+import { zipSync } from "fflate";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const FAKE_SERVER = readFileSync(join(HERE, "helpers", "fake-llama-server.mjs"));
@@ -130,6 +131,56 @@ describe("validateLock", () => {
       ["not an object", "x"],
     ];
     for (const [label, l] of bad) assert.throws(() => validateLock(l), (e) => e instanceof RuntimeError && e.code === "invalid_lock", label);
+  });
+});
+
+describe("zip archives (the Windows builds)", () => {
+  const zipOf = (files: Record<string, string | Uint8Array>): Uint8Array =>
+    zipSync(Object.fromEntries(Object.entries(files).map(([k, v]) => [k, typeof v === "string" ? new TextEncoder().encode(v) : v])));
+  const zipLock = (archive: Uint8Array, over: Partial<RuntimeLock["runtime"]["assets"][string]> = {}): RuntimeLock =>
+    lockFor(archive, MODEL, { name: "llama-test.zip", url: "https://example.test/llama-test.zip", dir: "", binary: "llama-server.exe", ...over });
+  const install = (lock: RuntimeLock, archive: Uint8Array, maxUnpackedBytes?: number) =>
+    installRuntime({ lock, cacheDir: cache, platform: "linux-x64", fetch: server({ [lock.runtime.assets["linux-x64"].url]: archive, [lock.embedding.url]: MODEL }).fetch, maxUnpackedBytes });
+
+  it("installs a zip whose files sit at the archive root (llama-server.exe beside its DLLs, no top-level directory)", async () => {
+    const archive = zipOf({ "llama-server.exe": "MZ fake executable", "ggml.dll": "dll", "sub/extra.dll": "nested dll" });
+    const lock = zipLock(archive);
+    const r = await install(lock, archive);
+    assert.ok(r.paths.server.endsWith("llama-server.exe"));
+    assert.equal(readFileSync(r.paths.server, "utf8"), "MZ fake executable");
+    assert.equal(readFileSync(join(dirname(r.paths.server), "sub", "extra.dll"), "utf8"), "nested dll");
+    assert.deepEqual(installedPaths(lock, cache, "linux-x64"), r.paths);
+  });
+
+  it("refuses zip entries that escape the install directory: '..', absolute, drive-letter and backslash forms", async () => {
+    for (const bad of ["../escaped.txt", "/tmp/uktub-zip-abs.txt", "C:/Windows/evil.dll", "C:\\evil.dll", "a\\..\\b.txt", "sub/../../up.txt"]) {
+      const archive = zipOf({ "llama-server.exe": "ok", [bad]: "pwned" });
+      await assert.rejects(install(zipLock(archive), archive), (e) => e instanceof RuntimeError && e.code === "unsafe_archive", bad);
+    }
+    for (const p of [join(cache, "..", "escaped.txt"), "/tmp/uktub-zip-abs.txt"]) assert.ok(!existsSync(p), `${p} must not exist`);
+  });
+
+  it("refuses an archive whose declared unpacked size exceeds the cap, before inflating anything", async () => {
+    const archive = zipOf({ "llama-server.exe": "ok", "big.bin": new Uint8Array(5000) });
+    await assert.rejects(install(zipLock(archive), archive, 1000), (e) => e instanceof RuntimeError && e.code === "unsafe_archive" && /larger than/.test(e.message));
+  });
+
+  it("a zip without the expected binary is refused; a corrupt zip is refused as an archive problem, not a crash", async () => {
+    const noBin = zipOf({ "readme.txt": "x" });
+    await assert.rejects(install(zipLock(noBin), noBin), (e) => e instanceof RuntimeError && e.code === "missing_binary");
+    const junk = Buffer.from("this is not a zip file at all".repeat(10));
+    await assert.rejects(install(zipLock(junk), junk), (e) => e instanceof RuntimeError && e.code === "unsafe_archive");
+  });
+
+  it("the lock validator accepts an archive-root layout (empty dir) and only .tar.gz or .zip archives", () => {
+    const archive = zipOf({ "llama-server.exe": "ok" });
+    assert.doesNotThrow(() => validateLock(JSON.parse(JSON.stringify(zipLock(archive)))));
+    const l = JSON.parse(JSON.stringify(zipLock(archive)));
+    l.runtime.assets["linux-x64"].name = "llama.tar.xz";
+    assert.throws(() => validateLock(l), (e) => e instanceof RuntimeError && e.code === "invalid_lock");
+    const l2 = JSON.parse(JSON.stringify(zipLock(archive)));
+    l2.runtime.assets["linux-x64"].dir = "../x";
+    assert.throws(() => validateLock(l2), (e) => e instanceof RuntimeError && e.code === "invalid_lock");
   });
 });
 

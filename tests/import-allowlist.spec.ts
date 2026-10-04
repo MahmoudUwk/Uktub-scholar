@@ -23,7 +23,7 @@ function listTsFiles(dir: string): string[] {
   return out;
 }
 
-const CORE_ALLOW_PREFIXES = ["node:", ".", "/", "typebox", "yaml", "unpdf", "fast-xml-parser", "tar"];
+const CORE_ALLOW_PREFIXES = ["node:", ".", "/", "typebox", "yaml", "unpdf", "fast-xml-parser", "tar", "fflate"];
 const CORE_DENY = ["@earendil-works"];
 
 test("src/core imports nothing Pi-specific", () => {

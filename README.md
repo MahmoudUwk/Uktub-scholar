@@ -137,16 +137,19 @@ verification — check a claim with `verify_claim` before citing it.
 Search is BM25 over an FTS5 index, and **hybrid when an embedding server is available**: BM25 and an exact-cosine
 vector ranking fused with Reciprocal Rank Fusion (k = 60). Two ways to have a server:
 
-- **Managed runtime (Linux x64):** `uktub-scholar embed install --yes` downloads two pinned artifacts once into a shared
-  cache (`UKTUB_CACHE_DIR`, default `~/.cache/uktub-scholar`; not project state, safe to delete) and verifies each against
-  the sha256 and size in [`models.lock.json`](src/core/embed/models.lock.json): the official
-  [llama.cpp](https://github.com/ggml-org/llama.cpp) `b11160` CPU build (17 MB, MIT) and
-  [EmbeddingGemma-300m](https://huggingface.co/google/embeddinggemma-300m) QAT Q8_0 with the sentence-transformers dense
-  modules (334 MB, **Gemma terms of use — `install` shows them and requires `--yes`**). The archive is extracted safely
-  (`..`, absolute paths and escaping links are refused). After that, `search_passages` starts `llama-server` on loopback as a
-  supervised child process (resident for the session, restarted if it dies, killed when the host exits) — a search never
-  downloads anything. `uktub-scholar embed status` shows what is installed. Other platforms are refused with the
-  instruction to run their own server.
+- **Managed runtime (Linux, macOS, Windows; x64 and arm64):** `uktub-scholar embed install --yes` downloads two pinned
+  artifacts once into a shared cache (`UKTUB_CACHE_DIR`, default `~/.cache/uktub-scholar`; not project state, safe to delete)
+  and verifies each against the sha256 and size in [`models.lock.json`](src/core/embed/models.lock.json): the official
+  [llama.cpp](https://github.com/ggml-org/llama.cpp) CPU build `b11398` for your platform (12–19 MB, MIT; `.tar.gz` on
+  Linux/macOS, `.zip` on Windows) and [EmbeddingGemma-300m](https://huggingface.co/google/embeddinggemma-300m) QAT Q8_0 with the
+  sentence-transformers dense modules (334 MB, **Gemma terms of use — `install` shows them and requires `--yes`**). The
+  archive is extracted safely (`..`, absolute paths, drive letters and escaping links are refused). After that,
+  `search_passages` starts `llama-server` on loopback as a supervised child process (resident for the session, restarted if
+  it dies, killed when the host exits) — a search never downloads anything. `uktub-scholar embed status` shows what is
+  installed. **Verification status:** Linux x64 is verified by running the server (parity gate, search); the other five builds
+  are digest-pinned and their archives download, verify and extract to the right executable type (ELF, Mach-O, PE), but the
+  servers have not been run on those systems — see [BACKLOG](docs/BACKLOG.md). A platform with no pin is refused with the
+  instruction to run its own server.
 - **Your own server:** any OpenAI-compatible `/v1/embeddings` endpoint, which wins over the managed runtime:
 
 | Variable | Meaning |
