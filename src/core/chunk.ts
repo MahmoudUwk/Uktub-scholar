@@ -55,7 +55,7 @@ const isHighSurrogate = (code: number): boolean => code >= 0xd800 && code <= 0xd
  * half of the window; just after any whitespace; the raw limit. Never inside
  * a surrogate pair. Returns an index in (start, hardEnd].
  */
-function cutPoint(text: string, start: number, hardEnd: number): number {
+export function cutPoint(text: string, start: number, hardEnd: number): number {
   if (hardEnd >= text.length) return text.length;
   const lo = start + Math.floor((hardEnd - start) * SNAP_WINDOW_SHARE);
   const isSpace = (i: number): boolean => /\s/.test(text[i]);
