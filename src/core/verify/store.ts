@@ -18,7 +18,10 @@
 import { createHash } from "node:crypto";
 import type { DatabaseSync } from "node:sqlite";
 
-import { chunkText, type ChunkTextConfig } from "../chunk.ts";
+import type { ChunkTextConfig } from "../chunk.ts";
+import { chunkDocument } from "../chunk-document.ts";
+import type { SectionMark } from "../sections.ts";
+import { detectHeadings } from "../source/headings.ts";
 import { bumpGeneration } from "../registry.ts";
 import type { PreparedSource } from "../source/prepare.ts";
 
@@ -30,9 +33,19 @@ export const passageHashOf = (text: string): string => sha256(text);
 /** Pointer revision: binds the acquired bytes, the extractor, and the captured text. */
 export const revisionOf = (digest: string, extraction: string, text: string): string =>
   sha256(`${digest}\0${extraction}\0${sha256(text)}`).slice(0, 16);
-/** Chunk policy identity: any change to these fields rebuilds chunks under new ids. */
+/** Version of the structure-aware chunking (splitter rules, heading detector, minimum-piece share):
+ *  bump it when any of them changes so stored section chunks rebuild. */
+export const SECTION_CHUNKING_VERSION = "sections-v1";
+/** Chunk policy identity: any change to these fields rebuilds chunks under new ids.
+ *  Fixed-window policies keep their original identity; section policies add the structure version. */
 export const chunkPolicyOf = (cfg: ChunkTextConfig): string =>
-  sha256(JSON.stringify([cfg.chunk_tokens, cfg.overlap_tokens, cfg.chars_per_token, cfg.boundary])).slice(0, 12);
+  sha256(
+    JSON.stringify(
+      cfg.boundary === "section"
+        ? [cfg.chunk_tokens, cfg.overlap_tokens, cfg.chars_per_token, cfg.boundary, SECTION_CHUNKING_VERSION]
+        : [cfg.chunk_tokens, cfg.overlap_tokens, cfg.chars_per_token, cfg.boundary],
+    ),
+  ).slice(0, 12);
 
 /** Client policy: a chunk with fewer non-space characters than this cannot
  *  support a claim and is not stored as a usable passage. */
@@ -79,6 +92,8 @@ export interface StoredChunk {
   est_tokens: number;
   content_hash: string;
   text: string;
+  /** Heading of the section the chunk starts in; null for fixed-window policies. */
+  section: string | null;
 }
 
 const iso = (d: Date): string => d.toISOString().replace(/\.\d{3}Z$/, "Z");
@@ -137,22 +152,22 @@ export function getSourceText(db: DatabaseSync, doi: string): { revision: string
 
 export function chunksOf(db: DatabaseSync, doi: string): StoredChunk[] {
   return db
-    .prepare("SELECT doi, chunk_index, chunk_id, revision, char_start, char_end, est_tokens, content_hash, text FROM chunks WHERE doi = ? ORDER BY chunk_index")
+    .prepare("SELECT doi, chunk_index, chunk_id, revision, char_start, char_end, est_tokens, content_hash, text, section FROM chunks WHERE doi = ? ORDER BY chunk_index")
     .all(doi) as unknown as StoredChunk[];
 }
 
 /** Replace the derived chunks of a ready paper under `cfg`. Caller holds the transaction. */
-function writeChunks(db: DatabaseSync, doi: string, revision: string, text: string, cfg: ChunkTextConfig): number {
+function writeChunks(db: DatabaseSync, doi: string, revision: string, text: string, sections: SectionMark[] | null, cfg: ChunkTextConfig): number {
   const policy = chunkPolicyOf(cfg);
   db.prepare("DELETE FROM chunks WHERE doi = ?").run(doi);
   const ins = db.prepare(
-    "INSERT INTO chunks (doi, chunk_index, chunk_id, revision, char_start, char_end, est_tokens, content_hash, text) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+    "INSERT INTO chunks (doi, chunk_index, chunk_id, revision, char_start, char_end, est_tokens, content_hash, text, section) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
   );
   let n = 0;
-  for (const c of chunkText(text, cfg)) {
+  for (const c of chunkDocument(text, sections, cfg)) {
     if (c.text.replace(/\s+/g, "").length < MIN_CHUNK_CHARS) continue;
     const id = sha256(`${doi}|${revision}|${policy}|${c.char_start}|${c.char_end}`).slice(0, 16);
-    ins.run(doi, n++, id, revision, c.char_start, c.char_end, c.est_tokens, c.content_hash, c.text);
+    ins.run(doi, n++, id, revision, c.char_start, c.char_end, c.est_tokens, c.content_hash, c.text, c.section);
   }
   db.prepare("UPDATE paper_sources SET chunk_policy = ? WHERE doi = ?").run(policy, doi);
   return n;
@@ -176,27 +191,30 @@ export function publishSource(
     if (!paperExists(db, doi)) return null;
     const revision = revisionOf(source.digest, source.extraction, source.text);
     const policy = chunkPolicyOf(cfg);
-    const cur = db.prepare("SELECT status, revision, chunk_policy FROM paper_sources WHERE doi = ?").get(doi) as
-      | { status: string; revision: string | null; chunk_policy: string | null }
+    const sections = source.sections === undefined || source.sections === null || source.sections.length === 0 ? null : source.sections;
+    const sectionsJson = sections === null ? null : JSON.stringify(sections);
+    const cur = db.prepare("SELECT status, revision, chunk_policy, sections_json FROM paper_sources WHERE doi = ?").get(doi) as
+      | { status: string; revision: string | null; chunk_policy: string | null; sections_json: string | null }
       | undefined;
     if (cur?.status === "ready" && cur.revision === revision) {
-      if (cur.chunk_policy === policy) {
+      if (cur.chunk_policy === policy && cur.sections_json === sectionsJson) {
         const n = (db.prepare("SELECT COUNT(*) AS n FROM chunks WHERE doi = ?").get(doi) as { n: number }).n;
         return { revision, chunkCount: Number(n), reused: true };
       }
-      const chunkCount = writeChunks(db, doi, revision, source.text, cfg);
+      db.prepare("UPDATE paper_sources SET sections_json = ? WHERE doi = ?").run(sectionsJson, doi);
+      const chunkCount = writeChunks(db, doi, revision, source.text, sections, cfg);
       bumpGeneration(db);
       return { revision, chunkCount, reused: false };
     }
     db.prepare(
-      `INSERT INTO paper_sources (doi, status, kind, ref, license, digest, extraction, revision, chunk_policy, text, page_starts_json, prepared_at, failure_code, failure_detail)
-       VALUES (?, 'ready', ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, NULL, NULL)
+      `INSERT INTO paper_sources (doi, status, kind, ref, license, digest, extraction, revision, chunk_policy, text, page_starts_json, sections_json, prepared_at, failure_code, failure_detail)
+       VALUES (?, 'ready', ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, NULL, NULL)
        ON CONFLICT(doi) DO UPDATE SET status='ready', kind=excluded.kind, ref=excluded.ref, license=excluded.license, digest=excluded.digest,
          extraction=excluded.extraction, revision=excluded.revision, chunk_policy=NULL, text=excluded.text, page_starts_json=excluded.page_starts_json,
-         prepared_at=excluded.prepared_at, failure_code=NULL, failure_detail=NULL`,
-    ).run(doi, source.kind, source.ref, source.license, source.digest, source.extraction, revision, source.text, source.pageStarts === null ? null : JSON.stringify(source.pageStarts), iso(now));
+         sections_json=excluded.sections_json, prepared_at=excluded.prepared_at, failure_code=NULL, failure_detail=NULL`,
+    ).run(doi, source.kind, source.ref, source.license, source.digest, source.extraction, revision, source.text, source.pageStarts === null ? null : JSON.stringify(source.pageStarts), sectionsJson, iso(now));
     db.prepare("DELETE FROM claim_evidence WHERE doi = ? AND revision != ?").run(doi, revision);
-    const chunkCount = writeChunks(db, doi, revision, source.text, cfg);
+    const chunkCount = writeChunks(db, doi, revision, source.text, sections, cfg);
     bumpGeneration(db);
     return { revision, chunkCount, reused: false };
   });
@@ -224,14 +242,24 @@ export function recordSourceFailure(
   });
 }
 
-/** Rebuild chunks from the captured text when the chunk policy changed. */
+/** Rebuild chunks from the captured text when the chunk policy changed. A PDF source stored before
+ *  section marks existed gets them derived from its text (the detector is a pure function of the
+ *  text); other extractions cannot be re-derived and stay unmarked. */
 export function ensureChunks(db: DatabaseSync, doi: string, cfg: ChunkTextConfig): void {
   inTransaction(db, () => {
-    const cur = db.prepare("SELECT status, revision, chunk_policy, text FROM paper_sources WHERE doi = ?").get(doi) as
-      | { status: string; revision: string | null; chunk_policy: string | null; text: string | null }
+    const cur = db.prepare("SELECT status, revision, chunk_policy, text, extraction, sections_json FROM paper_sources WHERE doi = ?").get(doi) as
+      | { status: string; revision: string | null; chunk_policy: string | null; text: string | null; extraction: string | null; sections_json: string | null }
       | undefined;
     if (cur?.status !== "ready" || cur.revision === null || cur.text === null || cur.chunk_policy === chunkPolicyOf(cfg)) return;
-    writeChunks(db, doi, cur.revision, cur.text, cfg);
+    let sections: SectionMark[] | null = cur.sections_json === null ? null : (JSON.parse(cur.sections_json) as SectionMark[]);
+    if (sections === null && cfg.boundary === "section" && cur.extraction?.startsWith("unpdf@")) {
+      const found = detectHeadings(cur.text);
+      if (found.length > 0) {
+        sections = found;
+        db.prepare("UPDATE paper_sources SET sections_json = ? WHERE doi = ?").run(JSON.stringify(found), doi);
+      }
+    }
+    writeChunks(db, doi, cur.revision, cur.text, sections, cfg);
     bumpGeneration(db);
   });
 }

@@ -22,7 +22,7 @@ export interface ChunkConfig {
     chunk_tokens: number;
     overlap_tokens: number;
     chars_per_token: number;
-    boundary: "paragraph" | "hard";
+    boundary: "paragraph" | "hard" | "section";
   };
   verification: {
     engine: string;
@@ -87,8 +87,8 @@ function validate(parsed: unknown): ChunkConfig {
   if (!Number.isFinite(c.chunking.chars_per_token) || c.chunking.chars_per_token < 0.25 || c.chunking.chars_per_token > 20) {
     throw new ConfigError(`chunking.chars_per_token out of range: ${c.chunking.chars_per_token}`);
   }
-  if (c.chunking.boundary !== "paragraph" && c.chunking.boundary !== "hard") {
-    throw new ConfigError(`chunking.boundary must be "paragraph" or "hard"`);
+  if (c.chunking.boundary !== "paragraph" && c.chunking.boundary !== "hard" && c.chunking.boundary !== "section") {
+    throw new ConfigError(`chunking.boundary must be "paragraph", "hard" or "section"`);
   }
   validateVerification(c.verification);
   return c;

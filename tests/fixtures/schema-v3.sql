@@ -6,7 +6,7 @@
 -- `doi` is the PRIMARY KEY: DOIs are case-insensitive, and the canonical
 -- lowercase form is what makes the uniqueness meaningful.
 --
--- Version 4 (current). Migration from v1/v2/v3 is explicit in registry.ts; this
+-- Version 3 (current). Migration from v1/v2 is explicit in registry.ts; this
 -- file is the whole current schema and is idempotent (IF NOT EXISTS).
 -- Every column names its consumer.
 
@@ -66,9 +66,6 @@ CREATE TABLE IF NOT EXISTS paper_sources (
   text TEXT,
   -- JSON array of page start offsets when the extractor grounds pages.
   page_starts_json TEXT,
-  -- JSON array of {start, heading, level} section marks (text offsets) when the extractor
-  -- found structure (TEI heads, PDF heading lines); NULL = none known. Chunking consumes it.
-  sections_json TEXT,
   prepared_at TEXT NOT NULL,
   -- Normalized failure reason (never a raw fetch exception) + short detail.
   failure_code TEXT,
@@ -90,9 +87,6 @@ CREATE TABLE IF NOT EXISTS chunks (
   content_hash TEXT NOT NULL,
   -- The chunk text: judged passage and FTS content.
   text TEXT NOT NULL,
-  -- Heading of the section the chunk starts in ('' before the first heading; NULL when the
-  -- chunk policy is not section-based). Shown with evidence and passage results.
-  section TEXT,
   PRIMARY KEY (doi, chunk_index)
 );
 CREATE INDEX IF NOT EXISTS idx_chunks_hash ON chunks(content_hash);
@@ -169,4 +163,4 @@ CREATE TABLE IF NOT EXISTS registry_state (
 );
 INSERT OR IGNORE INTO registry_state (id, generation) VALUES (1, 0);
 
-PRAGMA user_version = 4;
+PRAGMA user_version = 3;

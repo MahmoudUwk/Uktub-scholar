@@ -14,6 +14,8 @@ import { XMLParser } from "fast-xml-parser";
 import { extractText, getDocumentProxy } from "unpdf";
 
 import { decodeHtmlEntities } from "../bibrender.ts";
+import type { SectionMark } from "../sections.ts";
+import { detectHeadings } from "./headings.ts";
 
 export type SourceFailureCode =
   | "malformed"
@@ -47,6 +49,9 @@ export interface Extraction {
   pageStarts: number[] | null;
   /** Extractor identity + version: the extraction half of the pointer revision. */
   extraction: string;
+  /** Section marks (text offsets of heading lines) when structure was found; null = none known.
+   *  Chunking consumes them; they are not part of the pointer revision (offsets index `text`). */
+  sections: SectionMark[] | null;
 }
 
 /** Tied to the installed dependency by tests/source-extract.spec.ts. */
@@ -108,7 +113,8 @@ export async function extractPdf(bytes: Uint8Array): Promise<Extraction> {
     text += p;
   });
   if (!hasUsableText(text)) throw new SourceError("no_text_layer", "the PDF has no extractable text layer (scanned/image-only; no OCR)");
-  return { text, pageStarts, extraction: PDF_EXTRACTION_ID };
+  const sections = detectHeadings(text);
+  return { text, pageStarts, extraction: PDF_EXTRACTION_ID, sections: sections.length > 0 ? sections : null };
 }
 
 // ── TEI ─────────────────────────────────────────────────────────────────────
@@ -146,14 +152,19 @@ function find(nodes: XNode[], tag: string, found: XNode[][] = []): XNode[][] {
   return found;
 }
 
+interface Block {
+  text: string;
+  head: boolean;
+}
+
 /** Ordered heads/paragraphs under `nodes` (figures and tables are skipped). */
-function blocks(nodes: XNode[], out: string[]): void {
+function blocks(nodes: XNode[], out: Block[]): void {
   for (const n of nodes) {
     for (const [t, kids] of Object.entries(n)) {
       if (t === ":@" || !Array.isArray(kids)) continue;
       if (t === "head" || t === "p") {
         const s = clean(textOf(kids as XNode[]));
-        if (s.length > 0) out.push(s);
+        if (s.length > 0) out.push({ text: s, head: t === "head" });
       } else if (t !== "figure" && t !== "note") blocks(kids as XNode[], out);
     }
   }
@@ -187,23 +198,28 @@ export function extractTei(bytes: Uint8Array): Extraction {
   } catch {
     throw new SourceError("malformed", "the TEI could not be parsed");
   }
-  const parts: string[] = [];
+  const front: Block[] = []; // title + abstract: never section marks
   const header = find(tree, "teiHeader")[0] ?? [];
   const title = find(find(header, "titleStmt")[0] ?? [], "title")[0];
   if (title) {
     const t = clean(textOf(title));
-    if (t.length > 0) parts.push(t);
+    if (t.length > 0) front.push({ text: t, head: false });
   }
   const abstract = find(header, "abstract")[0];
-  if (abstract) blocks(abstract, parts);
-  const bodyBlocks: string[] = [];
+  if (abstract) blocks(abstract, front);
+  const bodyBlocks: Block[] = [];
   const body = find(tree, "body")[0];
   if (body) blocks(body, bodyBlocks);
-  parts.push(...bodyBlocks);
-  const text = parts.join("\n\n");
   // A header-only TEI (title + abstract) is not a readable paper: the body must carry the text.
-  if (!hasUsableText(bodyBlocks.join(""))) throw new SourceError("no_text_layer", "the TEI body holds no text");
-  return { text, pageStarts: null, extraction: TEI_EXTRACTION_ID };
+  if (!hasUsableText(bodyBlocks.map((b) => b.text).join(""))) throw new SourceError("no_text_layer", "the TEI body holds no text");
+  let text = "";
+  const sections: SectionMark[] = [];
+  [...front.map((b) => ({ ...b, head: false })), ...bodyBlocks].forEach((b, i) => {
+    if (i > 0) text += "\n\n";
+    if (b.head) sections.push({ start: text.length, heading: b.text, level: 1 });
+    text += b.text;
+  });
+  return { text, pageStarts: null, extraction: TEI_EXTRACTION_ID, sections: sections.length > 0 ? sections : null };
 }
 
 // ── identity ────────────────────────────────────────────────────────────────

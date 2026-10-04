@@ -12,7 +12,7 @@ import { join } from "node:path";
 import { REGISTRY_SCHEMA_VERSION, RegistryError, createRegistry, openRegistry, listPapers } from "../src/core/registry.ts";
 import { DatabaseSync } from "node:sqlite";
 import { mkdirSync } from "node:fs";
-import { LEGACY_PAPER, buildForeignRegistry, buildLegacyRegistry } from "./helpers/legacy-registry.ts";
+import { LEGACY_PAPER, V3_PAPER, buildForeignRegistry, buildLegacyRegistry, buildV3Registry } from "./helpers/legacy-registry.ts";
 
 let root: string;
 beforeEach(() => {
@@ -40,6 +40,34 @@ describe("registry migration", () => {
     });
   }
 
+  it("a v3 registry gains section storage in place, keeping papers, source text, chunks and the version it is at", () => {
+    buildV3Registry(root);
+    const db = openRegistry(root);
+    assert.equal((db.prepare("PRAGMA user_version").get() as { user_version: number }).user_version, REGISTRY_SCHEMA_VERSION);
+    const cols = (t: string): string[] => (db.prepare(`PRAGMA table_info(${t})`).all() as { name: string }[]).map((c) => c.name);
+    assert.ok(cols("paper_sources").includes("sections_json"));
+    assert.ok(cols("chunks").includes("section"));
+    const src = db.prepare("SELECT text, sections_json, chunk_policy FROM paper_sources WHERE doi = ?").get(V3_PAPER.doi) as { text: string; sections_json: string | null; chunk_policy: string };
+    assert.equal(src.text, V3_PAPER.text);
+    assert.equal(src.sections_json, null, "no marks were stored before; they are derived on the next rechunk");
+    assert.equal(src.chunk_policy, "oldpolicy", "the policy stamp is left for the rechunk check to compare");
+    const chunk = db.prepare("SELECT text, section FROM chunks WHERE doi = ?").get(V3_PAPER.doi) as { text: string; section: string | null };
+    assert.equal(chunk.text, V3_PAPER.text);
+    assert.equal(chunk.section, null);
+    assert.equal((db.prepare("SELECT COUNT(*) n FROM chunk_fts WHERE chunk_fts MATCH 'captured'").get() as { n: number }).n, 1, "the locator index still finds the migrated chunk");
+    db.close();
+  });
+
+  it("a stale v3 migration run after another process migrated changes nothing", async () => {
+    buildV3Registry(root);
+    const first = openRegistry(root);
+    first.prepare("UPDATE paper_sources SET sections_json = '[{\"start\":0,\"heading\":\"x\",\"level\":1}]' WHERE doi = ?").run(V3_PAPER.doi);
+    const { migrateLegacy } = await import("../src/core/registry.ts");
+    migrateLegacy(first, join(root, ".registry", "registry.db"), 3);
+    assert.match((first.prepare("SELECT sections_json FROM paper_sources").get() as { sections_json: string }).sections_json, /"heading":"x"/);
+    first.close();
+  });
+
   it("legacy chunks, verdicts and pointers carry no source provenance and are not kept as evidence", () => {
     buildLegacyRegistry(root, 2);
     const db = openRegistry(root);
@@ -66,7 +94,7 @@ describe("registry migration", () => {
     db.close();
   });
 
-  for (const [label, userVersion] of [["newer", 99], ["uninitialised foreign", 0], ["foreign v3-lookalike below", 4]] as const) {
+  for (const [label, userVersion] of [["newer", 99], ["uninitialised foreign", 0], ["foreign lookalike above the current version", REGISTRY_SCHEMA_VERSION + 1]] as const) {
     it(`${label} schema (user_version ${userVersion}) is refused without mutation`, () => {
       const file = buildForeignRegistry(root, userVersion, "wal");
       const before = readFileSync(file);

@@ -3,7 +3,7 @@
  * those package versions shipped it (git history of src/core/schema.sql), built
  * with raw SQL — never through the current createRegistry.
  */
-import { mkdirSync } from "node:fs";
+import { mkdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 
@@ -88,6 +88,34 @@ export function buildForeignRegistry(root: string, userVersion: number, journal:
   if (journal === "wal") db.exec("PRAGMA journal_mode=WAL");
   db.exec("CREATE TABLE marker (x TEXT); INSERT INTO marker VALUES ('untouched')");
   db.exec(`PRAGMA user_version = ${userVersion}`);
+  db.close();
+  return file;
+}
+
+/** The v3 schema exactly as it shipped (tests/fixtures/schema-v3.sql, from git history). */
+export const V3_PAPER = { doi: "10.1234/v3paper", text: "Introduction\nSome captured text that is long enough to chunk and keep." };
+
+/**
+ * `<root>/.registry/registry.db` at schema version 3, built from the shipped DDL with one paper,
+ * one ready source (no section marks existed then) and one chunk.
+ */
+export function buildV3Registry(root: string): string {
+  const file = join(root, ".registry", "registry.db");
+  mkdirSync(dirname(file), { recursive: true });
+  const db = new DatabaseSync(file);
+  db.exec(readFileSync(join(import.meta.dirname, "..", "fixtures", "schema-v3.sql"), "utf8"));
+  db.prepare(
+    "INSERT INTO papers (doi, citekey, title, authors_json, year, venue, provider_bibtex, bibtex_source, citable, ingested_at) VALUES (?,?,?,?,?,?,?,?,?,?)",
+  ).run(V3_PAPER.doi, "v32024", "A V3 Paper", '["Ada Lovelace"]', 2024, null, "@article{v3,\n  title={A V3 Paper},\n  year={2024}\n}", "crossref", 1, "2026-10-01T00:00:00Z");
+  db.prepare(
+    "INSERT INTO paper_sources (doi, status, kind, ref, digest, extraction, revision, chunk_policy, text, page_starts_json, prepared_at) VALUES (?, 'ready', 'local-file', 'p.pdf', 'd', 'unpdf@1.8.1/pages-v1', ?, 'oldpolicy', ?, '[0]', ?)",
+  ).run(V3_PAPER.doi, "r".repeat(16), V3_PAPER.text, "2026-10-02T00:00:00Z");
+  db.prepare("INSERT INTO chunks (doi, chunk_index, chunk_id, revision, char_start, char_end, est_tokens, content_hash, text) VALUES (?, 0, 'c0', ?, 0, ?, 12, 'h', ?)").run(
+    V3_PAPER.doi,
+    "r".repeat(16),
+    V3_PAPER.text.length,
+    V3_PAPER.text,
+  );
   db.close();
   return file;
 }

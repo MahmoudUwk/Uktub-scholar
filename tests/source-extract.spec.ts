@@ -113,6 +113,60 @@ describe("extractTei", () => {
   });
 });
 
+describe("section marks from extraction", () => {
+  const marksOk = (text: string, sections: { start: number; heading: string }[] | null): void => {
+    assert.ok(sections !== null);
+    let prev = -1;
+    for (const m of sections) {
+      assert.ok(m.start > prev && m.start < text.length, "strictly increasing, inside the text");
+      assert.ok(text.slice(m.start).startsWith(m.heading), `the text at ${m.start} starts with "${m.heading}"`);
+      prev = m.start;
+    }
+  };
+
+  it("TEI: every body <head> is a mark at its exact offset; head-less divs, title and abstract are not", () => {
+    const tei = makeTei({
+      title: "Cycle Life of Cells",
+      sections: [
+        { head: "Introduction", paragraphs: ["Cells age faster at high temperature and under load.", "Second paragraph of the introduction."] },
+        { paragraphs: ["A head-less division continues the previous section."] },
+        { head: "2. Methods &amp; Materials", paragraphs: ["We cycled cells at 45 degrees."] },
+        { head: "Results", paragraphs: ["Capacity faded 12 % over 500 cycles."] },
+      ],
+    });
+    const out = extractTei(new TextEncoder().encode(tei));
+    marksOk(out.text, out.sections);
+    assert.deepEqual(out.sections?.map((m) => m.heading), ["Introduction", "2. Methods & Materials", "Results"]);
+    assert.ok(out.sections![0].start > out.text.indexOf("Cycle Life of Cells"), "the title is not a section");
+  });
+
+  it("TEI without any head has no marks (null, not an empty list)", () => {
+    const tei = makeTei({ title: "Cycle Life of Cells", sections: [{ paragraphs: ["Only a paragraph of body text, long enough to count as usable text."] }] });
+    assert.equal(extractTei(new TextEncoder().encode(tei)).sections, null);
+  });
+
+  it("TEI marks survive gzip and astral characters before them", () => {
+    const tei = makeTei({ title: "Emoji 😀 Study", sections: [{ head: "Intro 😀", paragraphs: ["Body text with 😀 inside and enough words to be usable text."] }, { head: "Methods", paragraphs: ["More body text follows here."] }] });
+    const out = extractTei(gzipSync(Buffer.from(tei)));
+    marksOk(out.text, out.sections);
+    assert.deepEqual(out.sections?.map((m) => m.heading), ["Intro 😀", "Methods"]);
+  });
+
+  it("PDF: heading lines become marks at line starts; plain prose has none", async () => {
+    const withHeads = await extractPdf(
+      makePdf([
+        ["Cycle Life of Cells", "1. Introduction", "Cells age faster at high temperature and under load,", "which shortens their useful life considerably.", "2. Methods", "We cycled cells at 45 degrees for five hundred cycles."],
+        ["3. Results", "Capacity faded twelve percent over the whole test campaign."],
+      ]),
+    );
+    marksOk(withHeads.text, withHeads.sections);
+    assert.deepEqual(withHeads.sections?.map((m) => m.heading), ["1. Introduction", "2. Methods", "3. Results"]);
+
+    const prose = await extractPdf(makePdf([["Cells age faster at high temperature and under load,", "which shortens their useful life considerably and quickly."]]));
+    assert.equal(prose.sections, null);
+  });
+});
+
 describe("matchesPaperIdentity", () => {
   const paper = { doi: "10.1234/cells", title: "Cycle Life of Lithium Cells Under Thermal Stress" };
   it("accepts text carrying the title as a phrase, or the DOI", () => {

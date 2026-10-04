@@ -42,6 +42,13 @@ describe("loadChunkConfig", () => {
     assert.equal(c.verification.engine, "eos", "the owner's default engine (decision 2026-10-04)");
   });
 
+  it("accepts boundary: section and refuses any other boundary word, naming the three that exist", () => {
+    writeYaml(FULL().replace("boundary: paragraph", "boundary: section"));
+    assert.equal(loadChunkConfig(root, { env: {} }).chunking.boundary, "section");
+    writeYaml(FULL().replace("boundary: paragraph", "boundary: semantic"));
+    assert.throws(() => loadChunkConfig(root, { env: {} }), (e) => e instanceof ConfigError && /"paragraph", "hard" or "section"/.test(e.message));
+  });
+
   it("env overrides apply identically with and without a YAML file", () => {
     const env = { UKTUB_VERIFY_ENGINE: "llama-cpp", UKTUB_VERIFY_MIN_CONFIDENCE: "0.95" };
     const without = loadChunkConfig(root, { env });

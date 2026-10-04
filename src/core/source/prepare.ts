@@ -23,6 +23,7 @@ import type { FetchLike, ProviderConfig } from "../providers/types.ts";
 import { normalizeRegistryDoi } from "../doi.ts";
 import { MAX_SOURCE_BYTES, SourceError, extractPdf, extractTei, matchesPaperIdentity, type SourceFailureCode } from "./extract.ts";
 import type { DownloadLike } from "./download.ts";
+import type { SectionMark } from "../sections.ts";
 
 export type SourceKind = "openalex-pdf-url" | "openalex-content-tei" | "openalex-content-pdf" | "local-file";
 
@@ -36,6 +37,8 @@ export interface PreparedSource {
   extraction: string;
   text: string;
   pageStarts: number[] | null;
+  /** Section marks from extraction; absent/null = none known. */
+  sections?: SectionMark[] | null;
 }
 
 export type AcquireResult =
@@ -78,6 +81,7 @@ export async function prepareFromBytes(args: {
     extraction: extracted.extraction,
     text: extracted.text,
     pageStarts: extracted.pageStarts,
+    sections: extracted.sections,
   };
 }
 

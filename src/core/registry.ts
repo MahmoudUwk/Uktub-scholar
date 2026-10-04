@@ -32,7 +32,7 @@ export const REGISTRY_REL_PATH = ".registry/registry.db";
 export const BIBLIOGRAPHY_REL_PATH = "refs/references.bib";
 
 /** The only schema version this package speaks (KTD4). */
-export const REGISTRY_SCHEMA_VERSION = 3;
+export const REGISTRY_SCHEMA_VERSION = 4;
 
 /**
  * R15/KTD5: cross-process writes serialize through SQLite's busy wait. The
@@ -101,14 +101,21 @@ function tableExists(db: DatabaseSync, name: string): boolean {
   return getRow(db.prepare("SELECT 1 AS x FROM sqlite_master WHERE type='table' AND name = ?"), name) !== undefined;
 }
 
+/** Columns added after v3 shipped: [table, column, type]. v1/v2 gain them with their v3 tables. */
+const ADDED_COLUMNS = [
+  ["paper_sources", "sections_json", "TEXT"],
+  ["chunks", "section", "TEXT"],
+] as const;
+
 /**
- * Explicit in-place migration of the known package schemas (v1, v2) to the
- * current version, inside one transaction. Papers and citekeys are never
- * rewritten. v2's chunk/verdict/pointer rows are dropped (unsourced); when any
- * exist the whole file is copied to `<db>.v2.bak` first (backup = copy one
- * file). Anything else — foreign or newer — is refused by the callers.
+ * Explicit in-place migration of the known package schemas (v1, v2, v3) to the
+ * current version, inside one transaction. Papers, citekeys, captured texts and
+ * chunks are never rewritten; v3 only gains columns. v2's chunk/verdict/pointer
+ * rows are dropped (unsourced); when any exist the whole file is copied to
+ * `<db>.v2.bak` first (backup = copy one file). Anything else — foreign or
+ * newer — is refused by the callers.
  */
-export function migrateLegacy(db: DatabaseSync, file: string, from: 1 | 2): void {
+export function migrateLegacy(db: DatabaseSync, file: string, from: 1 | 2 | 3): void {
   if (from === 2) {
     const held = LEGACY_V2_TABLES.some(
       (t) => tableExists(db, t) && Number(getRow<{ n: number }>(db.prepare(`SELECT COUNT(*) AS n FROM ${t}`))?.n ?? 0) > 0,
@@ -125,7 +132,12 @@ export function migrateLegacy(db: DatabaseSync, file: string, from: 1 | 2): void
     const cols = allRows<{ name: string }>(db.prepare("PRAGMA table_info(papers)")).map((c) => c.name);
     if (!cols.includes("abstract")) db.exec("ALTER TABLE papers ADD COLUMN abstract TEXT");
     if (!cols.includes("abstract_source")) db.exec("ALTER TABLE papers ADD COLUMN abstract_source TEXT");
-    for (const t of LEGACY_V2_TABLES) db.exec(`DROP TABLE IF EXISTS ${t}`);
+    if (from < 3) for (const t of LEGACY_V2_TABLES) db.exec(`DROP TABLE IF EXISTS ${t}`);
+    for (const [table, column, type] of ADDED_COLUMNS) {
+      if (!tableExists(db, table)) continue; // v1/v2 have no source tables: SCHEMA_SQL creates them with the column
+      const have = allRows<{ name: string }>(db.prepare(`PRAGMA table_info(${table})`)).map((c) => c.name);
+      if (!have.includes(column)) db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${type}`);
+    }
     db.exec(SCHEMA_SQL());
     db.exec("COMMIT");
   } catch (err) {
@@ -141,7 +153,7 @@ export function migrateLegacy(db: DatabaseSync, file: string, from: 1 | 2): void
 function unsupported(version: number, verb: string): RegistryError {
   return new RegistryError(
     "REGISTRY_SCHEMA_UNSUPPORTED",
-    `${verb} a registry of schema version ${version} is not supported (this package speaks version ${REGISTRY_SCHEMA_VERSION}, and migrates 1 and 2)`,
+    `${verb} a registry of schema version ${version} is not supported (this package speaks version ${REGISTRY_SCHEMA_VERSION}, and migrates 1, 2 and 3)`,
   );
 }
 
@@ -160,11 +172,11 @@ function openDatabaseFile(abs: string, allowFresh: boolean): DatabaseSync {
     // someone else's tables are refused untouched.
     const empty = getRow<{ n: number }>(opened.prepare("SELECT COUNT(*) AS n FROM sqlite_master WHERE name NOT LIKE 'sqlite_%'"))?.n === 0;
     const fresh = version === 0 && allowFresh && empty;
-    if (!fresh && version !== REGISTRY_SCHEMA_VERSION && version !== 1 && version !== 2) {
+    if (!fresh && version !== REGISTRY_SCHEMA_VERSION && version !== 1 && version !== 2 && version !== 3) {
       throw unsupported(version, allowFresh ? "refusing to re-initialize" : "opening");
     }
     opened.exec(OPEN_PRAGMAS);
-    if (version === 1 || version === 2) migrateLegacy(opened, abs, version);
+    if (version === 1 || version === 2 || version === 3) migrateLegacy(opened, abs, version);
     return opened;
   } catch (err) {
     try {

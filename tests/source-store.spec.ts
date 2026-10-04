@@ -144,6 +144,76 @@ describe("publishSource", () => {
   });
 });
 
+describe("section-aware chunk storage", () => {
+  const SEC: ChunkTextConfig = { chunk_tokens: 256, overlap_tokens: 0, chars_per_token: 1, boundary: "section" }; // 256-char cap, 64-char floor
+  const sentence = "Battery cells age faster at high temperature. ";
+  const SECTIONED = [`1. Introduction\n${sentence.repeat(3)}`, `2. Methods\n${sentence.repeat(2)}`, `3. Results\n${sentence.repeat(12)}`].join("\n");
+  const marks = ["1. Introduction", "2. Methods", "3. Results"].map((h) => ({ start: SECTIONED.indexOf(h), heading: h, level: 1 }));
+  const sectionsOf = (): { start: number; heading: string }[] | null => {
+    const r = db.prepare("SELECT sections_json FROM paper_sources WHERE doi = ?").get(DOI) as { sections_json: string | null };
+    return r.sections_json === null ? null : JSON.parse(r.sections_json);
+  };
+
+  it("persists the marks with the source and labels each chunk with its section; spans still slice the text exactly", () => {
+    const out = publishSource(db, DOI, source(SECTIONED, { sections: marks }), SEC, NOW)!;
+    assert.ok(out.chunkCount >= 4, "Results is longer than the cap and splits");
+    assert.deepEqual(sectionsOf(), marks);
+    const chunks = chunksOf(db, DOI);
+    for (const c of chunks) {
+      assert.equal(SECTIONED.slice(c.char_start, c.char_end), c.text);
+      assert.ok(c.text.length <= 256);
+    }
+    assert.deepEqual([...new Set(chunks.map((c) => c.section))], ["1. Introduction", "2. Methods", "3. Results"]);
+    assert.equal(chunks.filter((c) => c.section === "2. Methods").length, 1, "a fitting section is one chunk");
+  });
+
+  it("fixed-window policies leave the label NULL", () => {
+    publishSource(db, DOI, source(SECTIONED, { sections: marks }), CFG, NOW);
+    assert.ok(chunksOf(db, DOI).every((c) => c.section === null));
+  });
+
+  it("the policy identity separates section from fixed windows and is stable", () => {
+    assert.notEqual(chunkPolicyOf(SEC), chunkPolicyOf({ ...SEC, boundary: "paragraph" }));
+    assert.equal(chunkPolicyOf(SEC), chunkPolicyOf({ ...SEC }));
+    assert.equal(chunkPolicyOf({ ...SEC, boundary: "paragraph" }), chunkPolicyOf({ ...CFG, chunk_tokens: 256 }), "fixed-window policy identities are unchanged by structure support");
+  });
+
+  it("switching a stored source to the section policy rebuilds chunks from the stored marks, keeping revision and pointers", () => {
+    const { revision } = publishSource(db, DOI, source(SECTIONED, { sections: marks }), CFG, NOW)!;
+    const before = getSource(db, DOI)!.chunkPolicy;
+    ensureChunks(db, DOI, SEC);
+    assert.notEqual(getSource(db, DOI)!.chunkPolicy, before);
+    assert.equal(getSource(db, DOI)!.revision, revision);
+    assert.deepEqual([...new Set(chunksOf(db, DOI).map((c) => c.section))], ["1. Introduction", "2. Methods", "3. Results"]);
+    ensureChunks(db, DOI, SEC); // idempotent
+    assert.equal(rowCount("chunks"), chunksOf(db, DOI).length);
+  });
+
+  it("republishing the same revision with new marks updates them and rebuilds under the same policy", () => {
+    publishSource(db, DOI, source(SECTIONED, { sections: marks.slice(0, 1) }), SEC, NOW);
+    assert.equal(sectionsOf()!.length, 1);
+    const out = publishSource(db, DOI, source(SECTIONED, { sections: marks }), SEC, NOW)!;
+    assert.equal(sectionsOf()!.length, 3);
+    assert.equal(out.reused, false);
+    assert.ok(chunksOf(db, DOI).some((c) => c.section === "3. Results"));
+  });
+
+  it("a PDF source stored before marks existed (NULL) gets them derived from its text when rechunked", () => {
+    publishSource(db, DOI, source(SECTIONED, { sections: null }), CFG, NOW);
+    assert.equal(sectionsOf(), null);
+    ensureChunks(db, DOI, SEC);
+    assert.deepEqual(sectionsOf()?.map((m) => m.heading), ["1. Introduction", "2. Methods", "3. Results"], "pdf headings detected from the stored text");
+    assert.ok(chunksOf(db, DOI).some((c) => c.section === "3. Results"));
+  });
+
+  it("a non-PDF source without marks stays unlabelled-by-heading (nothing is guessed from TEI-derived text)", () => {
+    publishSource(db, DOI, source(SECTIONED, { sections: null, extraction: "grobid-tei@fxp5.11.2/body-v1" }), CFG, NOW);
+    ensureChunks(db, DOI, SEC);
+    assert.equal(sectionsOf(), null);
+    assert.deepEqual([...new Set(chunksOf(db, DOI).map((c) => c.section))], [""]);
+  });
+});
+
 describe("one source, two papers", () => {
   it("the same document can back two registered papers (preprint and published version) with distinct chunk identities", () => {
     registerPaper(db, { doi: "10.2222/other", title: "Published Version", authors: [] }, { now: () => NOW });

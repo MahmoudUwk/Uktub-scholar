@@ -18,7 +18,7 @@ export interface ChunkTextConfig {
   chunk_tokens: number;
   overlap_tokens: number;
   chars_per_token: number;
-  boundary: "paragraph" | "hard";
+  boundary: "paragraph" | "hard" | "section";
 }
 
 export interface TextChunk {
