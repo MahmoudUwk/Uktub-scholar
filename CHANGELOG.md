@@ -13,6 +13,12 @@ and this project adheres to Semantic Versioning.
 - **Semantic Scholar was never reached in production** (base URL doubled `/graph/v1`); `mcp install` no longer overwrites a non-object server table; the SSRF guard blocks the IPv4-translated range; a tar cleanup race in `installRuntime` is closed.
 - `search_papers` text now names each failing provider and folds a DOI-less duplicate into its DOI-bearing record; `VERIFY_ENGINE_MISSING` names the default engine's setup.
 
+- **Long tool calls no longer time out**: the MCP server sends `notifications/progress` heartbeats (every 15 s, only when the client asked) so a host's request timeout (Pi: 60 s) does not kill a CPU-engine verification, a first compile or a large attach. Proven live: six consecutive ~105 s `verify_claim` calls on the CPU engine succeeded.
+- **Tool notices** now also cover interrupted verifications (how many passages were NOT checked, cleared when the continuation completes), guard blocks, and any failed tool result (host timeout, execution error): an answer that calls a check "exhaustive" after an interrupted or timed-out result gets the footer.
+- Pi guard: a destructive shell command on `.registry/` or `refs/references.bib` raises a confirm dialog to the human (blocked when there is no UI); a decline is final for that attempt but an explicit repeat request raises the dialog again.
+- CLI: `--help`/`-h`/`help`; `register`/`attach` exit 1 when every item was refused; `mcp install` accepts a zero-byte config and says when the codex entry is already present.
+- Agent rules: follow the continuation until `work:` reads complete; no bibliographic data from memory; no files for a paper that was not found unless a stub is requested.
+
 ### Added
 - `uktub-scholar tectonic status | install --yes`: a pinned (0.17.0), sha256-verified, self-checked LaTeX engine for users without TeX tooling; `compile_document` uses it after `UKTUB_TECTONIC_BIN` and PATH.
 - Agent rules (`src/core/agent-rules.ts`) delivered in the MCP handshake and as Pi system-prompt guidelines; the Pi extension blocks agent `edit`/`write` on `refs/references.bib` and `.registry/`.

@@ -1,8 +1,8 @@
 import { fileURLToPath } from "node:url";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { AGENT_RULES } from "../core/agent-rules.ts";
-import { type Notice, extractNotices, footerFor } from "../core/notices.ts";
-import { toolOwnedViolation } from "../core/tool-owned.ts";
+import { BLOCK_PREFIX, type Notice, clearedIds, extractNotices, footerFor } from "../core/notices.ts";
+import { destructiveToolOwnedCommand, toolOwnedViolation } from "../core/tool-owned.ts";
 
 /** Pi names an MCP server's tools `mcp__<server>__<tool>`. */
 const TOOL_PREFIX = "mcp__uktub_scholar__";
@@ -28,9 +28,11 @@ export default function uktubScholarExtension(pi: ExtensionAPI): void {
   pi.on("agent_start", () => void pending.clear());
   pi.on("tool_result", (event) => {
     const name = (event as { toolName?: string }).toolName ?? "";
-    if (!name.startsWith(TOOL_PREFIX)) return undefined;
     const text = event.content.map((c) => (c.type === "text" ? c.text : "")).join("\n");
-    for (const n of extractNotices(name.slice(TOOL_PREFIX.length), text, event.isError)) pending.set(`${n.key}|${n.line}`, n);
+    if (!name.startsWith(TOOL_PREFIX) && !text.startsWith(BLOCK_PREFIX)) return undefined;
+    const tool = name.startsWith(TOOL_PREFIX) ? name.slice(TOOL_PREFIX.length) : name;
+    for (const id of clearedIds(tool, text)) pending.delete(id);
+    for (const n of extractNotices(tool, text, event.isError)) pending.set(n.id ?? `${n.key}|${n.line}`, n);
     return undefined;
   });
   pi.on("message_end", (event) => {
@@ -42,11 +44,18 @@ export default function uktubScholarExtension(pi: ExtensionAPI): void {
     pending.clear();
     return footer === null ? undefined : { message: { ...event.message, content: [...blocks, { type: "text", text: footer }] } as never };
   });
-  // Agent read-only, human writable: block the ordinary edit/write route to the registry and the rendered bibliography.
-  pi.on("tool_call", (event, ctx) => {
-    if (event.toolName !== "edit" && event.toolName !== "write") return undefined;
-    const path = (event.input as { path?: unknown }).path;
-    const reason = typeof path === "string" ? toolOwnedViolation(ctx.cwd, path) : null;
-    return reason === null ? undefined : { block: true, reason };
+  // Agent read-only, human writable: block the edit/write route to the registry and the rendered bibliography outright, and ask the
+  // human before a shell command destroys or overwrites them (without a UI there is no one to ask, so it is blocked).
+  pi.on("tool_call", async (event, ctx) => {
+    const input = event.input as { path?: unknown; command?: unknown };
+    if (event.toolName === "edit" || event.toolName === "write") {
+      const reason = typeof input.path === "string" ? toolOwnedViolation(ctx.cwd, input.path) : null;
+      return reason === null ? undefined : { block: true, reason: `${BLOCK_PREFIX} ${reason}` };
+    }
+    if (event.toolName !== "bash" || typeof input.command !== "string") return undefined;
+    const warning = destructiveToolOwnedCommand(input.command);
+    if (warning === null) return undefined;
+    if (ctx.hasUI && (await ctx.ui.confirm("uktub-scholar: destructive command", `${warning}\n\n${input.command}\n\nAllow it?`))) return undefined;
+    return { block: true, reason: `${BLOCK_PREFIX} ${warning} ${ctx.hasUI ? "The user declined it." : "No one could be asked."} Do not work around this or try another command for the same effect; tell the user it was not run. If the user asks again explicitly, run the command again and the dialog will be raised again.` };
   });
 }

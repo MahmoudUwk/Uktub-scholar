@@ -1,11 +1,14 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
-import { extractNotices, footerFor } from "../src/core/notices.ts";
+import { BLOCK_PREFIX, clearedIds, extractNotices, footerFor } from "../src/core/notices.ts";
 import uktubScholarExtension from "../src/pi/index.ts";
 
 const REFUSED = `Refused: VERIFY_ENGINE_MISSING — eos engine failed to load: {"error": "decision2 model failed to load: ModuleNotFoundError: No module named 'torch'"}. Next: tell the user the verification engine is not available and how to enable it: the default eos engine needs a Python environment.`;
 const SEARCH = `5 candidates for "x" (truncated to the requested 5) — 1 provider warning\nwarning: semantic-scholar — PROVIDER_FAILED: semantic-scholar: HTTP 429 (GET failed); results exclude semantic-scholar\n1. 10.1/a — A (2024)`;
+const INTERRUPTED = (checked: number, claim = "Federated tuning cuts cost") => `NO SUPPORT FOUND YET: checking was interrupted before all selected passages were judged (see work).\nNo support found means the verifier did not find a passage supporting the claim under the configured bar; it is not evidence that the claim is false.\nclaim: ${claim}\nengine: eos-onnx (x), support bar 0.99\nsources: 14 selected, 14 with a usable source\ncandidates: exhaustive — every usable passage (698) of 14 paper(s) selected for checking\nwork: ${checked} of 698 selected passage(s) judged (${checked} new, 0 reused); INTERRUPTED (budget): the per-call limit of 120 fresh judgments was reached; ${698 - checked} not checked\ncontinuation: "tok" — repeat the SAME request with continuation set to this token to get unchecked passages.`;
+const COMPLETE = (claim = "Federated tuning cuts cost") => `NO SUPPORT FOUND across all 698 checked passage(s).\nclaim: ${claim}\ncandidates: exhaustive — every usable passage (698) of 14 paper(s) selected for checking\nwork: 698 of 698 selected passage(s) judged (120 new, 578 reused); complete`;
+const QUERY_LIMITED = `SUPPORT FOUND: 1 supporting passage(s) in 1 paper(s) — coverage is INCOMPLETE (see below).\nclaim: RF fingerprinting is a downstream task\ncandidates: query-limited — only passages matching the locator were checked (3 of 30); a 3/3 matched of 30. No candidates is a statement about the search, not a finding about the papers.\nwork: 3 of 3 selected passage(s) judged (3 new, 0 reused); complete`;
 const COMPILE = `Compiled manuscript/main.tex with tectonic 0.15.0 → build/main.pdf (17235 bytes). 0 error(s), 2 warning(s).\n- warning: internal consistency problem when checking if main.bbl changed\n- warning: TeX rerun seems needed, but stopping at 6 passes`;
 
 describe("extractNotices", () => {
@@ -32,6 +35,88 @@ describe("extractNotices", () => {
   it("a clean result has none", () => {
     assert.deepEqual(extractNotices("paper_registry", "4 papers selected (whole registry); showing 4", false), []);
     assert.deepEqual(extractNotices("compile_document", "Compiled manuscript/main.tex with tectonic 0.17.0 → build/main.pdf (1 bytes). 0 error(s), 0 warning(s).", false), []);
+  });
+});
+
+describe("interrupted verification", () => {
+  it("is a notice carrying how much was NOT checked, keyed to the claim", () => {
+    const n = extractNotices("verify_claim", INTERRUPTED(120), false);
+    assert.equal(n.length, 1);
+    assert.match(n[0]?.line ?? "", /578 of 698/);
+    assert.match(n[0]?.line ?? "", /not checked/i);
+    assert.match(n[0]?.line ?? "", /Federated tuning/);
+    assert.equal(n[0]?.id, extractNotices("verify_claim", INTERRUPTED(240), false)[0]?.id, "later pages replace the earlier notice for the same claim");
+    assert.notEqual(n[0]?.id, extractNotices("verify_claim", INTERRUPTED(120, "Another claim"), false)[0]?.id);
+  });
+
+  it("a complete result for the same claim clears it; a different claim's does not", () => {
+    const id = extractNotices("verify_claim", INTERRUPTED(120), false)[0]?.id;
+    assert.deepEqual(clearedIds("verify_claim", COMPLETE()), [id]);
+    assert.deepEqual(clearedIds("verify_claim", COMPLETE("Another claim")).includes(id as string), false);
+  });
+
+  it("a query-limited result is not a notice (that is how the search was asked), and neither is a complete one", () => {
+    assert.deepEqual(extractNotices("verify_claim", QUERY_LIMITED, false), []);
+    assert.deepEqual(extractNotices("verify_claim", COMPLETE(), false), []);
+  });
+
+  it("an answer that calls the check exhaustive without saying it stopped early gets the footer; an honest one does not", () => {
+    const n = extractNotices("verify_claim", INTERRUPTED(360), false);
+    assert.match(footerFor("An exhaustive check across all passages found no support.", n) ?? "", /not checked/i);
+    assert.equal(footerFor("I checked 360 of 698 passages; checking was interrupted, so the rest are unchecked.", n), null);
+    assert.equal(footerFor("Only part of the papers were checked (a budget stop).", n), null);
+  });
+});
+
+describe("any failed result is a notice, not only a typed refusal", () => {
+  it("a host timeout or an execution error is reported with its text", () => {
+    const t = extractNotices("verify_claim", "MCP request timed out after 60000ms", true);
+    assert.equal(t.length, 1);
+    assert.match(t[0]?.line ?? "", /verify_claim failed: MCP request timed out/);
+    assert.equal(extractNotices("compile_document", "Error executing tool compile_document: boom", true).length, 1);
+  });
+
+  it("is covered by an answer that says it failed or timed out, and not by one that says nothing", () => {
+    const n = extractNotices("verify_claim", "MCP request timed out after 60000ms", true);
+    assert.equal(footerFor("The verification timed out, so nothing was checked.", n), null);
+    assert.equal(footerFor("The call failed.", n), null);
+    assert.match(footerFor("An exhaustive check of all 14 papers was performed.", n) ?? "", /verify_claim failed/);
+  });
+
+  it("a typed refusal is still one notice, not two", () => {
+    assert.equal(extractNotices("verify_claim", REFUSED, true).length, 1);
+  });
+
+  it("a successful result with no warnings has none", () => {
+    assert.deepEqual(extractNotices("paper_registry", "4 papers selected", false), []);
+  });
+});
+
+describe("a guard block is a notice", () => {
+  const BLOCKED = `${BLOCK_PREFIX} This command would delete or overwrite the project's \`.registry/\`. The user declined it. Do not work around this.`;
+
+  it("any tool's blocked result becomes a notice, with the reason", () => {
+    const n = extractNotices("bash", BLOCKED, true);
+    assert.equal(n.length, 1);
+    assert.match(n[0]?.line ?? "", /bash was blocked/);
+    assert.match(n[0]?.line ?? "", /declined/);
+  });
+
+  it("the answer saying the command was not run covers it; one that does not gets the footer", () => {
+    const n = extractNotices("bash", BLOCKED, true);
+    assert.equal(footerFor("I did not run it: you declined the confirmation.", n), null);
+    assert.equal(footerFor("The command was blocked, so your registry is intact.", n), null);
+    assert.match(footerFor("Done! Anything else?", n) ?? "", /bash was blocked/);
+  });
+
+  it("the extension watches blocked results of tools that are not uktub's", () => {
+    type H = (e: never, ctx?: never) => unknown;
+    const h: Record<string, H> = {};
+    uktubScholarExtension({ registerMcpServer: () => {}, on: (ev: string, fn: H) => void (h[ev] = fn) } as never);
+    h.agent_start?.({ type: "agent_start" } as never);
+    h.tool_result?.({ toolName: "bash", content: [{ type: "text", text: BLOCKED }], isError: true } as never);
+    const out = h.message_end?.({ message: { role: "assistant", content: [{ type: "text", text: "All done." }], stopReason: "stop" } } as never) as { message: { content: { text?: string }[] } } | undefined;
+    assert.match(out?.message.content.map((c) => c.text ?? "").join("\n") ?? "", /bash was blocked/);
   });
 });
 
@@ -87,6 +172,21 @@ describe("the Pi extension appends unmentioned notices to the final answer only"
     assert.equal(h.message_end?.({ message: assistant("verify_claim was refused: VERIFY_ENGINE_MISSING.") } as never), undefined);
     h.agent_start?.({ type: "agent_start" } as never);
     assert.equal(h.message_end?.({ message: assistant("all good") } as never), undefined);
+  });
+
+  it("an interruption the agent finished by following the continuation leaves no footer; an unfinished one does", () => {
+    const h = wire();
+    h.agent_start?.({ type: "agent_start" } as never);
+    h.tool_result?.(toolResult("mcp__uktub_scholar__verify_claim", INTERRUPTED(120)) as never);
+    h.tool_result?.(toolResult("mcp__uktub_scholar__verify_claim", COMPLETE()) as never);
+    assert.equal(h.message_end?.({ message: assistant("Checked everything: no support.") } as never), undefined);
+    h.agent_start?.({ type: "agent_start" } as never);
+    h.tool_result?.(toolResult("mcp__uktub_scholar__verify_claim", INTERRUPTED(120)) as never);
+    h.tool_result?.(toolResult("mcp__uktub_scholar__verify_claim", INTERRUPTED(240)) as never);
+    const out = h.message_end?.({ message: assistant("An exhaustive check found no support.") } as never) as { message: { content: { text?: string }[] } };
+    const texts = out.message.content.map((c) => c.text ?? "").join("\n");
+    assert.match(texts, /458 of 698/, "the latest page's counts, once");
+    assert.doesNotMatch(texts, /578 of 698/);
   });
 
   it("notices do not leak into the next run, and other tools' results are ignored", () => {

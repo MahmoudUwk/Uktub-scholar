@@ -63,7 +63,15 @@ export interface McpServerOptions {
   queue?: ToolContext["queue"];
   download?: ToolContext["download"];
   providerConfig?: ToolContext["providerConfig"];
+  /** Milliseconds between progress heartbeats on a running tool call (default HEARTBEAT_MS). */
+  heartbeatMs?: number;
 }
+
+/**
+ * Client policy: hosts time a request out (Pi: 60 s) unless the server reports progress, and a verification on a CPU engine, the first
+ * compile (tectonic fetches its TeX bundle) or a large attach can take longer. A heartbeat every 15 s keeps those calls alive.
+ */
+export const HEARTBEAT_MS = 15_000;
 
 const REFUSAL_SEMANTICS =
   "On failure the result is an error carrying a stable code — " +
@@ -262,6 +270,20 @@ export function createMcpServer(targetDirOrOptions?: string | McpServerOptions):
     const toolName = normalizeToolName(name);
     const safeArgs = typeof args === "object" && args !== null && !Array.isArray(args) ? args : {};
 
+    // MCP progress: only when the client sent a progressToken; notifications/progress resets the host's request timeout.
+    const progressToken = request.params._meta?.progressToken;
+    const started = Date.now();
+    let beat = 0;
+    const heartbeat =
+      progressToken === undefined
+        ? null
+        : setInterval(() => {
+            beat += 1;
+            void extra
+              .sendNotification({ method: "notifications/progress", params: { progressToken, progress: beat, message: `uktub-scholar: ${toolName} still working (${Math.round((Date.now() - started) / 1000)} s)` } })
+              .catch(() => {});
+          }, options.heartbeatMs ?? HEARTBEAT_MS);
+
     try {
       switch (toolName) {
         case "search_papers":
@@ -286,6 +308,8 @@ export function createMcpServer(targetDirOrOptions?: string | McpServerOptions):
         content: [{ type: "text", text: `Error executing tool ${name}: ${message}` }],
         isError: true,
       };
+    } finally {
+      if (heartbeat !== null) clearInterval(heartbeat);
     }
   });
 

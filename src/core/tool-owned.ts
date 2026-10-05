@@ -34,3 +34,31 @@ export function toolOwnedViolation(cwd: string, path: string): string | null {
   }
   return null;
 }
+
+const REGISTRY = String.raw`(?:[^\s|;&"']*[/\\])?\.registry(?:[/\\][^\s|;&"']*)?`;
+const BIB = String.raw`[^\s|;&"']*references\.bib`;
+const TARGET = `(?:${REGISTRY}|${BIB})`;
+const DESTRUCTIVE: RegExp[] = [
+  // verbs that remove, move or empty their operands (the target anywhere in the same simple command)
+  new RegExp(String.raw`(?:^|[\s;&|(])(?:rm|rmdir|unlink|shred|mv|truncate|dd)\b[^;&|\n]*${TARGET}`),
+  new RegExp(String.raw`\bgit\s+clean\b[^;&|\n]*${TARGET}`),
+  new RegExp(String.raw`\bfind\b[^;&|\n]*(?:\.registry|references\.bib)[^;&|\n]*-delete|\bfind\b[^;&|\n]*-delete[^;&|\n]*(?:\.registry|references\.bib)`),
+  // writes onto the target: redirection, tee, in-place sed, cp with the target last
+  new RegExp(String.raw`>>?\s*${TARGET}`),
+  new RegExp(String.raw`\btee\b[^;&|\n]*${TARGET}`),
+  new RegExp(String.raw`\bsed\s+-[a-zA-Z.]*i[^;&|\n]*${TARGET}`),
+  new RegExp(String.raw`\bcp\b[^;&|\n]*\s${TARGET}\s*(?:$|[;&|])`),
+];
+
+/**
+ * A reason to ask the human first when a shell command would remove, move, empty or overwrite the registry directory or the rendered
+ * bibliography, else null. A heuristic over the command text for the common spellings (the edit/write route is blocked outright above);
+ * a shell can always be spelled around it, so this is a speed bump for honest mistakes, not a sandbox.
+ */
+export function destructiveToolOwnedCommand(command: string): string | null {
+  if (!DESTRUCTIVE.some((re) => re.test(command))) return null;
+  const registry = new RegExp(REGISTRY).test(command);
+  return registry
+    ? "This command would delete or overwrite the project's `.registry/` (the paper registry, extracted sources and cached judgments). That cannot be undone, and refs/references.bib is rendered from it."
+    : "This command would overwrite or delete refs/references.bib. It is rendered from the registry (`uktub-scholar sync-bib` or paper_registry sync_bibliography restores it), but the file is the project's bibliography.";
+}

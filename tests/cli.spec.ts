@@ -597,6 +597,43 @@ describe("mcp command", () => {
     }
   });
 
+  it("--help, -h and help print the usage and exit 0, also for subcommands", async () => {
+    for (const argv of [["--help"], ["-h"], ["help"], ["mcp", "install", "--help"], ["eos", "--help"], ["tectonic", "-h"]]) {
+      const c = io();
+      assert.equal(await runCli(argv, c), 0, argv.join(" "));
+      assert.match(c.lines.out.join("\n"), /usage: uktub-scholar/, argv.join(" "));
+      assert.equal(c.lines.err.length, 0, argv.join(" "));
+    }
+  });
+
+  it("mcp install treats a zero-byte or blank config file as empty, not as corrupt", async () => {
+    for (const blank of ["", "  \n\t\n"]) {
+      writeFileSync(join(root, ".mcp.json"), blank, "utf8");
+      const c = io();
+      assert.equal(await runCli(["mcp", "install", "--host", "claude"], c), 0, JSON.stringify(blank));
+      assert.ok(JSON.parse(readFileSync(join(root, ".mcp.json"), "utf8")).mcpServers["uktub-scholar"]);
+    }
+  });
+
+  it("mcp install --host codex says so when the entry is already there and leaves the file alone", async () => {
+    const first = io();
+    await runCli(["mcp", "install", "--host", "codex"], first);
+    const before = readFileSync(join(root, ".codex", "config.toml"), "utf8");
+    const second = io();
+    assert.equal(await runCli(["mcp", "install", "--host", "codex"], second), 0);
+    assert.match(second.lines.out.join("\n"), /already/i);
+    assert.doesNotMatch(second.lines.out.join("\n"), /^Wrote/m);
+    assert.equal(readFileSync(join(root, ".codex", "config.toml"), "utf8"), before);
+  });
+
+  it("register and attach exit 1 when EVERY item was refused (a script must not read success), and 0 when any item succeeded", async () => {
+    const allBad = io();
+    assert.equal(await runCli(["register", "not-a-doi"], allBad), 1);
+    assert.match(allBad.lines.err.join("\n") + allBad.lines.out.join("\n"), /INVALID_DOI/);
+    const attachBad = io();
+    assert.equal(await runCli(["attach", "no-such-handle", "nope.pdf"], attachBad), 1);
+  });
+
   it("mcp install --host without argument errors with clear message", async () => {
     const c = io();
     assert.equal(await runCli(["mcp", "install", "--host"], c), 1);

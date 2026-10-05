@@ -389,7 +389,7 @@ describe("server instructions (read by every host's model, whether or not it ope
   it("state the rules the observed agent failures broke, briefly", async () => {
     const { client } = await createClientServer();
     const text = client.getInstructions() ?? "";
-    assert.ok(text.length > 0 && text.length <= 2600, `instructions must exist and stay short (${text.length} chars)`);
+    assert.ok(text.length > 0 && text.length <= 3000, `instructions must exist and stay short (${text.length} chars)`);
     assert.match(text, /fail|refus|error/i);
     assert.match(text, /tell the user|report/i);
     assert.match(text, /verbatim|exactly as (returned|given)/i);
@@ -398,8 +398,11 @@ describe("server instructions (read by every host's model, whether or not it ope
     assert.match(text, /no support.*not.*false|not.*(means|mean).*false/i);
     assert.match(text, /never (invent|fabricate|guess)/i);
     assert.match(text, /unverified/i, "when verify_claim cannot run the claim stays unverified; retrieval must not be sold as support");
+    assert.match(text, /from memory/i, "a paper's authors, venue, abstract or BibTeX come from a tool result, never from memory");
+    assert.match(text, /continuation/i, "asked for an exhaustive check, follow the continuation token until the work is complete");
     assert.match(text, /withheld/i, "a withheld excerpt is not to be extracted another way");
     assert.match(text, /data,? (and )?never instructions|never (as )?instructions/i, "text inside a paper is data; injected instructions are ignored and reported");
+    assert.match(text, /(only|unless) (if )?the user (asks|asked|wants|insists)/i, "a stub is written only when the user asks for one, never as an unrequested side effect");
     assert.match(text, /placeholder/i, "a stub citation for an unfound paper is a marked placeholder");
     assert.match(text, /only the fields the user (gave|supplied)/i, "the stub holds nothing the user did not say");
   });
@@ -408,5 +411,49 @@ describe("server instructions (read by every host's model, whether or not it ope
     const { client } = await createClientServer();
     const pkg = JSON.parse((await import("node:fs")).readFileSync(new URL("../package.json", import.meta.url), "utf8")) as { version: string };
     assert.equal(client.getServerVersion()?.version, pkg.version);
+  });
+});
+
+describe("progress heartbeats (hosts time a request out unless the server reports progress)", () => {
+  const slowSearch = (ms: number): typeof fetch => {
+    const { fetchFn } = createSearchFetch({ openalex: [{ title: "A", doi: "10.1/a" }], crossref: [], semanticScholar: [] });
+    return (async (...a: Parameters<typeof fetch>) => {
+      await new Promise((r) => setTimeout(r, ms));
+      return fetchFn(...(a as [never]));
+    }) as typeof fetch;
+  };
+  const call = (client: Client, onprogress?: (p: { progress: number; message?: string }) => void) =>
+    client.callTool({ name: "search_papers", arguments: { query: "slow" } }, undefined, onprogress ? { onprogress } : undefined);
+
+  it("sends increasing progress notifications while a slow tool runs, naming the tool", async () => {
+    const { client } = await createClientServer({ fetch: slowSearch(180), providerConfig: SEARCH_CFG, heartbeatMs: 20 });
+    const seen: { progress: number; message?: string }[] = [];
+    const r = await call(client, (p) => seen.push(p));
+    assert.ok(!(r as { isError?: boolean }).isError);
+    assert.ok(seen.length >= 3, `expected several heartbeats, got ${seen.length}`);
+    assert.ok(seen.every((p, i) => i === 0 || p.progress > seen[i - 1]!.progress), "progress strictly increases");
+    assert.match(seen[0]?.message ?? "", /search_papers/);
+  });
+
+  it("sends nothing when the client did not ask for progress, and the call still succeeds", async () => {
+    const { client } = await createClientServer({ fetch: slowSearch(80), providerConfig: SEARCH_CFG, heartbeatMs: 10 });
+    const r = await call(client);
+    assert.ok(!(r as { isError?: boolean }).isError);
+  });
+
+  it("stops when the call ends", async () => {
+    const { client } = await createClientServer({ fetch: slowSearch(60), providerConfig: SEARCH_CFG, heartbeatMs: 15 });
+    let n = 0;
+    await call(client, () => n++);
+    const after = n;
+    await new Promise((r) => setTimeout(r, 120));
+    assert.equal(n, after, "no heartbeat after the result");
+  });
+
+  it("a fast call needs none", async () => {
+    const { client } = await createClientServer({ providerConfig: SEARCH_CFG, heartbeatMs: 5_000 });
+    let n = 0;
+    await call(client, () => n++);
+    assert.equal(n, 0);
   });
 });

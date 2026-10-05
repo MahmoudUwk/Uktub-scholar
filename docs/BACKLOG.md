@@ -55,7 +55,7 @@ Every milestone was developed behavior-first (TDD) and verified with zero-mock t
 - **Node-native Eos:** `eos-onnx` is a Python worker. `onnxruntime-node` plus a JS tokenizer would remove Python entirely; unproven (the prompt encoder is token-exact in Python only). Also untested on macOS/Windows and above 1,728-token contexts.
 - **Installer hardening not built (no consumer yet):** a mirror override for the three downloads, resumable `.part` files for the 700 MB model, `eos install --verify` offline revalidation, bounded retry with backoff on transient network errors.
 - **llama.cpp pin:** `b11398` is verified on 6 platforms; upstream now publishes semver tags (v0.6.0 on 2026-10-05). Re-pinning needs the parity gate again.
-- **Agent enforcement stops at edit/write:** the file guard and notices footer exist only in the Pi extension; other MCP hosts get the rules in the handshake but no enforcement. A destructive explicit request (wipe the registry) is not confirmed first.
+- **Agent enforcement exists only in the Pi extension:** the file guard, the shell confirm dialog (a heuristic over the command text, not a sandbox) and the notices footer; other MCP hosts get the rules in the handshake but no enforcement.
 - **`win32-arm64` has no official tectonic build;** `eos install` assumes `python3` on PATH (override `UKTUB_EOS_ONNX_BOOTSTRAP_PYTHON`) and a venv-capable Python (Debian needs `python3-venv`).
 
 ---

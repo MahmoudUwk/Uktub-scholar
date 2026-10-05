@@ -101,6 +101,12 @@ function reportTool(result: ToolResult<unknown>, io: CliIo): number {
     io.err(`error: ${text}`);
     return 1;
   }
+  // Per-item refusals are outcomes (a partly successful batch exits 0), but a call in which EVERY item was refused must not read as success.
+  const outcomes = (result.structuredContent as { outcomes?: { status?: string }[] } | null)?.outcomes;
+  if (Array.isArray(outcomes) && outcomes.length > 0 && outcomes.every((o) => o.status === "refused")) {
+    io.err(`error: ${text}`);
+    return 1;
+  }
   io.out(text);
   return 0;
 }
@@ -323,6 +329,7 @@ function readJsonFile(filePath: string): { ok: true; data: Record<string, unknow
   if (!existsSync(filePath)) return { ok: true, data: {} };
   try {
     const raw = readFileSync(filePath, "utf8");
+    if (raw.trim().length === 0) return { ok: true, data: {} }; // a touched, empty file is not a corrupt one
     const parsed = JSON.parse(raw);
     if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
       return { ok: false, error: `${filePath} does not contain a JSON object` };
@@ -464,11 +471,13 @@ async function mcpInstallCommand(args: string[], io: CliIo): Promise<number> {
       if (existsSync(target)) {
         existing = readFileSync(target, "utf8");
       }
-      if (!existing.includes("[mcp_servers.uktub-scholar]")) {
-        const content = existing.length > 0 ? (existing.endsWith("\n") ? existing : existing + "\n") + "\n" + snippet : snippet;
-        mkdirSync(dirname(target), { recursive: true });
-        writeFileSync(target, content, "utf8");
+      if (/^\s*\[mcp_servers\.(?:uktub-scholar|"uktub-scholar")\]/m.test(existing)) {
+        io.out(`MCP server configuration for codex is already in .codex/config.toml; left unchanged.`);
+        return 0;
       }
+      const content = existing.length > 0 ? (existing.endsWith("\n") ? existing : existing + "\n") + "\n" + snippet : snippet;
+      mkdirSync(dirname(target), { recursive: true });
+      writeFileSync(target, content, "utf8");
       io.out(`Wrote MCP server configuration for codex to .codex/config.toml:\n\n${snippet}`);
       return 0;
     }
@@ -538,6 +547,12 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
   const err = io.err;
   const root = io.cwd ?? process.cwd();
   const [command, ...args] = argv;
+
+  // Help: `help`, or --help/-h anywhere except in the free-text commands (a claim or a query may contain the word).
+  if (command === "help" || (command !== "verify" && command !== "search" && argv.some((a) => a === "--help" || a === "-h"))) {
+    out(USAGE);
+    return 0;
+  }
 
   try {
     switch (command) {
