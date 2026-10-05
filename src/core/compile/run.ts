@@ -54,6 +54,13 @@ export type CompileOutcome =
 /** Deterministic human text the tool/CLI both render from an outcome. Refusals
  * are NOT rendered here — they go through renderRefusal/refusalResult so the
  * stable `next` hint comes from the one refusal table (KTD6). */
+/**
+ * Tectonic runs BibTeX, not biber, and it cannot hand `../` paths to an external tool. The layout this package creates keeps the
+ * bibliography at refs/references.bib beside manuscript/, so a biblatex setup fails with an error that is precise but not actionable.
+ */
+const BIBTEX_HINT = "Tectonic runs BibTeX, not biber, so biblatex with \\addbibresource cannot read the bibliography through `../`. From manuscript/ use `\\bibliographystyle{plain}` and `\\bibliography{../refs/references}` (no biblatex), cite with \\cite{citekey}, and do not copy or edit refs/references.bib.";
+const HINTS: { test: RegExp }[] = [{ test: /relative parent paths are not supported for the external tool/i }, { test: /biber\b.*(not found|no such file)|(not found|no such file).*biber\b/i }];
+
 export function describeOutcome(outcome: Exclude<CompileOutcome, { kind: "refusal" }>): string {
   const d = outcome.diagnostics;
   const errors = d.filter((x) => x.severity === "error");
@@ -67,7 +74,8 @@ export function describeOutcome(outcome: Exclude<CompileOutcome, { kind: "refusa
     return `- ${x.severity}${at ? ` ${at}` : ""}: ${x.message}`;
   });
   if (outcome.truncated) lines.push(`- (diagnostics truncated at the ${d.length} shown)`);
-  return [head, ...lines].join("\n");
+  const hint = d.some((x) => x.severity === "error" && HINTS.some((h) => h.test.test(x.message))) ? [`hint: ${BIBTEX_HINT}`] : [];
+  return [head, ...lines, ...hint].join("\n");
 }
 
 /** Resolve the entry .tex: explicit param (confined) or the documented defaults. */

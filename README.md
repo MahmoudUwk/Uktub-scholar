@@ -72,7 +72,9 @@ agent rules to Pi's system prompt, and blocks the agent's `edit`/`write` on `ref
 `.registry/` (agent read-only, human writable; a shell is not blocked). It also keeps the agent honest
 deterministically: any refusal or warning a uktub tool returned during a run (a failed `verify_claim`, a search
 provider that did not answer, compile warnings) that the final answer does not mention is appended to it as a
-"Tool notices" footer, because models drop such details.
+"Tool notices" footer, because models drop such details: an interrupted or timed-out verification, a guard block, a failed call, and any
+registry change (registered, removed, attached) the answer does not mention. The server also sends progress heartbeats so a host's request
+timeout does not kill a long call, and the supervised embedding server is ended even when the host is SIGKILLed (POSIX).
 
 ### 3. LaTeX Engine & Project Initialization
 

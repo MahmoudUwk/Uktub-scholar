@@ -1,18 +1,17 @@
-import { fileURLToPath } from "node:url";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { AGENT_RULES } from "../core/agent-rules.ts";
+import { BIN_PATH } from "../core/launch.ts";
 import { BLOCK_PREFIX, type Notice, clearedIds, extractNotices, footerFor } from "../core/notices.ts";
 import { destructiveToolOwnedCommand, toolOwnedViolation } from "../core/tool-owned.ts";
 
 /** Pi names an MCP server's tools `mcp__<server>__<tool>`. */
 const TOOL_PREFIX = "mcp__uktub_scholar__";
 /** The bin shim of THIS package copy: `pi install` does not link bins onto PATH, so a bare `uktub-scholar` is ENOENT. */
-const BIN = fileURLToPath(new URL("../../bin/uktub-scholar.js", import.meta.url));
 
 export default function uktubScholarExtension(pi: ExtensionAPI): void {
   pi.registerMcpServer("uktub-scholar", {
     command: process.execPath,
-    args: [BIN, "mcp"],
+    args: [BIN_PATH, "mcp"],
     // Five small tools: declared to the model directly (the codemode default hides them from a small model).
     exposure: "direct",
     description: "Scholarly research for the project: search papers, manage the paper registry and bibliography, compile LaTeX, find passages, verify a claim against registered papers.",

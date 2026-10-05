@@ -54,3 +54,27 @@ Research was delegated to Hermes (online) and one bounded native subagent (ONNX 
 - The engine misses claim A ("single shared ViT backbone for both IQ and spectrogram inputs") on both the torch and ONNX engines although the paper
   states it: recall is 90.5% by the 2026-10-05 review, so no-support is never a verdict.
 - One model, one machine, nine scenarios: this is a probe, not a benchmark.
+
+## Round 2: scripted live suite (every MCP tool and action)
+
+Twenty natural-language turns (no tool names) against a 14-paper corpus with the managed engines, asserted on the **transcript**: `search_papers`;
+`paper_registry` register (+alias), read (limit, cursor, fields, handles, bibtex), attach_source (+ path escape), sync_bibliography, remove;
+`search_passages` (hybrid, scoped, across all); `verify_claim` (all papers with continuation to completion, scoped + query, direct passages);
+`compile_document` (error → fix → recompile); plus refusals, a missing paper, an injection PDF, two destructive-request dialogs and an end-to-end
+related-work workflow. A simulated human answers the extension's confirm dialogs by policy.
+
+| Run | Result |
+|---|---|
+| Flash Lite, final code, 3 consecutive | 19/19 each (2 with an honest "stopped before complete" warning on the exhaustive check) |
+| Gemini 3.8 Flash, final code | 20/20; fewer wasted calls; refuses the registry wipe outright and hands the user the command (the dialog is then never reached) |
+
+Defects the suite found, each fixed test-first and re-run: a CPU-engine call died at Pi's 60 s MCP timeout (now progress heartbeats; six ~105 s calls
+succeeded live) and the agent then claimed an exhaustive check (notices now cover interruptions, guard blocks and any failed result); the agent
+registered papers the user did not ask for and ignored "only my registry" (rules + a registry-change audit trail in the footer); stated BibTeX
+from memory (rule); created stub files for unfound identifiers it was not asked to stub (rule); a refusal naming `uktub-scholar init`, a command on no PATH
+(now `node "<abs bin>" init`); six compile attempts on `biblatex` through `../` (the compile result now carries the working BibTeX recipe); the
+destructive-shell dialog's decline message made the agent refuse forever (it now allows an explicit repeat); `llama-server` surviving a SIGKILLed host
+(a parent-death watcher); no retry on transient download failures (bounded backoff, never for integrity failures).
+
+Suite caveats: one project, one model family, session memory carries across turns (it once re-created a stub the user had asked for earlier), and
+Vertex occasionally returns a provider error on a turn (the harness retries that turn once).

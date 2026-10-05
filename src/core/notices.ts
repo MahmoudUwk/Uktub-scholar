@@ -65,6 +65,12 @@ export function extractNotices(tool: string, text: string, isError: boolean): No
       line: `${tool} failed: ${clip(text, 200)}`,
     });
   }
+  if (tool === "paper_registry") {
+    // an audit trail of what changed the bibliography, so a silent change cannot stay silent
+    for (const m of text.matchAll(/^\[\d+\] (registered|updated|removed|attached) (\S+) (\S+)/gm)) {
+      out.push({ id: `changed|${m[1]}|${m[2]}`, key: m[2] ?? "", anyOf: [m[3] ?? ""], line: `paper_registry ${m[1]} ${m[2]} (${m[3]})` });
+    }
+  }
   for (const m of text.matchAll(/^warning: (\S+) — ([A-Z_]+): (.*)$/gm)) {
     out.push({ key: m[1] ?? "", line: `${tool}: provider ${m[1]} did not answer (${m[2]}: ${clip(m[3] ?? "", 160)})` });
   }

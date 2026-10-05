@@ -44,16 +44,14 @@ Every milestone was developed behavior-first (TDD) and verified with zero-mock t
 - **Citation graph exploration ("PaperRabbit / ResearchRabbit"):** An interactive topological graph over registered papers (citekeys), claims, and supporting passages (`doi@revision#start-end`), with citation edges ("cites / cited by" via OpenAlex) and semantic edges ("similar to" via passage vectors). Deferred as the final capability on the long arc.
 
 ### 5. Findings from the 2026-10-05 review (open)
-- **Host SIGKILL / OOM-kill orphans `llama-server`:** SIGTERM/SIGINT/SIGHUP/stdin-close are handled; an uncatchable kill of the host leaves the child (~0.4 GB) running until the next manual kill. Needs a watchdog (child polls the parent pid) or a Linux `PR_SET_PDEATHSIG` launcher.
 - **Eos verification margins are thin:** on the 42 TRUE / 42 FALSE stratified sample recall is 90.5 % (bar 90), specificity 95.2 % (bar 95), precision 95.0 % (bar 95). Any engine or retrieval change needs a re-run on a larger, independently written claim set before the bar is restated.
 - **Search typo tolerance is not provided:** `search_papers` forwards free text to providers that do not correct typos; Semantic Scholar's shared unauthenticated pool also answers HTTP 429 often. Set `SEMANTIC_SCHOLAR_API_KEY` for reliable three-way fusion; a fuzzy-title pass is an owner-gated option.
-- **`mcp install` strictness:** JSONC (comments) and zero-byte config files are refused rather than parsed/treated as empty; the codex branch detects an existing entry by substring and reports "Wrote …" when it skipped.
-- **CLI exit codes:** `attach`/`register` exit 0 when every item was refused (per-item refusals are outcomes by design); scripted callers must read the output or the MCP `structuredContent`.
+- **`mcp install` strictness:** JSONC (comments) in `opencode.json` is refused rather than parsed (zero-byte files and the codex "already present" case are handled).
 
 ### 6. Packaging and agent follow-ups (2026-10-05, see [agent-session-review-2026-10-05.md](agent-session-review-2026-10-05.md))
 - **Not published:** `package.json` is still `private: true`; a registry publish (npm trusted publishing with provenance) is an owner decision. Until then `npx -y uktub-scholar` does not exist; installs are from a checkout or a tarball.
 - **Node-native Eos:** `eos-onnx` is a Python worker. `onnxruntime-node` plus a JS tokenizer would remove Python entirely; unproven (the prompt encoder is token-exact in Python only). Also untested on macOS/Windows and above 1,728-token contexts.
-- **Installer hardening not built (no consumer yet):** a mirror override for the three downloads, resumable `.part` files for the 700 MB model, `eos install --verify` offline revalidation, bounded retry with backoff on transient network errors.
+- **Installer hardening still not built (no consumer yet):** a mirror override for the three downloads, resumable `.part` files for the 700 MB model, `eos install --verify` offline revalidation. (Bounded retry with backoff on transient failures exists.)
 - **llama.cpp pin:** `b11398` is verified on 6 platforms; upstream now publishes semver tags (v0.6.0 on 2026-10-05). Re-pinning needs the parity gate again.
 - **Agent enforcement exists only in the Pi extension:** the file guard, the shell confirm dialog (a heuristic over the command text, not a sandbox) and the notices footer; other MCP hosts get the rules in the handshake but no enforcement.
 - **`win32-arm64` has no official tectonic build;** `eos install` assumes `python3` on PATH (override `UKTUB_EOS_ONNX_BOOTSTRAP_PYTHON`) and a venv-capable Python (Debian needs `python3-venv`).

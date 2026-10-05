@@ -68,6 +68,40 @@ describe("interrupted verification", () => {
   });
 });
 
+describe("registry changes are an audit trail", () => {
+  const REGISTER = "register: 3 input(s) — 2 registered, 1 duplicate\n[0] registered chen2024role 10.1109/mwc.005.2300481\n[1] updated wang2025federated 10.1109/twc.2025.3531128 [uncitable]\n[2] duplicate of [0] chen2024role 10.1109/mwc.005.2300481";
+  const REMOVE = "remove: 1 input(s) — 1 removed\n[0] removed love2014moderated 10.1186/s13059-014-0550-8";
+  const ATTACH = "attach_source: 1 input(s) — 1 attached\n[0] attached aboulfotouh2025multimodal 10.48550/arxiv.2511.15162 — source ready, revision 9f3e, 29970 characters, 6 pages, 30 passages";
+
+  it("registered, updated, removed and attached outcomes are notices; duplicates, absences and reads are not", () => {
+    const keys = (tool: string, text: string) => extractNotices(tool, text, false).map((n) => n.key);
+    assert.deepEqual(keys("paper_registry", REGISTER), ["chen2024role", "wang2025federated"]);
+    assert.deepEqual(keys("paper_registry", REMOVE), ["love2014moderated"]);
+    assert.deepEqual(keys("paper_registry", ATTACH), ["aboulfotouh2025multimodal"]);
+    assert.deepEqual(keys("paper_registry", "4 papers selected (whole registry); showing 4\nchen2024role | 10.1/x | A (2024)"), []);
+    assert.deepEqual(keys("paper_registry", "[0] absent foo — no registered paper has this DOI or citekey"), []);
+  });
+
+  it("the line says what changed", () => {
+    const n = extractNotices("paper_registry", REGISTER, false);
+    assert.match(n[0]?.line ?? "", /registered chen2024role/);
+    assert.match(n[1]?.line ?? "", /updated wang2025federated/);
+  });
+
+  it("an answer naming the citekey or the DOI covers it; one that says nothing about it gets listed", () => {
+    const n = extractNotices("paper_registry", REGISTER, false);
+    assert.equal(footerFor("I added chen2024role and updated wang2025federated.", n), null);
+    assert.equal(footerFor("Added 10.1109/mwc.005.2300481, refreshed 10.1109/twc.2025.3531128.", n), null);
+    const f = footerFor("Done, the paragraph is written.", n) ?? "";
+    assert.match(f, /registered chen2024role/);
+    assert.match(f, /updated wang2025federated/);
+  });
+
+  it("other tools never produce registry-change notices", () => {
+    assert.deepEqual(extractNotices("search_papers", REGISTER, false), []);
+  });
+});
+
 describe("any failed result is a notice, not only a typed refusal", () => {
   it("a host timeout or an execution error is reported with its text", () => {
     const t = extractNotices("verify_claim", "MCP request timed out after 60000ms", true);

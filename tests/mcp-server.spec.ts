@@ -126,6 +126,7 @@ describe("MCP Server tools/call paper_registry", () => {
     assert.equal(result.isError, true);
     assert.equal(result.structuredContent, undefined);
     assert.match(textContent(result), /Refused: REGISTRY_NOT_INITIALIZED/);
+    assert.match(textContent(result), /node "[^"]*bin[\\/]uktub-scholar\.js" init/, "the refusal names a command that runs from anywhere, not a bare uktub-scholar that is on no PATH");
   });
 
   it("handles register, read, remove, and sync_bibliography when registry is initialized", async () => {
@@ -389,7 +390,7 @@ describe("server instructions (read by every host's model, whether or not it ope
   it("state the rules the observed agent failures broke, briefly", async () => {
     const { client } = await createClientServer();
     const text = client.getInstructions() ?? "";
-    assert.ok(text.length > 0 && text.length <= 3000, `instructions must exist and stay short (${text.length} chars)`);
+    assert.ok(text.length > 0 && text.length <= 3600, `instructions must exist and stay short (${text.length} chars)`);
     assert.match(text, /fail|refus|error/i);
     assert.match(text, /tell the user|report/i);
     assert.match(text, /verbatim|exactly as (returned|given)/i);
@@ -398,6 +399,8 @@ describe("server instructions (read by every host's model, whether or not it ope
     assert.match(text, /no support.*not.*false|not.*(means|mean).*false/i);
     assert.match(text, /never (invent|fabricate|guess)/i);
     assert.match(text, /unverified/i, "when verify_claim cannot run the claim stays unverified; retrieval must not be sold as support");
+    assert.match(text, /only the papers (already )?in (my|the) registry|restrict/i, "when the user limits the sources to the registry, no searching or registering more");
+    assert.match(text, /register (a paper )?only when/i, "a question about papers is not a request to change the bibliography");
     assert.match(text, /from memory/i, "a paper's authors, venue, abstract or BibTeX come from a tool result, never from memory");
     assert.match(text, /continuation/i, "asked for an exhaustive check, follow the continuation token until the work is complete");
     assert.match(text, /withheld/i, "a withheld excerpt is not to be extracted another way");

@@ -13,7 +13,6 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { execFile, spawn } from "node:child_process";
 import { dirname, isAbsolute, join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 import type { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
@@ -31,6 +30,7 @@ import type { ToolContext, ToolResult } from "../core/tools/context.ts";
 import { verifyClaimTool, type VerifyClaimArgs, type VerifyHooks } from "../core/tools/verify.ts";
 import { searchPassagesTool, type SearchPassagesArgs } from "../core/tools/passages.ts";
 import { managedCacheDir } from "../core/embed/config.ts";
+import { BIN_PATH } from "../core/launch.ts";
 import { RuntimeError, installRuntime, installedPaths, platformKey, readLock, type RuntimeLock } from "../core/embed/runtime.ts";
 import { createMcpServer, validateTargetDir } from "../mcp/server.ts";
 
@@ -320,7 +320,7 @@ async function tectonicCommand(args: string[], io: CliIo): Promise<number> {
  * How a host launches this package's MCP server: `node` plus the absolute bin of THIS copy. A bare `uktub-scholar` is on no PATH for a
  * source checkout or a project-local install (`pnpm exec` is not PATH), so every generated config would fail with ENOENT.
  */
-const SERVER_LAUNCH = { command: "node", args: [fileURLToPath(new URL("../../bin/uktub-scholar.js", import.meta.url)), "mcp"] } as const;
+const SERVER_LAUNCH = { command: "node", args: [BIN_PATH, "mcp"] } as const;
 
 const ALLOWED_MCP_HOSTS = ["claude", "pi", "agy", "codex", "cursor", "opencode"] as const;
 type McpHost = (typeof ALLOWED_MCP_HOSTS)[number];

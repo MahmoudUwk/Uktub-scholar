@@ -166,16 +166,37 @@ export function installedPaths(lock: RuntimeLock, cacheDir: string, platform: st
 
 // ── download ────────────────────────────────────────────────────────────────
 
+/** Client policy: a transient download failure (network error, HTTP 408/429/5xx) is retried this many times with these delays. */
+export const DOWNLOAD_RETRY: { delaysMs: number[]; sleep: (ms: number) => Promise<void> } = { delaysMs: [1_000, 4_000], sleep: (ms) => new Promise((r) => setTimeout(r, ms)) };
+
+/** A download failure worth another attempt (network error, HTTP 408/429/5xx, a stream cut off); integrity failures and other 4xx never are. */
+const transientFailure = (message: string): RuntimeError => Object.assign(new RuntimeError("download_failed", message), { transient: true });
+
 export async function downloadVerified(fetchImpl: typeof fetch, url: string, dest: string, expect: { sha256: string; size: number }): Promise<void> {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await downloadOnce(fetchImpl, url, dest, expect);
+    } catch (err) {
+      const wait = DOWNLOAD_RETRY.delaysMs[attempt];
+      if (!(err as { transient?: boolean }).transient || wait === undefined) throw err;
+      await DOWNLOAD_RETRY.sleep(wait);
+    }
+  }
+}
+
+async function downloadOnce(fetchImpl: typeof fetch, url: string, dest: string, expect: { sha256: string; size: number }): Promise<void> {
   mkdirSync(join(dest, ".."), { recursive: true });
   const tmp = `${dest}.${process.pid}.${Date.now()}.part`;
   let res: Response;
   try {
     res = await fetchImpl(url, { redirect: "follow" });
   } catch (err) {
-    throw new RuntimeError("download_failed", `download failed: ${err instanceof Error ? err.message : String(err)}`);
+    throw transientFailure(`download failed: ${err instanceof Error ? err.message : String(err)}`);
   }
-  if (!res.ok || res.body === null) throw new RuntimeError("download_failed", `download failed: HTTP ${res.status}`);
+  if (!res.ok || res.body === null) {
+    const message = `download failed: HTTP ${res.status}`;
+    throw res.status === 408 || res.status === 429 || res.status >= 500 ? transientFailure(message) : new RuntimeError("download_failed", message);
+  }
   const hash = createHash("sha256");
   let bytes = 0;
   const gate = new Transform({
@@ -194,7 +215,7 @@ export async function downloadVerified(fetchImpl: typeof fetch, url: string, des
   } catch (err) {
     rmSync(tmp, { force: true });
     if (err instanceof RuntimeError) throw err;
-    throw new RuntimeError("download_failed", `download failed: ${err instanceof Error ? err.message : String(err)}`);
+    throw transientFailure(`download failed: ${err instanceof Error ? err.message : String(err)}`);
   }
 }
 
@@ -380,6 +401,23 @@ export async function startServer(o: { paths: InstallPaths; lock: RuntimeLock; c
   throw last!;
 }
 
+/**
+ * Exit handlers cannot run when the host is killed uncatchably (SIGKILL, an OOM kill), and Node has no parent-death signal, so the child
+ * would live on holding its port and memory. A tiny detached watcher polls both pids once a second and ends the child only when the
+ * parent is gone while the child is still alive; it exits by itself as soon as either side is gone. POSIX only.
+ */
+const WATCHER = 'while kill -0 "$1" 2>/dev/null && kill -0 "$2" 2>/dev/null; do sleep 1; done; if kill -0 "$2" 2>/dev/null && ! kill -0 "$1" 2>/dev/null; then kill -TERM "$2" 2>/dev/null; sleep 3; kill -KILL "$2" 2>/dev/null; fi';
+function watchParent(childPid: number | undefined): void {
+  if (process.platform === "win32" || childPid === undefined) return;
+  try {
+    const watcher = spawn("sh", ["-c", WATCHER, "uktub-watchdog", String(process.pid), String(childPid)], { detached: true, stdio: "ignore" });
+    watcher.on("error", () => {});
+    watcher.unref();
+  } catch {
+    // no sh: the signal handlers below still cover the catchable cases
+  }
+}
+
 async function startOnce(o: { paths: InstallPaths; lock: RuntimeLock; cacheDir: string }, port: number, timeoutMs: number): Promise<ManagedServer> {
   const logDir = join(o.cacheDir, "logs");
   mkdirSync(logDir, { recursive: true });
@@ -389,6 +427,7 @@ async function startOnce(o: { paths: InstallPaths; lock: RuntimeLock; cacheDir: 
   let exited: { code: number | null; signal: string | null } | null = null;
   const child = spawn(o.paths.server, ["-m", o.paths.model, "--host", "127.0.0.1", "--port", String(port), ...o.lock.embedding.serverArgs], { stdio: ["ignore", fd, fd] });
   closeSync(fd);
+  watchParent(child.pid);
   let spawnError: Error | null = null;
   child.once("error", (err) => (spawnError = err));
   child.once("exit", (code, signal) => (exited = { code, signal }));

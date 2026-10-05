@@ -10,7 +10,7 @@ import { mkdtempSync, mkdirSync, rmSync, writeFileSync, existsSync, statSync } f
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { compileDocument, timeoutMsFromEnv, DEFAULT_COMPILE_TIMEOUT_MS, type EngineSpawn } from "../src/core/compile/run.ts";
+import { compileDocument, describeOutcome, timeoutMsFromEnv, DEFAULT_COMPILE_TIMEOUT_MS, type EngineSpawn } from "../src/core/compile/run.ts";
 
 let root: string;
 
@@ -190,5 +190,30 @@ describe("prod spawn against a real tectonic (env-gated)", () => {
       assert.ok((outcome.pdfSizeBytes ?? 0) > 1000);
       assert.ok(statSync(join(root, "build", "main.pdf")).isFile());
     }
+  });
+});
+
+describe("describeOutcome hints (a precise engine error the model still cannot act on gets the working recipe)", () => {
+  const failed = (message: string) => ({
+    kind: "errors" as const,
+    entry: "manuscript/main.tex",
+    engineVersion: "0.17.0",
+    diagnostics: [{ severity: "error" as const, message }],
+    truncated: false,
+  });
+
+  it("biblatex through a parent path: names the BibTeX form that works from manuscript/", () => {
+    const text = describeOutcome(failed("relative parent paths are not supported for the external tool. Got path `../refs/references.bib`."));
+    assert.match(text, /hint:/i);
+    assert.match(text, /\\bibliography\{\.\.\/refs\/references\}/);
+    assert.match(text, /biblatex/i);
+  });
+
+  it("a missing biber is the same hint (Tectonic runs BibTeX, not biber)", () => {
+    assert.match(describeOutcome(failed("biber: command not found")), /\\bibliography/);
+  });
+
+  it("an ordinary error gets no hint, and a clean build none", () => {
+    assert.doesNotMatch(describeOutcome(failed("LaTeX Error: Environment itemze undefined.")), /hint:/i);
   });
 });

@@ -15,6 +15,7 @@
  * `ingested_at` is the only clock value and arrives through the injected
  * `now` (KTD6).
  */
+import { cliCommand } from "./launch.ts";
 import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join, parse, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
@@ -215,7 +216,7 @@ export function findEnclosingProject(root: string): string | null {
 export function openRegistry(root: string): DatabaseSync {
   const abs = join(root, REGISTRY_REL_PATH);
   if (!existsSync(abs)) {
-    throw new RegistryError("REGISTRY_NOT_INITIALIZED", `no registry at ${REGISTRY_REL_PATH} under ${root}`);
+    throw new RegistryError("REGISTRY_NOT_INITIALIZED", `no registry at ${REGISTRY_REL_PATH} under ${root}. To create one in that folder run: (cd "${root}" && ${cliCommand("init")})`);
   }
   return openDatabaseFile(abs, false);
 }
