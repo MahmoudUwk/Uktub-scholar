@@ -6,7 +6,7 @@ For coding agents and human contributors working on `uktub-scholar`.
 
 - `README.md`: installation, tools, CLI, configuration and limits.
 - `docs/VISION.md`: scope; `docs/DECISIONS.md`: rationale.
-- `docs/BACKLOG.md`: deferred work; `docs/review-2026-10-04.md`: independent review evidence and verification record.
+- `docs/BACKLOG.md`: deferred work; `docs/review-2026-10-05.md` (latest) and `docs/review-2026-10-04.md`: independent review evidence and verification record.
 - `docs/plans/`: dated plans with acceptance cases (history, not the current contract).
 - `src/core/`: host-independent domain code; `src/pi/` and `src/cli/`: adapters.
 - `benchmarks/`: dataset/protocol; `docs/benchmarks/`: measured evidence.

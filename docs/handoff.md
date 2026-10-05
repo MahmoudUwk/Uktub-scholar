@@ -66,7 +66,7 @@ If you identify any defect, race condition, data truncation, or missing handling
 1. Write a failing regression test or isolated reproduction script first.
 2. Verify that it reproduces the bug cleanly.
 3. Apply the minimal, robust fix to the codebase.
-4. Verify that the regression test now passes, alongside the existing 616 unit tests.
+4. Verify that the regression test now passes, alongside every existing test (`pnpm test`).
 5. **Never weaken or skip existing tests.**
 
 ### C. External Research via Hermes Subagents
@@ -94,7 +94,7 @@ The reviewer must execute the following 10 stress-test suites and document exact
   ```
 - **Validation Criteria:**
   - `tsc` exits 0 with zero errors and zero unused variables.
-  - All 611 tests across 141 suites pass cleanly (2 skipped by design: env-gated Julia engine).
+  - All tests pass (2 skipped by design: env-gated Julia engine); counts are recorded once, in `docs/review-2026-10-05.md`.
   - `tests/import-allowlist.spec.ts` passes: `src/core/`, `src/cli/`, and `src/mcp/` have zero imports of `@earendil-works/pi-coding-agent`.
 
 ### Subsystem 2: Unified Stdio MCP Server (JSON-RPC Protocol & Transports)
@@ -139,7 +139,7 @@ The reviewer must execute the following 10 stress-test suites and document exact
 - **Key Files:** `src/core/tools/context.ts`, `src/mcp/server.ts`, `tests/tools.spec.ts`, `tests/source-preparation.spec.ts`, `tests/mcp-server.spec.ts`.
 - **Stress-Test Scenarios:**
   1. **Directory Traversal:**
-     - Attempt targetDir / paths containing `../`, `../../etc`, `..\\windows`.
+     - Attempt `attach_source` `path` values and `mcp --dir` containing `../`, `../../etc`, `..\\windows`.
      - Verify rejection with `PATH_REFUSED` before filesystem access occurs.
   2. **Protected Segments:**
      - Attempt reading or writing `.registry/` or `.git/`.
@@ -158,9 +158,9 @@ The reviewer must execute the following 10 stress-test suites and document exact
 - **Goal:** Validate live scholarly search across OpenAlex, Crossref, and Semantic Scholar.
 - **Script:** `scripts/test-live-search.ts`
 - **Stress-Test Queries:**
-  - Exact DOI: `10.1038/s41586-020-2649-2` (AlphaFold)
-  - arXiv ID: `2411.09996` (Wireless Foundation Model)
-  - Misspelled query: `attenshun is all you ned` -> Expect "Attention Is All You Need"
+  - DOI-shaped: `10.1038/s41586-020-2649-2` (*Array programming with NumPy*) — `search_papers` is free-text by contract ("a DOI-shaped query still searches"); exact resolution is `paper_registry register`, so expect a hint, not that paper
+  - arXiv ID: `2411.09996` (Wireless Foundation Model) — same: register it, do not expect search to resolve it
+  - Misspelled query: `attenshun is all you ned` — typo tolerance was **not met** on 2026-10-05 (OpenAlex/Crossref do not correct typos; S2 rate-limits without a key); record what you observe
   - Multilingual queries: Arabic (`معالجة اللغات الطبيعية`), French (`apprentissage profond`)
   - Long natural language query (> 200 characters)
   - Nonsense query -> Expect 0 hits, `found: false` without exception
@@ -185,7 +185,7 @@ The reviewer must execute the following 10 stress-test suites and document exact
      - Verify handling of wrapped HTML (`<html><body><tei>`), case-insensitive XML tags, and direct `<div>` text preservation (> 200 chars).
   4. **PDF Extraction:**
      - Run `scripts/test-item4-extraction.ts` on the 14 real papers in `../test_papers`.
-     - Verify extraction time (< 150 ms/document).
+     - Verify extraction time (average < 150 ms/document; the 14-page `2506.06718v2` takes ≈ 225 ms).
      - Test hostile PDFs: missing `%PDF-` header, truncated `%%EOF`, missing text layer (scanned).
 
 ### Subsystem 7: Section Chunking & Tiling Math
@@ -224,7 +224,7 @@ The reviewer must execute the following 10 stress-test suites and document exact
      - Verify `embed install --yes` unpacks verified binary and GGUF into `UKTUB_CACHE_DIR`.
      - Verify `search_passages` starts `llama-server` on loopback.
      - Send `SIGKILL` to `llama-server` mid-session; verify supervisor auto-restarts the child process and answers subsequent queries.
-     - Send `SIGTERM` / `SIGINT` to the parent process; verify child `llama-server` is actively killed (no zombie/orphaned processes).
+     - Send `SIGTERM` / `SIGINT` / `SIGHUP` to the parent process; verify child `llama-server` is actively killed (no zombie/orphaned processes). `SIGKILL` of the parent cannot be handled and leaves the child running (known limitation, BACKLOG §5).
   2. **Hybrid RAG Fusion (BM25 + Cosine RRF k=60):**
      - Run 30 domain queries across Smart Home and RF sensing papers.
      - Verify 100% pointer resolution (`doi@revision#start-end`).
@@ -240,11 +240,11 @@ The reviewer must execute the following 10 stress-test suites and document exact
   1. **Engine Startup & Identity:**
      - Starts `scripts/decision2_decide.py` using Python environment (`UKTUB_EOS_PYTHON`).
      - Handshake check: returns `{"ready": true, "model": "...", "revision": "..."}` on first line.
-     - Memory footprint: $\approx 3\text{ GB}$ on CUDA GPU (VRAM).
+     - Memory footprint: $\approx 2\text{ GB}$ on CUDA GPU (1,925 MiB after load on an RTX 4060).
   2. **Verification Quality (Bar 0.99):**
-     - Test on 40 TRUE claims across scientific papers: target recall $\ge 90\%$ (measured: 95.0%).
-     - Test on 30 FALSE / altered claims: target specificity $\ge 95\%$ (measured: 96.7%).
-     - Verify precision $\ge 95\%$ (measured: 97.4%).
+     - `scripts/test-item7-claim-verification.ts` samples 42 TRUE and 42 FALSE claims (3 per paper × 14 papers): target recall $\ge 90\%$ (measured 2026-10-05: 90.5%, 38/42).
+     - FALSE / altered claims: target specificity $\ge 95\%$ (measured: 95.2%, 40/42).
+     - Verify precision $\ge 95\%$ (measured: 95.0%). Margins are thin; the run is deterministic.
   3. **Continuation & Paging:**
      - Test multi-page evidence output: verify continuation token resumes unfinished checking without re-judging cached passages.
      - Verify pointer integrity across pages.

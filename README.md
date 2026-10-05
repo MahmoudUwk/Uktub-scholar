@@ -22,8 +22,12 @@ The core is host-agnostic.
 Requires Node >= 22.19. From this checkout:
 
 ```sh
-pnpm install
+pnpm install     # also builds dist/ (the `prepare` script): the Pi package loads the compiled extension
 ```
+
+An installed copy (`npm pack` tarball or a registry install) ships compiled JavaScript in `dist/`, because Node
+refuses to type-strip TypeScript under `node_modules`; a source checkout runs `src/` directly. `mcp install`
+writes `node <absolute path of this copy's bin> mcp` into each host's config, so no PATH setup is needed.
 
 ### 1. Model Context Protocol (Claude Code, Cursor, Codex, OpenCode, Pi, Agy)
 
@@ -60,13 +64,23 @@ pnpm exec uktub-scholar mcp [target-dir]
 For Pi native extension loading:
 
 ```sh
-pi install .
+pi install /path/to/Uktub-scholar
 ```
+
+The extension registers the MCP server with an absolute command, loads the `uktub-research` skill, adds the
+agent rules to Pi's system prompt, and blocks the agent's `edit`/`write` on `refs/references.bib` and
+`.registry/` (agent read-only, human writable; a shell is not blocked). It also keeps the agent honest
+deterministically: any refusal or warning a uktub tool returned during a run (a failed `verify_claim`, a search
+provider that did not answer, compile warnings) that the final answer does not mention is appended to it as a
+"Tool notices" footer, because models drop such details.
 
 ### 3. LaTeX Engine & Project Initialization
 
-Compilation needs a local [Tectonic](https://tectonic-typesetting.github.io)
->= 0.15.0 on `PATH` or at `UKTUB_TECTONIC_BIN`; no engine is downloaded or bundled.
+Compilation needs [Tectonic](https://tectonic-typesetting.github.io) >= 0.15.0: your own on `PATH` or at
+`UKTUB_TECTONIC_BIN` (both win), else a managed copy from `uktub-scholar tectonic install --yes` (a pinned 0.17.0,
+sha256-verified, self-checked, about 10 MB, in the shared cache; `tectonic status` shows the state). Nothing is
+downloaded unless you run that command. Tectonic itself fetches its TeX support bundle on the first compile.
+Tectonic 0.15.0 reports two spurious `main.bbl` warnings on every bibliography build; 0.17.0 does not.
 
 Run `uktub-scholar init` in your research project to create `.registry/registry.db`
 and `refs/references.bib`. Nested projects are refused. The user owns layout,
@@ -282,6 +296,12 @@ Engines:
   measured precision 0.97 and recall 0.84 with fixed 1,024-token windows (0.52 at 8,192); the default section chunks measured 0.88–0.90 on 50 claims
   ([evidence](docs/benchmarks/evidence-quality-end-to-end-2026-10-04.md)); a missing environment is a
   `VERIFY_ENGINE_MISSING` refusal naming the cause.
+- `eos-onnx`: the same Eos model on ONNX Runtime, **no PyTorch**: `uktub-scholar eos install --yes` downloads a pinned,
+  sha256-verified 8-bit export (684 MB, Apache-2.0) into the shared cache, builds a small Python environment
+  (`onnxruntime`, `numpy`, `tokenizers`; 198 MB, 459 MB with `--gpu`), and self-checks the worker before it is used. Select it with
+  `verification.engine: eos-onnx`. Parity with the torch worker over 450 judgments is 100% at the 0.99 bar (4-bit exports are not viable and
+  are refused); a judgment takes about 49 ms on a CUDA GPU and about 0.8 s on CPU, which is slow for a full scan
+  ([evidence](docs/benchmarks/eos-onnx-parity-2026-10-05.md)). `UKTUB_EOS_ONNX_DIR` / `UKTUB_EOS_ONNX_PYTHON` use your own copy.
 - `openrouter`: `inception/mercury-decide:free`, System One decisions API;
   needs `OPENROUTER_API_KEY`; `UKTUB_OPENROUTER_MODEL` selects another compatible model.
 - `llama-cpp`: local `/v1/systemone` endpoint (`UKTUB_VERIFY_URL`, default

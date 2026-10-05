@@ -4,6 +4,22 @@ All notable changes to the `uktub-scholar` package are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to Semantic Versioning.
 
+## [Unreleased]
+
+### Fixed
+- **Pi package was inert after `pi install`**: the extension registered the bare command `uktub-scholar` (on no PATH) and the manifest never named the skills directory. It now registers `node <abs bin>`, loads the skill, and exposes the five tools directly.
+- **`mcp install` wrote a command no host could spawn** (`uktub-scholar` is on no PATH for a checkout or project-local install): every host config now launches `node <abs bin> mcp`.
+- **An npm-installed copy could not run** (Node refuses to type-strip files under `node_modules`): the package now ships compiled `dist/` (165 kB, was 925 kB with tests and docs); a checkout still runs `src/`.
+- **Semantic Scholar was never reached in production** (base URL doubled `/graph/v1`); `mcp install` no longer overwrites a non-object server table; the SSRF guard blocks the IPv4-translated range; a tar cleanup race in `installRuntime` is closed.
+- `search_papers` text now names each failing provider and folds a DOI-less duplicate into its DOI-bearing record; `VERIFY_ENGINE_MISSING` names the default engine's setup.
+
+### Added
+- `uktub-scholar tectonic status | install --yes`: a pinned (0.17.0), sha256-verified, self-checked LaTeX engine for users without TeX tooling; `compile_document` uses it after `UKTUB_TECTONIC_BIN` and PATH.
+- Agent rules (`src/core/agent-rules.ts`) delivered in the MCP handshake and as Pi system-prompt guidelines; the Pi extension blocks agent `edit`/`write` on `refs/references.bib` and `.registry/`.
+- Engine `eos-onnx` and `uktub-scholar eos status | install --yes [--gpu]`: Decision 2.0 Eos on ONNX Runtime without PyTorch (882 MB cold install against 8+ GB; 100% decision agreement with the torch worker at the 0.99 bar over 450 judgments; 4-bit exports refused). The default engine is unchanged.
+- Pi "Tool notices" footer: refusals and warnings from uktub tools that the final answer leaves out are appended to it (`src/core/notices.ts`).
+- MCP server version is read from `package.json`; `typescript` is a declared devDependency.
+
 ## [0.2.0] - 2026-10-05
 
 ### Added
