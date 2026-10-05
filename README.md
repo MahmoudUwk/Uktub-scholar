@@ -301,13 +301,10 @@ and re-rendered on registry writes. Human edits to it are overwritten; `sync-bib
 - **Path confinement (`PATH_REFUSED`)**: All tools and the MCP server strictly validate project
   paths. Lexical `..` escapes, symlink traversal outside the project root, and access to protected
   directories (`.registry/**` and `.git/**`) are rejected immediately before reading or writing.
-- **MCP server security boundary**: On external MCP hosts (Claude Code, Cursor, Codex, OpenCode),
-  tools execute via JSON-RPC. The server enforces confinement on its own parameters; host-level
-  file/bash operations are external to the MCP process and guided by agent discipline
-  ([research skill](skills/uktub-research/SKILL.md)).
-- **Advisory bash guard**: In native Pi extension environments, `guardToolCall` provides
-  heuristics against accidental writes to `refs/references.bib` and direct SQLite edits. Removing
-  the extension removes that advisory seatbelt.
+- **MCP server security boundary**: On all hosts (Claude Code, Cursor, Codex, OpenCode, Antigravity,
+  and Pi via `registerMcpServer`), tools execute via JSON-RPC over stdio. The server strictly enforces
+  confinement on its own parameters; host-level file and terminal operations are external to the MCP
+  process and guided by agent discipline ([research skill](skills/uktub-research/SKILL.md)).
 
 Optional project `AGENTS.md` guidance (never written by `init`): use the scholarly
 tools for papers, cite only citable registered keys, never hand-edit the rendered
@@ -329,9 +326,9 @@ are separate tiers; the exercised checkout evidence is in [the independent syste
 [Dated benchmark reports](docs/benchmarks/) preserve measurements of engines and
 evidence quality; a score is evidence about one dataset, not a guarantee.
 
-`scripts/test-sandbox.sh` runs an optional Docker Pi TUI, mounts the package and
+`scripts/test-sandbox.sh` runs an optional Docker Pi test environment, mounts the package and
 read-only ADC, and persists project/session data in `../uktub-sandbox/`.
-`--fresh` deletes that persisted data. The TUI registry panel refreshes after tool calls.
+`--fresh` deletes that persisted data.
 
 [NOTICE.md](NOTICE.md) records borrowed-code provenance. License: AGPL-3.0-only.
 Companion research/deliverable skills and their adoption triggers live in the backlog.

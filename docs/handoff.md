@@ -71,13 +71,13 @@ If you identify any defect, race condition, data truncation, or missing handling
 
 ### C. External Research via Hermes Subagents
 Whenever you need to verify external specifications, package versions, upstream bug reports, or host configurations, delegate to the Hermes research subagent:
-- Skill path: `.agents/skills/hermes-subagent/SKILL.md`
-- Use cases:
-  - Querying MCP specification changes (e.g., Model Context Protocol SDK 2026/2027 standards).
-  - Checking configuration file formats for Claude Code, Cursor, Codex, OpenCode.
-  - Verifying upstream `llama.cpp` release tags, binary assets, and CUDA compatibility.
-  - Verifying OpenAlex Content API TEI schema details.
-- **Rule:** Hermes subagents are research-only and must never edit local workspace files.
+- **Skill reference:** `.agents/skills/hermes-subagent/SKILL.md`
+- **Invocation pattern:** Instruct Hermes as an online research subagent for external standards and packages without touching local files:
+  - *Example 1 (MCP Specification)*: "Check the Model Context Protocol stdio transport specification and standard JSON-RPC 2.0 error response shapes for unknown tools and validation errors."
+  - *Example 2 (Host Configuration Formats)*: "Verify the current configuration schema for MCP servers in Claude Code (`.mcp.json`), Cursor (`.cursor/mcp.json`), Codex (`.codex/config.toml`), and OpenCode (`opencode.json`)."
+  - *Example 3 (llama.cpp & GGUF)*: "Verify the release assets and SHA-256 conventions for llama.cpp release b11398, and verify Google's embeddinggemma-300m architecture tensor names (`dense_2.weight`, `dense_3.weight`)."
+  - *Example 4 (OpenAlex Content API)*: "Research the OpenAlex Content API TEI XML schema, specifically how root XML nodes and direct `<div>` paragraphs are formatted."
+- **Strict Guardrail:** Hermes subagents are research-only and must never edit or create local workspace files. All implementation and verification remains local.
 
 ---
 
@@ -94,7 +94,7 @@ The reviewer must execute the following 10 stress-test suites and document exact
   ```
 - **Validation Criteria:**
   - `tsc` exits 0 with zero errors and zero unused variables.
-  - All 616 tests across 142 suites pass cleanly (2 skipped by design: env-gated Julia engine).
+  - All 611 tests across 141 suites pass cleanly (2 skipped by design: env-gated Julia engine).
   - `tests/import-allowlist.spec.ts` passes: `src/core/`, `src/cli/`, and `src/mcp/` have zero imports of `@earendil-works/pi-coding-agent`.
 
 ### Subsystem 2: Unified Stdio MCP Server (JSON-RPC Protocol & Transports)
@@ -136,7 +136,7 @@ The reviewer must execute the following 10 stress-test suites and document exact
 
 ### Subsystem 4: Path Confinement & Sandbox Security (`PATH_REFUSED`)
 - **Goal:** Prove that the agent host cannot escape project boundaries or corrupt protected state.
-- **Key Files:** `src/core/tools/context.ts`, `src/mcp/server.ts`, `tests/guard.spec.ts`.
+- **Key Files:** `src/core/tools/context.ts`, `src/mcp/server.ts`, `tests/tools.spec.ts`, `tests/source-preparation.spec.ts`, `tests/mcp-server.spec.ts`.
 - **Stress-Test Scenarios:**
   1. **Directory Traversal:**
      - Attempt targetDir / paths containing `../`, `../../etc`, `..\\windows`.

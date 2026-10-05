@@ -1,7 +1,7 @@
 # Vision
 
 **Uktub Scholar** is a local-first scholarly research package for coding
-agents (Pi first): find papers, register sources, keep a clean bibliography,
+agents (unified Stdio MCP server, Pi package, and CLI): find papers, register sources, keep a clean bibliography,
 write citation-grounded LaTeX — and find supporting passages for a claim, with
 exact pointers and honest coverage, using a configurable decision engine —
 inside the project folder the
@@ -38,7 +38,7 @@ dedicated thin workbench above this package — never an adopted office suite.
    tree, sessions belong to Pi (cwd-keyed), no global index, no cloud.
    Delete the folder and the project is gone; copy it and it moves.
 3. **Standard machinery only.** SQLite (`node:sqlite`), BibTeX rendering,
-   Pi's package/skill/extension APIs. Anything a maintained library does
+   Model Context Protocol (`@modelcontextprotocol/sdk`), and Tectonic LaTeX. Anything a maintained library does
    better, we don't rebuild.
 4. **Honest refusal beats silent improvisation.** The agent cites only
    what it registered; missing coverage is reported, never papered over.
@@ -50,4 +50,4 @@ evidence for ONE claim at a time (never a verdict that a claim is false) and kee
 paper text internal. Source acquisition is OpenAlex-only and lawful; scanned documents are
 refused. `compile_document` covers build-and-diagnostics only; thesis-scale orchestration
 stays with the user.
-Accounts and a UI are out. Claude Code / Codex integrations are future adapters.
+Accounts and a UI are out. Model Context Protocol (MCP) provides universal multi-host integration across Claude Code, Pi, Cursor, Codex, OpenCode, and Antigravity.

@@ -15,13 +15,19 @@ and this project adheres to Semantic Versioning.
   - Bidirectional tool name normalization in `normalizeToolName()`, supporting both bare tool names and host-namespaced identifiers (e.g. `mcp__uktub_scholar__search_papers` or `uktub-scholar/search_papers`).
 - **Test Suite Expansion**:
   - Added `tests/mcp-server.spec.ts` covering in-memory JSON-RPC sessions and real OS stdio subprocess transports.
-  - Added `tests/cli.spec.ts` covering MCP CLI commands, host configuration generation, and path confinement. Suite expanded to 616 passing tests.
+  - Added `tests/cli.spec.ts` covering MCP CLI commands, host configuration generation, and path confinement. All 611 tests passing across 141 suites.
 
 ### Changed
 - **Streamlined Host Adapters**:
   - Pruned in-process tool extension (`src/pi/extension.ts`) and custom widget (`src/pi/registry-widget.ts`), replacing them with an 8-line `registerMcpServer` hook in `src/pi/index.ts`.
   - Decoupled `@earendil-works/pi-coding-agent` into an optional peer dependency in `package.json`.
   - Updated documentation across `README.md`, `docs/DECISIONS.md`, and `docs/BACKLOG.md` to reflect universal MCP-first architecture.
+
+### Removed
+- **Dead Code & Legacy In-Process Artifacts**:
+  - Removed orphaned `src/core/guard.ts` and `tests/guard.spec.ts` (advisory in-process Pi tool interceptor).
+  - Removed obsolete `PI_EXTENSION_API_UNAVAILABLE` refusal code and `REFUSALS` entry.
+  - Removed stale references to advisory bash guards and TUI registry widgets in `README.md` and `docs/`.
 
 ## [0.1.0] - 2026-10-04
 

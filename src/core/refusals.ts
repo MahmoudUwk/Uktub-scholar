@@ -24,8 +24,7 @@ export type RefusalCode =
   | "CONFIG_INVALID"
   | "ARGUMENT_INVALID"
   | "CONTINUATION_INVALID"
-  | "SOURCE_UNUSABLE"
-  | "PI_EXTENSION_API_UNAVAILABLE";
+  | "SOURCE_UNUSABLE";
 
 export type WarningCode = "BIBTEX_UNAVAILABLE" | "DOI_TITLE_MISMATCH";
 
@@ -88,9 +87,6 @@ export const REFUSALS: Record<RefusalCode, RefusalEntry> = {
   },
   SOURCE_UNUSABLE: {
     next: "attach a text-based PDF or GROBID TEI of this exact paper (image-only scans need OCR first), or retry once an open-access copy exists",
-  },
-  PI_EXTENSION_API_UNAVAILABLE: {
-    next: "upgrade Pi to >= 1.0.0, which exposes pi.registerTool",
   },
 };
 
