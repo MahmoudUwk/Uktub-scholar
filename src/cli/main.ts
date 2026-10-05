@@ -11,7 +11,7 @@
  */
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname, isAbsolute, join, resolve } from "node:path";
 import type { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 
@@ -181,14 +181,18 @@ async function embedCommand(args: string[], io: CliIo): Promise<number> {
 const ALLOWED_MCP_HOSTS = ["claude", "pi", "agy", "codex", "cursor", "opencode"] as const;
 type McpHost = (typeof ALLOWED_MCP_HOSTS)[number];
 
-function readJsonFile(filePath: string): Record<string, unknown> {
-  if (!existsSync(filePath)) return {};
+function readJsonFile(filePath: string): { ok: true; data: Record<string, unknown> } | { ok: false; error: string } {
+  if (!existsSync(filePath)) return { ok: true, data: {} };
   try {
     const raw = readFileSync(filePath, "utf8");
     const parsed = JSON.parse(raw);
-    return typeof parsed === "object" && parsed !== null && !Array.isArray(parsed) ? (parsed as Record<string, unknown>) : {};
-  } catch {
-    return {};
+    if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+      return { ok: false, error: `${filePath} does not contain a JSON object` };
+    }
+    return { ok: true, data: parsed as Record<string, unknown> };
+  } catch (caught) {
+    const message = caught instanceof Error ? caught.message : String(caught);
+    return { ok: false, error: `failed to parse ${filePath}: ${message}` };
   }
 }
 
@@ -198,7 +202,11 @@ async function mcpInstallCommand(args: string[], io: CliIo): Promise<number> {
 
   for (let i = 0; i < args.length; i++) {
     const a = args[i];
-    if (a === "--host" && i + 1 < args.length) {
+    if (a === "--host") {
+      if (i + 1 >= args.length) {
+        io.err(`error: option "--host" requires an argument\nusage: uktub-scholar mcp install [--host <claude|pi|agy|codex|cursor|opencode>]`);
+        return 1;
+      }
       host = args[++i];
     } else if (a.startsWith("--host=")) {
       host = a.slice("--host=".length);
@@ -221,7 +229,12 @@ async function mcpInstallCommand(args: string[], io: CliIo): Promise<number> {
     case "claude":
     case "pi": {
       const target = join(root, ".mcp.json");
-      const data = readJsonFile(target);
+      const readResult = readJsonFile(target);
+      if (!readResult.ok) {
+        io.err(`error: ${readResult.error}`);
+        return 1;
+      }
+      const data = readResult.data;
       const mcpServers = (typeof data.mcpServers === "object" && data.mcpServers !== null && !Array.isArray(data.mcpServers))
         ? (data.mcpServers as Record<string, unknown>)
         : {};
@@ -237,7 +250,12 @@ async function mcpInstallCommand(args: string[], io: CliIo): Promise<number> {
     }
     case "agy": {
       const target = join(root, ".agents", "mcp_config.json");
-      const data = readJsonFile(target);
+      const readResult = readJsonFile(target);
+      if (!readResult.ok) {
+        io.err(`error: ${readResult.error}`);
+        return 1;
+      }
+      const data = readResult.data;
       const mcpServers = (typeof data.mcpServers === "object" && data.mcpServers !== null && !Array.isArray(data.mcpServers))
         ? (data.mcpServers as Record<string, unknown>)
         : {};
@@ -253,7 +271,12 @@ async function mcpInstallCommand(args: string[], io: CliIo): Promise<number> {
     }
     case "cursor": {
       const target = join(root, ".cursor", "mcp.json");
-      const data = readJsonFile(target);
+      const readResult = readJsonFile(target);
+      if (!readResult.ok) {
+        io.err(`error: ${readResult.error}`);
+        return 1;
+      }
+      const data = readResult.data;
       const mcpServers = (typeof data.mcpServers === "object" && data.mcpServers !== null && !Array.isArray(data.mcpServers))
         ? (data.mcpServers as Record<string, unknown>)
         : {};
@@ -269,7 +292,12 @@ async function mcpInstallCommand(args: string[], io: CliIo): Promise<number> {
     }
     case "opencode": {
       const target = join(root, "opencode.json");
-      const data = readJsonFile(target);
+      const readResult = readJsonFile(target);
+      if (!readResult.ok) {
+        io.err(`error: ${readResult.error}`);
+        return 1;
+      }
+      const data = readResult.data;
       const mcp = (typeof data.mcp === "object" && data.mcp !== null && !Array.isArray(data.mcp))
         ? (data.mcp as Record<string, unknown>)
         : {};
@@ -311,7 +339,11 @@ async function mcpCommand(args: string[], io: CliIo): Promise<number> {
   let targetDir: string | undefined;
   for (let i = 0; i < args.length; i++) {
     const a = args[i];
-    if (a === "--dir" && i + 1 < args.length) {
+    if (a === "--dir") {
+      if (i + 1 >= args.length) {
+        io.err(`error: option "--dir" requires an argument\nusage: uktub-scholar mcp [dir] [--dir <path>]`);
+        return 1;
+      }
       targetDir = args[++i];
     } else if (a.startsWith("--dir=")) {
       targetDir = a.slice("--dir=".length);
@@ -323,7 +355,18 @@ async function mcpCommand(args: string[], io: CliIo): Promise<number> {
     }
   }
 
-  const effectiveDir = targetDir ?? io.cwd ?? process.cwd();
+  const baseDir = io.cwd ?? process.cwd();
+  let effectiveDir: string;
+  if (targetDir !== undefined) {
+    if (targetDir.split(/[\\/]/).includes("..")) {
+      effectiveDir = targetDir;
+    } else {
+      effectiveDir = isAbsolute(targetDir) ? targetDir : resolve(baseDir, targetDir);
+    }
+  } else {
+    effectiveDir = baseDir;
+  }
+
   const confinement = validateTargetDir(effectiveDir);
   if (!confinement.ok) {
     io.err(`error: ${renderRefusal({ code: confinement.code, message: confinement.message })}`);

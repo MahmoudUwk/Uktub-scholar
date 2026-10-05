@@ -529,6 +529,35 @@ describe("mcp command", () => {
     assert.match(c.lines.err.join("\n"), /PATH_REFUSED/);
   });
 
+  it("mcp install refuses to overwrite corrupted or invalid JSON in config files", async () => {
+    const c = io();
+    const mcpFile = join(root, ".mcp.json");
+    writeFileSync(mcpFile, "{ malformed json", "utf8");
+
+    assert.equal(await runCli(["mcp", "install", "--host", "claude"], c), 1);
+    assert.match(c.lines.err.join("\n"), /failed to parse/);
+    assert.equal(readFileSync(mcpFile, "utf8"), "{ malformed json", "corrupt file must not be clobbered");
+  });
+
+  it("mcp install --host without argument errors with clear message", async () => {
+    const c = io();
+    assert.equal(await runCli(["mcp", "install", "--host"], c), 1);
+    assert.match(c.lines.err.join("\n"), /option "--host" requires an argument/);
+  });
+
+  it("mcp --dir without argument errors with clear message", async () => {
+    const c = io();
+    assert.equal(await runCli(["mcp", "--dir"], c), 1);
+    assert.match(c.lines.err.join("\n"), /option "--dir" requires an argument/);
+  });
+
+  it("mcp with relative target directory without traversal (e.g. '.') resolves against cwd and succeeds", async () => {
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+    const c = io({ mcpTransport: serverTransport });
+    assert.equal(await runCli(["mcp", "."], c), 0);
+    await clientTransport.close();
+  });
+
   it("mcp runs server with custom transport", async () => {
     const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
     const c = io({ mcpTransport: serverTransport });
@@ -536,4 +565,5 @@ describe("mcp command", () => {
     await clientTransport.close();
   });
 });
+
 

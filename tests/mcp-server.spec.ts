@@ -5,9 +5,10 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Value } from "typebox/value";
 
-import { createMcpServer, TOOL_DEFINITIONS, validateTargetDir } from "../src/mcp/server.ts";
+import { createMcpServer, normalizeToolName, TOOL_DEFINITIONS, validateTargetDir } from "../src/mcp/server.ts";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
+import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { createRegistry, registerPaper } from "../src/core/registry.ts";
 import { SearchPapersOutput } from "../src/core/tools/search.ts";
 import { PaperRegistryOutput } from "../src/core/tools/registry.ts";
@@ -53,7 +54,7 @@ function textContent(result: unknown): string {
 }
 
 describe("MCP Server tools/list", () => {
-  it("lists all 5 scholar tools with descriptions and TypeBox input schemas", async () => {
+  it("lists all 5 scholar tools with descriptions, input schemas, and output schemas", async () => {
     const { client } = await createClientServer();
     const result = await client.listTools();
 
@@ -70,6 +71,8 @@ describe("MCP Server tools/list", () => {
       assert.ok(tool.description && tool.description.length > 0, `${tool.name} missing description`);
       assert.equal(tool.inputSchema.type, "object", `${tool.name} inputSchema must be type: object`);
       assert.ok(typeof tool.inputSchema.properties === "object", `${tool.name} inputSchema must have properties`);
+      assert.ok(tool.outputSchema, `${tool.name} missing outputSchema`);
+      assert.equal((tool.outputSchema as { type?: string }).type, "object", `${tool.name} outputSchema must be type: object`);
     }
   });
 });
@@ -317,4 +320,70 @@ describe("MCP Server cancellation signal", () => {
     );
   });
 });
+
+describe("MCP Server namespaced tool invocation", () => {
+  it("normalizes diverse host-namespaced tool prefixes", () => {
+    assert.equal(normalizeToolName("search_papers"), "search_papers");
+    assert.equal(normalizeToolName("mcp__uktub_scholar__search_papers"), "search_papers");
+    assert.equal(normalizeToolName("mcp__uktub-scholar__search_papers"), "search_papers");
+    assert.equal(normalizeToolName("uktub_scholar__search_papers"), "search_papers");
+    assert.equal(normalizeToolName("uktub-scholar__search_papers"), "search_papers");
+    assert.equal(normalizeToolName("uktub-scholar/search_papers"), "search_papers");
+    assert.equal(normalizeToolName("uktub_scholar:search_papers"), "search_papers");
+    assert.equal(normalizeToolName("paper_registry"), "paper_registry");
+    assert.equal(normalizeToolName("mcp__uktub_scholar__paper_registry"), "paper_registry");
+  });
+
+  it("successfully invokes tools through namespaced identifiers", async () => {
+    const { fetchFn } = createSearchFetch({
+      openalex: [{ doi: "10.1001/b", title: "Paper B", citations: 5 }],
+      crossref: [],
+      semanticScholar: [],
+    });
+
+    const { client } = await createClientServer({ fetch: fetchFn });
+
+    // Call using Claude Code namespaced format: mcp__uktub_scholar__search_papers
+    const result1 = await client.callTool({
+      name: "mcp__uktub_scholar__search_papers",
+      arguments: { query: "graph theory", limit: 3 },
+    });
+    assert.equal(result1.isError, undefined);
+    assert.ok(textContent(result1).includes("Paper B"));
+
+    // Call using slash format: uktub-scholar/search_papers
+    const result2 = await client.callTool({
+      name: "uktub-scholar/search_papers",
+      arguments: { query: "graph theory", limit: 3 },
+    });
+    assert.equal(result2.isError, undefined);
+    assert.ok(textContent(result2).includes("Paper B"));
+  });
+});
+
+describe("MCP Server real OS child process stdio pipes", () => {
+  it("communicates over OS stdio pipes with bin/uktub-scholar.js mcp", async () => {
+    const transport = new StdioClientTransport({
+      command: process.execPath,
+      args: ["bin/uktub-scholar.js", "mcp", root],
+    });
+    const client = new Client({ name: "real-os-stdio-client", version: "1.0.0" }, { capabilities: {} });
+
+    try {
+      await client.connect(transport);
+      const tools = await client.listTools();
+      assert.equal(tools.tools.length, 5);
+
+      const result = await client.callTool({
+        name: "paper_registry",
+        arguments: { action: "read" },
+      });
+      assert.equal(result.isError, true);
+      assert.match(textContent(result), /REGISTRY_NOT_INITIALIZED/);
+    } finally {
+      await transport.close();
+    }
+  });
+});
+
 

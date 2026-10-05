@@ -23,26 +23,31 @@ import {
   type ToolResult,
 } from "../core/tools/context.ts";
 import {
+  CompileDocumentOutput,
   CompileDocumentParams,
   compileDocumentTool,
   type CompileDocumentArgs,
 } from "../core/tools/compile.ts";
 import {
+  PaperRegistryOutput,
   PaperRegistryParams,
   paperRegistryTool,
   type PaperRegistryArgs,
 } from "../core/tools/registry.ts";
 import {
+  SearchPapersOutput,
   SearchPapersParams,
   searchPapersTool,
   type SearchPapersArgs,
 } from "../core/tools/search.ts";
 import {
+  VerifyClaimOutput,
   VerifyClaimParams,
   verifyClaimTool,
   type VerifyClaimArgs,
 } from "../core/tools/verify.ts";
 import {
+  SearchPassagesOutput,
   SearchPassagesParams,
   searchPassagesTool,
   type SearchPassagesArgs,
@@ -72,6 +77,7 @@ export const TOOL_DEFINITIONS = [
       "At most 20 results per call (client policy after a tool-payload incident). " +
       REFUSAL_SEMANTICS,
     inputSchema: SearchPapersParams,
+    outputSchema: SearchPapersOutput,
   },
   {
     name: "paper_registry",
@@ -86,6 +92,7 @@ export const TOOL_DEFINITIONS = [
       "A paper without provider BibTeX is citable: false — BibTeX is never synthesized. " +
       REFUSAL_SEMANTICS,
     inputSchema: PaperRegistryParams,
+    outputSchema: PaperRegistryOutput,
   },
   {
     name: "compile_document",
@@ -97,6 +104,7 @@ export const TOOL_DEFINITIONS = [
       "The engine must be installed — a missing engine is a refusal, not a download. " +
       REFUSAL_SEMANTICS,
     inputSchema: CompileDocumentParams,
+    outputSchema: CompileDocumentOutput,
   },
   {
     name: "verify_claim",
@@ -110,6 +118,7 @@ export const TOOL_DEFINITIONS = [
       "verification.* in config/chunking.yaml or the documented defaults. " +
       REFUSAL_SEMANTICS,
     inputSchema: VerifyClaimParams,
+    outputSchema: VerifyClaimOutput,
   },
   {
     name: "search_passages",
@@ -121,8 +130,17 @@ export const TOOL_DEFINITIONS = [
       "embedder degrades to keyword results and says so. Results are retrieval, not verification: check a claim with verify_claim before you cite it. " +
       REFUSAL_SEMANTICS,
     inputSchema: SearchPassagesParams,
+    outputSchema: SearchPassagesOutput,
   },
 ] as const;
+
+/**
+ * Normalize host-namespaced tool identifiers (e.g. `mcp__uktub_scholar__search_papers`
+ * or `uktub-scholar/search_papers`) to the bare scholar tool name.
+ */
+export function normalizeToolName(name: string): string {
+  return name.replace(/^(?:mcp__)?uktub[-_]scholar(?:_{1,2}|[/:])/, "");
+}
 
 export function validateTargetDir(targetDir?: string): Confinement {
   const root = targetDir ?? process.cwd();
@@ -157,7 +175,17 @@ export function createMcpServer(targetDirOrOptions?: string | McpServerOptions):
       ? { targetDir: targetDirOrOptions }
       : (targetDirOrOptions ?? {});
 
-  const rawRoot = options.targetDir ?? process.cwd();
+  const rawTarget = options.targetDir;
+  let rawRoot: string;
+  if (rawTarget !== undefined) {
+    if (rawTarget.split(/[\\/]/).includes("..")) {
+      rawRoot = rawTarget;
+    } else {
+      rawRoot = resolve(rawTarget);
+    }
+  } else {
+    rawRoot = process.cwd();
+  }
   const root = resolve(rawRoot);
   const queue = options.queue ?? new WriteQueue();
   const download = options.download ?? createSafeDownloader();
@@ -206,6 +234,12 @@ export function createMcpServer(targetDirOrOptions?: string | McpServerOptions):
           required?: string[];
           [key: string]: unknown;
         },
+        outputSchema: tool.outputSchema as unknown as {
+          type: "object";
+          properties?: Record<string, unknown>;
+          required?: string[];
+          [key: string]: unknown;
+        },
       })),
     };
   });
@@ -217,18 +251,21 @@ export function createMcpServer(targetDirOrOptions?: string | McpServerOptions):
     }
 
     const { name, arguments: args } = request.params;
+    const toolName = normalizeToolName(name);
+    const safeArgs = typeof args === "object" && args !== null && !Array.isArray(args) ? args : {};
+
     try {
-      switch (name) {
+      switch (toolName) {
         case "search_papers":
-          return toCallToolResult(await searchPapersTool(toolCtx, (args ?? {}) as SearchPapersArgs));
+          return toCallToolResult(await searchPapersTool(toolCtx, safeArgs as SearchPapersArgs));
         case "paper_registry":
-          return toCallToolResult(await paperRegistryTool(toolCtx, (args ?? {}) as PaperRegistryArgs));
+          return toCallToolResult(await paperRegistryTool(toolCtx, safeArgs as PaperRegistryArgs));
         case "compile_document":
-          return toCallToolResult(await compileDocumentTool(toolCtx, (args ?? {}) as CompileDocumentArgs));
+          return toCallToolResult(await compileDocumentTool(toolCtx, safeArgs as CompileDocumentArgs));
         case "verify_claim":
-          return toCallToolResult(await verifyClaimTool(toolCtx, (args ?? {}) as VerifyClaimArgs));
+          return toCallToolResult(await verifyClaimTool(toolCtx, safeArgs as VerifyClaimArgs));
         case "search_passages":
-          return toCallToolResult(await searchPassagesTool(toolCtx, (args ?? {}) as SearchPassagesArgs));
+          return toCallToolResult(await searchPassagesTool(toolCtx, safeArgs as SearchPassagesArgs));
         default:
           return {
             content: [{ type: "text", text: `Unknown tool: ${name}` }],
