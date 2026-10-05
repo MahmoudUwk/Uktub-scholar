@@ -75,9 +75,6 @@ function openRaw(timeoutMs: number): DatabaseSync {
   return conn;
 }
 
-function getRow<T extends object>(statement: StatementSync, ...params: SQLInputValue[]): T | undefined {
-  return statement.get(...params) as T | undefined;
-}
 
 /** The citable keys the registry says the file must state. */
 function registryBibKeys(): string[] {

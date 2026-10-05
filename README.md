@@ -1,9 +1,10 @@
 # uktub-scholar
 
-Local-first scholarly tools for [Pi](https://github.com/earendil-works/pi): paper
-search, a paper registry, a rendered bibliography, LaTeX compilation, exploratory
-passage search (RAG), and evidence retrieval for claims. The core is host-agnostic;
-other host adapters are not implemented.
+Local-first scholarly tools for coding agents: paper search, paper registry, a rendered
+bibliography, LaTeX compilation, exploratory passage search (RAG), and evidence retrieval
+for claims. Exposes a unified Model Context Protocol (MCP) server over stdio for Claude Code,
+Pi, Cursor, Codex, OpenCode, and Antigravity, alongside a Pi package extension and CLI.
+The core is host-agnostic.
 
 ## Start here
 
@@ -13,29 +14,67 @@ other host adapters are not implemented.
 - [Vision](docs/VISION.md): product direction; [backlog](docs/BACKLOG.md): deferred work.
 - [Decisions](docs/DECISIONS.md): dated rationale, not current setup instructions.
 - [Benchmarks](benchmarks/README.md): datasets, runner, and historical evidence.
+- [Reviewer handoff](docs/handoff.md): independent review and stress-test guide.
 - [Research skill](skills/uktub-research/SKILL.md): agent usage guidance.
 
-## Development install
+## Installation & Host Setup
 
-The package is private; `pi install npm:uktub-scholar` is not a published install path.
-From this checkout:
+Requires Node >= 22.19. From this checkout:
 
 ```sh
 pnpm install
-pi install .
-pnpm exec uktub-scholar --help
 ```
 
-Requires Node >= 22.19 and Pi >= 1.0.0 (`@earendil-works/pi-coding-agent`).
-The bin shim runs TypeScript directly, adding `--experimental-strip-types` on
-Node 22. Compilation needs a local [Tectonic](https://tectonic-typesetting.github.io)
+### 1. Model Context Protocol (Claude Code, Cursor, Codex, OpenCode, Pi, Agy)
+
+Run the automated config installer for your agent host:
+
+```sh
+# Claude Code (.mcp.json)
+pnpm exec uktub-scholar mcp install --host claude
+
+# Pi coding agent (.mcp.json or pi install .)
+pnpm exec uktub-scholar mcp install --host pi
+
+# Cursor (.cursor/mcp.json)
+pnpm exec uktub-scholar mcp install --host cursor
+
+# Codex CLI (.codex/config.toml)
+pnpm exec uktub-scholar mcp install --host codex
+
+# OpenCode (opencode.json)
+pnpm exec uktub-scholar mcp install --host opencode
+
+# Antigravity (.agents/mcp_config.json)
+pnpm exec uktub-scholar mcp install --host agy
+```
+
+You can also run the stdio MCP server directly:
+
+```sh
+pnpm exec uktub-scholar mcp [target-dir]
+```
+
+### 2. Pi Coding Agent Package Extension
+
+For Pi native extension loading:
+
+```sh
+pi install .
+```
+
+### 3. LaTeX Engine & Project Initialization
+
+Compilation needs a local [Tectonic](https://tectonic-typesetting.github.io)
 >= 0.15.0 on `PATH` or at `UKTUB_TECTONIC_BIN`; no engine is downloaded or bundled.
 
-Run `uktub-scholar init` in the research project to create `.registry/registry.db`
+Run `uktub-scholar init` in your research project to create `.registry/registry.db`
 and `refs/references.bib`. Nested projects are refused. The user owns layout,
 LaTeX sources, git, backups, and toolchains; sandboxing is optional.
 
-## Five Pi tools
+## Five core scholarly tools
+
+All five tools are exposed over standard MCP (`tools/list`, `tools/call`), through the Pi package hook, and via the CLI. Tool names can be invoked bare (`search_papers`, etc.) or with host-namespaced prefixes (e.g. `mcp__uktub_scholar__search_papers` or `uktub-scholar/search_papers`).
 
 | Tool | Behavior / limits |
 |---|---|
@@ -198,12 +237,21 @@ PeerJ paper and an arXiv preprint did), which are not scraped — attach a file 
 
 ## CLI
 
-`uktub-scholar` exposes `init`, `register <id>...`, `attach <doi|citekey> <file>`,
-`verify <claim> [--papers all|<handle>,… ] [--query <words>] [--continuation <token>]`,
-`search <query> [--papers all|<handle>,… ] [--limit <n>]`, `embed status`, `embed install --yes`,
-`deregister <doi|citekey>...`, `sync-bib`, `list`, and `compile [entry.tex]`.
-`register`, `attach`, `verify` and `search` call the same tool functions the agent uses and print
-exactly what the agent reads.
+`uktub-scholar` exposes:
+- `mcp [dir] [--dir <path>]`: run the stdio MCP server (defaults to cwd)
+- `mcp install [--host <claude|pi|agy|codex|cursor|opencode>]`: write host MCP configuration files
+- `init`: create the registry and an empty `refs/references.bib`
+- `register <id>...`: register papers by DOI or arxiv:ID
+- `attach <doi|citekey> <file>`: attach local PDF/TEI source inside the project
+- `verify <claim> [--papers all|<handle>,...] [--query <words>] [--continuation <token>]`: find supporting passages for one claim
+- `search <query> [--papers all|<handle>,...] [--limit <n>]`: exploratory hybrid RAG passage search
+- `embed status` / `embed install --yes`: managed embedding runtime status and installation
+- `deregister <doi|citekey>...`: remove papers from registry
+- `sync-bib`: re-render `refs/references.bib` from registry
+- `list`: print registered papers in citekey order
+- `compile [entry.tex]`: compile LaTeX with Tectonic into `build/`
+
+`register`, `attach`, `verify`, and `search` call the same underlying core functions that the MCP server and Pi extension use, guaranteeing structural parity.
 
 ## Configuration
 
@@ -245,14 +293,21 @@ Engines:
 The package never reads credentials from retired repositories, and offline tests never
 spend provider quota.
 
-## Ownership and guard
+## Ownership and confinement
 
-The SQLite registry is canonical; `refs/references.bib` is derived and re-rendered
-on registry writes. Human edits to it are overwritten; `sync-bib` restores it.
-The Pi `tool_call` guard blocks agent access to `.registry/**` and agent writes
-to `refs/references.bib`; bibliography reads are allowed. Bash guarding scans
-command text, not shell syntax: it is advisory protection, not a security sandbox.
-Removing the extension removes the guard.
+The SQLite registry is canonical (`.registry/registry.db`); `refs/references.bib` is derived
+and re-rendered on registry writes. Human edits to it are overwritten; `sync-bib` restores it.
+
+- **Path confinement (`PATH_REFUSED`)**: All tools and the MCP server strictly validate project
+  paths. Lexical `..` escapes, symlink traversal outside the project root, and access to protected
+  directories (`.registry/**` and `.git/**`) are rejected immediately before reading or writing.
+- **MCP server security boundary**: On external MCP hosts (Claude Code, Cursor, Codex, OpenCode),
+  tools execute via JSON-RPC. The server enforces confinement on its own parameters; host-level
+  file/bash operations are external to the MCP process and guided by agent discipline
+  ([research skill](skills/uktub-research/SKILL.md)).
+- **Advisory bash guard**: In native Pi extension environments, `guardToolCall` provides
+  heuristics against accidental writes to `refs/references.bib` and direct SQLite edits. Removing
+  the extension removes that advisory seatbelt.
 
 Optional project `AGENTS.md` guidance (never written by `init`): use the scholarly
 tools for papers, cite only citable registered keys, never hand-edit the rendered

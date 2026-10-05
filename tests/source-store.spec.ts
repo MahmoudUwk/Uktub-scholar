@@ -43,7 +43,6 @@ afterEach(() => {
   rmSync(root, { recursive: true, force: true });
 });
 
-const sourceText = (): string => (db.prepare("SELECT text FROM paper_sources WHERE doi = ?").get(DOI) as { text: string }).text;
 const rowCount = (table: string): number => (db.prepare(`SELECT COUNT(*) n FROM ${table}`).get() as { n: number }).n;
 
 const CARRY = { unavailable: [], unresolved: [], staleDropped: 0 };

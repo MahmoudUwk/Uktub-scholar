@@ -4,10 +4,11 @@ Open correctness risks and deferred work; current behavior is in [README](../REA
 Historical rationale lives in [DECISIONS.md](DECISIONS.md); attribution rules in [NOTICE.md](../NOTICE.md);
 independent review evidence in [review-2026-10-04.md](review-2026-10-04.md).
 
-## Completed Milestones & Resolved Debt (2026-10-04)
+## Completed Milestones & Resolved Debt (2026-10-05)
 
 Every milestone was developed behavior-first (TDD) and verified with zero-mock tests against real papers and live services:
 
+- [x] **Unified Stdio MCP Server & Multi-Host Adapters**: Implemented standard Model Context Protocol server (`src/mcp/server.ts`) over stdio via `@modelcontextprotocol/sdk`. Exposes all five canonical scholarly tools (`search_papers`, `paper_registry`, `compile_document`, `verify_claim`, `search_passages`) with strict TypeBox JSON Schema input definitions, structured JSON outputs, and typed refusal error reporting. Added bidirectional namespaced tool identifier normalization (`mcp__uktub_scholar__*`), declarative host installer (`uktub-scholar mcp install --host <claude|pi|agy|codex|cursor|opencode>`), decoupled peer dependencies, and streamlined Pi extension to an 8-line hook. Verified across 616 passing tests ([decision](DECISIONS.md)).
 - [x] **Section-aware chunking**: `splitBySections` with heading detection (`pdf.js` text items and GROBID TEI), schema v4, default `boundary: section` at 512 tokens. Tiling verified with zero gaps, zero overlaps, and exact verbatim slice recovery across 14 real papers ([evidence](benchmarks/evidence-chunking-sections-2026-10-04.md); [decision](DECISIONS.md)).
 - [x] **Managed llama.cpp embedding runtime**: Pinned official `llama-server` `b11398` fetched on explicit `embed install --yes` into shared cache (`UKTUB_CACHE_DIR`), verified by sha256, safely extracted, and supervised as a resident child process on loopback. Safe symlink reconstruction and `.zip` archive inflation ([decision](DECISIONS.md)).
 - [x] **First-party ungated embedding GGUF pin**: Discovered and pinned official `ggml-org/embeddinggemma-300M-GGUF` (`embeddinggemma-300M-Q8_0.gguf`, 316 tensors, ungated HTTP 200), replacing third-party conversions. Measured at **0.9997 mean cosine parity**, 0.9999 Pearson correlation, and 1.00 Top-1 agreement against reference `sentence-transformers` on the parity gate ([decision](DECISIONS.md)).
@@ -58,4 +59,4 @@ Every milestone was developed behavior-first (TDD) and verified with zero-mock t
   - `europepmc`: PubMed/biomedical metadata and OA retrieval.
   - `paper-figures`: Publication-grade LaTeX/vector figures.
   - `grant-proposals`: NSF/NIH/DOE proposal structure and review criteria.
-  - `host-adapters`: MCP wrapper around `src/core` for non-Pi hosts (Claude Code, Codex).
+  - [x] `host-adapters`: Unified Stdio MCP server (`src/mcp/server.ts`) and declarative config generator (`uktub-scholar mcp install`) for Claude Code, Pi, Cursor, Codex, OpenCode, and Antigravity.

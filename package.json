@@ -1,12 +1,17 @@
 {
   "name": "uktub-scholar",
-  "version": "0.1.0",
-  "description": "Local-first scholarly research tools for coding agents: paper search, registry, bibliography. Pi package; CLI included.",
+  "version": "0.2.0",
+  "description": "Local-first scholarly research tools for coding agents: paper search, registry, bibliography, LaTeX compilation, RAG passage search, and claim verification. Unified Stdio MCP server, Pi package, and CLI.",
   "type": "module",
   "license": "AGPL-3.0-only",
   "private": true,
   "keywords": [
-    "pi-package"
+    "pi-package",
+    "mcp",
+    "mcp-server",
+    "modelcontextprotocol",
+    "scholarly",
+    "latex"
   ],
   "engines": {
     "node": ">=22.19"

@@ -17,7 +17,7 @@ import { WriteQueue } from "../src/core/queue.ts";
 import { createRegistry, deregisterPapers, registerPaper } from "../src/core/registry.ts";
 import type { ToolContext } from "../src/core/tools/context.ts";
 import { MAX_EVIDENCE_PER_PAGE, MAX_PAGE_EXCERPT_CHARS, VerifyClaimOutput, verifyClaimTool, type VerifyClaimArgs, type VerifyHooks } from "../src/core/tools/verify.ts";
-import { EngineError, type ClaimEngine } from "../src/core/verify/claim.ts";
+import { EngineError } from "../src/core/verify/claim.ts";
 import { chunksOf, getSource, publishSource, resolvePointer } from "../src/core/verify/store.ts";
 import { SourceError } from "../src/core/source/extract.ts";
 import type { DownloadLike } from "../src/core/source/download.ts";
@@ -66,10 +66,6 @@ function writeConfig(opts: { chunkTokens?: number; maxJudgments?: number; worker
   );
 }
 
-interface FakeEngine extends ClaimEngine {
-  rows: { state: string; instructions: string }[];
-  builds: number;
-}
 /** Scores 0.999 for rows whose passage carries the marker and the right claim; 0.05 otherwise. */
 function engine(over: { failAfter?: number; onRun?: () => void } = {}): { hooks: VerifyHooks; stats: { rows: number; calls: number; builds: number } } {
   const stats = { rows: 0, calls: 0, builds: 0 };

@@ -1,7 +1,7 @@
 /**
  * U7 integration and determinism suite: cross-layer proofs with zero network
  * and zero Pi — provider fakes for every HTTP path, real node:sqlite temp
- * registries, the fake-Pi adapter harness for execute-level calls, and fresh
+ * registries, the MCP server and client harness for tool execution calls, and fresh
  * node subprocesses for the R8 determinism re-run. Scenarios that tools.spec.ts
  * already proves in isolation (queue serialization mechanics, batch partial
  * failure) are only re-exercised here as parts of end-to-end flows.

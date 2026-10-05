@@ -12,6 +12,16 @@ local alternative. Earlier “primary” choices and Stage-D candidate lists bel
 are superseded. Recorded live/benchmark runs are historical; the latest
 Mercury CLI attempt was quota-blocked, not a new successful live verification.
 
+## 2026-10-05 (Unified Stdio MCP Server & Multi-Host Architecture)
+
+Owner request: elevate `uktub-scholar` from a single-host Pi extension to a universal scholarly tools suite accessible across all modern AI coding agents (Claude Code, Pi, Cursor, Codex, OpenCode, Antigravity) and human CLI workflows.
+
+- **Unified Stdio MCP Server (`src/mcp/server.ts`)** — Implemented a standards-compliant Model Context Protocol server over stdio using `@modelcontextprotocol/sdk`. Exposes all five canonical scholarly tools (`search_papers`, `paper_registry`, `compile_document`, `verify_claim`, `search_passages`) with strict TypeBox JSON Schema input definitions, structured JSON outputs, and typed refusal error reporting.
+- **Streamlined Pi Adapter (`src/pi/index.ts`)** — Replaced in-process tool registrations (`src/pi/extension.ts`) and custom TUI widgets (`src/pi/registry-widget.ts`) with an 8-line hook delegating to `pi.registerMcpServer("uktub-scholar", { command: "uktub-scholar", args: ["mcp"] })`. Decoupled `@earendil-works/pi-coding-agent` to an optional peer dependency, ensuring the package installs and runs cleanly in non-Pi environments.
+- **Host Tool Name Normalization** — Different MCP hosts invoke tools under varied namespaced identifiers (e.g. `mcp__uktub_scholar__search_papers` in Claude Code / OpenCode, `uktub-scholar/search_papers`, or bare `search_papers`). Implemented robust regex normalization in `src/mcp/server.ts` to map any namespaced variant to the canonical tool implementation.
+- **Declarative Host Configuration Generator (`uktub-scholar mcp install`)** — Created CLI command supporting `--host <claude|pi|agy|codex|cursor|opencode>`. Safely reads existing config files (`.mcp.json`, `.agents/mcp_config.json`, `.cursor/mcp.json`, `opencode.json`, `.codex/config.toml`), merges the server definition, and writes formatted output without clobbering other configured MCP servers.
+- **Protocol & OS Stdio Verification** — Comprehensive unit and integration coverage in `tests/mcp-server.spec.ts` and `tests/cli.spec.ts`. Verified in-memory client-server sessions, schema validation, and real OS subprocess stdio execution with `StdioClientTransport`, bringing the full test suite to 616 passing tests.
+
 ## 2026-10-04 (section chunking and passage search)
 
 Owner request: chunk by the document's own structure, one set of chunks for retrieval and claim

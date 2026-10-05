@@ -4,6 +4,25 @@ All notable changes to the `uktub-scholar` package are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to Semantic Versioning.
 
+## [0.2.0] - 2026-10-05
+
+### Added
+- **Unified Stdio MCP Server (`src/mcp/server.ts`)**:
+  - Implemented standard Model Context Protocol server over stdio via `@modelcontextprotocol/sdk`.
+  - Exposes all five canonical scholarly tools (`search_papers`, `paper_registry`, `compile_document`, `verify_claim`, `search_passages`) with strict TypeBox JSON Schema input definitions, structured JSON outputs, and typed refusal error reporting.
+  - CLI subcommands `uktub-scholar mcp [dir]` and `uktub-scholar mcp install [--host <claude|pi|agy|codex|cursor|opencode>]`.
+  - Declarative host config generator safely creating or merging `.mcp.json`, `.agents/mcp_config.json`, `.cursor/mcp.json`, `opencode.json`, and `.codex/config.toml`.
+  - Bidirectional tool name normalization in `normalizeToolName()`, supporting both bare tool names and host-namespaced identifiers (e.g. `mcp__uktub_scholar__search_papers` or `uktub-scholar/search_papers`).
+- **Test Suite Expansion**:
+  - Added `tests/mcp-server.spec.ts` covering in-memory JSON-RPC sessions and real OS stdio subprocess transports.
+  - Added `tests/cli.spec.ts` covering MCP CLI commands, host configuration generation, and path confinement. Suite expanded to 616 passing tests.
+
+### Changed
+- **Streamlined Host Adapters**:
+  - Pruned in-process tool extension (`src/pi/extension.ts`) and custom widget (`src/pi/registry-widget.ts`), replacing them with an 8-line `registerMcpServer` hook in `src/pi/index.ts`.
+  - Decoupled `@earendil-works/pi-coding-agent` into an optional peer dependency in `package.json`.
+  - Updated documentation across `README.md`, `docs/DECISIONS.md`, and `docs/BACKLOG.md` to reflect universal MCP-first architecture.
+
 ## [0.1.0] - 2026-10-04
 
 ### Added

@@ -1,156 +1,291 @@
 ---
 artifact_contract: "ce-handoff/v1"
-created_at: "2026-10-04T23:31:00Z"
-title: "Package Installation, Distribution & Multi-Host Adapters (Pi & Claude Code)"
-summary: "Handoff detailing the packagability audit, MCP server adapter design for Claude Code, optional peer dependencies, and next implementation steps."
-keywords: ["packagability", "distribution", "pi-extension", "claude-code", "mcp-server", "npm", "build-pipeline"]
+created_at: "2026-10-05T20:30:00Z"
+title: "Independent Reviewer Handoff & Stress-Test Protocol: Uktub-scholar v0.2.0"
+summary: "Unbiased, rigorous review protocol and execution brief for an independent reviewer to stress-test the entire uktub-scholar system: stdio MCP server, multi-host config generation, live scholarly search, registry integrity, TEI/PDF extraction, GGUF embedding parity, managed llama.cpp runtime, hybrid RAG passage search, and resident CUDA Eos claim verification."
+keywords: ["independent-review", "reviewer-brief", "mcp-server", "modelcontextprotocol", "stress-test", "zero-mocks", "hermes-research", "rag", "llama.cpp", "decision2-eos", "openalex", "tei", "chunk-tiling"]
 cwd: "/home/mahmoud/Desktop/AI_Projects/UktubAI/Uktub-scholar"
-resume_focus: "Implement MCP stdio server adapter (src/mcp/), decouple peer dependencies, and establish production dist/ build pipeline for universal host support"
+resume_focus: "Execute independent zero-mock system review, stress-test MCP stdio across multiple hosts, and verify all 10 core subsystems"
 repository: "Uktub-scholar"
-repo_root_sha: "2a3eebf55d6d338ababdac19ba9330629ce8cd4a"
 branch: "main"
-head: "de106a2762fe89700c91bb2538fed0efe05ff7e7"
 ---
 
-# Package Installation, Distribution & Multi-Host Handoff
+# Independent Reviewer Handoff & Stress-Test Protocol (v0.2.0)
 
-## 1. Context & Objective
-
-The `Uktub-scholar` package is currently verified and functioning as an independent, local-first scholarly tools suite. It provides:
-- Live paper search across OpenAlex, Crossref, and Semantic Scholar with RRF candidate fusion.
-- Unified paper registry with local PDF/TEI attachment, metadata extraction, and BibTeX synchronization.
-- Section-aware chunking (512 tokens) with exact character-slice recovery and zero tiling gaps.
-- Managed `llama.cpp` (`b11398`) embedding supervisor running first-party `ggml-org/embeddinggemma-300M-GGUF` (0.9997 cosine parity against reference `sentence-transformers`).
-- Exploratory RAG passage search (`search_passages`) with FTS5 lexical + vector RRF hybrid retrieval and strict full-text containment.
-- Claim verification (`verify_claim`) backed by a resident Decision 2.0 Eos 0.8B model running locally on CUDA GPU (or OpenRouter fallback).
-- LaTeX compilation (`compile_document`) via local Tectonic binary.
-
-The primary objective now is **packaging, distribution, and universal installation** so that `uktub-scholar` functions seamlessly as:
-1. A **Pi package / extension** for the Pi Coding Agent (`@earendil-works/pi-coding-agent`).
-2. An **MCP server** for **Claude Code**, Cursor, Windsurf, Antigravity, and other Model Context Protocol clients.
-3. A **Standalone CLI** for developers, scripts, and CI workflows.
+> [!WARNING] **Reviewer Stance & Skepticism Disclaimer**
+> You are an independent reviewer whose goal is to verify, challenge, and stress-test this codebase. Do not assume anything works because of previous claims, documentation, or commit messages. Approach every subsystem with rigorous skepticism: write reproducer probes, run live zero-mock integrations, attack edge cases, and inspect raw output bytes. If something breaks or deviates from its documented contract, write a test-first reproduction and fix it before finishing.
 
 ---
 
-## 2. Packagability & Portability Audit: Current State vs. Universal Needs
+## 1. System Overview & Architecture (v0.2.0)
 
-### A. What Can Be Packaged Cleanly (Host-Independent)
-- **`src/core/`**: 100% host-agnostic TypeScript. Relies only on standard Node.js built-ins (`node:sqlite`, `node:fs`, `node:crypto`, `node:child_process`, `fetch`). SQLite schema migrations, FTS5 BM25 search, vector embeddings, citation handling, and extraction logic have zero host dependencies.
-- **`skills/uktub-research/SKILL.md`**: Host-agnostic procedural guidance teaching any AI coding agent when and how to call the 5 tools.
-- **`src/cli/`**: Standalone command-line interface.
-- **Managed Assets**: `llama-server` binary and the 318MB GGUF are downloaded on-demand into `UKTUB_CACHE_DIR` (or `~/.cache/uktub-scholar/`) via `embed install --yes`. They are not bundled into the npm package, keeping the package size minimal (< 5 MB).
+`Uktub-scholar` is a local-first scholarly tools suite for coding agents and researchers. It provides five canonical capabilities:
+1. `search_papers`: Live paper search across OpenAlex, Crossref, and Semantic Scholar with Reciprocal Rank Fusion (RRF).
+2. `paper_registry`: Unified registry managing papers, citekeys, metadata, local PDF/TEI source attachments, and one-way BibTeX bibliography sync (`refs/references.bib`).
+3. `compile_document`: LaTeX compilation with local Tectonic, structured diagnostic parsing, and PDF generation into `build/`.
+4. `verify_claim`: One-claim verification against registered papers, powered by a local resident Decision 2.0 Eos 0.8B model (CUDA) or OpenRouter fallback, producing exact text pointers (`doi@revision#start-end`) and strict full-text containment.
+5. `search_passages`: Exploratory hybrid RAG passage search combining SQLite FTS5 (BM25) and exact-cosine dense vector search over document sections.
 
-### B. What Violates Packagability Today
-1. **Hard Peer Dependency on Pi (`package.json`)**:
-   - `package.json` specifies `"peerDependencies": { "@earendil-works/pi-coding-agent": "*", "typebox": "*" }`.
-   - Claude Code / npm users who run `npm install -g uktub-scholar` or `npx uktub-scholar` receive installation errors or warnings about missing Pi packages.
-2. **Missing MCP Adapter**:
-   - Claude Code and other modern agents cannot execute Pi extension code (`pi.registerTool`, `pi.on`). They communicate exclusively over **MCP (Model Context Protocol)** using JSON-RPC over `stdio`.
-3. **No Compiled Distribution Pipeline (`dist/`)**:
-   - `"private": true` is set in `package.json`, preventing npm publication.
-   - There is no `dist/` directory or `build` script. `bin/uktub-scholar.js` invokes `src/cli/main.ts` using `node --experimental-strip-types`. While functional in local Node 22/23 development, standard npm consumers expect pre-compiled `.js` and `.d.ts` artifacts.
-4. **Host Guard Asymmetry**:
-   - In Pi, `pi.on("tool_call")` (`guardToolCall`) intercepts other tools (`bash`, `write_file`) from tampering with `.registry` or writing directly to `refs/`.
-   - In Claude Code / MCP, the server is an external process; **it cannot intercept Claude's built-in file or bash operations**. The contract on non-Pi hosts is enforced at the tool API level and documented in agent instructions, not by host event interception.
-
----
-
-## 3. Universal Architecture Design
-
+### Host Integration Surfaces
 ```mermaid
 flowchart TD
     subgraph Core ["src/core/ (Host-Agnostic Engine)"]
-        Tools["5 Tools: Search, Registry, RAG Passages, Verify, Compile"]
-        Storage["SQLite (node:sqlite) + FTS5 + Vector Cache"]
-        Runtime["Managed llama.cpp + GGUF Cache Supervisor"]
+        Tools["5 Tools: search_papers, paper_registry, compile_document, verify_claim, search_passages"]
+        Storage["SQLite Registry (.registry/registry.db) + FTS5 + Vector Cache"]
+        Runtime["Managed llama.cpp + EmbeddingGemma Supervisor"]
     end
 
-    subgraph Adapters ["Surface Adapters"]
-        PiExt["src/pi/ (Pi Extension)"]
-        MCPExt["src/mcp/ (MCP Stdio Server)"]
-        CLIExt["src/cli/ (CLI Binary)"]
+    subgraph Surfaces ["Host & Integration Surfaces"]
+        MCP["src/mcp/server.ts (Stdio MCP Server)"]
+        Pi["src/pi/index.ts (Pi registerMcpServer hook)"]
+        CLI["src/cli/main.ts (uktub-scholar CLI)"]
     end
 
-    Core --> PiExt
-    Core --> MCPExt
-    Core --> CLIExt
+    Core --> MCP
+    Core --> Pi
+    Core --> CLI
 
-    PiExt --> HostPi["Pi Coding Agent (pi-package)"]
-    MCPExt --> HostClaude["Claude Code, Cursor, Windsurf (MCP)"]
-    CLIExt --> HostShell["Terminal / CI / Scripts"]
+    MCP --> Hosts["Claude Code, Cursor, Codex, OpenCode, Antigravity, Pi"]
+    CLI --> Shell["Developer Terminal, Scripts, CI"]
 ```
 
 ---
 
-## 4. Implementation Plan & Next Steps
+## 2. Reviewer Ground Rules & Protocol
 
-### Phase 1: Decouple Peer Dependencies & Refactor Package Manifest
-- In `package.json`:
-  - Mark `@earendil-works/pi-coding-agent` as an optional peer dependency:
-    ```json
-    "peerDependencies": {
-      "@earendil-works/pi-coding-agent": ">=1.0.0",
-      "typebox": "^1.3.0"
-    },
-    "peerDependenciesMeta": {
-      "@earendil-works/pi-coding-agent": {
-        "optional": true
-      }
-    }
-    ```
-  - Declare dual binaries:
-    ```json
-    "bin": {
-      "uktub-scholar": "./dist/cli/main.js",
-      "uktub-scholar-mcp": "./dist/mcp/main.js"
-    }
-    ```
-  - Define package exports:
-    ```json
-    "exports": {
-      ".": "./dist/core/index.js",
-      "./pi": "./dist/pi/index.js",
-      "./mcp": "./dist/mcp/index.js"
-    }
-    ```
+### A. Zero Mocks on Integration Paths
+Unit tests use offline provider fakes for isolation and determinism. **However, your review must validate against the real world:**
+- Real OS processes and stdio pipes (`StdioClientTransport`, child processes).
+- Real scientific PDFs (14 test papers in `../test_papers`).
+- Real live APIs (OpenAlex, Crossref, Semantic Scholar, OpenAlex Content API).
+- Real binaries (`llama-server`, `tectonic`, `python3` with PyTorch/CUDA).
+- Real filesystem interactions, SQLite locks, and schema migrations.
 
-### Phase 2: Implement the MCP Adapter (`src/mcp/`)
-- Create `src/mcp/main.ts`:
-  - Use `@modelcontextprotocol/sdk` (or lightweight JSON-RPC over `node:readline` / `process.stdin`).
-  - Translate the 5 tool definitions (`search_papers`, `paper_registry`, `compile_document`, `verify_claim`, `search_passages`) to MCP `tools/list` and `tools/call`.
-  - Convert TypeBox parameter schemas to standard JSON Schema.
-  - Instantiate `ToolContext` using current working directory (`process.cwd()`) and execute the exact same tool handlers in `src/core/tools/*`.
-  - Map `ToolResult` outputs to MCP `content: [{ type: "text", text: ... }]` blocks, preserving error indicators on refusals.
+### B. Test-First Bug Fixes (TDD)
+If you identify any defect, race condition, data truncation, or missing handling:
+1. Write a failing regression test or isolated reproduction script first.
+2. Verify that it reproduces the bug cleanly.
+3. Apply the minimal, robust fix to the codebase.
+4. Verify that the regression test now passes, alongside the existing 616 unit tests.
+5. **Never weaken or skip existing tests.**
 
-### Phase 3: Add Production Build Pipeline (`dist/`)
-- Configure a fast bundler (e.g. `tsup` or TypeScript project references via `tsc`):
-  - Output compiled, sourcemapped, type-declared artifacts to `dist/`.
-  - Add `"build": "tsup"` (or `"build": "tsc -p tsconfig.build.json"`) to `scripts`.
-  - Add `"prepublishOnly": "pnpm run typecheck && pnpm test && pnpm run build"`.
-  - Update `.gitignore` and `package.json` `"files": ["dist", "skills", "bin", "README.md", "LICENSE"]`.
-
-### Phase 4: Verification & Host Integration Testing
-- **Test with Pi**: Verify Pi local extension loading (`pi -e .`) and tool registration.
-- **Test with Claude Code / MCP Inspector**:
-  - Run MCP inspector: `npx @modelcontextprotocol/inspector node dist/mcp/main.js`.
-  - Run Claude Code CLI configuration: `claude mcp add uktub-scholar -- node /path/to/Uktub-scholar/dist/mcp/main.js`.
-  - Test tool discovery, execution of `search_papers`, `paper_registry`, `search_passages`, and `verify_claim`.
-- **Test CLI**: Verify `uktub-scholar` executable runs cleanly without `--experimental-strip-types`.
+### C. External Research via Hermes Subagents
+Whenever you need to verify external specifications, package versions, upstream bug reports, or host configurations, delegate to the Hermes research subagent:
+- Skill path: `.agents/skills/hermes-subagent/SKILL.md`
+- Use cases:
+  - Querying MCP specification changes (e.g., Model Context Protocol SDK 2026/2027 standards).
+  - Checking configuration file formats for Claude Code, Cursor, Codex, OpenCode.
+  - Verifying upstream `llama.cpp` release tags, binary assets, and CUDA compatibility.
+  - Verifying OpenAlex Content API TEI schema details.
+- **Rule:** Hermes subagents are research-only and must never edit local workspace files.
 
 ---
 
-## 5. Verification Status & Baseline
+## 3. Subsystem Stress-Test Suites
 
-- **Current HEAD**: `de106a2`
-- **Unit & Regression Tests**: 596 tests, 130 suites: **594 pass, 2 skipped** (Julia adapter env-gated).
-- **Parity Gate**: 0.9997 cosine parity against `sentence-transformers` with official first-party `ggml-org/embeddinggemma-300M-GGUF`.
-- **Clean Workspace**: `git status --short` is clean on `main`.
+The reviewer must execute the following 10 stress-test suites and document exact PASS / FAIL / NOT RUN status and metrics.
+
+### Subsystem 1: Baseline Verification & Clean Architecture
+- **Goal:** Verify typecheck, import boundaries, and zero-defect baseline.
+- **Commands:**
+  ```sh
+  pnpm exec tsc --noEmit --noUnusedLocals --noUnusedParameters
+  pnpm test
+  ```
+- **Validation Criteria:**
+  - `tsc` exits 0 with zero errors and zero unused variables.
+  - All 616 tests across 142 suites pass cleanly (2 skipped by design: env-gated Julia engine).
+  - `tests/import-allowlist.spec.ts` passes: `src/core/`, `src/cli/`, and `src/mcp/` have zero imports of `@earendil-works/pi-coding-agent`.
+
+### Subsystem 2: Unified Stdio MCP Server (JSON-RPC Protocol & Transports)
+- **Goal:** Stress-test the stdio MCP server across in-memory and real OS subprocess transports.
+- **Key Files:** `src/mcp/server.ts`, `tests/mcp-server.spec.ts`.
+- **Stress-Test Scenarios:**
+  1. **Tool Listing & Schemas:**
+     - Initialize MCP client over `StdioClientTransport` pointing to `bin/uktub-scholar.js mcp`.
+     - Call `tools/list`: verify all 5 tools (`search_papers`, `paper_registry`, `compile_document`, `verify_claim`, `search_passages`) return valid JSON Schema properties and descriptions.
+  2. **Tool Execution:**
+     - Execute each of the 5 tools via `tools/call`.
+     - Verify structured content envelopes (`content`, `isError`, `structuredContent`).
+  3. **Tool Namespacing Normalization:**
+     - Test calling tools with bare names: `search_papers`.
+     - Test calling tools with Claude Code prefixes: `mcp__uktub_scholar__search_papers`.
+     - Test calling tools with slash namespaces: `uktub-scholar/search_papers`.
+     - Test colon namespaces: `mcp__uktub-scholar:search_papers`.
+     - Verify `normalizeToolName()` strips prefixes correctly and routes to the real tool.
+  4. **Error Handling & Refusals:**
+     - Pass invalid arguments (e.g. unknown action to `paper_registry`, empty claim to `verify_claim`).
+     - Verify responses return `isError: true` with stable refusal messages (`Refused: CODE — message. Next: hint.`).
+
+### Subsystem 3: Declarative Host Configuration Generator (`mcp install`)
+- **Goal:** Verify that `uktub-scholar mcp install` correctly provisions config files for all target agent hosts without data corruption.
+- **Command Matrix:**
+  ```sh
+  pnpm exec uktub-scholar mcp install --host claude     # writes .mcp.json
+  pnpm exec uktub-scholar mcp install --host pi         # writes .mcp.json
+  pnpm exec uktub-scholar mcp install --host cursor     # writes .cursor/mcp.json
+  pnpm exec uktub-scholar mcp install --host codex      # writes .codex/config.toml
+  pnpm exec uktub-scholar mcp install --host opencode   # writes opencode.json
+  pnpm exec uktub-scholar mcp install --host agy        # writes .agents/mcp_config.json
+  ```
+- **Stress-Test Scenarios:**
+  1. **Clean Installation:** Run against an empty temporary directory; verify valid JSON/TOML syntax.
+  2. **Preservation & Merging:** Run against a pre-existing config containing existing servers (e.g. `weather-server`, `fetch`); verify existing servers are preserved and `uktub-scholar` is merged.
+  3. **Idempotence:** Re-running install on an already configured host must produce identical output without duplicate entries.
+  4. **Invalid Host Handling:** Pass `--host invalid`; verify typed refusal naming allowed hosts.
+
+### Subsystem 4: Path Confinement & Sandbox Security (`PATH_REFUSED`)
+- **Goal:** Prove that the agent host cannot escape project boundaries or corrupt protected state.
+- **Key Files:** `src/core/tools/context.ts`, `src/mcp/server.ts`, `tests/guard.spec.ts`.
+- **Stress-Test Scenarios:**
+  1. **Directory Traversal:**
+     - Attempt targetDir / paths containing `../`, `../../etc`, `..\\windows`.
+     - Verify rejection with `PATH_REFUSED` before filesystem access occurs.
+  2. **Protected Segments:**
+     - Attempt reading or writing `.registry/` or `.git/`.
+     - Verify immediate rejection (`tool context points at the protected path segment`).
+  3. **Symlink Escapes:**
+     - Create a symlink inside the project pointing outside the project root; call `attach_source`.
+     - Verify detection and refusal.
+  4. **SSRF Defense:**
+     - In `src/core/source/download.ts`, verify blocking of private IP ranges:
+       - Loopback: `127.0.0.1`, `::1`
+       - RFC1918: `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`
+       - Cloud metadata: `169.254.169.254`
+       - IPv6 ULA, IPv4-mapped, and redirect hops.
+
+### Subsystem 5: Real Paper Search & Multi-Provider Degradation
+- **Goal:** Validate live scholarly search across OpenAlex, Crossref, and Semantic Scholar.
+- **Script:** `scripts/test-live-search.ts`
+- **Stress-Test Queries:**
+  - Exact DOI: `10.1038/s41586-020-2649-2` (AlphaFold)
+  - arXiv ID: `2411.09996` (Wireless Foundation Model)
+  - Misspelled query: `attenshun is all you ned` -> Expect "Attention Is All You Need"
+  - Multilingual queries: Arabic (`معالجة اللغات الطبيعية`), French (`apprentissage profond`)
+  - Long natural language query (> 200 characters)
+  - Nonsense query -> Expect 0 hits, `found: false` without exception
+- **Degradation Testing:**
+  - Block OpenAlex via network fake -> Verify Crossref and S2 continue with warning.
+  - Block Semantic Scholar -> Verify OpenAlex and Crossref continue with warning.
+  - Block all 3 providers -> Verify typed refusal `SEARCH_UNAVAILABLE`.
+
+### Subsystem 6: Paper Registry & Document Extraction (GROBID TEI & PDF)
+- **Goal:** Stress-test paper registration, citekey pinning, bibliography rendering, and live full-text extraction.
+- **Scripts:** `scripts/test-live-registration.ts`, `scripts/test-live-tei.ts`
+- **Stress-Test Scenarios:**
+  1. **Batch Registration & Deduplication:**
+     - Register 5 DOIs in a single batch.
+     - Re-register the same papers using URL format (`https://doi.org/...`) -> Expect `duplicate` with preserved citekeys.
+  2. **Bibliography Sync & Healing:**
+     - Hand-edit `refs/references.bib` with invalid content.
+     - Call `paper_registry(action: "sync_bibliography")` or CLI `uktub-scholar sync-bib`.
+     - Verify byte-identical restoration from SQLite registry.
+  3. **GROBID TEI Extraction:**
+     - Test papers via OpenAlex Content API (e.g. DESeq2 `10.1186/s13059-014-0550-8`, PRISMA `W2156098321`).
+     - Verify handling of wrapped HTML (`<html><body><tei>`), case-insensitive XML tags, and direct `<div>` text preservation (> 200 chars).
+  4. **PDF Extraction:**
+     - Run `scripts/test-item4-extraction.ts` on the 14 real papers in `../test_papers`.
+     - Verify extraction time (< 150 ms/document).
+     - Test hostile PDFs: missing `%PDF-` header, truncated `%%EOF`, missing text layer (scanned).
+
+### Subsystem 7: Section Chunking & Tiling Math
+- **Goal:** Prove mathematical continuity of document chunking.
+- **Key Files:** `src/core/sections.ts`, `tests/sections.spec.ts`, `scripts/test-item4-extraction.ts`.
+- **Verification Invariants:**
+  - Default policy: `boundary: section`, 512 tokens.
+  - **Zero gaps:** For all chunks $i$, `chunks[i].char_end === chunks[i+1].char_start`.
+  - **Zero overlaps:** `chunks[0].char_start === 0` and `chunks[last].char_end === fullText.length`.
+  - **Verbatim reconstruction:** `chunk.text === fullText.slice(chunk.char_start, chunk.char_end)`.
+  - **Heading integrity:** Section headings are never chopped or isolated at the trailing edge of a chunk; section labels are capped at 200 characters.
+
+### Subsystem 8: Embedding GGUF Parity & First-Party Resolution
+- **Goal:** Verify that the served embedding GGUF model reproduces the reference sentence-transformers geometry.
+- **Key Files:** `scripts/embed-parity.py`, `src/core/embed/models.lock.json`.
+- **Verification Steps:**
+  1. Check `src/core/embed/models.lock.json`:
+     - Pinned model: `ggml-org/embeddinggemma-300M-GGUF` (`embeddinggemma-300M-Q8_0.gguf`).
+     - Sha256: `b5ce9d77a3fc4b3b39ccb5643c36777911cc4eb46a66962eadfa3f5f60490d63`.
+     - Size: 333,590,944 bytes.
+  2. Run the parity gate:
+     ```sh
+     python3 scripts/embed-parity.py http://127.0.0.1:8080
+     ```
+  3. Verify thresholds:
+     - Mean cosine similarity: $\ge 0.98$ (expected: **0.9997**).
+     - Pairwise Pearson correlation: $\ge 0.99$ (expected: **0.9999**).
+     - Top-1 retrieval agreement: **1.00**.
+  4. Negative control: Verify that defective 314-tensor GGUF (`embeddinggemma-300m-qat-q8_0-GGUF` lacking dense modules) fails the gate (cosine $\approx 0.01$).
+
+### Subsystem 9: Managed llama.cpp Supervisor & Hybrid RAG Retrieval
+- **Goal:** Verify child process supervision, cold indexing, crash recovery, and hybrid search.
+- **Scripts:** `scripts/bench-rag.ts`, `scripts/test-item5-rag-lifecycle.ts`.
+- **Stress-Test Scenarios:**
+  1. **Supervisor Process Lifecycle:**
+     - Verify `embed install --yes` unpacks verified binary and GGUF into `UKTUB_CACHE_DIR`.
+     - Verify `search_passages` starts `llama-server` on loopback.
+     - Send `SIGKILL` to `llama-server` mid-session; verify supervisor auto-restarts the child process and answers subsequent queries.
+     - Send `SIGTERM` / `SIGINT` to the parent process; verify child `llama-server` is actively killed (no zombie/orphaned processes).
+  2. **Hybrid RAG Fusion (BM25 + Cosine RRF k=60):**
+     - Run 30 domain queries across Smart Home and RF sensing papers.
+     - Verify 100% pointer resolution (`doi@revision#start-end`).
+  3. **Full-Text Output Containment:**
+     - Enforce `SOURCE_SHARE_MAX = 0.25` (max 25% of any paper's text released per call).
+     - Enforce 1,500 characters per passage excerpt.
+     - Verify that queries targeting a single paper withhold excess text with `withheld: "source_share"`, while retaining all exact pointers.
+
+### Subsystem 10: Resident CUDA Decision 2.0 Eos Claim Verification
+- **Goal:** Verify the primary claim verification engine on CUDA GPU.
+- **Key Files:** `scripts/decision2_decide.py`, `scripts/test-item7-claim-verification.ts`.
+- **Stress-Test Scenarios:**
+  1. **Engine Startup & Identity:**
+     - Starts `scripts/decision2_decide.py` using Python environment (`UKTUB_EOS_PYTHON`).
+     - Handshake check: returns `{"ready": true, "model": "...", "revision": "..."}` on first line.
+     - Memory footprint: $\approx 3\text{ GB}$ on CUDA GPU (VRAM).
+  2. **Verification Quality (Bar 0.99):**
+     - Test on 40 TRUE claims across scientific papers: target recall $\ge 90\%$ (measured: 95.0%).
+     - Test on 30 FALSE / altered claims: target specificity $\ge 95\%$ (measured: 96.7%).
+     - Verify precision $\ge 95\%$ (measured: 97.4%).
+  3. **Continuation & Paging:**
+     - Test multi-page evidence output: verify continuation token resumes unfinished checking without re-judging cached passages.
+     - Verify pointer integrity across pages.
 
 ---
 
-## 6. How to Resume
+## 4. Deliverables & Required Reporting Format
 
-To continue from this handoff:
-1. Review the proposed Phase 1 and Phase 2 changes.
-2. Choose between using `@modelcontextprotocol/sdk` as a dependency vs. a zero-dependency JSON-RPC stdio implementation for `src/mcp/`.
-3. Proceed with implementing `src/mcp/` and configuring the build toolchain.
+The reviewer must deliver their final report as a structured Markdown document (or pull request review) matching the following format:
+
+```markdown
+# Independent System Review: Uktub-scholar v0.2.0
+
+**Date:** YYYY-MM-DD
+**Reviewer:** [Independent Reviewer Name]
+**Target:** `Uktub-scholar` repository
+**Baseline Commit:** [Commit SHA]
+
+## Executive Summary
+[Brief overview of findings, bugs discovered, fixes applied, and pass/fail summary.]
+
+## Review Matrix (10 Subsystems)
+| # | Subsystem | Status (PASS/FAIL/NOT RUN) | Key Evidence / Metric |
+|---|---|---|---|
+| 1 | Baseline Test Suite & Typecheck | | |
+| 2 | Unified Stdio MCP Server | | |
+| 3 | Declarative Host Config Generator | | |
+| 4 | Path Confinement & Sandbox Security | | |
+| 5 | Real Paper Search & Degradation | | |
+| 6 | Paper Registry & TEI/PDF Extraction | | |
+| 7 | Section Chunking & Tiling Math | | |
+| 8 | Embedding GGUF Parity Gate | | |
+| 9 | Managed llama.cpp & Hybrid RAG | | |
+| 10 | Resident CUDA Eos Claim Verification | | |
+
+## Detailed Evidence & Logs
+[Item-by-item breakdown with exact command invocations, timings, and outputs.]
+
+## Bugs Discovered & TDD Fixes
+[Details on any bugs found, the failing test written, and the code diff that resolved it.]
+
+## Known Limitations & Next Steps
+[Honest assessment of residual risks and future roadmap items.]
+```

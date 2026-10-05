@@ -5,14 +5,13 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Value } from "typebox/value";
 
-import { createMcpServer, normalizeToolName, TOOL_DEFINITIONS, validateTargetDir } from "../src/mcp/server.ts";
+import { createMcpServer, normalizeToolName, validateTargetDir } from "../src/mcp/server.ts";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { createRegistry, registerPaper } from "../src/core/registry.ts";
 import { SearchPapersOutput } from "../src/core/tools/search.ts";
 import { PaperRegistryOutput } from "../src/core/tools/registry.ts";
-import { CompileDocumentOutput } from "../src/core/tools/compile.ts";
 import { VerifyClaimOutput } from "../src/core/tools/verify.ts";
 import { SearchPassagesOutput } from "../src/core/tools/passages.ts";
 import { createSearchFetch, SEARCH_CFG } from "./helpers/provider-fakes.ts";
