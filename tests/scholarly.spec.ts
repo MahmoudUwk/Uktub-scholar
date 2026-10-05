@@ -13,6 +13,8 @@ import {
   InvalidDoiError,
 } from "../src/core/scholarly.ts";
 import { mergeCandidates } from "../src/core/providers/merge.ts";
+import { providerConfigOf } from "../src/core/tools/context.ts";
+import { WriteQueue } from "../src/core/queue.ts";
 import type { FetchLike } from "../src/core/providers/types.ts";
 import {
   SEARCH_CFG,
@@ -59,6 +61,31 @@ describe("searchPapers — provider degradation (R4)", () => {
         return true;
       },
     );
+  });
+});
+
+describe("merge — a candidate without a DOI that restates a DOI-bearing one", () => {
+  const withDoi = (over: Partial<Parameters<typeof candidate>[0]> = {}) => candidate({ title: "Multimodal Wireless Foundation Models", doi: "10.48550/arxiv.2511.15162", year: 2025, provider: "openalex", ...over });
+  const noDoi = (over: Partial<Parameters<typeof candidate>[0]> = {}) => candidate({ title: "Multimodal Wireless Foundation Models", year: 2025, provider: "crossref", ...over });
+
+  it("is folded into it: same title and year, nothing registrable is lost", () => {
+    const merged = mergeCandidates([[withDoi()], [noDoi()]]);
+    assert.equal(merged.length, 1);
+    assert.equal(merged[0]?.doi, "10.48550/arxiv.2511.15162");
+  });
+
+  it("stays separate when the years differ", () => {
+    assert.equal(mergeCandidates([[withDoi()], [noDoi({ year: 2019 })]]).length, 2);
+  });
+
+  it("never folds two DOI-bearing records (a preprint and its published version are different works)", () => {
+    assert.equal(mergeCandidates([[withDoi()], [withDoi({ doi: "10.1109/x.2026.1", provider: "crossref" })]]).length, 2);
+  });
+
+  it("the fold counts as a second provider reporting the work (ranks above a single-provider hit)", () => {
+    const other = candidate({ title: "Something Else Entirely", doi: "10.1000/zz", year: 2025, provider: "openalex" });
+    const merged = mergeCandidates([[other, withDoi()], [noDoi()]]);
+    assert.equal(merged[0]?.doi, "10.48550/arxiv.2511.15162");
   });
 });
 
@@ -239,5 +266,24 @@ describe("fetchPaperMetadata — DOI forms", () => {
     assert.ok(record !== null);
     assert.equal(record.bibtex, null);
     assert.equal(record.citable, false);
+  });
+});
+
+describe("searchPapers — the production provider configuration", () => {
+  it("requests each provider's documented search endpoint (the unit fakes use bare hosts, so only the real defaults can catch a bad path)", async () => {
+    const requests: string[] = [];
+    const fetchFn: FetchLike = async (url) => {
+      requests.push(url);
+      return new Response(JSON.stringify({}), { status: 200 });
+    };
+    const production = providerConfigOf({ root: "/tmp", fetch: fetchFn, env: {}, now: () => new Date(), queue: new WriteQueue() });
+    await searchPapers(fetchFn, { ...production, sleep: async () => {} }, { query: "attention is all you need" });
+    const pathOf = (host: string): string | undefined => {
+      const hit = requests.find((u) => new URL(u).host === host);
+      return hit === undefined ? undefined : new URL(hit).pathname;
+    };
+    assert.equal(pathOf("api.openalex.org"), "/works");
+    assert.equal(pathOf("api.crossref.org"), "/works");
+    assert.equal(pathOf("api.semanticscholar.org"), "/graph/v1/paper/search");
   });
 });

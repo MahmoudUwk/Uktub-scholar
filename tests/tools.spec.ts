@@ -174,6 +174,14 @@ describe("search_papers", () => {
   });
 
 
+  it("names each failing provider in the text the model reads (a bare count lets the agent claim all providers answered)", async () => {
+    const { fetchFn } = createSearchFetch({ openalex: fakeWorks("oa", 3), crossref: fakeWorks("cr", 3), semanticScholar: "rate-limited" });
+    const text = (await searchPapersTool(makeCtx(fetchFn), { query: "microplastics" })).content[0]?.text ?? "";
+    assert.match(text, /warning: semantic-scholar — PROVIDER_FAILED/);
+    assert.match(text, /results exclude semantic-scholar/i);
+    assert.doesNotMatch(text, /warning: (openalex|crossref)/);
+  });
+
   it("all providers down → SEARCH_UNAVAILABLE refusal with provider detail", async () => {
     const { fetchFn } = createSearchFetch({
       openalex: "down",

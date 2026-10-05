@@ -11,7 +11,10 @@ import { mkdirSync, readdirSync, existsSync, statSync } from "node:fs";
 import { promisify } from "node:util";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 
+import { managedCacheDir } from "../embed/config.ts";
+import { platformKey } from "../embed/runtime.ts";
 import { resolveEngine } from "./engine.ts";
+import { managedTectonicPath, readTectonicLock } from "./managed.ts";
 import { parseTectonicStreams, type CompileDiagnostic } from "./diagnostics.ts";
 
 /** Default single-compile budget — client policy (labelled; not a provider limit). */
@@ -152,12 +155,13 @@ export const prodSpawn: EngineSpawn = async (file, args, opts) => {
 };
 
 export async function compileDocument(input: CompileInput, entryParam?: string): Promise<CompileOutcome> {
-  const engine = await resolveEngine(input.env, spawnVersionProbe(input.spawn), input.fs);
+  const managed = managedTectonicPath(readTectonicLock(), managedCacheDir(input.env), platformKey());
+  const engine = await resolveEngine(input.env, spawnVersionProbe(input.spawn), input.fs, managed);
   if (!engine.ok) {
     return {
       kind: "refusal",
       code: "COMPILE_ENGINE_MISSING",
-      message: `${engine.detail} — install tectonic or point ${"UKTUB_TECTONIC_BIN"} at the binary`,
+      message: engine.detail,
     };
   }
 

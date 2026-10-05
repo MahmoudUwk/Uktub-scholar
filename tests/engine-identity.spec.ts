@@ -73,6 +73,39 @@ describe("resolveEngineIdentity", () => {
     }
   });
 
+  it("eos-onnx: a different model from eos (ONNX weights answer), named by its pinned revision", async () => {
+    const a = await resolveEngineIdentity({ UKTUB_EOS_ONNX_DIR: "/models/eos-onnx" }, "eos-onnx");
+    assert.match(a!.model, /^eos-onnx:.*@[0-9a-f]{12}$/);
+    assert.equal(a!.protocol, "decision2-noul-v1", "the same prompt protocol");
+    assert.ok(!(await resolveEngineIdentity({}, "eos"))!.model.startsWith("eos-onnx"), "never shares a cache key with the torch engine");
+    const b = await resolveEngineIdentity({ UKTUB_EOS_ONNX_DIR: "/models/eos-onnx", UKTUB_EOS_ONNX_REVISION: "f".repeat(40) }, "eos-onnx");
+    assert.notEqual(a!.model, b!.model);
+  });
+
+  it("eos-onnx: the pin is the identity, not the path (the worker refuses other weights), so moving the cache keeps cached judgments", async () => {
+    const a = await resolveEngineIdentity({ UKTUB_EOS_ONNX_DIR: "/one/place" }, "eos-onnx");
+    const b = await resolveEngineIdentity({ UKTUB_EOS_ONNX_DIR: "/another/place" }, "eos-onnx");
+    assert.equal(a!.model, b!.model);
+    assert.ok(!a!.model.includes("/place") && !a!.model.includes("/tmp"), a!.model);
+  });
+
+  it("eos-onnx: overriding the weights digest drops that guarantee, so the identity falls back to the directory's fingerprint", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "uktub-eoso-id-"));
+    try {
+      writeFileSync(join(dir, "x.onnx_data"), "v1");
+      utimesSync(join(dir, "x.onnx_data"), 1_700_000_000, 1_700_000_000);
+      const pinned = await resolveEngineIdentity({ UKTUB_EOS_ONNX_DIR: dir }, "eos-onnx");
+      const custom = await resolveEngineIdentity({ UKTUB_EOS_ONNX_DIR: dir, UKTUB_EOS_ONNX_SHA256: "a".repeat(64) }, "eos-onnx");
+      assert.notEqual(pinned!.model, custom!.model);
+      writeFileSync(join(dir, "x.onnx_data"), "version-two");
+      utimesSync(join(dir, "x.onnx_data"), 1_800_000_000, 1_800_000_000);
+      const changed = await resolveEngineIdentity({ UKTUB_EOS_ONNX_DIR: dir, UKTUB_EOS_ONNX_SHA256: "a".repeat(64) }, "eos-onnx");
+      assert.notEqual(custom!.model, changed!.model, "replaced weights under a custom digest change the identity");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it("refuses an unknown engine name", async () => {
     await assert.rejects(resolveEngineIdentity({}, "mystery"), /unknown verification engine/);
   });

@@ -4,3 +4,5 @@ node_modules/
 .registry/
 .mcp.json
 opencode.json
+dist/
+__pycache__/

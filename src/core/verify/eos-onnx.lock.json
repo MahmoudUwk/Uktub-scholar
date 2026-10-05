@@ -1,0 +1,50 @@
+{
+  "schema": 1,
+  "note": "Decision-2.0-Eos-0.8B ONNX export, 8-bit variant only: 100% decision agreement at the 0.99 bar vs the torch worker on 450 judgments (docs/benchmarks/eos-onnx-parity-2026-10-05.md); the 4-bit q4f16 export is not viable. Digests are Hugging Face LFS oids and match the bytes tested.",
+  "model": {
+    "id": "onnx-community/Decision-2.0-Eos-0.8B-ONNX",
+    "revision": "6369be38417edb4e1169ad6c42e2b3b848ad7807",
+    "license": "apache-2.0",
+    "variant": "model_quantized",
+    "files": [
+      {
+        "path": "config.json",
+        "url": "https://huggingface.co/onnx-community/Decision-2.0-Eos-0.8B-ONNX/resolve/6369be38417edb4e1169ad6c42e2b3b848ad7807/config.json",
+        "size": 821,
+        "sha256": "4c178792c64c56726ad846f17f8b9b0a044eb109dc373878b3f6c137d311b9a5"
+      },
+      {
+        "path": "tokenizer.json",
+        "url": "https://huggingface.co/onnx-community/Decision-2.0-Eos-0.8B-ONNX/resolve/6369be38417edb4e1169ad6c42e2b3b848ad7807/tokenizer.json",
+        "size": 19989325,
+        "sha256": "06b9509352d2af50381ab2247e083b80d32d5c0aba91c272ca9ff729b6a0e523"
+      },
+      {
+        "path": "onnx/model_quantized.onnx",
+        "url": "https://huggingface.co/onnx-community/Decision-2.0-Eos-0.8B-ONNX/resolve/6369be38417edb4e1169ad6c42e2b3b848ad7807/onnx/model_quantized.onnx",
+        "size": 531011,
+        "sha256": "113e5981ce1ab913388f585b3edf4eb3a9d490829f4ee5a5de2843bb73b31779"
+      },
+      {
+        "path": "onnx/model_quantized.onnx_data",
+        "url": "https://huggingface.co/onnx-community/Decision-2.0-Eos-0.8B-ONNX/resolve/6369be38417edb4e1169ad6c42e2b3b848ad7807/onnx/model_quantized.onnx_data",
+        "size": 696563712,
+        "sha256": "7762919ced5afbbb42f383afc23ae88ee6e75018792065b2b0e720d8c190aa51"
+      }
+    ],
+    "weights": "onnx/model_quantized.onnx_data"
+  },
+  "python": {
+    "min": "3.10",
+    "cpu": [
+      "onnxruntime==1.30.0",
+      "numpy==2.5.3",
+      "tokenizers==0.23.2"
+    ],
+    "gpu": [
+      "onnxruntime-gpu==1.30.0",
+      "numpy==2.5.3",
+      "tokenizers==0.23.2"
+    ]
+  }
+}

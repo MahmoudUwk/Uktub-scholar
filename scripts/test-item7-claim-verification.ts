@@ -48,7 +48,8 @@ async function run() {
   const trueClaims = allClaims.filter(c => c.label === "TRUE");
   const falseClaims = allClaims.filter(c => c.label === "FALSE");
 
-  // Stratified sample: 40 TRUE, 30 FALSE claims distributed across papers
+  // Stratified sample: up to 3 TRUE and 3 FALSE claims per paper (14 papers → 42 each), padded to at least 40 TRUE / 30 FALSE.
+  // Every denominator below comes from the actual sample sizes.
   const paperIds = [...new Set(allClaims.map(c => c.paper))].sort();
   const sampleTrue: Claim[] = [];
   const sampleFalse: Claim[] = [];
@@ -59,7 +60,7 @@ async function run() {
     sampleTrue.push(...pTrue.slice(0, 3));
     sampleFalse.push(...pFalse.slice(0, 3));
   }
-  // Pad to reach exactly 40 TRUE and 30 FALSE
+  // Pad up to the minimum sizes when the dataset has fewer than 3 per paper
   for (const c of trueClaims) {
     if (sampleTrue.length >= 40) break;
     if (!sampleTrue.some(x => x.id === c.id)) sampleTrue.push(c);
@@ -115,7 +116,7 @@ async function run() {
     queue: new WriteQueue(),
   };
 
-  console.log("\n--- Part A: Verifying 40 TRUE claims ---");
+  console.log(`\n--- Part A: Verifying ${sampleTrue.length} TRUE claims ---`);
   let truePositives = 0;
   let falseNegatives = 0;
   const inspectedExcerpts: any[] = [];
@@ -155,14 +156,14 @@ async function run() {
     } else {
       falseNegatives++;
     }
-    if ((idx + 1) % 10 === 0) {
-      console.log(`  Processed ${idx + 1}/40 TRUE claims (TP: ${truePositives}, FN: ${falseNegatives})...`);
+    if ((idx + 1) % 10 === 0 || idx + 1 === sampleTrue.length) {
+      console.log(`  Processed ${idx + 1}/${sampleTrue.length} TRUE claims (TP: ${truePositives}, FN: ${falseNegatives})...`);
     }
   }
   const trueDurationMs = performance.now() - tTrue0;
-  console.log(`Finished 40 TRUE claims in ${(trueDurationMs / 1000).toFixed(1)}s (TP: ${truePositives}/40, Recall: ${(truePositives / 40 * 100).toFixed(1)}%).`);
+  console.log(`Finished ${sampleTrue.length} TRUE claims in ${(trueDurationMs / 1000).toFixed(1)}s (TP: ${truePositives}/${sampleTrue.length}, Recall: ${(truePositives / sampleTrue.length * 100).toFixed(1)}%).`);
 
-  console.log("\n--- Part B: Verifying 30 FALSE claims ---");
+  console.log(`\n--- Part B: Verifying ${sampleFalse.length} FALSE claims ---`);
   let trueNegatives = 0;
   let falsePositives = 0;
 
@@ -181,12 +182,12 @@ async function run() {
     } else {
       trueNegatives++;
     }
-    if ((idx + 1) % 10 === 0) {
-      console.log(`  Processed ${idx + 1}/30 FALSE claims (TN: ${trueNegatives}, FP: ${falsePositives})...`);
+    if ((idx + 1) % 10 === 0 || idx + 1 === sampleFalse.length) {
+      console.log(`  Processed ${idx + 1}/${sampleFalse.length} FALSE claims (TN: ${trueNegatives}, FP: ${falsePositives})...`);
     }
   }
   const falseDurationMs = performance.now() - tFalse0;
-  console.log(`Finished 30 FALSE claims in ${(falseDurationMs / 1000).toFixed(1)}s (TN: ${trueNegatives}/30, Precision: ${truePositives / (truePositives + falsePositives) * 100}%).`);
+  console.log(`Finished ${sampleFalse.length} FALSE claims in ${(falseDurationMs / 1000).toFixed(1)}s (TN: ${trueNegatives}/${sampleFalse.length}, Specificity: ${(trueNegatives / sampleFalse.length * 100).toFixed(1)}%, Precision: ${(truePositives / (truePositives + falsePositives) * 100).toFixed(1)}%).`);
 
   console.log("\n--- Part C: Judgment Reuse Cache (0 cost on repeat) ---");
   const testClaim = sampleTrue[0];

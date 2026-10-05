@@ -65,7 +65,7 @@ export const REFUSALS: Record<RefusalCode, RefusalEntry> = {
     next: "split the batch into calls within the limit named in the message",
   },
   COMPILE_ENGINE_MISSING: {
-    next: "install tectonic (tectonic-typesetting.github.io) or set UKTUB_TECTONIC_BIN to the binary path, then retry",
+    next: "tell the user to run `uktub-scholar tectonic install --yes` (a pinned, verified download), or install tectonic (tectonic-typesetting.github.io) / set UKTUB_TECTONIC_BIN, then retry",
   },
   COMPILE_NO_ENTRY: {
     next: "create manuscript/main.tex or pass entry with the project-relative .tex file to compile",
@@ -74,7 +74,7 @@ export const REFUSALS: Record<RefusalCode, RefusalEntry> = {
     next: "simplify the document or raise the budget via UKTUB_COMPILE_TIMEOUT_S (seconds), then retry",
   },
   VERIFY_ENGINE_MISSING: {
-    next: "start the verification engine (OpenRouter needs OPENROUTER_API_KEY; engine llama-cpp needs UKTUB_VERIFY_URL pointing at a local System One server) or switch verification.engine in config/chunking.yaml, then retry",
+    next: "tell the user the verification engine is not available and how to enable it: the default eos engine needs a Python environment with torch, transformers>=5.17 and safetensors (point UKTUB_EOS_PYTHON at its interpreter; README \"Engines\"). Without PyTorch: run `uktub-scholar eos install --yes` (a pinned ONNX export plus a small environment) and select verification.engine: eos-onnx in config/chunking.yaml. Other alternatives are OpenRouter (OPENROUTER_API_KEY) or a local System One server (UKTUB_VERIFY_URL). Do not improvise a verdict; search_passages still works",
   },
   CONFIG_INVALID: {
     next: "fix the reported key in config/chunking.yaml (or the file named by UKTUB_CHUNK_CONFIG), then retry",

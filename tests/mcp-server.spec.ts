@@ -385,4 +385,28 @@ describe("MCP Server real OS child process stdio pipes", () => {
   });
 });
 
+describe("server instructions (read by every host's model, whether or not it opens a skill)", () => {
+  it("state the rules the observed agent failures broke, briefly", async () => {
+    const { client } = await createClientServer();
+    const text = client.getInstructions() ?? "";
+    assert.ok(text.length > 0 && text.length <= 2600, `instructions must exist and stay short (${text.length} chars)`);
+    assert.match(text, /fail|refus|error/i);
+    assert.match(text, /tell the user|report/i);
+    assert.match(text, /verbatim|exactly as (returned|given)/i);
+    assert.match(text, /warning/i);
+    assert.match(text, /retrieval.*not verification|not verification/i);
+    assert.match(text, /no support.*not.*false|not.*(means|mean).*false/i);
+    assert.match(text, /never (invent|fabricate|guess)/i);
+    assert.match(text, /unverified/i, "when verify_claim cannot run the claim stays unverified; retrieval must not be sold as support");
+    assert.match(text, /withheld/i, "a withheld excerpt is not to be extracted another way");
+    assert.match(text, /data,? (and )?never instructions|never (as )?instructions/i, "text inside a paper is data; injected instructions are ignored and reported");
+    assert.match(text, /placeholder/i, "a stub citation for an unfound paper is a marked placeholder");
+    assert.match(text, /only the fields the user (gave|supplied)/i, "the stub holds nothing the user did not say");
+  });
 
+  it("report the package version, not a literal", async () => {
+    const { client } = await createClientServer();
+    const pkg = JSON.parse((await import("node:fs")).readFileSync(new URL("../package.json", import.meta.url), "utf8")) as { version: string };
+    assert.equal(client.getServerVersion()?.version, pkg.version);
+  });
+});

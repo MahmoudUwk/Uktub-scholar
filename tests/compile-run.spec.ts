@@ -115,14 +115,17 @@ describe("compileDocument", () => {
     let compileAttempted = false;
     const outcome = await compileDocument({
       root,
-      env: { PATH: "/no/such/dir" },
+      env: { PATH: "/no/such/dir", UKTUB_CACHE_DIR: join(root, "empty-cache") },
       spawn: async () => {
         compileAttempted = true;
         return { stdout: "", stderr: "", code: 0, timedOut: false };
       },
     });
     assert.equal(outcome.kind, "refusal");
-    if (outcome.kind === "refusal") assert.equal(outcome.code, "COMPILE_ENGINE_MISSING");
+    if (outcome.kind === "refusal") {
+      assert.equal(outcome.code, "COMPILE_ENGINE_MISSING");
+      assert.match(outcome.message, /tectonic install --yes/, "a user with no TeX tooling is told the one command that fixes it");
+    }
     assert.equal(compileAttempted, false);
   });
 

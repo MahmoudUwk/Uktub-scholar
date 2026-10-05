@@ -347,6 +347,24 @@ describe("installRuntime", () => {
     for (const p of [join(cache, "..", "escaped.txt"), "/tmp/uktub-abs-escape.txt", join(tmpdir(), "uktub-sym-escape.txt")]) assert.ok(!existsSync(p), `${p} must not exist`);
   });
 
+  it("a refused archive always surfaces as unsafe_archive and leaves no staging debris, even while an earlier entry is still being written", async () => {
+    // tar's strict mode rejects at the first bad header while the unpacker may still be writing the entry before it; cleanup must wait
+    // for that write to settle, or `rmSync` races it (ENOTEMPTY replaces the typed refusal, or a late write recreates the staging dir)
+    const before: TarEntry[] = Array.from({ length: 20 }, (_, n) => ({ name: `llama-test/lib/part-${n}.bin`, data: "x".repeat(2048) }));
+    for (let i = 0; i < 200; i++) {
+      const archive = makeTarGz([
+        ...before,
+        { name: "/tmp/uktub-abs-escape-race.txt", data: "pwned" },
+        { name: "llama-test/llama-server", data: FAKE_SERVER, mode: 0o755 },
+      ]);
+      const lock = lockFor(archive);
+      const srv = server({ [lock.runtime.assets["linux-x64"].url]: archive, [lock.embedding.url]: MODEL });
+      await assert.rejects(installRuntime({ lock, cacheDir: cache, platform: "linux-x64", fetch: srv.fetch }), (e) => e instanceof RuntimeError && e.code === "unsafe_archive", `iteration ${i}`);
+      const debris = readdirSync(join(cache, "runtime")).filter((n) => n.endsWith(".tmp"));
+      assert.deepEqual(debris, [], `iteration ${i}: staging directory left behind`);
+    }
+  });
+
   it("an archive without the expected binary is refused", async () => {
     const archive = makeTarGz([{ name: "llama-test/README", data: "no server here" }]);
     const lock = lockFor(archive);

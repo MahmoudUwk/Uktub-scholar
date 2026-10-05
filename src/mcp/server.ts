@@ -4,6 +4,8 @@
  * search_papers, paper_registry, compile_document, verify_claim, search_passages.
  */
 
+import { readFileSync } from "node:fs";
+import { AGENT_RULES } from "../core/agent-rules.ts";
 import { resolve } from "node:path";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
@@ -138,6 +140,11 @@ export const TOOL_DEFINITIONS = [
  * Normalize host-namespaced tool identifiers (e.g. `mcp__uktub_scholar__search_papers`
  * or `uktub-scholar/search_papers`) to the bare scholar tool name.
  */
+const PACKAGE_VERSION = (JSON.parse(readFileSync(new URL("../../package.json", import.meta.url), "utf8")) as { version: string }).version;
+
+/** The shared rules (`src/core/agent-rules.ts`) as the MCP handshake's instructions. */
+export const SERVER_INSTRUCTIONS = ["uktub-scholar: scholarly tools over the user's project. The registry is the bibliography.", ...AGENT_RULES.map((rule) => `- ${rule}`)].join("\n");
+
 export function normalizeToolName(name: string): string {
   return name.replace(/^(?:mcp__)?uktub[-_]scholar(?:_{1,2}|[/:])/, "");
 }
@@ -214,12 +221,13 @@ export function createMcpServer(targetDirOrOptions?: string | McpServerOptions):
   const server = new Server(
     {
       name: "uktub-scholar",
-      version: "0.2.0",
+      version: PACKAGE_VERSION,
     },
     {
       capabilities: {
         tools: {},
       },
+      instructions: SERVER_INSTRUCTIONS,
     },
   );
 

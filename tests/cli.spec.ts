@@ -8,7 +8,7 @@ import { describe, it, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import { mkdtempSync, mkdirSync, readFileSync, existsSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, isAbsolute, join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 
 import { runCli } from "../src/cli/main.ts";
@@ -445,6 +445,13 @@ describe("uktub-scholar embed install / status (managed embedding runtime)", asy
   });
 });
 
+/** What a host can actually run: `node <absolute bin that exists> mcp` — never a bare `uktub-scholar`, which is on no PATH for a checkout or a project-local install. */
+function assertSpawnable(command: string, args: string[], label: string): void {
+  assert.equal(command, "node", label);
+  assert.ok(isAbsolute(args[0] ?? "") && /bin[\\/]uktub-scholar\.js$/.test(args[0] ?? "") && existsSync(args[0] ?? ""), `${label}: ${args[0]} must be this package's bin`);
+  assert.deepEqual(args.slice(1), ["mcp"], label);
+}
+
 describe("mcp command", () => {
   it("mcp install defaults to claude and writes .mcp.json", async () => {
     const c = io();
@@ -452,10 +459,7 @@ describe("mcp command", () => {
     assert.match(c.lines.out.join("\n"), /\.mcp\.json/);
 
     const content = JSON.parse(readFileSync(join(root, ".mcp.json"), "utf8"));
-    assert.deepEqual(content.mcpServers["uktub-scholar"], {
-      command: "uktub-scholar",
-      args: ["mcp"],
-    });
+    assertSpawnable(content.mcpServers["uktub-scholar"].command, content.mcpServers["uktub-scholar"].args, "mcpServers");
   });
 
   it("mcp install --host pi writes .mcp.json", async () => {
@@ -464,10 +468,7 @@ describe("mcp command", () => {
     assert.match(c.lines.out.join("\n"), /\.mcp\.json/);
 
     const content = JSON.parse(readFileSync(join(root, ".mcp.json"), "utf8"));
-    assert.deepEqual(content.mcpServers["uktub-scholar"], {
-      command: "uktub-scholar",
-      args: ["mcp"],
-    });
+    assertSpawnable(content.mcpServers["uktub-scholar"].command, content.mcpServers["uktub-scholar"].args, "mcpServers");
   });
 
   it("mcp install --host agy writes .agents/mcp_config.json", async () => {
@@ -476,10 +477,7 @@ describe("mcp command", () => {
     assert.match(c.lines.out.join("\n"), /\.agents\/mcp_config\.json/);
 
     const content = JSON.parse(readFileSync(join(root, ".agents", "mcp_config.json"), "utf8"));
-    assert.deepEqual(content.mcpServers["uktub-scholar"], {
-      command: "uktub-scholar",
-      args: ["mcp"],
-    });
+    assertSpawnable(content.mcpServers["uktub-scholar"].command, content.mcpServers["uktub-scholar"].args, "mcpServers");
   });
 
   it("mcp install --host cursor writes .cursor/mcp.json", async () => {
@@ -488,10 +486,7 @@ describe("mcp command", () => {
     assert.match(c.lines.out.join("\n"), /\.cursor\/mcp\.json/);
 
     const content = JSON.parse(readFileSync(join(root, ".cursor", "mcp.json"), "utf8"));
-    assert.deepEqual(content.mcpServers["uktub-scholar"], {
-      command: "uktub-scholar",
-      args: ["mcp"],
-    });
+    assertSpawnable(content.mcpServers["uktub-scholar"].command, content.mcpServers["uktub-scholar"].args, "mcpServers");
   });
 
   it("mcp install --host opencode writes opencode.json", async () => {
@@ -500,10 +495,9 @@ describe("mcp command", () => {
     assert.match(c.lines.out.join("\n"), /opencode\.json/);
 
     const content = JSON.parse(readFileSync(join(root, "opencode.json"), "utf8"));
-    assert.deepEqual(content.mcp["uktub-scholar"], {
-      type: "local",
-      command: ["uktub-scholar", "mcp"],
-    });
+    assert.equal(content.mcp["uktub-scholar"].type, "local");
+    const [command, ...args] = content.mcp["uktub-scholar"].command as string[];
+    assertSpawnable(command, args, "opencode");
   });
 
   it("mcp install --host codex writes .codex/config.toml and outputs TOML snippet", async () => {
@@ -514,7 +508,9 @@ describe("mcp command", () => {
 
     const toml = readFileSync(join(root, ".codex", "config.toml"), "utf8");
     assert.match(toml, /\[mcp_servers\.uktub-scholar\]/);
-    assert.match(toml, /command = "uktub-scholar"/);
+    const parsed = /command = "([^"]+)"\nargs = \[([^\]]*)\]/.exec(toml);
+    assert.ok(parsed, "codex table has command and args");
+    assertSpawnable(parsed[1], JSON.parse(`[${parsed[2]}]`) as string[], "codex");
   });
 
   it("mcp install with unknown host fails with code 1", async () => {
@@ -537,6 +533,68 @@ describe("mcp command", () => {
     assert.equal(await runCli(["mcp", "install", "--host", "claude"], c), 1);
     assert.match(c.lines.err.join("\n"), /failed to parse/);
     assert.equal(readFileSync(mcpFile, "utf8"), "{ malformed json", "corrupt file must not be clobbered");
+  });
+
+  it("mcp install refuses, and leaves the file byte-identical, when the server table exists but is not an object", async () => {
+    const hosts: [string, string, string][] = [
+      ["claude", ".mcp.json", "mcpServers"],
+      ["pi", ".mcp.json", "mcpServers"],
+      ["cursor", ".cursor/mcp.json", "mcpServers"],
+      ["agy", ".agents/mcp_config.json", "mcpServers"],
+      ["opencode", "opencode.json", "mcp"],
+    ];
+    for (const [host, file, key] of hosts) {
+      for (const wrong of [[1, 2], "oops", 7, null]) {
+        const path = join(root, file);
+        mkdirSync(dirname(path), { recursive: true });
+        const before = JSON.stringify({ [key]: wrong, keep: true });
+        writeFileSync(path, before, "utf8");
+        const c = io();
+        assert.equal(await runCli(["mcp", "install", "--host", host], c), 1, `${host} with ${key}=${JSON.stringify(wrong)}`);
+        assert.match(c.lines.err.join("\n"), new RegExp(`"${key}".*not an object`), host);
+        assert.equal(readFileSync(path, "utf8"), before, `${host}: a user's ${key}=${JSON.stringify(wrong)} must not be silently replaced`);
+      }
+    }
+  });
+
+  it("tectonic status reports the pin and whether it is installed; install refuses without --yes and downloads nothing", async () => {
+    const cache = mkdtempSync(join(tmpdir(), "uktub-cli-tec-"));
+    try {
+      const status = io();
+      assert.equal(await runCli(["tectonic", "status"], { ...status, env: { UKTUB_CACHE_DIR: cache } }), 0);
+      assert.match(status.lines.out.join("\n"), /tectonic 0\.\d+\.\d+/i);
+      assert.match(status.lines.out.join("\n"), /not installed/);
+      let fetched = 0;
+      const refuse = io();
+      assert.equal(await runCli(["tectonic", "install"], { ...refuse, env: { UKTUB_CACHE_DIR: cache }, embedFetch: (async () => void fetched++) as never }), 1);
+      assert.match(refuse.lines.err.join("\n"), /--yes/);
+      assert.equal(fetched, 0, "no download without explicit consent");
+    } finally {
+      rmSync(cache, { recursive: true, force: true });
+    }
+  });
+
+  it("eos status reports the pin and install state; eos install refuses without --yes, names the sizes, and runs nothing", async () => {
+    const cache = mkdtempSync(join(tmpdir(), "uktub-cli-eos-"));
+    try {
+      const status = io();
+      assert.equal(await runCli(["eos", "status"], { ...status, env: { UKTUB_CACHE_DIR: cache } }), 0);
+      const out = status.lines.out.join("\n");
+      assert.match(out, /Decision-2\.0-Eos/);
+      assert.match(out, /not installed/);
+      assert.match(out, /eos install --yes/);
+      let fetched = 0;
+      const refuse = io();
+      assert.equal(await runCli(["eos", "install"], { ...refuse, env: { UKTUB_CACHE_DIR: cache }, embedFetch: (async () => void fetched++) as never }), 1);
+      const err = refuse.lines.err.join("\n");
+      assert.match(err, /--yes/);
+      assert.match(err, /MB/, "the user is told what will be downloaded");
+      assert.equal(fetched, 0, "no download without explicit consent");
+      const bad = io();
+      assert.equal(await runCli(["eos", "frobnicate"], bad), 1);
+    } finally {
+      rmSync(cache, { recursive: true, force: true });
+    }
   });
 
   it("mcp install --host without argument errors with clear message", async () => {

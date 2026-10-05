@@ -6,6 +6,7 @@
  */
 import { describe, it, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
+import { VERIFICATION_ENGINES } from "../src/core/verify/engines.ts";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -109,5 +110,11 @@ describe("loadChunkConfig", () => {
   it("an out-of-range min-confidence override is refused rather than silently replaced", () => {
     assert.throws(() => loadChunkConfig(root, { env: { UKTUB_VERIFY_MIN_CONFIDENCE: "0.1" } }), (e) => e instanceof ConfigError);
     assert.throws(() => loadChunkConfig(root, { env: { UKTUB_VERIFY_MIN_CONFIDENCE: "abc" } }), (e) => e instanceof ConfigError);
+  });
+});
+
+describe("verification engines", () => {
+  it("eos-onnx is a known engine name", () => {
+    assert.ok((VERIFICATION_ENGINES as readonly string[]).includes("eos-onnx"));
   });
 });

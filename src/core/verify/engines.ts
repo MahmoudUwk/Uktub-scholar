@@ -6,6 +6,7 @@
  * env; the engine itself never reads ambient state.
  */
 
+import { readEosOnnxLock, withManagedEosOnnx } from "./eos-onnx.ts";
 import { createHash } from "node:crypto";
 import { readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
@@ -15,6 +16,7 @@ import {
   EOS_REVISION,
   bevEngine,
   eosEngine,
+  eosOnnxEngine,
   juliaEngine,
   k2Engine,
   layaEngine,
@@ -32,6 +34,7 @@ export const DEFAULT_LLAMA_CPP_URL = "http://127.0.0.1:8080";
 
 export const VERIFICATION_ENGINES = [
   "eos",
+  "eos-onnx",
   "openrouter",
   "llama-cpp",
   "k2",
@@ -48,6 +51,7 @@ export const SYSTEMONE_PROTOCOL = "systemone-noul-v1";
 
 const PROTOCOLS: Record<(typeof VERIFICATION_ENGINES)[number], string> = {
   eos: "decision2-noul-v1",
+  "eos-onnx": "decision2-noul-v1",
   openrouter: SYSTEMONE_PROTOCOL,
   "llama-cpp": SYSTEMONE_PROTOCOL,
   k2: SYSTEMONE_PROTOCOL,
@@ -115,6 +119,15 @@ export async function resolveEngineIdentity(
   switch (engine) {
     case "eos":
       return { model: `eos:${localModelRef(env.UKTUB_EOS_MODEL ?? EOS_MODEL)}@${(env.UKTUB_EOS_REVISION ?? EOS_REVISION).slice(0, 12)}`, protocol: "decision2-noul-v1" };
+    case "eos-onnx": {
+      // Under the pinned digest the worker refuses any other weights, so the pin IS the identity (and moving the cache keeps cached
+      // judgments). A user-overridden digest or revision drops that guarantee: fingerprint the directory instead.
+      const lock = readEosOnnxLock();
+      const revision = (env.UKTUB_EOS_ONNX_REVISION ?? lock.model.revision).slice(0, 12);
+      const overridden = env.UKTUB_EOS_ONNX_SHA256 !== undefined || env.UKTUB_EOS_ONNX_REVISION !== undefined;
+      const dir = withManagedEosOnnx(env).UKTUB_EOS_ONNX_DIR;
+      return { model: `eos-onnx:${overridden && dir !== undefined ? localModelRef(dir) : lock.model.id}@${revision}`, protocol: "decision2-noul-v1" };
+    }
     case "openrouter":
       return { model: `openrouter:${env.UKTUB_OPENROUTER_MODEL ?? DEFAULT_OPENROUTER_MODEL}`, protocol: SYSTEMONE_PROTOCOL };
     case "llama-cpp":
@@ -142,7 +155,7 @@ export async function resolveEngineIdentity(
 /** Resident worker engines (a model loaded into GPU memory) are shared per process and
  *  configuration, so a long-lived host does not reload the model for every call. */
 const resident = new Map<string, ClaimEngine>();
-const RESIDENT_ENGINES = new Set(["eos", "julia", "laya"]);
+const RESIDENT_ENGINES = new Set(["eos", "eos-onnx", "julia", "laya"]);
 
 function residentKey(env: Record<string, string | undefined>, engine: string): string {
   return `${engine}|${Object.entries(env).filter(([k, v]) => v !== undefined && k.startsWith("UKTUB_")).sort(([a], [b]) => (a < b ? -1 : 1)).map(([k, v]) => `${k}=${v}`).join("&")}`;
@@ -165,6 +178,8 @@ function buildEngine(env: Record<string, string | undefined>, engine: string): C
   switch (engine) {
     case "eos":
       return eosEngine({ env });
+    case "eos-onnx":
+      return eosOnnxEngine({ env });
     case "openrouter":
       return openrouterDecisionsEngine({ env, model: env.UKTUB_OPENROUTER_MODEL ?? DEFAULT_OPENROUTER_MODEL });
     case "llama-cpp":

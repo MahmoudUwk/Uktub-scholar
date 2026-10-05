@@ -39,7 +39,7 @@ export function providerConfigOf(ctx: ToolContext): ProviderConfig {
   return {
     openalexBaseUrl: "https://api.openalex.org",
     crossrefBaseUrl: "https://api.crossref.org",
-    semanticScholarBaseUrl: "https://api.semanticscholar.org/graph/v1",
+    semanticScholarBaseUrl: "https://api.semanticscholar.org",
     semanticScholarApiKey: ctx.env.SEMANTIC_SCHOLAR_API_KEY,
     openalexApiKey: ctx.env.OPENALEX_API_KEY,
     crossrefMailto: ctx.env.CROSSREF_MAILTO,

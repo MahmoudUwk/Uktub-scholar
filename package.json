@@ -21,7 +21,10 @@
   },
   "pi": {
     "extensions": [
-      "./src/pi"
+      "./dist/pi"
+    ],
+    "skills": [
+      "./skills"
     ]
   },
   "peerDependencies": {
@@ -34,13 +37,17 @@
     }
   },
   "scripts": {
+    "build": "tsc -p tsconfig.build.json && node scripts/build-assets.mjs src dist",
+    "prepare": "npm run build",
     "typecheck": "tsc --noEmit",
+    "pretest": "npm run build",
     "test": "node --test \"tests/*.spec.ts\""
   },
   "devDependencies": {
     "@earendil-works/pi-coding-agent": "^1.0.0",
     "@types/node": "^22.20.5",
-    "typebox": "^1.3.34"
+    "typebox": "^1.3.34",
+    "typescript": "^5.9.3"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.32.0",
@@ -49,5 +56,17 @@
     "tar": "^7.5.22",
     "unpdf": "^1.8.1",
     "yaml": "^2.9.1"
-  }
+  },
+  "files": [
+    "bin",
+    "dist",
+    "skills",
+    "scripts/*.py",
+    "scripts/*.json",
+    "scripts/build-assets.mjs",
+    "README.md",
+    "NOTICE.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ]
 }

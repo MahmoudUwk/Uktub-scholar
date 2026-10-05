@@ -7,6 +7,7 @@
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { readEosOnnxLock, withManagedEosOnnx } from "./eos-onnx.ts";
 
 /** Owner bar for scientific writing: support needs ≥99% engine confidence. */
 export const DEFAULT_MIN_CONFIDENCE = 0.99;
@@ -79,6 +80,42 @@ export function eosEngine(opts: {
     UKTUB_DECISION2_REVISION: opts.env.UKTUB_EOS_REVISION ?? EOS_REVISION,
   };
   return workerEngine({ ...opts, env, script: "decision2_decide.py", envName: "UKTUB_EOS_PYTHON", label: "eos" });
+}
+
+/**
+ * Eos on ONNX Runtime (engine `eos-onnx`): `scripts/decision2_onnx.py` speaks the same protocol with onnxruntime, numpy and tokenizers
+ * only (no PyTorch). The 8-bit export agrees with the torch worker 100% at the 0.99 bar (docs/benchmarks/eos-onnx-parity-2026-10-05.md).
+ * Model directory and interpreter come from `UKTUB_EOS_ONNX_DIR` / `UKTUB_EOS_ONNX_PYTHON`, else an installed managed copy
+ * (`uktub-scholar eos install --yes`); `UKTUB_EOS_ONNX_REVISION` / `_SHA256` override the pin.
+ */
+export function eosOnnxEngine(opts: {
+  env: Record<string, string | undefined>;
+  pythonBin?: string;
+  spawnImpl?: typeof spawn;
+}): ClaimEngine {
+  const lock = readEosOnnxLock();
+  const env = withManagedEosOnnx(opts.env);
+  const dir = env.UKTUB_EOS_ONNX_DIR;
+  if (dir === undefined || dir === "") {
+    return {
+      run: async () => {
+        throw new EngineError("eos-onnx engine: no model installed; run `uktub-scholar eos install --yes` (or set UKTUB_EOS_ONNX_DIR to an export directory)");
+      },
+    } as ClaimEngine;
+  }
+  const weights = lock.model.files.find((f) => f.path === lock.model.weights);
+  return workerEngine({
+    ...opts,
+    env: {
+      ...env,
+      UKTUB_DECISION2_ONNX_DIR: dir,
+      UKTUB_DECISION2_REVISION: env.UKTUB_EOS_ONNX_REVISION ?? lock.model.revision,
+      UKTUB_DECISION2_ONNX_SHA256: env.UKTUB_EOS_ONNX_SHA256 ?? weights?.sha256,
+    },
+    script: "decision2_onnx.py",
+    envName: "UKTUB_EOS_ONNX_PYTHON",
+    label: "eos-onnx",
+  });
 }
 
 /** Shared resident-python JSONL worker: spawn once per run, stream rows, map replies. */

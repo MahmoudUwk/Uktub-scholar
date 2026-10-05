@@ -475,6 +475,17 @@ describe("bounded work and continuation (R14, R15)", () => {
     assert.match(text(r), /OPENROUTER_API_KEY/);
   });
 
+  it("the hint names the DEFAULT engine's setup too: a new user with no Python environment gets a path forward", async () => {
+    addPaper("10.5555/long", "Long Paper", supports(16));
+    const r = await run({ papers: "all" }, { fetchImpl: NO_ENGINE.fetchImpl, createEngine: () => { throw new EngineError("eos engine failed to load: No module named 'torch'"); } });
+    assert.equal(refused(r), "VERIFY_ENGINE_MISSING");
+    assert.match(text(r), /UKTUB_EOS_PYTHON/);
+    assert.match(text(r), /torch/);
+    assert.match(text(r), /tell the user/i, "the agent must relay this, not improvise");
+    assert.match(text(r), /uktub-scholar eos install --yes/, "the no-PyTorch route is a single command");
+    assert.match(text(r), /eos-onnx/, "and the engine name to select after it");
+  });
+
   it("refuses continuations that do not match: garbage, another claim, or a source that changed", async () => {
     addPaper("10.5555/long", "Long Paper", supports(64));
     const a = await run({ papers: "all" }, engine().hooks);

@@ -16,13 +16,13 @@
  */
 import { createHash } from "node:crypto";
 import { spawn } from "node:child_process";
-import { chmodSync, closeSync, createWriteStream, mkdirSync, openSync, readFileSync, renameSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
+import { chmodSync, closeSync, createReadStream, createWriteStream, mkdirSync, openSync, readFileSync, renameSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
 import { createServer } from "node:net";
 import { dirname, isAbsolute, join, normalize, sep } from "node:path";
 import { Readable, Transform } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import { unzipSync } from "fflate";
-import { extract } from "tar";
+import { Unpack } from "tar";
 
 export type RuntimeErrorCode =
   | "invalid_lock"
@@ -32,6 +32,7 @@ export type RuntimeErrorCode =
   | "size_mismatch"
   | "unsafe_archive"
   | "missing_binary"
+  | "install_failed"
   | "start_failed"
   | "start_timeout";
 
@@ -90,14 +91,19 @@ const part = (o: Record<string, unknown>, k: string): string => (PART.test(str(o
 const archiveName = (o: Record<string, unknown>): string => (/\.(tar\.gz|zip)$/.test(part(o, "name")) ? (o.name as string) : bad("name must be a .tar.gz or .zip archive"));
 const archiveDir = (o: Record<string, unknown>): string => (o.dir === "" ? "" : part(o, "dir"));
 
+/** One pinned archive entry, validated the same way for every lock file (runtime and managed tools). */
+export function parseAsset(key: string, raw: unknown): Asset {
+  const a = isObj(raw) ? raw : bad(`asset ${key} is not an object`);
+  return { name: archiveName(a), url: https(a, "url"), sha256: digest(a, "sha256"), size: size(a, "size"), dir: archiveDir(a), binary: part(a, "binary") };
+}
+
 export function validateLock(x: unknown): RuntimeLock {
   if (!isObj(x) || x.schema !== 1) return bad("schema must be 1");
   const rt = isObj(x.runtime) ? x.runtime : bad("runtime missing");
   const assetsIn = isObj(rt.assets) ? rt.assets : bad("runtime.assets missing");
   const assets: Record<string, Asset> = {};
   for (const [key, raw] of Object.entries(assetsIn)) {
-    const a = isObj(raw) ? raw : bad(`asset ${key} is not an object`);
-    assets[key] = { name: archiveName(a), url: https(a, "url"), sha256: digest(a, "sha256"), size: size(a, "size"), dir: archiveDir(a), binary: part(a, "binary") };
+    assets[key] = parseAsset(key, raw);
   }
   const em = isObj(x.embedding) ? x.embedding : bad("embedding missing");
   const args = Array.isArray(em.serverArgs) && em.serverArgs.every((a) => typeof a === "string") ? (em.serverArgs as string[]) : bad("embedding.serverArgs must be a list of strings");
@@ -160,7 +166,7 @@ export function installedPaths(lock: RuntimeLock, cacheDir: string, platform: st
 
 // ── download ────────────────────────────────────────────────────────────────
 
-async function downloadVerified(fetchImpl: typeof fetch, url: string, dest: string, expect: { sha256: string; size: number }): Promise<void> {
+export async function downloadVerified(fetchImpl: typeof fetch, url: string, dest: string, expect: { sha256: string; size: number }): Promise<void> {
   mkdirSync(join(dest, ".."), { recursive: true });
   const tmp = `${dest}.${process.pid}.${Date.now()}.part`;
   let res: Response;
@@ -210,7 +216,7 @@ function safeZipName(name: string): boolean {
   return !(name.includes("\0") || name.includes("\\") || name.startsWith("/") || /^[A-Za-z]:/.test(name) || name.split("/").includes(".."));
 }
 
-function extractZip(file: string, into: string, maxBytes: number): void {
+export function extractZip(file: string, into: string, maxBytes: number): void {
   let total = 0;
   // the declared size is checked per entry BEFORE it is inflated, so a zip bomb never gets to allocate
   const entries = unzipSync(readFileSync(file), {
@@ -231,20 +237,33 @@ function extractZip(file: string, into: string, maxBytes: number): void {
   }
 }
 
-async function extractTarGz(archive: string, staging: string): Promise<void> {
+export async function extractTarGz(archive: string, staging: string): Promise<void> {
   // Regular files and directories go through tar in strict mode (it refuses `..`, absolute paths and links that escape).
   // Symlinks are collected and recreated after validation: a release archive legitimately carries chains of
   // same-directory library links (libx.so → libx.so.0 → libx.so.0.5.0) that tar's own link guard rejects in some orders.
   const links: { path: string; target: string }[] = [];
-  await extract({
-    file: archive,
-    cwd: staging,
-    strict: true,
-    filter: (path, entry) => {
-      if ((entry as { type?: string }).type !== "SymbolicLink") return true;
-      links.push({ path, target: (entry as { linkpath?: string }).linkpath ?? "" });
-      return false;
-    },
+  // tar's own `extract({ file })` rejects at the first strict error while the unpacker may still be writing the entries around it, and
+  // the caller then deletes `staging` underneath those writes (ENOTEMPTY, or a late write recreating files). Drive `Unpack` directly and
+  // settle only on `close`, which tar emits once nothing is left in flight, error or not.
+  await new Promise<void>((resolve, reject) => {
+    let failure: Error | undefined;
+    const unpack = new Unpack({
+      cwd: staging,
+      strict: true,
+      filter: (path, entry) => {
+        if ((entry as { type?: string }).type !== "SymbolicLink") return true;
+        links.push({ path, target: (entry as { linkpath?: string }).linkpath ?? "" });
+        return false;
+      },
+    });
+    unpack.on("error", (err) => void (failure ??= err));
+    unpack.on("close", () => (failure === undefined ? resolve() : reject(failure)));
+    const source = createReadStream(archive);
+    source.on("error", (err) => {
+      failure ??= err;
+      unpack.end();
+    });
+    source.pipe(unpack);
   });
   for (const l of links) {
     const rel = normalize(l.path);

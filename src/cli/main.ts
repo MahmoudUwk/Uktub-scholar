@@ -11,12 +11,18 @@
  */
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { execFile, spawn } from "node:child_process";
 import { dirname, isAbsolute, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+import { promisify } from "node:util";
 import type { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 
 import { RegistryError, createRegistry, deregisterPapers, findEnclosingProject, listPapers, openRegistry, syncBibliography } from "../core/registry.ts";
 import { compileDocument, describeOutcome, prodSpawn } from "../core/compile/run.ts";
+import { installTectonic, managedTectonicPath, readTectonicLock } from "../core/compile/managed.ts";
+import { installedEosOnnx, readEosOnnxLock } from "../core/verify/eos-onnx.ts";
+import { type Run, installEosOnnx } from "../core/verify/eos-onnx-install.ts";
 import { renderRefusal } from "../core/refusals.ts";
 import { WriteQueue } from "../core/queue.ts";
 import { createSafeDownloader } from "../core/source/download.ts";
@@ -67,6 +73,12 @@ commands:
                                 the managed embedding runtime: a pinned llama.cpp server and
                                 EmbeddingGemma, downloaded once (sha256-verified) into a shared cache;
                                 or run your own server and set UKTUB_EMBED_URL
+  eos status | eos install --yes [--gpu]
+                                the Eos claim-verification engine without PyTorch: a pinned ONNX export (about 700 MB)
+                                plus a small Python environment (about 150 MB); select it with verification.engine: eos-onnx
+  tectonic status | tectonic install --yes
+                                the LaTeX engine for compile: a pinned, sha256-verified tectonic downloaded once
+                                into the shared cache (skip it when tectonic is already on PATH)
   mcp [dir] [--dir <path>]      run the stdio MCP server (defaults to cwd)
   mcp install [--host <name>]   write host MCP configuration (claude, pi, agy, codex, cursor, opencode)`;
 
@@ -178,6 +190,132 @@ async function embedCommand(args: string[], io: CliIo): Promise<number> {
   }
 }
 
+/** Run a command for the installers: no shell, captured output, optional stdin, a hard timeout (a pip install can take minutes). */
+const prodRun: Run = (file, args, opts) =>
+  new Promise((resolve, reject) => {
+    const child = spawn(file, args, { env: { ...process.env, ...opts?.env } as NodeJS.ProcessEnv, stdio: ["pipe", "pipe", "pipe"] });
+    let stdout = "";
+    let stderr = "";
+    const timer = setTimeout(() => child.kill("SIGKILL"), 20 * 60_000); // client policy: a first pip install on a slow link
+    child.stdout.on("data", (d) => (stdout += d));
+    child.stderr.on("data", (d) => (stderr += d));
+    child.on("error", (err) => {
+      clearTimeout(timer);
+      reject(err);
+    });
+    child.on("close", (code) => {
+      clearTimeout(timer);
+      resolve({ stdout, stderr, code: code ?? 1 });
+    });
+    child.stdin.on("error", () => {});
+    child.stdin.end(opts?.input ?? "");
+  });
+
+async function eosCommand(args: string[], io: CliIo): Promise<number> {
+  const sub = args[0];
+  if (sub !== "status" && sub !== "install") {
+    io.err(`error: unknown eos command; use eos status or eos install --yes [--gpu]\n${USAGE}`);
+    return 1;
+  }
+  const lock = readEosOnnxLock();
+  const env = io.env ?? (process.env as Record<string, string | undefined>);
+  const cacheDir = managedCacheDir(env);
+  const installed = installedEosOnnx(lock, cacheDir);
+  const weights = lock.model.files.find((f) => f.path === lock.model.weights);
+  const total = lock.model.files.reduce((n, f) => n + f.size, 0);
+
+  if (sub === "status") {
+    io.out(`Managed Eos claim-verification engine (ONNX Runtime, no PyTorch)`);
+    io.out(`  cache:    ${cacheDir}`);
+    io.out(`  model:    Decision-2.0-Eos-0.8B ${lock.model.variant} export (${lock.model.id}@${lock.model.revision.slice(0, 12)}, ${lock.model.license}), ${megabytes(total)}`);
+    io.out(installed !== null ? `  state:    installed at ${installed.modelDir}` : `  state:    not installed — run: uktub-scholar eos install --yes   (add --gpu for onnxruntime-gpu)`);
+    io.out(`  use:      set verification.engine: eos-onnx in config/chunking.yaml (or UKTUB_VERIFY_ENGINE=eos-onnx)`);
+    return 0;
+  }
+
+  if (!args.includes("--yes")) {
+    io.err(`eos install will download, verify (sha256 pinned in eos-onnx.lock.json) and set up in ${cacheDir}:`);
+    io.err(`  ${lock.model.id} @ ${lock.model.revision.slice(0, 12)}, ${lock.model.variant} (${lock.model.license}): ${megabytes(total)} from huggingface.co`);
+    io.err(`  a Python environment with ${(args.includes("--gpu") ? lock.python.gpu : lock.python.cpu).join(", ")} (wheels only, from PyPI)`);
+    io.err(`Re-run with --yes to download.`);
+    return 1;
+  }
+  try {
+    const gpu = args.includes("--gpu");
+    const r = await installEosOnnx({ lock, cacheDir, fetch: io.embedFetch ?? ((...a) => globalThis.fetch(...a)), run: prodRun, systemPython: env.UKTUB_EOS_ONNX_BOOTSTRAP_PYTHON ?? "python3", gpu });
+    io.out(r.downloaded ? `Installed (downloaded, verified and self-checked: the worker started on the pinned weights${gpu ? ", GPU build" : ""}).` : `Already installed; nothing to download.`);
+    io.out(`Select it with verification.engine: eos-onnx (config/chunking.yaml) or UKTUB_VERIFY_ENGINE=eos-onnx. The pinned weights digest: ${weights?.sha256.slice(0, 16)}…`);
+    return 0;
+  } catch (caught) {
+    if (caught instanceof RuntimeError) {
+      io.err(`error: ${caught.code}: ${caught.message}`);
+      return 1;
+    }
+    throw caught;
+  }
+}
+
+async function tectonicCommand(args: string[], io: CliIo): Promise<number> {
+  const sub = args[0];
+  if (sub !== "status" && sub !== "install") {
+    io.err(`error: unknown tectonic command; use tectonic status or tectonic install --yes\n${USAGE}`);
+    return 1;
+  }
+  const lock = readTectonicLock();
+  const env = io.env ?? (process.env as Record<string, string | undefined>);
+  const cacheDir = managedCacheDir(env);
+  const platform = io.embedPlatform ?? platformKey();
+  const asset = lock.tool.assets[platform];
+  const installed = managedTectonicPath(lock, cacheDir, platform);
+
+  if (sub === "status") {
+    io.out(`Managed LaTeX engine`);
+    io.out(`  cache:    ${cacheDir}`);
+    io.out(asset === undefined ? `  platform: ${platform} — no build pinned; install tectonic yourself (PATH or UKTUB_TECTONIC_BIN)` : `  platform: ${platform} — tectonic ${lock.tool.version} (${lock.tool.license}), ${megabytes(asset.size)}`);
+    io.out(installed !== null ? `  state:    installed at ${installed}` : `  state:    not installed${asset === undefined ? "" : " — run: uktub-scholar tectonic install --yes"}`);
+    io.out(`  note:     tectonic fetches its TeX support bundle from the network on the first compile (about 1 minute, then cached by tectonic)`);
+    return 0;
+  }
+
+  if (asset === undefined) {
+    io.err(`error: no tectonic ${lock.tool.version} build is pinned for ${platform}; install tectonic yourself and put it on PATH or set UKTUB_TECTONIC_BIN`);
+    return 1;
+  }
+  if (!args.includes("--yes")) {
+    io.err(`tectonic install will download, verify (sha256 pinned in tectonic.lock.json) and unpack into ${cacheDir}:`);
+    io.err(`  tectonic ${lock.tool.version} (${lock.tool.license}): ${megabytes(asset.size)} from ${asset.url}`);
+    io.err(`Re-run with --yes to download.`);
+    return 1;
+  }
+  try {
+    const r = await installTectonic({
+      lock,
+      cacheDir,
+      platform,
+      fetch: io.embedFetch ?? ((...a) => globalThis.fetch(...a)),
+      probe: async (binary) => {
+        const { stdout, stderr } = await promisify(execFile)(binary, ["--version"], { timeout: 20_000 });
+        return `${stdout}${stderr}`;
+      },
+    });
+    io.out(r.downloaded ? `Installed tectonic ${lock.tool.version} (downloaded, verified and self-checked) at ${r.path}.` : `Already installed at ${r.path}; nothing to download.`);
+    io.out(`compile_document now finds it automatically when no tectonic is on PATH.`);
+    return 0;
+  } catch (caught) {
+    if (caught instanceof RuntimeError) {
+      io.err(`error: ${caught.code}: ${caught.message}`);
+      return 1;
+    }
+    throw caught;
+  }
+}
+
+/**
+ * How a host launches this package's MCP server: `node` plus the absolute bin of THIS copy. A bare `uktub-scholar` is on no PATH for a
+ * source checkout or a project-local install (`pnpm exec` is not PATH), so every generated config would fail with ENOENT.
+ */
+const SERVER_LAUNCH = { command: "node", args: [fileURLToPath(new URL("../../bin/uktub-scholar.js", import.meta.url)), "mcp"] } as const;
+
 const ALLOWED_MCP_HOSTS = ["claude", "pi", "agy", "codex", "cursor", "opencode"] as const;
 type McpHost = (typeof ALLOWED_MCP_HOSTS)[number];
 
@@ -194,6 +332,14 @@ function readJsonFile(filePath: string): { ok: true; data: Record<string, unknow
     const message = caught instanceof Error ? caught.message : String(caught);
     return { ok: false, error: `failed to parse ${filePath}: ${message}` };
   }
+}
+
+/** The host's server table: absent means start one; present but not an object is the user's data, so refuse rather than replace it. */
+function serverTable(data: Record<string, unknown>, key: string, filePath: string): { ok: true; table: Record<string, unknown> } | { ok: false; error: string } {
+  if (!(key in data)) return { ok: true, table: {} };
+  const v = data[key];
+  if (typeof v !== "object" || v === null || Array.isArray(v)) return { ok: false, error: `${filePath}: "${key}" is not an object; fix or remove it, then retry (it was left untouched)` };
+  return { ok: true, table: v as Record<string, unknown> };
 }
 
 async function mcpInstallCommand(args: string[], io: CliIo): Promise<number> {
@@ -235,13 +381,13 @@ async function mcpInstallCommand(args: string[], io: CliIo): Promise<number> {
         return 1;
       }
       const data = readResult.data;
-      const mcpServers = (typeof data.mcpServers === "object" && data.mcpServers !== null && !Array.isArray(data.mcpServers))
-        ? (data.mcpServers as Record<string, unknown>)
-        : {};
-      mcpServers["uktub-scholar"] = {
-        command: "uktub-scholar",
-        args: ["mcp"],
-      };
+      const table = serverTable(data, "mcpServers", target);
+      if (!table.ok) {
+        io.err(`error: ${table.error}`);
+        return 1;
+      }
+      const mcpServers = table.table;
+      mcpServers["uktub-scholar"] = { command: SERVER_LAUNCH.command, args: [...SERVER_LAUNCH.args] };
       data.mcpServers = mcpServers;
       mkdirSync(dirname(target), { recursive: true });
       writeFileSync(target, JSON.stringify(data, null, 2) + "\n", "utf8");
@@ -256,13 +402,13 @@ async function mcpInstallCommand(args: string[], io: CliIo): Promise<number> {
         return 1;
       }
       const data = readResult.data;
-      const mcpServers = (typeof data.mcpServers === "object" && data.mcpServers !== null && !Array.isArray(data.mcpServers))
-        ? (data.mcpServers as Record<string, unknown>)
-        : {};
-      mcpServers["uktub-scholar"] = {
-        command: "uktub-scholar",
-        args: ["mcp"],
-      };
+      const table = serverTable(data, "mcpServers", target);
+      if (!table.ok) {
+        io.err(`error: ${table.error}`);
+        return 1;
+      }
+      const mcpServers = table.table;
+      mcpServers["uktub-scholar"] = { command: SERVER_LAUNCH.command, args: [...SERVER_LAUNCH.args] };
       data.mcpServers = mcpServers;
       mkdirSync(dirname(target), { recursive: true });
       writeFileSync(target, JSON.stringify(data, null, 2) + "\n", "utf8");
@@ -277,13 +423,13 @@ async function mcpInstallCommand(args: string[], io: CliIo): Promise<number> {
         return 1;
       }
       const data = readResult.data;
-      const mcpServers = (typeof data.mcpServers === "object" && data.mcpServers !== null && !Array.isArray(data.mcpServers))
-        ? (data.mcpServers as Record<string, unknown>)
-        : {};
-      mcpServers["uktub-scholar"] = {
-        command: "uktub-scholar",
-        args: ["mcp"],
-      };
+      const table = serverTable(data, "mcpServers", target);
+      if (!table.ok) {
+        io.err(`error: ${table.error}`);
+        return 1;
+      }
+      const mcpServers = table.table;
+      mcpServers["uktub-scholar"] = { command: SERVER_LAUNCH.command, args: [...SERVER_LAUNCH.args] };
       data.mcpServers = mcpServers;
       mkdirSync(dirname(target), { recursive: true });
       writeFileSync(target, JSON.stringify(data, null, 2) + "\n", "utf8");
@@ -298,13 +444,13 @@ async function mcpInstallCommand(args: string[], io: CliIo): Promise<number> {
         return 1;
       }
       const data = readResult.data;
-      const mcp = (typeof data.mcp === "object" && data.mcp !== null && !Array.isArray(data.mcp))
-        ? (data.mcp as Record<string, unknown>)
-        : {};
-      mcp["uktub-scholar"] = {
-        type: "local",
-        command: ["uktub-scholar", "mcp"],
-      };
+      const table = serverTable(data, "mcp", target);
+      if (!table.ok) {
+        io.err(`error: ${table.error}`);
+        return 1;
+      }
+      const mcp = table.table;
+      mcp["uktub-scholar"] = { type: "local", command: [SERVER_LAUNCH.command, ...SERVER_LAUNCH.args] };
       data.mcp = mcp;
       mkdirSync(dirname(target), { recursive: true });
       writeFileSync(target, JSON.stringify(data, null, 2) + "\n", "utf8");
@@ -313,7 +459,7 @@ async function mcpInstallCommand(args: string[], io: CliIo): Promise<number> {
     }
     case "codex": {
       const target = join(root, ".codex", "config.toml");
-      const snippet = `[mcp_servers.uktub-scholar]\ncommand = "uktub-scholar"\nargs = ["mcp"]\n`;
+      const snippet = `[mcp_servers.uktub-scholar]\ncommand = ${JSON.stringify(SERVER_LAUNCH.command)}\nargs = [${SERVER_LAUNCH.args.map((a) => JSON.stringify(a)).join(", ")}]\n`;
       let existing = "";
       if (existsSync(target)) {
         existing = readFileSync(target, "utf8");
@@ -520,6 +666,10 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
       }
       case "embed":
         return await embedCommand(args, io);
+      case "eos":
+        return await eosCommand(args, io);
+      case "tectonic":
+        return await tectonicCommand(args, io);
       case "mcp":
         return await mcpCommand(args, io);
       default:
@@ -538,14 +688,16 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
 }
 
 /* eslint-disable no-console -- console is the CLI's user interface. */
+/** The process entry: run the CLI on the real console and set the exit code. Used by the bin shim and by direct execution. */
+export async function main(argv: string[]): Promise<void> {
+  try {
+    process.exitCode = await runCli(argv, { out: console.log, err: console.error });
+  } catch (e: unknown) {
+    console.error(`uktub-scholar: ${e instanceof Error ? e.message : String(e)}`);
+    process.exitCode = 1;
+  }
+}
+
 if (process.argv[1] !== undefined && import.meta.url === new URL(`file://${process.argv[1]}`).href) {
-  runCli(process.argv.slice(2), { out: console.log, err: console.error }).then(
-    (code) => {
-      process.exitCode = code;
-    },
-    (e: unknown) => {
-      console.error(`uktub-scholar: ${e instanceof Error ? e.message : String(e)}`);
-      process.exitCode = 1;
-    },
-  );
+  void main(process.argv.slice(2));
 }

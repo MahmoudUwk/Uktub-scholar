@@ -43,14 +43,18 @@ export async function resolveEngine(
   env: Record<string, string | undefined>,
   execFile: (file: string, args: string[]) => Promise<{ stdout: string; stderr: string }>,
   fs: EngineFs = realFs,
+  /** A managed (`tectonic install`) copy: used only when there is no override and nothing on PATH. */
+  managed: string | null = null,
+  platform: NodeJS.Platform = process.platform,
 ): Promise<EngineResolution> {
   const override = env[ENGINE_ENV_OVERRIDE];
   const candidates: string[] = override
     ? [override]
-    : (env.PATH ?? "")
-        .split(":")
+    : (env.PATH ?? env.Path ?? "")
+        .split(platform === "win32" ? ";" : ":")
         .filter((p) => p.length > 0)
-        .map((dir) => `${dir}/tectonic`);
+        .map((dir) => (platform === "win32" ? `${dir.replace(/[\\/]+$/, "")}\\tectonic.exe` : `${dir}/tectonic`));
+  if (!override && managed !== null) candidates.push(managed);
   const found = candidates.find((p) => fs.exists(p));
   if (!found) {
     return {
@@ -58,7 +62,7 @@ export async function resolveEngine(
       reason: "not-found",
       detail: override
         ? `${ENGINE_ENV_OVERRIDE} points at "${override}", which does not exist`
-        : "no `tectonic` binary on PATH",
+        : "no `tectonic` binary on PATH and no managed copy installed (run `uktub-scholar tectonic install --yes`)",
     };
   }
   if (!fs.executable(found)) {

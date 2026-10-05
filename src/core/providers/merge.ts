@@ -7,7 +7,7 @@
  * first-reporter-wins provenance rule.
  */
 
-import type { PaperCandidate } from "./types.ts";
+import { titleKey, type PaperCandidate } from "./types.ts";
 
 function richerCandidate(a: PaperCandidate, b: PaperCandidate): PaperCandidate {
   const openAccess = mergedOpenAccess(a.isOpenAccess, b.isOpenAccess);
@@ -107,8 +107,30 @@ export function mergeCandidates(lists: PaperCandidate[][]): PaperCandidate[] {
       scores.set(key, (scores.get(key) ?? 0) + 1 / (RRF_K + index + 1));
     });
   }
+  foldDoiless(merged, scores);
   return [...merged.values()].sort((a, b) => {
     const gap = (scores.get(b.dedupKey) ?? 0) - (scores.get(a.dedupKey) ?? 0);
     return Math.abs(gap) > RRF_SCORE_EPSILON ? gap : compareCandidates(a, b);
   });
+}
+
+/**
+ * A record without a DOI that restates a DOI-bearing one (same title slug, same year — or either year unknown) is the same work seen by a
+ * provider that lacks the DOI (e.g. an arXiv listing). It cannot be registered anyway, so it is folded into the DOI record and counts as
+ * one more provider reporting it. Two DOI-bearing records are never folded: a preprint and its published version are distinct works.
+ */
+function foldDoiless(merged: Map<string, PaperCandidate>, scores: Map<string, number>): void {
+  const byTitle = new Map<string, string>();
+  for (const [key, c] of merged) if (c.doi !== null) byTitle.set(titleKey(c.title), key);
+  for (const [key, dup] of [...merged]) {
+    if (dup.doi !== null) continue;
+    const survivorKey = byTitle.get(titleKey(dup.title));
+    const survivor = survivorKey === undefined ? undefined : merged.get(survivorKey);
+    if (survivorKey === undefined || survivor === undefined) continue;
+    if (survivor.year !== null && dup.year !== null && survivor.year !== dup.year) continue;
+    merged.set(survivorKey, richerCandidate(survivor, dup));
+    scores.set(survivorKey, (scores.get(survivorKey) ?? 0) + (scores.get(key) ?? 0));
+    merged.delete(key);
+    scores.delete(key);
+  }
 }

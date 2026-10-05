@@ -103,6 +103,7 @@ for (const [net, prefix] of [
   ["100::", 64], // discard-only
   ["64:ff9b:1::", 48], // local-use NAT64
   ["fec0::", 10], // site-local (deprecated)
+  ["::ffff:0:0:0", 96], // IPv4-translated (SIIT, RFC 6052): embeds an IPv4 address, distinct from the v4-mapped ::ffff:a.b.c.d
 ] as const) blocked.addSubnet(net, prefix, "ipv6");
 
 /** IPv4 embedded in an IPv6 address (v4-mapped ::ffff:a.b.c.d, NAT64 64:ff9b::/96), or null. */

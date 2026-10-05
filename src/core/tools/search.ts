@@ -100,6 +100,10 @@ export async function searchPapersTool(
             (structured.warnings.length > 0
               ? ` — ${structured.warnings.length} provider warning${structured.warnings.length === 1 ? "" : "s"}`
               : "") +
+            // Name them: a bare count lets the model claim every provider answered.
+            structured.warnings
+              .map((warning) => `\nwarning: ${warning.provider} — ${warning.code}: ${warning.message}; results exclude ${warning.provider}`)
+              .join("") +
             // The model reads ONLY this text (structuredContent is for
             // codemode callers): each candidate must appear here or the model
             // cannot select and register it. One deterministic line each.

@@ -34,7 +34,12 @@ export function dedupKey(input: { doi?: string | null; title: string }): string 
     const bare = input.doi.trim().replace(/^doi:\s*/i, "").toLowerCase();
     return `doi:${bare}`;
   }
-  const rawSlug = input.title
+  return titleKey(input.title);
+}
+
+/** The title-slug dedup key (`title:…`), also how a DOI-less record is matched to a DOI-bearing one. */
+export function titleKey(title: string): string {
+  const rawSlug = title
     .toLowerCase()
     .replace(/[^\p{L}\p{N}]+/gu, "-")
     .replace(/^-+/g, "");
@@ -43,7 +48,7 @@ export function dedupKey(input: { doi?: string | null; title: string }): string 
     .join("")
     .replace(/-+$/g, "");
   if (slug.length === 0) {
-    return `title:${hashHex(input.title.trim().toLowerCase())}`;
+    return `title:${hashHex(title.trim().toLowerCase())}`;
   }
   return `title:${slug}`;
 }

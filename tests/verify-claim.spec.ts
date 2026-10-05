@@ -11,6 +11,7 @@ import { spawn as realSpawn, spawnSync } from "node:child_process";
 import {
   DEFAULT_MIN_CONFIDENCE,
   eosEngine,
+  eosOnnxEngine,
   juliaEngine,
   minConfidenceFromEnv,
 } from "../src/core/verify/claim.ts";
@@ -52,6 +53,45 @@ describe("eos engine adapter (resident Decision 2.0 worker)", () => {
     await engine.run([{ state: "support", instructions: "c" }]);
     assert.equal(calls.at(-1)!.bin, "/opt/venv/bin/python");
     assert.deepEqual([calls.at(-1)!.env.UKTUB_DECISION2_MODEL, calls.at(-1)!.env.UKTUB_DECISION2_REVISION], ["/models/eos", "abc123"]);
+  });
+});
+
+describe("eos-onnx engine adapter (the same worker protocol on ONNX Runtime, no PyTorch)", () => {
+  const FAKE = `
+    process.stdout.write(JSON.stringify({ready:true, model:"fake"}) + "\\n");
+    let buf = ""; process.stdin.on("data", d => { buf += d; let i; while ((i = buf.indexOf("\\n")) !== -1) { const line = buf.slice(0, i); buf = buf.slice(i + 1); if (!line.trim()) continue; const row = JSON.parse(line); if (row.exit) process.exit(0); process.stdout.write(JSON.stringify({p_true: row.state.includes("support") ? 0.995 : 0.05, tokens: 3}) + "\\n"); } });`;
+  const calls: { bin: string; args: string[]; env: Record<string, string | undefined> }[] = [];
+  const children: { kill(): boolean }[] = [];
+  const fakeSpawn = ((bin: string, args: string[], opts: { env?: NodeJS.ProcessEnv }) => {
+    calls.push({ bin, args, env: { ...opts.env } });
+    const child = realSpawn(process.execPath, ["-e", FAKE], opts as never);
+    children.push(child);
+    return child;
+  }) as unknown as typeof realSpawn;
+  after(() => children.forEach((c) => c.kill()));
+
+  it("runs scripts/decision2_onnx.py with the pinned export and answers rows through it", async () => {
+    const engine = eosOnnxEngine({ env: { UKTUB_EOS_ONNX_DIR: "/models/eos-onnx" }, spawnImpl: fakeSpawn });
+    assert.deepEqual(await engine.run([{ state: "support", instructions: "c" }, { state: "other", instructions: "c" }]), [0.995, 0.05]);
+    const call = calls.at(-1)!;
+    assert.equal(call.bin, "python3");
+    assert.match(call.args[0] ?? "", /scripts[\\/]decision2_onnx\.py$/);
+    assert.equal(call.env.UKTUB_DECISION2_ONNX_DIR, "/models/eos-onnx");
+    assert.match(call.env.UKTUB_DECISION2_REVISION ?? "", /^[0-9a-f]{40}$/, "a pinned revision of the export");
+    assert.match(call.env.UKTUB_DECISION2_ONNX_SHA256 ?? "", /^[0-9a-f]{64}$/, "the pinned weights digest is handed to the worker, which refuses a mismatch");
+  });
+
+  it("honours UKTUB_EOS_ONNX_PYTHON, and a user override of the digest/revision pin", async () => {
+    const engine = eosOnnxEngine({ env: { UKTUB_EOS_ONNX_DIR: "/m", UKTUB_EOS_ONNX_PYTHON: "/opt/venv/bin/python", UKTUB_EOS_ONNX_REVISION: "abc123", UKTUB_EOS_ONNX_SHA256: "f".repeat(64) }, spawnImpl: fakeSpawn });
+    await engine.run([{ state: "support", instructions: "c" }]);
+    const call = calls.at(-1)!;
+    assert.equal(call.bin, "/opt/venv/bin/python");
+    assert.deepEqual([call.env.UKTUB_DECISION2_REVISION, call.env.UKTUB_DECISION2_ONNX_SHA256], ["abc123", "f".repeat(64)]);
+  });
+
+  it("with no model directory it fails with a message that names the installer", async () => {
+    const engine = eosOnnxEngine({ env: { UKTUB_CACHE_DIR: "/nonexistent-cache" }, spawnImpl: fakeSpawn });
+    await assert.rejects(engine.run([{ state: "support", instructions: "c" }]), /eos install/);
   });
 });
 

@@ -106,9 +106,9 @@ The capabilities and arguments are identical in either form.
 
 ## Compiling the document
 
-- `compile_document` runs the user's local Tectonic binary (PATH or
-  `UKTUB_TECTONIC_BIN`). There is no download and no bundled engine — a missing
-  engine refuses; tell the user how to install it instead of improvising.
+- `compile_document` runs Tectonic: the user's own (`UKTUB_TECTONIC_BIN`, then PATH), else a
+  managed copy the user installed with `uktub-scholar tectonic install --yes`. Nothing is
+  downloaded by a compile — a missing engine refuses; tell the user that command instead of improvising.
 - Entry resolution: `entry` omitted → `manuscript/main.tex`, then `main.tex`,
   then a lone top-level `.tex`. Several candidates refuse with the list — pass
   `entry` explicitly rather than guessing.
