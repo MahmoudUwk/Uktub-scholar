@@ -15,7 +15,9 @@ import { dirname, join } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 
 import { WriteQueue } from "../src/core/queue.ts";
-import uktubOaExtension from "../src/pi/extension.ts";
+import { createMcpServer } from "../src/mcp/server.ts";
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { runCli } from "../src/cli/main.ts";
 import { BIBLIOGRAPHY_REL_PATH, createRegistry, listPapers, syncBibliography } from "../src/core/registry.ts";
 import { paperRegistryTool, type PaperRegistryArgs } from "../src/core/tools/registry.ts";
@@ -29,12 +31,6 @@ import {
   crossrefWorkEnvelope,
   fakeWorks,
 } from "./helpers/provider-fakes.ts";
-
-/** The adapter's execute-level tool def (same stand-in shape pi-compat.spec.ts uses). */
-interface RegisteredDef {
-  name: string;
-  execute?: (toolCallId: string, params: unknown, signal: unknown, onUpdate: unknown, ctx: unknown) => Promise<unknown>;
-}
 
 // ── fixtures ───────────────────────────────────────────────────────────────
 
@@ -269,10 +265,10 @@ process.stdout.write(JSON.stringify({
   });
 });
 
-// ── scenario 4: parallel fake-Pi execute() calls → serialized, ordered keys ─
+// ── scenario 4: parallel MCP callTool() calls → serialized, ordered keys ─────
 
-describe("parallel fake-Pi execute calls", () => {
-  it("overlapping register execute() calls serialize; the second collision-holder gets the deterministic base-26 suffix", async () => {
+describe("parallel MCP callTool calls", () => {
+  it("overlapping register callTool() calls serialize; the second collision-holder gets the deterministic base-26 suffix", async () => {
     // Both papers mint the same base citekey (Holder, 2024, "Same") — the
     // suffix assignment is decided by queue arrival order.
     const { fetchFn } = registerFetch({
@@ -280,38 +276,22 @@ describe("parallel fake-Pi execute calls", () => {
       "10.9001/two": { title: "Same Title", bibtex: BIBTEX_B },
     });
 
-    // The fake-Pi harness (pi-compat.spec.ts pattern): load the extension and
-    // invoke the registered tool's execute directly.
-    const tools: RegisteredDef[] = [];
-    uktubOaExtension({
-      registerTool(def: RegisteredDef) {
-        tools.push(def);
-      },
-      on() {},
-    } as never);
-    const registerExecute = tools.find((tool) => tool.name === "paper_registry")!.execute!;
+    const server = createMcpServer({ targetDir: root, fetch: fetchFn as typeof globalThis.fetch });
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+    const client = new Client({ name: "test-client", version: "1.0.0" }, { capabilities: {} });
+    await Promise.all([server.connect(serverTransport), client.connect(clientTransport)]);
+
     interface ExecuteOutcome {
       structuredContent?: { outcomes: { doi: string; citekey: string; status: string }[] };
     }
     const call = (doi: string): Promise<ExecuteOutcome> =>
-      registerExecute("call-1", { action: "register", identifiers: [doi] }, undefined, undefined, { cwd: root }) as Promise<ExecuteOutcome>;
+      client.callTool({ name: "paper_registry", arguments: { action: "register", identifiers: [doi] } }) as Promise<ExecuteOutcome>;
 
-    // The adapter wires globalThis.fetch into its context (src/pi/extension.ts),
-    // so the fake is installed as the process fetch for the duration — zero
-    // network still holds.
-    const originalFetch = globalThis.fetch;
-    globalThis.fetch = fetchFn as typeof globalThis.fetch;
-    let firstResult: Awaited<ReturnType<typeof call>>;
-    let secondResult: Awaited<ReturnType<typeof call>>;
-    try {
-      // Fire both WITHOUT awaiting: promise-creation order fixes queue arrival
-      // order deterministically (each call runs synchronously to its first await).
-      const first = call("10.9001/one");
-      const second = call("10.9001/two");
-      [firstResult, secondResult] = (await Promise.all([first, second])) as [typeof firstResult, typeof secondResult];
-    } finally {
-      globalThis.fetch = originalFetch;
-    }
+    // Fire both WITHOUT awaiting: promise-creation order fixes queue arrival
+    // order deterministically (each call runs synchronously to its first await).
+    const first = call("10.9001/one");
+    const second = call("10.9001/two");
+    const [firstResult, secondResult] = (await Promise.all([first, second])) as [Awaited<ReturnType<typeof call>>, Awaited<ReturnType<typeof call>>];
 
     assert.deepEqual(
       firstResult.structuredContent?.outcomes.map((outcome) => [outcome.doi, outcome.status]),

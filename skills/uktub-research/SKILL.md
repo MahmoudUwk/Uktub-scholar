@@ -5,9 +5,14 @@ description: Using uktub-scholar's five tools for scholarly search, the paper re
 
 # Scholarly research with uktub-scholar
 
-Five tools operate beside the user's project: `search_papers`, `paper_registry`,
+Five core capabilities operate beside the user's project: `search_papers`, `paper_registry`,
 `compile_document`, `verify_claim`, and `search_passages`. The SQLite registry is canonical.
 `refs/references.bib` is rendered from it. The PDF is derived from the user's own LaTeX sources.
+
+Depending on the host agent and MCP configuration, tools may be available under their bare names
+(`search_papers`, `paper_registry`, `compile_document`, `verify_claim`, `search_passages`) or namespaced
+with the server name (e.g. `mcp__uktub_scholar__search_papers`, `mcp__uktub_scholar__paper_registry`, etc.).
+The capabilities and arguments are identical in either form.
 
 ## Search versus register
 

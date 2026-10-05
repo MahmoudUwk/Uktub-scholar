@@ -10,6 +10,11 @@
  * directly).
  */
 
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import type { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+
 import { RegistryError, createRegistry, deregisterPapers, findEnclosingProject, listPapers, openRegistry, syncBibliography } from "../core/registry.ts";
 import { compileDocument, describeOutcome, prodSpawn } from "../core/compile/run.ts";
 import { renderRefusal } from "../core/refusals.ts";
@@ -21,6 +26,7 @@ import { verifyClaimTool, type VerifyClaimArgs, type VerifyHooks } from "../core
 import { searchPassagesTool, type SearchPassagesArgs } from "../core/tools/passages.ts";
 import { managedCacheDir } from "../core/embed/config.ts";
 import { RuntimeError, installRuntime, installedPaths, platformKey, readLock, type RuntimeLock } from "../core/embed/runtime.ts";
+import { createMcpServer, validateTargetDir } from "../mcp/server.ts";
 
 /** Injected I/O: the bin passes console writers; tests capture arrays. */
 export interface CliIo {
@@ -37,6 +43,8 @@ export interface CliIo {
   embedLock?: RuntimeLock;
   embedFetch?: typeof fetch;
   embedPlatform?: string;
+  /** Test seam for `mcp`: custom transport instead of stdio. */
+  mcpTransport?: Transport;
 }
 
 const USAGE = `usage: uktub-scholar <command>
@@ -58,7 +66,9 @@ commands:
   embed status | embed install --yes
                                 the managed embedding runtime: a pinned llama.cpp server and
                                 EmbeddingGemma, downloaded once (sha256-verified) into a shared cache;
-                                or run your own server and set UKTUB_EMBED_URL`;
+                                or run your own server and set UKTUB_EMBED_URL
+  mcp [dir] [--dir <path>]      run the stdio MCP server (defaults to cwd)
+  mcp install [--host <name>]   write host MCP configuration (claude, pi, agy, codex, cursor, opencode)`;
 
 /** The same context the Pi adapter builds: real network, env and clock unless a test injects them. */
 function toolContext(io: CliIo, root: string): ToolContext {
@@ -166,6 +176,170 @@ async function embedCommand(args: string[], io: CliIo): Promise<number> {
     }
     throw caught;
   }
+}
+
+const ALLOWED_MCP_HOSTS = ["claude", "pi", "agy", "codex", "cursor", "opencode"] as const;
+type McpHost = (typeof ALLOWED_MCP_HOSTS)[number];
+
+function readJsonFile(filePath: string): Record<string, unknown> {
+  if (!existsSync(filePath)) return {};
+  try {
+    const raw = readFileSync(filePath, "utf8");
+    const parsed = JSON.parse(raw);
+    return typeof parsed === "object" && parsed !== null && !Array.isArray(parsed) ? (parsed as Record<string, unknown>) : {};
+  } catch {
+    return {};
+  }
+}
+
+async function mcpInstallCommand(args: string[], io: CliIo): Promise<number> {
+  const root = io.cwd ?? process.cwd();
+  let host: string | undefined;
+
+  for (let i = 0; i < args.length; i++) {
+    const a = args[i];
+    if (a === "--host" && i + 1 < args.length) {
+      host = args[++i];
+    } else if (a.startsWith("--host=")) {
+      host = a.slice("--host=".length);
+    } else {
+      io.err(`error: unknown option "${a}"\nusage: uktub-scholar mcp install [--host <claude|pi|agy|codex|cursor|opencode>]`);
+      return 1;
+    }
+  }
+
+  if (!host) {
+    host = "claude";
+  }
+
+  if (!ALLOWED_MCP_HOSTS.includes(host as McpHost)) {
+    io.err(`error: unknown host "${host}" — allowed hosts: ${ALLOWED_MCP_HOSTS.join(", ")}`);
+    return 1;
+  }
+
+  switch (host) {
+    case "claude":
+    case "pi": {
+      const target = join(root, ".mcp.json");
+      const data = readJsonFile(target);
+      const mcpServers = (typeof data.mcpServers === "object" && data.mcpServers !== null && !Array.isArray(data.mcpServers))
+        ? (data.mcpServers as Record<string, unknown>)
+        : {};
+      mcpServers["uktub-scholar"] = {
+        command: "uktub-scholar",
+        args: ["mcp"],
+      };
+      data.mcpServers = mcpServers;
+      mkdirSync(dirname(target), { recursive: true });
+      writeFileSync(target, JSON.stringify(data, null, 2) + "\n", "utf8");
+      io.out(`Wrote MCP server configuration for ${host} to .mcp.json`);
+      return 0;
+    }
+    case "agy": {
+      const target = join(root, ".agents", "mcp_config.json");
+      const data = readJsonFile(target);
+      const mcpServers = (typeof data.mcpServers === "object" && data.mcpServers !== null && !Array.isArray(data.mcpServers))
+        ? (data.mcpServers as Record<string, unknown>)
+        : {};
+      mcpServers["uktub-scholar"] = {
+        command: "uktub-scholar",
+        args: ["mcp"],
+      };
+      data.mcpServers = mcpServers;
+      mkdirSync(dirname(target), { recursive: true });
+      writeFileSync(target, JSON.stringify(data, null, 2) + "\n", "utf8");
+      io.out(`Wrote MCP server configuration for agy to .agents/mcp_config.json`);
+      return 0;
+    }
+    case "cursor": {
+      const target = join(root, ".cursor", "mcp.json");
+      const data = readJsonFile(target);
+      const mcpServers = (typeof data.mcpServers === "object" && data.mcpServers !== null && !Array.isArray(data.mcpServers))
+        ? (data.mcpServers as Record<string, unknown>)
+        : {};
+      mcpServers["uktub-scholar"] = {
+        command: "uktub-scholar",
+        args: ["mcp"],
+      };
+      data.mcpServers = mcpServers;
+      mkdirSync(dirname(target), { recursive: true });
+      writeFileSync(target, JSON.stringify(data, null, 2) + "\n", "utf8");
+      io.out(`Wrote MCP server configuration for cursor to .cursor/mcp.json`);
+      return 0;
+    }
+    case "opencode": {
+      const target = join(root, "opencode.json");
+      const data = readJsonFile(target);
+      const mcp = (typeof data.mcp === "object" && data.mcp !== null && !Array.isArray(data.mcp))
+        ? (data.mcp as Record<string, unknown>)
+        : {};
+      mcp["uktub-scholar"] = {
+        type: "local",
+        command: ["uktub-scholar", "mcp"],
+      };
+      data.mcp = mcp;
+      mkdirSync(dirname(target), { recursive: true });
+      writeFileSync(target, JSON.stringify(data, null, 2) + "\n", "utf8");
+      io.out(`Wrote MCP server configuration for opencode to opencode.json`);
+      return 0;
+    }
+    case "codex": {
+      const target = join(root, ".codex", "config.toml");
+      const snippet = `[mcp_servers.uktub-scholar]\ncommand = "uktub-scholar"\nargs = ["mcp"]\n`;
+      let existing = "";
+      if (existsSync(target)) {
+        existing = readFileSync(target, "utf8");
+      }
+      if (!existing.includes("[mcp_servers.uktub-scholar]")) {
+        const content = existing.length > 0 ? (existing.endsWith("\n") ? existing : existing + "\n") + "\n" + snippet : snippet;
+        mkdirSync(dirname(target), { recursive: true });
+        writeFileSync(target, content, "utf8");
+      }
+      io.out(`Wrote MCP server configuration for codex to .codex/config.toml:\n\n${snippet}`);
+      return 0;
+    }
+    default:
+      return 1;
+  }
+}
+
+async function mcpCommand(args: string[], io: CliIo): Promise<number> {
+  if (args[0] === "install") {
+    return await mcpInstallCommand(args.slice(1), io);
+  }
+
+  let targetDir: string | undefined;
+  for (let i = 0; i < args.length; i++) {
+    const a = args[i];
+    if (a === "--dir" && i + 1 < args.length) {
+      targetDir = args[++i];
+    } else if (a.startsWith("--dir=")) {
+      targetDir = a.slice("--dir=".length);
+    } else if (!a.startsWith("-")) {
+      targetDir = a;
+    } else {
+      io.err(`error: unknown option "${a}"\nusage: uktub-scholar mcp [dir] [--dir <path>]`);
+      return 1;
+    }
+  }
+
+  const effectiveDir = targetDir ?? io.cwd ?? process.cwd();
+  const confinement = validateTargetDir(effectiveDir);
+  if (!confinement.ok) {
+    io.err(`error: ${renderRefusal({ code: confinement.code, message: confinement.message })}`);
+    return 1;
+  }
+
+  const server = createMcpServer({
+    targetDir: effectiveDir,
+    fetch: io.fetch,
+    env: io.env,
+    download: io.download,
+  });
+
+  const transport = io.mcpTransport ?? new StdioServerTransport();
+  await server.connect(transport);
+  return 0;
 }
 
 /** One CLI run: returns the process exit code (0 success, 1 refusal/error).
@@ -303,6 +477,8 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
       }
       case "embed":
         return await embedCommand(args, io);
+      case "mcp":
+        return await mcpCommand(args, io);
       default:
         err(command === undefined ? USAGE : `error: unknown command "${command}"\n${USAGE}`);
         return 1;

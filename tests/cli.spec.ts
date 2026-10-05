@@ -12,6 +12,7 @@ import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 
 import { runCli } from "../src/cli/main.ts";
+import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { chunksOf, getSource } from "../src/core/verify/store.ts";
 import { makePdf } from "./helpers/pdf.ts";
 import { bib, crossrefFake } from "./helpers/registry-fakes.ts";
@@ -443,3 +444,96 @@ describe("uktub-scholar embed install / status (managed embedding runtime)", asy
     assert.match(c.lines.err.join("\n"), /embed (install|status)/);
   });
 });
+
+describe("mcp command", () => {
+  it("mcp install defaults to claude and writes .mcp.json", async () => {
+    const c = io();
+    assert.equal(await runCli(["mcp", "install"], c), 0);
+    assert.match(c.lines.out.join("\n"), /\.mcp\.json/);
+
+    const content = JSON.parse(readFileSync(join(root, ".mcp.json"), "utf8"));
+    assert.deepEqual(content.mcpServers["uktub-scholar"], {
+      command: "uktub-scholar",
+      args: ["mcp"],
+    });
+  });
+
+  it("mcp install --host pi writes .mcp.json", async () => {
+    const c = io();
+    assert.equal(await runCli(["mcp", "install", "--host", "pi"], c), 0);
+    assert.match(c.lines.out.join("\n"), /\.mcp\.json/);
+
+    const content = JSON.parse(readFileSync(join(root, ".mcp.json"), "utf8"));
+    assert.deepEqual(content.mcpServers["uktub-scholar"], {
+      command: "uktub-scholar",
+      args: ["mcp"],
+    });
+  });
+
+  it("mcp install --host agy writes .agents/mcp_config.json", async () => {
+    const c = io();
+    assert.equal(await runCli(["mcp", "install", "--host", "agy"], c), 0);
+    assert.match(c.lines.out.join("\n"), /\.agents\/mcp_config\.json/);
+
+    const content = JSON.parse(readFileSync(join(root, ".agents", "mcp_config.json"), "utf8"));
+    assert.deepEqual(content.mcpServers["uktub-scholar"], {
+      command: "uktub-scholar",
+      args: ["mcp"],
+    });
+  });
+
+  it("mcp install --host cursor writes .cursor/mcp.json", async () => {
+    const c = io();
+    assert.equal(await runCli(["mcp", "install", "--host", "cursor"], c), 0);
+    assert.match(c.lines.out.join("\n"), /\.cursor\/mcp\.json/);
+
+    const content = JSON.parse(readFileSync(join(root, ".cursor", "mcp.json"), "utf8"));
+    assert.deepEqual(content.mcpServers["uktub-scholar"], {
+      command: "uktub-scholar",
+      args: ["mcp"],
+    });
+  });
+
+  it("mcp install --host opencode writes opencode.json", async () => {
+    const c = io();
+    assert.equal(await runCli(["mcp", "install", "--host", "opencode"], c), 0);
+    assert.match(c.lines.out.join("\n"), /opencode\.json/);
+
+    const content = JSON.parse(readFileSync(join(root, "opencode.json"), "utf8"));
+    assert.deepEqual(content.mcp["uktub-scholar"], {
+      type: "local",
+      command: ["uktub-scholar", "mcp"],
+    });
+  });
+
+  it("mcp install --host codex writes .codex/config.toml and outputs TOML snippet", async () => {
+    const c = io();
+    assert.equal(await runCli(["mcp", "install", "--host", "codex"], c), 0);
+    assert.match(c.lines.out.join("\n"), /\.codex\/config\.toml/);
+    assert.match(c.lines.out.join("\n"), /\[mcp_servers\.uktub-scholar\]/);
+
+    const toml = readFileSync(join(root, ".codex", "config.toml"), "utf8");
+    assert.match(toml, /\[mcp_servers\.uktub-scholar\]/);
+    assert.match(toml, /command = "uktub-scholar"/);
+  });
+
+  it("mcp install with unknown host fails with code 1", async () => {
+    const c = io();
+    assert.equal(await runCli(["mcp", "install", "--host", "unknown_host"], c), 1);
+    assert.match(c.lines.err.join("\n"), /unknown host/);
+  });
+
+  it("mcp with invalid target directory refuses with code 1 and PATH_REFUSED", async () => {
+    const c = io();
+    assert.equal(await runCli(["mcp", "--dir", `${root}/../outside`], c), 1);
+    assert.match(c.lines.err.join("\n"), /PATH_REFUSED/);
+  });
+
+  it("mcp runs server with custom transport", async () => {
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+    const c = io({ mcpTransport: serverTransport });
+    assert.equal(await runCli(["mcp"], c), 0);
+    await clientTransport.close();
+  });
+});
+

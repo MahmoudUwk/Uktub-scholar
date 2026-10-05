@@ -6,10 +6,17 @@
  * like any registry transaction (KTD5).
  */
 
-import { Type } from "typebox";
+import { Type, type Static } from "typebox";
 
 import { compileDocument, describeOutcome, prodSpawn, type CompileOutcome } from "../compile/run.ts";
 import { refusalResult, type ToolContext, type ToolResult } from "./context.ts";
+
+export const CompileDocumentParams = Type.Object({
+  entry: Type.Optional(
+    Type.String({ description: "Project-relative .tex path; omit to use the default entry resolution" }),
+  ),
+});
+export type CompileDocumentArgs = Static<typeof CompileDocumentParams>;
 
 export const CompileDocumentOutput = Type.Object({
   status: Type.Union([Type.Literal("compiled"), Type.Literal("errors")]),
@@ -45,7 +52,7 @@ interface CompileDocumentStructuredDiag {
   message: string;
 }
 
-export async function compileDocumentTool(ctx: ToolContext, args: { entry?: string } = {}): Promise<ToolResult<CompileDocumentStructured>> {
+export async function compileDocumentTool(ctx: ToolContext, args: CompileDocumentArgs = {}): Promise<ToolResult<CompileDocumentStructured>> {
   const outcome: CompileOutcome = await ctx.queue.runExclusive(() =>
     compileDocument({ root: ctx.root, env: ctx.env, spawn: prodSpawn }, args.entry),
   );

@@ -2,3 +2,5 @@ node_modules/
 *.log
 *.tmp
 .registry/
+.mcp.json
+opencode.json

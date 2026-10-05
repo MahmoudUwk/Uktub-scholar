@@ -5,11 +5,19 @@
  * search anyway and surfaces the register hint in `details` (plan U4).
  */
 
-import { Type } from "typebox";
+import { Type, type Static } from "typebox";
 
 import { SearchUnavailableError, searchPapers } from "../scholarly.ts";
 import type { ProviderWarning } from "../scholarly.ts";
 import { providerConfigOf, refusalResult, type ToolContext, type ToolResult } from "./context.ts";
+
+export const SearchPapersParams = Type.Object({
+  query: Type.String({ description: "Free-text scholarly query; DOI-shaped strings are allowed and hinted" }),
+  limit: Type.Optional(
+    Type.Integer({ minimum: 1, description: "Max candidates to return (default 5, cap 20)" }),
+  ),
+});
+export type SearchPapersArgs = Static<typeof SearchPapersParams>;
 
 /** Output schema (R8): deterministic shape the adapter declares to the host. */
 export const SearchPapersOutput = Type.Object({
@@ -56,7 +64,7 @@ export interface SearchPapersStructured {
  */
 export async function searchPapersTool(
   ctx: ToolContext,
-  args: { query: string; limit?: number },
+  args: SearchPapersArgs,
 ): Promise<ToolResult<SearchPapersStructured>> {
   if (typeof args.query !== "string" || args.query.trim().length === 0) {
     return refusalResult({ code: "QUERY_REQUIRED", message: "search_papers needs a non-empty query" });

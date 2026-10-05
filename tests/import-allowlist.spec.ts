@@ -45,7 +45,7 @@ test("src/core imports nothing Pi-specific", () => {
 });
 
 test("src/pi is the only place importing the Pi peer package", () => {
-  for (const dir of ["core", "cli"] as const) {
+  for (const dir of ["core", "cli", "mcp"] as const) {
     for (const file of listTsFiles(join(root, dir))) {
       const src = readFileSync(file, "utf8");
       assert.ok(
