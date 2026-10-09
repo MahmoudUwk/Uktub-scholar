@@ -2,7 +2,8 @@
 # NOT a product deployment artifact; dev-only tooling.
 #
 # Build:  docker build -t uktub-scholar-sandbox -f docker/test-sandbox.Dockerfile .
-# Run:    scripts/test-sandbox.sh   (mounts the repo + your ADC credentials)
+# Run:    pnpm sandbox (interactive Pi) or the live tiers; scripts/live/sandbox.ts defines the container boundary and
+#         sets its own entrypoint, so this image carries only Pi, Tectonic and git.
 FROM node:26-slim
 
 # Tectonic pinned to the tested floor (0.15.0) so sandbox users install nothing;
@@ -22,10 +23,5 @@ RUN apt-get update \
  && rm -rf /var/lib/apt/lists/* \
  && npm install -g @earendil-works/pi-coding-agent@${PI_VERSION}
 
-# The package under test is mounted at /uktub-scholar (live source, not baked).
+# The package under test is a staged consumer install mounted at run time; Vertex needs a location.
 ENV GOOGLE_CLOUD_LOCATION=global
-WORKDIR /workspace/project
-
-COPY docker/sandbox-entrypoint.sh /usr/local/bin/uktub-sandbox-entrypoint
-ENTRYPOINT ["uktub-sandbox-entrypoint"]
-CMD ["pi", "--no-builtin-tools", "--provider", "google-vertex", "--model", "gemini-3.5-flash-lite"]

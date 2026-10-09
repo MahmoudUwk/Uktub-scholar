@@ -1,0 +1,40 @@
+version: 1
+baseline_id: H0
+incumbent_id: H0
+best_reliable_score: null
+noise_tolerance_delta: null
+bounded_horizon_rounds: 20
+edit_budget:
+  early_max: 4
+  late_min: 1
+stall_window_rounds: 3
+prune_window_rounds: 4
+metrics:
+  - task_score
+  - first_pass_delivery
+  - end_to_end_success
+  - input_tokens
+  - output_tokens
+  - total_policy_tokens
+  - tool_calls
+  - steps
+  - wall_time
+  - cost
+  - budget_stops
+components:
+  prompt: editable
+  control_flow: editable
+  config: editable
+  output_plumbing: editable
+  context_mgmt: editable
+  client_tool: editable
+  skill: editable
+  memory: editable
+  subagent: editable
+protected:
+  - model_weights
+  - evaluator
+  - heldout_data
+  - ood_audit_data
+  - permissions
+  - safety_boundaries

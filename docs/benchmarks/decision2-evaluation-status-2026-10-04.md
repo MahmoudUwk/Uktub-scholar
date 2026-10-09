@@ -287,7 +287,7 @@ s('vllm-sr/Decision-2.0-Kai-0.6B', revision='cd49ea3813fd8ba0928a9a23ef6c9a0f2f0
 s('vllm-sr/Decision-2.0-Eos-0.8B', revision='3594047d69f476f1d01cf84c593e213fc3a4dfe0', local_dir='$HOME/.cache/uktub-bench/decision2/models/eos')"
 
 # 3. paper text (outside the repo)
-P=/home/mahmoud/Desktop/AI_Projects/UktubAI/test_papers; T=/path/to/text; mkdir -p $T
+P=test_papers; T=/path/to/text; mkdir -p $T
 for id in $(node -e 'for (const p of new Set(JSON.parse(require("fs").readFileSync("benchmarks/datasets/claim-verification-v1/claims.json","utf8")).claims.map(c=>c.paper))) console.log(p)'); do
   pdftotext -q "$(ls $P/RF/$id*.pdf $P/smarthome/$id*.pdf 2>/dev/null | head -1)" "$T/$id.txt"; done
 

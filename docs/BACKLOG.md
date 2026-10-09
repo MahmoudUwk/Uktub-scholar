@@ -1,116 +1,158 @@
-# Backlog — correctness risks and deferred capabilities
+# Backlog
 
-Open correctness risks and deferred work; current behavior is in [README](../README.md).
-Historical rationale lives in [DECISIONS.md](DECISIONS.md); attribution rules in [NOTICE.md](../NOTICE.md);
-independent review evidence in [review-2026-10-04.md](review-2026-10-04.md), [review-2026-10-05.md](review-2026-10-05.md) and [agent-session-review-2026-10-05.md](agent-session-review-2026-10-05.md).
+The only tracker of open work. Each item names the owner decision or evidence trigger it waits for. Built work is in the
+[CHANGELOG](../CHANGELOG.md), rationale in [DECISIONS](DECISIONS.md), current behavior in the [README](../README.md); evidence is
+in [reviews/](reviews/) and [benchmarks/](benchmarks/).
 
-Completed work is in [CHANGELOG.md](../CHANGELOG.md); only open items are listed here.
+## 1. Platforms and installation
 
-## Active Backlog & Correctness Risks
+- **macOS and Windows execution.** The managed `llama-server` and model are digest-pinned for six platforms; archives verify and
+  extract on all of them, but the server has run on `linux-x64` only. Risks: macOS quarantine flags and Metal versus CPU
+  selection; Windows child-process termination and `.exe` paths. Trigger: the first session on macOS or Windows.
+- **Not published.** `package.json` is `private: true`; a registry publish (npm trusted publishing with provenance) is an owner
+  decision. Until then installs are from a checkout or a tarball.
+- **Node-native Eos.** `eos-onnx` is a Python worker; `onnxruntime-node` plus a JS tokenizer would remove Python but is
+  unproven (the prompt encoder is token-exact in Python only). Also untested on macOS/Windows and above 1,728-token contexts.
+- **Installer hardening (no consumer yet):** mirror override for the three downloads, resumable `.part` files for the 700 MB
+  model, `eos install --verify`. Bounded retry with backoff exists.
+- **llama.cpp pin.** `b11476` is digest-checked on six platforms; upstream now also publishes semver tags. Re-pinning needs the
+  parity gate again. `win32-arm64` has no official Tectonic build; `eos install` assumes `python3` on PATH (override
+  `UKTUB_EOS_ONNX_BOOTSTRAP_PYTHON`) and a venv-capable Python (Debian needs `python3-venv`).
+- **`mcp install` strictness.** JSONC (comments) in `opencode.json` is refused rather than parsed.
 
-### 1. Platform Runtime Execution (macOS & Windows)
-- **Status:** Pinned for 6 platforms; executed on Linux x64 only.
-- **Details:** The managed `llama-server` binary and GGUF model are pinned and verified for `linux-x64`, `linux-arm64`, `darwin-x64`, `darwin-arm64`, `win32-x64`, and `win32-arm64`. While archive digests and extraction formats have been verified across all six, actual execution of the server process has only been validated on `linux-x64`.
-- **Remaining risk:** macOS Gatekeeper/quarantine flags on downloaded binaries; macOS Metal GPU selection vs CPU fallback; Windows child-process termination and `.exe` path separators.
-- **Trigger:** First developer or CI session running on macOS or Windows.
+## 2. Parsing, retrieval and verification quality
 
-### 2. Document Parser & Structure Enhancements
-- **PDF heading detector residue:** On the 14 test papers, ≈ 7 false positives were identified out of ≈ 300 headings (e.g. bare line numbers in algorithm pseudocode, affiliation footnotes, numbered lists). They create a harmless section boundary but never break text continuity or pointers. A font-size/weight pass over `pdf.js` text items would eliminate them if sessions show need.
-- **TEI heading hierarchy:** GROBID's `n` attribute is dropped by current parser settings, causing all TEI headings to be treated as level 1 (chunking boundaries are unaffected).
-- **OCR fallback for scanned PDFs:** Scanned PDFs lacking a text layer fail-closed with `no_text_layer`. An optional OCR fallback (e.g. via LiteParse or Tesseract) remains deferred.
+- **PDF heading false positives:** about 7 in 300 headings on the 14 test papers (pseudocode line numbers, affiliations, lists);
+  harmless to pointers. A font-size pass over `pdf.js` items would remove them if sessions show harm.
+- **TEI heading hierarchy:** GROBID's `n` attribute is dropped, so every TEI heading is level 1 (chunk boundaries unaffected).
+- **OCR fallback** for scanned PDFs (they refuse with `no_text_layer`); candidates LiteParse or Tesseract.
+- **Retrieval:** the exact cosine scan is O(N) (3 ms for 700 passages); evaluate `sqlite-vec` beyond about 10,000 passages. RRF is
+  unweighted (k = 60); a weighted or reranked pass is a measurement for later. `claim_judgments` has no eviction (records are
+  small; bound it for multi-month projects, needs a schema bump).
+- **Search typo tolerance** is not provided; Semantic Scholar's shared pool answers 429 often without `SEMANTIC_SCHOLAR_API_KEY`.
+  A fuzzy-title pass is owner-gated.
+- **Eos margins are thin.** On the 42 TRUE / 42 FALSE stratified sample recall is 90.5 % (bar 90), specificity 95.2 % (bar 95),
+  precision 95.0 % (bar 95). Any engine or retrieval change needs a re-run on a larger, independently written claim set before the
+  bar is restated.
+- **Verifier model search: closed 2026-10-08, Eos stays.** Not run: Intern-Decision-0.8B and Kev-0.8b (the Eos card ranks both
+  below it; if one last test is wanted, Kev). Reopen only for a genuinely new model family.
+- **Embedding candidates (not measured):** Evoke is a PostgreSQL extension whose model is IBM's `granite-embedding-30m-sparse`
+  (learned sparse, no GGUF, would need a weighted SQLite index); the dense `granite-embedding-small-english-r2` (47.7 M, 2025)
+  fits the existing runtime. Both are older than the "no older model families" rule and need an owner waiver. Baseline to beat:
+  EmbeddingGemma 2 Q4_K_XL, hybrid all-papers @10 80.2 %, own-paper 91.9 %, 176 ms per passage, 175 MB.
 
-### 3. Retrieval & Evidence Scaling
-- **Vector index scaling:** Exact cosine distance scan in SQLite is currently $O(N)$ (takes ≈ 3 ms for 700 passages). For corpora exceeding 10,000 passages, integrating an indexed vector store (such as `sqlite-vec`) should be evaluated.
-- **Retrieval fusion tuning:** Reciprocal Rank Fusion uses equal weighting (k = 60). A weighted or cross-encoder reranked pass could improve question-style query recall if future benchmarks warrant it.
-- **Judgment cache eviction:** The `claim_judgments` table stores verified claim results without an LRU eviction policy (records are small). While runs and evidence expire after 24 hours, persistent cache growth should be bounded for multi-month projects.
+## 3. Capabilities waiting for a session that needs them (owner: build only what addresses an observed problem)
 
-### 4. Roadmap Items (Owner-Gated)
-- **Open-access full-text acquisition:** OpenAlex `pdf_url` and `oa_url`, arXiv PDFs, Semantic Scholar `openAccessPdf` and its arXiv preprint, and the OpenAlex Content API TEI/PDF are supported (owner decision 2026-10-07). The PubMed Central (`pmc-pdf`) and Europe PMC PDF-link (`epmc-pdf`) routes are built (see §10); publisher pages are not, and `europepmc.org` render links are bot-gated and never fetched. Add further repositories from evidence of papers that still end `no_open_copy`.
-- **Citation graph exploration ("PaperRabbit / ResearchRabbit"):** An interactive topological graph over registered papers (citekeys), claims, and supporting passages (`doi@revision#start-end`), with citation edges ("cites / cited by" via OpenAlex) and semantic edges ("similar to" via passage vectors). Deferred as the final capability on the long arc.
+- **More acquisition routes**, from evidence of papers that still end `no_open_copy`; `search_papers` and `paper_registry read`
+  do not render `isOpenAccess` (measure the remaining misses first). Whether `search_passages` should fetch sources on demand,
+  as `verify_claim` does, is an owner call, not a defect.
+- **Retraction flag:** Crossref `update-to` / `updated-by` of type `retraction`, shown on `register` and in the notices footer
+  (the PMC open-data JSON also carries `is_retracted`; nothing reads it today). Needs a named consumer before a field is added.
+- **Citation graph:** one hop back and forward through OpenAlex (`filter=cites:W…`, `referenced_works` hydrated 50 at a time,
+  unhydrated references reported, not dropped); "similar to" edges from passage vectors; every edge carries the chunk it came
+  from. A sixth MCP tool changes the five-tool contract, so a CLI-only route comes first.
+- **Deterministic manuscript audit:** undefined citation key, missing `\includegraphics` file, every DOI in the text registered; no
+  model (free-text fix hints are an injection channel). Merge with ScientificSlop below instead of building two checkers.
+  [yerimoh/ScientificSlop](https://github.com/yerimoh/ScientificSlop) scores slop in a paper; four of its six measures
+  (cross-section references, macro redundancy, citation isolation, evidence gap) are deterministic and run on LaTeX. The
+  repository has **no licence**, so reimplement from the paper's definitions and record provenance in `NOTICE.md`; check parity
+  against its released `scores.parquet` (780 papers) before trusting it; report the scores as diagnostics with per-unit evidence,
+  not as "this manuscript is good". Our own experiment manuscripts would also give the experiments an automatic review signal.
+- **Smaller:** `Retry-After` as an HTTP date; judgment-cache retention by last access.
+- **Helper material only:** [rahulnyk/knowledge_graph](https://github.com/rahulnyk/knowledge_graph) (MIT concept-graph
+  notebooks; not a citation graph, nothing to adopt beyond per-edge chunk provenance) and
+  [aspi6246/Claude-Code-Presentation](https://github.com/aspi6246/Claude-Code-Presentation) (no licence; its read-only audit
+  persona could inform a manuscript-review section of the `uktub-research` skill).
+- **Nothing found** in the three studied repositories for OCR, vector-index scaling, reranking, typo tolerance or the judgment cache.
 
-### 5. Findings from the 2026-10-05 review (open)
-- **Eos verification margins are thin:** on the 42 TRUE / 42 FALSE stratified sample recall is 90.5 % (bar 90), specificity 95.2 % (bar 95), precision 95.0 % (bar 95). Any engine or retrieval change needs a re-run on a larger, independently written claim set before the bar is restated.
-- **Search typo tolerance is not provided:** `search_papers` forwards free text to providers that do not correct typos; Semantic Scholar's shared unauthenticated pool also answers HTTP 429 often. Set `SEMANTIC_SCHOLAR_API_KEY` for reliable three-way fusion; a fuzzy-title pass is an owner-gated option.
-- **`mcp install` strictness:** JSONC (comments) in `opencode.json` is refused rather than parsed (zero-byte files and the codex "already present" case are handled).
+## 4. Writing workflow and the self-improving harness
 
-### 6. Packaging and agent follow-ups (2026-10-05, see [agent-session-review-2026-10-05.md](agent-session-review-2026-10-05.md))
-- **Not published:** `package.json` is still `private: true`; a registry publish (npm trusted publishing with provenance) is an owner decision. Until then `npx -y uktub-scholar` does not exist; installs are from a checkout or a tarball.
-- **Node-native Eos:** `eos-onnx` is a Python worker. `onnxruntime-node` plus a JS tokenizer would remove Python entirely; unproven (the prompt encoder is token-exact in Python only). Also untested on macOS/Windows and above 1,728-token contexts.
-- **Installer hardening still not built (no consumer yet):** a mirror override for the three downloads, resumable `.part` files for the 700 MB model, `eos install --verify` offline revalidation. (Bounded retry with backoff on transient failures exists.)
-- **llama.cpp pin:** `b11398` is verified on 6 platforms; upstream now publishes semver tags (v0.6.0 on 2026-10-05). Re-pinning needs the parity gate again.
-- **Agent enforcement exists only in the Pi extension:** the file guard, the shell confirm dialog (a heuristic over the command text, not a sandbox) and the notices footer; other MCP hosts get the rules in the handshake but no enforcement.
-- **`win32-arm64` has no official tectonic build;** `eos install` assumes `python3` on PATH (override `UKTUB_EOS_ONNX_BOOTSTRAP_PYTHON`) and a venv-capable Python (Debian needs `python3-venv`).
+[Plan](plans/2026-10-07-document-writing-workflow-plan.md). Phase 0 is built (acquisition hook, `acquire`, typed source status,
+multi-file compile diagnostics); phases 1 to 6 (generation client, `summarize_papers`, `write_sections`, claims ledger, harness
+cases, rules and skill) are not started. Engine decided 2026-10-08: in-process Pi SDK sessions; before Phase 1 a live spike must
+show four concurrent sessions in one process and what `prompt()` does after an abort (Pi 1.1.0 adds an `aborted` flag to
+`agent_settled`). Model roles and the remaining defaults are in the plan's Revision section.
 
-### 7. Findings from the user-simulation experiments (2026-10-06)
-Evidence: `experiments/runs/rf-llm-literature-review/` (reports and transcripts). Fixed in code from evidence that does not depend on provider keys: the DOI-query hint reaches the model's text; the two Tectonic 0.15.0 `main.bbl` warnings are explained in the compile output; `search_passages` says how a source is obtained; `verify_claim`'s `query` and an agent rule state what an exhaustive check costs (CPU Eos time: agent `verify_claim` tool time 1296 s → about 100–200 s per run once followed).
-- **Caveat: iterations 1–10 and the acceptance runs up to 2026-10-06 ran keyless.** The harness forwarded provider keys only from the shell, not from the product repository's `.env` (which held `OPENALEX_API_KEY` and `SEMANTIC_SCHOLAR_API_KEY`), so the 429s, the metadata-only papers and the agents' manual PDF downloads seen in those runs say nothing about a keyed setup. The harness now forwards the keys by name (no key value appears in any evidence file). The first keyed direct run (`acceptance/direct-2026-10-06T22-08-28-667Z`) was 31 PASS, 0 FAIL, 1 NOT_RUN, the authenticated Semantic Scholar case passed, and `search_papers` returned no provider warnings; the first keyed user-simulation run (`rf-llm-literature-review/iter-11`) succeeded with 9/9 checks in 19 minutes with no provider warnings, no manual PDF downloads or `attach_source` calls, and 9 s of `search_papers` time (keyless runs: 163–234 s), which confirms the earlier 429, metadata-only and manual-download findings were artifacts of running keyless.
-- **Keyed acceptance on the final build (2026-10-07, cases `2026-10-07.7` / agent `2026-10-07.3`, commit `3f72351` plus the working tree):** `live:direct` `direct-2026-10-07T21-00-32-025Z` 38 PASS, 0 FAIL, 0 BLOCKED, 0 NOT_RUN (the ambiguous compile-entry refusal, the error-crowding case, the open-copy acquisition cases for arXiv, preprints and PubMed Central, and the read-only bibliography run live; the authenticated Semantic Scholar case passed); `live:agent` `agent-2026-10-07T21-04-25-187Z` 10 PASS (registration hook on, EmbeddingGemma 2 Q4_K_XL), 0 FAIL, 0 BLOCKED, 0 NOT_RUN, no leftover containers, and a scan of both runs' evidence reported no provider key value (that scan was wrong: on 2026-10-08 the forwarded OpenAlex and Semantic Scholar key values were found in the agent transcripts of six agent runs, this one included, because the agent had printed its environment and the harness only redacted credential shapes; they were redacted in place with a `NOTE.md` per run, and every harness evidence write now redacts forwarded key values, `scripts/live/redact.ts`). A first keyed agent run (`agent-2026-10-07T09-23-36-077Z`) was 9 PASS, 1 NOT_RUN: with keys no provider fails, so `agent.provider-warning-disclosed` could no longer rely on 429s. It now forces a real HTTP 403 with a deliberately invalid Semantic Scholar key in a second Pi session (`agent-provider-warning-2026-10-07` ran that case alone first). Two earlier keyed agent runs (`agent-2026-10-07T10-22-53-538Z`, `agent-2026-10-07T11-46-25-367Z`) each had one FAIL, a false positive in the case's assertion ("0 passages left unchecked" and then "no passages left unchecked" matched as incompleteness claims; the product behaved correctly), kept with a `NOTE.md`; the assertion is now negation-aware. A run in between was BLOCKED once by a Vertex 429 (`RESOURCE_EXHAUSTED`). Experiment `iter-14` (success, 9/9 checks, 56 tool calls, $0.68) ran on the final code, including the read-only bibliography; `iter-13` (success, 9/9, 62 tool calls, $1.08) was the first on the new acquisition routes: 15 of 24 registered papers had a usable source and one paper ended `no_open_copy`; it is closed in OpenAlex and Semantic Scholar, with no preprint linked (the only arXiv "RadioLLM" is an earlier, different paper), so that outcome is correct. Not covered: the GPU Eos path.
-- **iter-12 (keyed, 2026-10-07; success, 9/9 checks, 43 tool calls, $0.60) and what was done with its recommendations.** Fixed (test-first, verified live by `compile.error-not-crowded-out-by-warnings`): a compile that failed with `0 error(s)` because 50 `Overfull \hbox` warnings crowded the real error out of the capped diagnostics list (see CHANGELOG). Done on the owner's instruction ("I don't mind getting PDFs from any source"): the arXiv fallback and the other open-access URL fields (OpenAlex `oa_url`, Semantic Scholar `openAccessPdf` and its arXiv preprint) are now acquisition routes, with the preprint disclosed (DECISIONS 2026-10-07, CHANGELOG); the three papers that failed in iter-12 now get sources live (`verify.acquires-open-copies-beyond-openalex-pdf-url`). Already documented, owner decision: `search_passages` fetching sources on demand (README "Sources"; the agent asked for it again, 1 wasted call in 43). Open candidate, not started: `search_papers` and `paper_registry read` still do not show whether a paper is open access (`isOpenAccess` exists on the provider record but is not rendered); with the new routes most such papers now acquire, so measure the remaining `no_open_copy` cases before adding a flag.
-- **Documented design, noted by the agents:** `verify_claim` acquires sources on demand while `search_passages` does not (README "Sources"). Whether that is worth changing is for the owner; it is not a defect.
-- Not pursued: near-miss passages for failed verification (would put non-supporting text in tool output, against the containment contract), batch claims and registering from a search-result index (new capabilities).
-- Test environment: this host has no NVIDIA container runtime, so Eos runs on CPU in the sandbox; Vertex `gemini-3.8-flash` through Pi stalled for minutes at times (`iter-03`), bounded by a client idle timeout and visible retries.
+The self-improving loop is built ([plan](plans/2026-10-07-self-improving-harness-plan.md), `pnpm evolve`). Its limits: the
+development scenario is saturated (9/9) and the nine checks are structural (none scores content), so only cost and structural
+candidates can be promoted until a multi-section scenario exists; the noise delta of 0 comes from three identical baseline
+scores, not a measured floor. A content-scoring check is an evaluator change, which only the owner may make.
 
-### 8. EmbeddingGemma 2 (owner request 2026-10-06; measured 2026-10-07; ADOPTED as Q4_K_XL on 2026-10-07, see DECISIONS)
-The blocker is gone: llama.cpp `b11454` is the first release containing PR #30054, `b11476` was current on 2026-10-07 (six platform digests were collected), and a first-party ungated GGUF exists: `ggml-org/embeddinggemma-2-GGUF` (Apache-2.0, `embeddinggemma-2-Q8_0.gguf`, 309,855,456 bytes, sha256 `2188ac1deca4b77dffefd603c2776a9d76d9d74ec01841392982ebb840b09135`; BF16 also; Google ships safetensors only). Parity against `google/embeddinggemma-2` passes the old bar for all four variants (mean cosine 0.995 to 1.000, Pearson 0.993 to 0.9995). Measurements on this machine (i7-14650HX, 698 section-512 passages, our benchmark and not Qdrant's):
+## 5. Hosts and clients
 
-| Model | File | ms per passage | Hybrid all-papers @10 / MRR | Hybrid own-paper @10 |
+Research and measurements: [host adapters](plans/2026-10-08-host-adapter-layer-research.md),
+[codemode](plans/2026-10-08-codemode-concept-research.md),
+[web client](plans/2026-10-08-web-client-and-general-layer-decision.md). Built: tool titles and annotations, `UKTUB_MCP_TRACE`.
+
+- **Generated adapters from one manifest** (MCP entry with env, cwd and per-host timeouts; SKILL.md; an AGENTS.md block with a
+  tool-choice line; an Agent Plugins portable plugin). Measured need: Codex 0.161.0 used web search instead of `search_papers` in
+  3 of 3 neutral runs; a one-line project AGENTS.md made it 3 of 3, the same line as MCP `instructions` did nothing. `mcp install`
+  writes an absolute `node` path with no env, timeout or steering text, and Codex defaults to a 60 s tool timeout against
+  `verify_claim`'s 70–160 s on CPU. Owner decision: adopt `add-mcp` (maintained, 22 agents; check stdio timeout support) or keep
+  the hand-written writer.
+- **`paper_registry` annotation cost** (owner decision): its destructive hint blocks it headless on Codex even for `read`. Options:
+  keep one truthful tool and set per-tool approval in the generated Codex config (opt-in), split read from destructive actions
+  (changes the five-tool contract), or soften the annotation (no longer truthful).
+- **Per-host live acceptance** in `scripts/live` (Claude Code and Codex headless; `codex exec` needs `< /dev/null`; a forced 403
+  via an invalid Semantic Scholar key; log the handshake). **Unmeasured:** whether progress notifications reset Codex's
+  `tool_timeout_sec`, ChatGPT (needs an HTTP transport), Cursor, Gemini CLI, opencode, Claude Code's approval for the destructive
+  hint, and the MCP revision hosts negotiate once they update.
+- **Agent enforcement exists only in the Pi extension** (file guard, shell confirm dialog, notices footer); other hosts get the
+  rules in the handshake but no enforcement.
+- **Codemode** (owner direction pending): Pi's extension hooks fire for script-made tool calls (source-verified, not yet live).
+  Smallest steps: a shape-stability audit of the five tools' results, then a live `direct` against `codemode` comparison on
+  `gemini-3.8-flash` and a Codex probe with `features.code_mode`. No server-side script tool.
+- **Web client and the general layer** (owner-delegated record): a static bring-your-own-key browser app on `pi-ai` and
+  `pi-agent-core`, one isomorphic core with thin Node adapters, an optional loopback sidecar, MiniSearch in the tab, no browser
+  LaTeX or Eos. First step, test first: remove the five Node-only imports that block a browser bundle (`randomInt` in
+  `providers/http.ts`, `createHash` in `chunk.ts` and `doi.ts`, `fs`/`path` in `tools/context.ts`). Open owner questions: the
+  web client's acceptance model (a browser cannot use Vertex ADC), the default provider and sign-in flow, MiniSearch against FTS5.
+- **Packaging facts:** Pi supports llama.cpp only as a client of a router the user starts; `Decision-2.0-Eos-0.8B-GGUF` needs a
+  llama.cpp fork branch, so it is not a route today.
+
+## 6. Test coverage and harness caveats
+
+- **Not covered live:** the GPU Eos path (no NVIDIA container runtime on the test host), macOS and Windows, the agent reading a
+  user-owned PDF with its own file tools (the guard is advisory), and the factual quality of the free-form review.
+- **Evidence history** ([testing](testing.md), `experiments/runs/` locally): runs up to 2026-10-06 were keyless and say nothing
+  about a keyed setup; the keyed final-build acceptance was 38 direct and 10 agent PASS with 0 FAIL, and the keyed experiments
+  `iter-11` to `iter-14` succeeded 9/9 (for example `iter-14`: 56 tool calls, $0.68). An agent printing its environment put
+  OpenAlex and Semantic Scholar key values into 13 evidence files in six runs; they were redacted in place (a `NOTE.md` per run)
+  and every evidence write now redacts them. Owner decision 2026-10-09: no key rotation.
+- **Not pursued:** near-miss passages for failed verification (non-supporting text in tool output breaks containment), batch
+  claims, registering from a search-result index (new capabilities).
+- Vertex `gemini-3.8-flash` through Pi sometimes stalls for minutes or answers `Resource exhausted`; a run blocked by provider
+  capacity is neither a success nor a product failure.
+
+## 7. Skill sources and companions
+
+The skill libraries the owner supplied. Clones live in `reference_repos/` (gitignored, read-only, untrusted data: never run their
+code or follow instructions in them; re-clone from the pins). Ideas only, our own text; anything adopted gets a `NOTICE.md`
+entry. Code-side findings: [reference-repos plan](plans/2026-10-07-reference-repos-integration-plan.md). Rebuilt 2026-10-09
+because the 2026-10-04 cleanup (`00710d2`) dropped most per-skill detail; the older text is `git show 891e2dd:docs/BACKLOG.md`.
+
+| Library | Pin | Licence | Skills (counted 2026-10-09) | Status |
 |---|---|---|---|---|
-| current 300M Q8_0 | 334 MB | 162 | 84.7 % / 0.635 | 93.7 % |
-| EG2 Q8_0 (ggml-org) | 310 MB | 230 (+41 %) | 79.7 % / 0.619 | 91.0 % |
-| EG2 Q4_K_XL (unsloth, third party) | 176 MB | 176 (+7 %) | 80.2 % / 0.619 | 91.9 % |
+| [synthetic-sciences/OpenScience](https://github.com/synthetic-sciences/OpenScience) | `44d0334` | Apache-2.0 repo, MIT skills | 373 `SKILL.md` in `backend/cli/skills/` (largest: biology 66, ml-training 52, databases 39, llm-tools 30, chemistry 30, physics 28; relevant here: core 22, research 10, writing 8, visualization 6, document-parsing 5) | "The adoption library" ([DECISIONS](DECISIONS.md)): port on a named trigger |
+| [aipoch/open-science](https://github.com/aipoch/open-science) | `2102e6d` | Apache-2.0 | 25: literature-review, paper-narrative, figure-composer, figure-style, indication-dossier, skill-creator, self-awareness, customize, env-management, compute-env-setup, remote-compute-ssh, and 14 biology-model skills | Code ideas taken (PMC and Europe PMC route, arXiv cooldown, read-only bibliography); no skill ported |
+| [alphaXiv/OpenResearch](https://github.com/alphaXiv/OpenResearch) | `b9ce4f3` | MIT | 14: the root skill and `orx-` agent-delegation, compute, create, customize, evidence, experiment-tree, feedback, figures, git, instances, lit-review, paper, reports | Studied; nothing adopted |
 
-- **Quality does not improve at 768 dimensions; it drops about 5 points** on hybrid all-papers @10 (about 6 queries of 74); the variants (BF16, Q8, Q5, Q4) are within 1–2 points of each other. Matryoshka: 512 dimensions cost almost nothing but save no disk (one 4 KiB SQLite page per vector); 256 saves 65 % of vector bytes (27 MB per 10,000 passages) for about 0.02 hybrid MRR; 128 is clearly worse.
-- **What Qdrant's post does not give us.** Its "much smaller footprint" is 1-bit quantization and Matryoshka truncation inside Qdrant at 10 million vectors (30x smaller vectors, 99 % nDCG retained at 768 dimensions). Our corpus is 698 passages: 2.1 MB of float32 vectors, a 3 ms exact scan, a query embedding of 25–36 ms. 1-bit vectors would save megabytes at 100,000 passages and nothing that matters at our size.
-- **The real RAM is the llama-server process, not the model or the vectors:** about 386 MB after load and about 1.3 GB after embedding 700 passages, identical across all models. It is not the micro-batch (`-ub 1024` gives the same; 512 or less fails on the longest passages) and not the prompt cache (`--no-cache-prompt`, `--cache-ram 0` give the same). See the allocator result below if recorded.
-- **What EG2 would give:** an Apache-2.0 licence instead of the Gemma terms the installer asks the user to accept. That is a licence and ecosystem argument, not a quality or speed one.
-- **If adopted:** pin `b11476` (or newer) with the six digests, `embeddinggemma-2-Q8_0.gguf` from ggml-org at its commit, keep the `embeddinggemma` profile and server args; vectors re-embed automatically (the embedder identity changes), old rows stay until pruned by `embed_id`; update README, DECISIONS and `scripts/test-item9-cross-platform.ts`. Scripts and raw outputs of the measurement are in the 2026-10-07 session scratch only.
-
-### 9. Candidate additions from owner-supplied repositories (checked 2026-10-06; nothing started)
-- **[yerimoh/ScientificSlop](https://github.com/yerimoh/ScientificSlop) — worth a feasibility pass (strongest fit).** "SciSlop" scores six kinds of slop in a paper as failed units / checked units (higher = worse): four are deterministic and run on LaTeX with no model (cross-section references, macro redundancy, citation isolation, evidence gap); two need Qwen2.5-32B/VL on a GPU (argument graph, figure exposition) and do not fit a local-first package. The README reports pair accuracy against human papers of 0.906 / 0.723 / 0.794 / 0.640 for the four deterministic measures and that a rerun reproduced most released scores (e.g. 759 of 780 identical for cross-section references); these are the authors' unreviewed figures. Constraints: the repository is anonymized for ICLR 2027 review and **has no licence**, so do not copy code; reimplement from the paper's definitions and record provenance in `NOTICE.md`. The scores discriminate AI-generated from human papers pairwise, so report them as diagnostics with per-unit evidence, not as "this manuscript is good". Feasibility steps: reimplement the four measures on LaTeX; check them against the released `scislopbench/data/scores.parquet` (780 scored papers) for parity before trusting them; try them on our own experiment manuscripts (`experiments/runs/*/iter-*/deliverables/manuscript`), which would also give the experiments an automatic review-quality signal they lack today. As a feature (a user brings their own papers; deterministic review that does not fill the agent's context): either a CLI command that writes the full report to a project file and prints a few lines, or an MCP tool that returns only a short summary plus the report path. A sixth MCP tool changes the documented five-tool contract, so that is an owner decision; the CLI route does not.
-- **[rahulnyk/knowledge_graph](https://github.com/rahulnyk/knowledge_graph) — low priority for the citation graph (section 4).** It is MIT-licensed notebooks that build a concept graph: an LLM (Mistral 7B via Ollama) extracts concept relations per text chunk, and an edge is a chunk where two concepts co-occur, with weights and communities. It is not a citation graph: "cites / cited by" edges come deterministically from OpenAlex, and "similar to" edges from our passage vectors, both cheaper and without model-invented relations. The one idea worth keeping is that every edge carries the chunk it came from, which matches our exact-pointer provenance rule. Not worth adopting the code.
-- **[aspi6246/Claude-Code-Presentation](https://github.com/aspi6246/Claude-Code-Presentation) — helper material only.** Slides on Claude Code for academics and "The Editor", a read-only audit persona for finance papers (never edits author files, files reports under `correspondence/`, asks before changing anything). No licence is declared. It could inform a manuscript-review section of the `uktub-research` skill (ideas only, adapted from finance to general papers); it is not a feature.
-
-### 10. Deferred from the reference-repository study (2026-10-07, owner: build only what addresses an observed problem)
-Plan and evidence: [plans/2026-10-07-reference-repos-integration-plan.md](plans/2026-10-07-reference-repos-integration-plan.md). Built from it: the PubMed Central and Europe PMC routes, the arXiv cooldown, the read-only bibliography. Deferred, each until a real session shows the need:
-- **Retraction flag.** Crossref `update-to` / `updated-by` with type `retraction`, shown on `register` and in the notices footer. The PMC open-data JSON also carries `is_retracted`, now read for free on the PMC route but not used. Needs a named consumer before any field is added.
-- **Citation graph.** One hop backward and forward through OpenAlex (`filter=cites:W…`, `referenced_works` hydrated 50 at a time, unhydrated references reported not dropped). A new capability; a sixth MCP tool changes the five-tool contract, so a CLI-only route is the cheaper first step (see §4).
-- **Deterministic manuscript audit** (undefined citation key, missing `\includegraphics` file, every DOI in the text is registered; no model, because free-text fix hints are an injection channel). Merge with the ScientificSlop idea in §9 instead of building two checkers.
-- ~~**Held-out experiment scenario**~~ Built 2026-10-07: `heldout-federated-medical-segmentation` and `ood-claim-check-genomics` (frozen, protected; `experiments/README.md`, `pnpm evolve status`) so the improve-and-rerun loop cannot overfit `rf-llm-literature-review`. One reference run each so far.
-- **Resumable `.part` downloads and a mirror override** for the installer (aipoch `resilient-download.ts`); §6 already says no consumer yet.
-- **Judgment-cache retention** by last access (aipoch `full-text-index.ts`); needs a schema bump, the table is small.
-- **`Retry-After` as an HTTP date** (seconds are handled).
-- **Rejected:** a Claude Code `PreToolUse` hook for enforcement (the stance says enforcement lives above the package; the read-only file mode covers the bibliography on every host).
-- **Nothing found in any of the three repositories** for OCR, vector-index scaling, reranking, typo tolerance or the judgment cache; the entries in §2–§3 and §5 stand.
-
-### 11. Document-writing workflow and the self-improving harness (planned 2026-10-07)
-Plan: [plans/2026-10-07-document-writing-workflow-plan.md](plans/2026-10-07-document-writing-workflow-plan.md) (Pi-extension writers, own small spawner, claims ledger, summaries with pointers, acquisition hook; owner decisions recorded in its Revision section). Built: the self-improving loop ([plan](plans/2026-10-07-self-improving-harness-plan.md)). Phase 0 of the writing workflow is built (acquisition hook, `acquire`, typed source status, multi-file compile diagnostics); phases 1 to 6 are not started, and the plan's writer-engine and model choices are still open (see the plan's Revision section). Known loop limits: the development scenario is saturated (9/9) and the checks are structural, so only cost and structural candidates can be promoted until the multi-section scenario exists; the baseline noise delta is 0 from three identical scores, not a measured floor.
-
-### 12. Host-adapter layer and research records (2026-10-08)
-Built: tool titles and annotations, `UKTUB_MCP_TRACE`. Research and measurements: [host adapters](plans/2026-10-08-host-adapter-layer-research.md), [codemode](plans/2026-10-08-codemode-concept-research.md), [web client](plans/2026-10-08-web-client-and-general-layer-decision.md). Open, in order:
-- **Generated adapters from one manifest** (MCP entry with env, cwd and per-host timeouts; SKILL.md; an AGENTS.md block with a tool-choice line; an Agent Plugins portable plugin). Measured need: Codex 0.161.0 used web search instead of `search_papers` in 3 of 3 neutral runs; a one-line project AGENTS.md made it 3 of 3, the same line as MCP `instructions` did nothing (Codex does not put server instructions in the model's context). Today's `mcp install` writes an absolute `node` path with no env, timeout or steering text, and Codex defaults to a 60 s tool timeout against `verify_claim`'s 70–160 s on CPU. Owner decision pending: adopt `add-mcp` (maintained, 22 agents; check stdio timeout support) or keep the hand-written writer.
-- **`paper_registry` annotation cost** (owner decision): its destructive hint blocks it headless on Codex even for `read`. Options: keep one truthful tool and set the per-tool approval mode in the generated Codex config (opt-in), split read from destructive actions (changes the five-tool contract), or soften the annotation (no longer truthful).
-- **Per-host live acceptance in `scripts/live`** (Claude Code and Codex headless; `codex exec` needs `< /dev/null`; forced 403 via an invalid Semantic Scholar key; log the handshake). The research runner was a throwaway.
-- **Unmeasured:** whether progress notifications reset Codex's `tool_timeout_sec`, ChatGPT behavior (plans, limits, Secure MCP Tunnel; needs an HTTP transport), Cursor, Gemini CLI, opencode, Claude Code's approval behavior for the destructive hint, and the MCP revision hosts negotiate once they update (both still use `initialize`; Codex has an `mcp_2026_07_28` flag under development).
-- **Codemode as a concept** (owner direction pending): Pi's extension hooks fire for script-made tool calls (source-verified, not yet live). Smallest steps: a shape-stability audit of the five tools' results (refusals carry no `structuredContent`), then a live `direct` against `codemode` exposure comparison on `gemini-3.8-flash`, and a Codex probe with `features.code_mode`. No server-side script tool.
-- **Web client and the general layer** (owner-delegated decision record): static bring-your-own-key browser app on `pi-ai` and `pi-agent-core`, one isomorphic core with thin Node adapters, optional loopback sidecar, MiniSearch in the tab, no browser LaTeX or Eos. First step: remove the five Node-only imports blocking a browser bundle of the search, sections and bibliography code (`randomInt` in `providers/http.ts`, `createHash` in `chunk.ts` and `doi.ts`, `fs` and `path` in `tools/context.ts`), test-first. Open owner questions: acceptance model for the web client, default provider and sign-in flow, retrieval divergence (MiniSearch against FTS5).
-- **Embedding candidates** (not measured): Evoke is a PostgreSQL extension; its model is IBM's `granite-embedding-30m-sparse` (30 M, English only, Feb 2025), a learned-sparse retriever with no GGUF that would need a weighted index in SQLite. The dense `granite-embedding-small-english-r2` (47.7 M, July 2025, third-party GGUFs only) fits the existing runtime. Both are older than the owner's "no older model families" rule without a waiver. Baseline to beat: EmbeddingGemma 2 Q4_K_XL, hybrid all-papers recall@10 80.2 %, own-paper 91.9 %, 176 ms per passage, 175 MB. A 30 to 50 M model also suits the browser client.
-- **Verifier model search: closed 2026-10-08, Eos stays** (owner and two external consultants agree). Tested and not adopted: Vela 2.0 0.3B and 0.8B ([DECISIONS](DECISIONS.md)); rejected earlier: Julia-1, Lumma-fev-0.6b, Kai at the 0.99 bar, GLiNER; MiniCheck dropped as too old. Not run: Intern-Decision-0.8B, Kev-0.8b (its own card says it is weak out of domain: coverage 0.145 at 5 % error); Eos's card ranks both below it. If one last test is wanted, Kev; reopen only for a genuinely new model family.
-- **Packaging facts:** Pi supports llama.cpp only as a client of a router the user starts (it neither ships nor installs the binary); `Decision-2.0-Eos-0.8B-GGUF` exists but needs a llama.cpp fork branch, so it is not a route today.
-
----
-
-## Deliverable Companions (Host-Side, Never Bundled)
-
-- **Slides — open-slide runtime** (MIT, github.com/open-slide/open-slide): Agent-written React decks on a fixed 1920×1080 canvas. Alternative: **Slidev** via slideblocks-skill (MIT). Content discipline template: OpenScience `writing/scientific-slides` and `academic-pptx-skill`.
-- **Office deliverables — GenOffice** (Apache-2.0, genspark-ai/genoffice) for interactive editing; **Paper Office** (paperinstruments.com) for scripted `.docx`/`.pptx` manipulation.
-- **Charts — evident-charts** (MIT, rhiever/evident-charts): Publication-grade charting.
-- **Document ingestion — LiteParse** (Apache-2.0, run-llama/liteparse): Rust-based parser for reading user drafts and supplementary PDFs outside LaTeX.
-
-## Computational Experiments & Research Skills
-
-- **Autonomous experiment loops**: Budget-bounded keep-or-discard iterations against a single metric (`program.md` instructions, agent-edited script, logged verdicts).
-- **Domain skill extensions (as needed)**:
-  - `europepmc`: PubMed/biomedical metadata and OA retrieval.
-  - `paper-figures`: Publication-grade LaTeX/vector figures.
-  - `grant-proposals`: NSF/NIH/DOE proposal structure and review criteria.
-  - [x] `host-adapters`: Unified Stdio MCP server (`src/mcp/server.ts`) and declarative config generator (`uktub-scholar mcp install`) for Claude Code, Pi, Cursor, Codex, OpenCode, and Antigravity.
+- **Named for porting (verified present in the OpenScience pin):** `core/peer-review`, `core/paper-writing`, `core/citations`,
+  `research/statistical-power`, `research/experimental-design`, `writing/latex-posters`; plus `core/literature-review` and
+  `core/sources` (literature skill), `research/research-grants` (`grant-proposals`), `core/figures` and
+  `core/scientific-visualization` (`paper-figures`), `writing/scientific-slides`, `databases/pubmed-database` (the `europepmc`
+  pattern). The rest are not evaluated.
+- **Other sources:** `figures4papers` (reference only, licence unusable), karpathy `autoresearch` (pattern adopted as
+  `pnpm experiment` and `pnpm evolve`), Tencent `WeKnora`, `academic-pptx-skill` (Gabberflast, MIT), K-Dense
+  `claude-scientific-writer` and Companion-Inc `feynman` (cross-check sources named in `NOTICE.md`), and "ARS" (named in an old
+  workspace backlog without a URL: owner to say which repository).
+- **Writing-quality ideas** (ARS, Feynman, OpenScience; evaluated 2026-10-02, not built; each needs a real session showing the
+  problem first): an anti-trope filter for drafts (about 25 AI clichés and throat-clearing openers) in the writer rules; a
+  literature-review structure (consensus, contradictions, open questions); a `CITEKEY_WEAK` warning for metadata-poor records; the
+  Crossref against DataCite semantics when a provider's BibTeX is down.
+- **Skills this package could ship** (one exists, `uktub-research`): `europepmc`, `paper-figures`, `grant-proposals`, and the
+  writing-workflow skill of §4.
+- **Deliverable companions (host-side, never bundled):** slides via `open-slide` (MIT) or Slidev with slideblocks-skill (MIT);
+  office files via GenOffice (Apache-2.0) or Paper Office (paperinstruments.com); charts via evident-charts (MIT,
+  rhiever/evident-charts); ingestion of user drafts and supplementary PDFs via LiteParse (Apache-2.0, run-llama/liteparse;
+  official skill `npx skills add run-llama/llamaparse-agent-skills --skill liteparse`; not the primary parser).

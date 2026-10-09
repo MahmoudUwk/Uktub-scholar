@@ -54,6 +54,8 @@ export interface SandboxSpec {
    * never appear in an argv, a log or a manifest. The agent inside can still read its own environment (a documented exposure, like the ADC file).
    */
   secretEnv?: Record<string, string>;
+  /** Interactive session: the container gets a terminal (`-t`). Everything else is pipe-only. */
+  tty?: boolean;
 }
 
 const run = (cmd: string, args: string[], cwd: string): string => {
@@ -97,7 +99,7 @@ function dockerArgs(spec: SandboxSpec, command: string[]): string[] {
   };
   const ro = (host: string, inside: string) => ["-v", `${host}:${inside}:ro`];
   return [
-    "run", "--rm", "-i", "--init", "--name", spec.name,
+    "run", "--rm", spec.tty ? "-it" : "-i", "--init", "--name", spec.name,
     "--user", `${uid}:${process.getgid?.() ?? 1000}`,
     "--cap-drop", "ALL", "--security-opt", "no-new-privileges", "--read-only",
     "--tmpfs", "/tmp", "--tmpfs", `${INSIDE.home}:uid=${uid}`, "--tmpfs", `${INSIDE.home}/.cache:uid=${uid}`, "--tmpfs", `${INSIDE.cache}:uid=${uid}`,
@@ -132,6 +134,17 @@ export function runSandboxed(spec: SandboxSpec, command: string[], timeoutMs = 1
 /** Start `command` inside the boundary with piped stdio (the Pi RPC process). */
 export function spawnSandboxed(spec: SandboxSpec, command: string[]): ChildProcess {
   return spawn("docker", dockerArgs(spec, command), { stdio: ["pipe", "pipe", "pipe"], env: clientEnv(spec) });
+}
+
+/** Hand the terminal to `command` inside the boundary (the interactive Pi); resolves with its exit status. Termination signals go to the container. */
+export function runInteractive(spec: SandboxSpec, command: string[]): Promise<number | null> {
+  return new Promise((resolve, reject) => {
+    const child = spawn("docker", dockerArgs({ ...spec, tty: true }, command), { stdio: "inherit", env: clientEnv(spec) });
+    const forward = (signal: NodeJS.Signals): boolean => child.kill(signal);
+    for (const signal of ["SIGINT", "SIGTERM", "SIGHUP"] as const) process.on(signal, forward);
+    child.on("error", reject);
+    child.on("close", resolve);
+  });
 }
 
 /** Write the per-run Pi settings: only the staged package (by its in-container path), no retry (a retry would hide a provider failure). */

@@ -2,10 +2,10 @@
 
 This package is licensed under AGPL-3.0-only. Third-party provenance is recorded per file or directory below.
 
-## Project-internal extraction (same author, UktubAI workspace)
+## Project-internal extraction (same author, an earlier private UktubAI codebase; paths kept for provenance)
 
 - `src/core/registry.ts`, `src/core/citekey.ts`, `src/core/bibrender.ts` — ported from the
-  UktubAI workspace (`UktubAI_Agentic/deploy/sandbox-image/pi-registry.js` and related sandbox
+  author's earlier private codebase (`UktubAI_Agentic/deploy/sandbox-image/pi-registry.js` and related sandbox
   modules, same author and licence origin). Behaviors and BibTeX normalizers are ported; the
   schema is trimmed to this package's v0 contract.
 - `src/core/providers/*`, `src/core/scholarly.ts` — ported from

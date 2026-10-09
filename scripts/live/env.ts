@@ -77,7 +77,7 @@ export function createEnv(out: string, opts: { corpus?: boolean; maxJudgments?: 
   const project = join(out, "project");
   for (const d of ["papers", "manuscript", "refs", "config"]) mkdirSync(join(project, d), { recursive: true });
   if (opts.corpus) {
-    const corpus = resolve(repo, "../test_papers/RF");
+    const corpus = resolve(repo, "test_papers/RF");
     for (const [src, dst] of [["2411.09996v1.pdf", "papers/2411.09996.pdf"], ["2511.15162v1.pdf", "papers/2511.15162.pdf"]] as const) {
       if (!existsSync(join(corpus, src))) throw new Error(`corpus PDF missing: ${join(corpus, src)}`);
       writeFileSync(join(project, dst), readFileSync(join(corpus, src)));

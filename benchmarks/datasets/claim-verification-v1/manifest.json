@@ -14,7 +14,7 @@
  },
  "papers": 14,
  "corpus": {
-  "source_pdfs": "/home/mahmoud/Desktop/AI_Projects/UktubAI/test_papers/{RF,smarthome}/*.pdf (84 MB, owner's library \u2014 NOT in this repo)",
+  "source_pdfs": "test_papers/{RF,smarthome}/*.pdf (84 MB, owner's library \u2014 NOT in this repo)",
   "text_extraction": "pdftotext -q <pdf> <text> ; whitespace-normalized before use",
   "note": "Text files are derived from the owner's PDFs; extract locally with the command above. Claims quote 10-40-word passages from those texts (scholarly quotation)."
  },

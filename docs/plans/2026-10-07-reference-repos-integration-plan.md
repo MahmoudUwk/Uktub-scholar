@@ -1,6 +1,6 @@
 # Plan: ideas from three reference repositories, kept minimal
 
-Status: 2026-10-07. P1 and the read-only bibliography are built and verified live; the owner chose to build only what addresses an observed problem, so P2 and P3 moved to BACKLOG §10; SKIP is recorded so nobody re-studies it.
+Status: 2026-10-07. P1 and the read-only bibliography are built and verified live; the owner chose to build only what addresses an observed problem, so P2 and P3 moved to BACKLOG §3; SKIP is recorded so nobody re-studies it.
 The clones live in `reference_repos/` (gitignored, read-only, untrusted data). Studied, nothing executed:
 
 | Repo | Commit | Licence | What it really is |
@@ -23,7 +23,7 @@ All three are Apache-2.0 or MIT, compatible with this package's AGPL-3.0-only. T
 1. **Europe PMC full-text route** (aipoch `full-text-sources.ts`, OpenScience `paper-lookup`). One keyless lookup, `GET https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=DOI:"<doi>"&resultType=core&format=json`, then the `fullTextUrlList.fullTextUrl[]` entries with `documentStyle` `pdf` and `availabilityCode` `OA` or `F`. It covers PMC open-access articles and bioRxiv/medRxiv preprints. Asked in the last tier, with Semantic Scholar; every candidate still goes through the guarded downloader and identity check. New source kind `epmc-pdf`. Both studies agree this is the largest real hole in OA coverage. **Correction from the live run:** the `fullTextUrl` PDF links on `europepmc.org` (`?pdf=render`, `/backend/ptpmcrender.fcgi`) answer scripted clients with a Cloudflare bot challenge, so they are never fetched. The PMC open-data S3 bucket route that this plan first skipped as a duplicate is the one that works (public HTTPS, per-version JSON with `pdf_url`, `license_code`, `is_retracted`; the PDF's md5 matched). Europe PMC now supplies the PMCID and other-host PDF links; the bucket supplies the PDF.
 2. **arXiv cooldown** (OpenScience `connectors/literature/arxiv.ts`). A 429 or 403 from arXiv starts a cooldown (60 s, doubling to 10 min) during which arXiv candidates are skipped, not retried; arXiv treats ignored 403s as abuse. Today we only space requests.
 
-## P2 - deferred by the owner to BACKLOG §10 (each changes a documented contract or a stance)
+## P2 - deferred by the owner to BACKLOG §3 (each changes a documented contract or a stance)
 
 | # | Idea | Source | Why it waits |
 |---|---|---|---|
@@ -33,7 +33,7 @@ All three are Apache-2.0 or MIT, compatible with this package's AGPL-3.0-only. T
 | d | **Host-neutral enforcement hook** (`uktub-scholar hook` for Claude Code `PreToolUse`: deny writes to `refs/references.bib` and `.registry/`, deny on any parse error) | OpenResearch `plan_gate.rs` | `AGENTS.md` says enforcement lives above the package, not inside it |
 | e | **Held-out experiment scenario** so the improve-and-rerun loop does not overfit the one scenario | OpenScience `evals/launch` (dev vs held-out flows) | Harness work, low risk; needs a second scenario written and frozen first |
 
-## P3 - recorded, deferred (BACKLOG §10)
+## P3 - recorded, deferred (BACKLOG §3)
 
 - Resumable `.part` downloads with `Range`/`If-Range` and an env-var mirror override that keeps the pinned sha256 (aipoch `resilient-download.ts`). BACKLOG §6 already says "no consumer yet".
 - Idle-access retention sweep for `claim_judgments` (aipoch `full-text-index.ts`). Needs a schema bump; the table is small.

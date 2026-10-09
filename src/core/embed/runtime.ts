@@ -11,7 +11,7 @@
  * time — the next install fetches again.
  *
  * Pinned for Linux, macOS and Windows on x64 and arm64 (`.tar.gz` and `.zip` builds). Linux x64 is verified by running the
- * server; the others are digest-pinned and extraction-verified (docs/review-2026-10-04.md). An unpinned platform reports
+ * server; the others are digest-pinned and extraction-verified (docs/reviews/review-2026-10-04.md). An unpinned platform reports
  * `unsupported_platform` and uses UKTUB_EMBED_URL.
  */
 import { createHash } from "node:crypto";

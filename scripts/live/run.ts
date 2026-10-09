@@ -30,7 +30,7 @@ const HARNESS_MAX_JUDGMENTS = 20;
 const env = createEnv(out, { corpus: true, maxJudgments: HARNESS_MAX_JUDGMENTS, acquireOnRegister: suite === "agent" });
 const { log } = env;
 
-const corpus = resolve(repo, "../test_papers/RF");
+const corpus = resolve(repo, "test_papers/RF");
 const sourceCache = new Map<string, string>();
 for (const [key, file] of [["2411", "2411.09996v1.pdf"], ["2511", "2511.15162v1.pdf"]] as const) {
   const pdf = await getDocumentProxy(new Uint8Array(readFileSync(join(corpus, file))));

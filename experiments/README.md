@@ -6,12 +6,12 @@ A simulated user (a Pi session on `google-vertex/gemini-3.8-flash`, no tools) ta
 experiments/
   simulator.md                 the user persona and stop rules (hashed into every run)
   scenarios/<name>.md          the frozen user request + success criteria
-  runs/<scenario>/iter-NN/     one iteration (created by the runner)
+  runs/<scenario>/iter-NN/     one iteration (created by the runner; all of runs/ is git-ignored)
     report.md                  the report: facts, simulator assessment, agent feedback, recommendations
     metrics.json               deterministic measurements and checks
     conversation.md            the readable conversation
     deliverables/              the manuscript, bibliography, PDF and registry as the user saw them
-    evidence/                  raw transcripts, tool calls, logs (git-ignored)
+    evidence/                  raw transcripts, tool calls, logs
 ```
 
 ## Run one iteration

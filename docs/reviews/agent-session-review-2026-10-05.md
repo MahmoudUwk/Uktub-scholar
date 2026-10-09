@@ -34,7 +34,7 @@ Research was delegated to Hermes (online) and one bounded native subagent (ONNX 
 | Generated host configs unspawnable | `spawn uktub-scholar ENOENT` for claude/cursor/codex/opencode/agy | `node <abs bin> mcp`; all five spawned and completed an MCP handshake |
 | tectonic 0.15.0 warns on every bibliography build | 6 passes + `main.bbl` warning, reproduced with each entry alone | managed 0.17.0 (stable tag `tectonic@0.17.0`, 5 platforms verified against GitHub digests): 0 warnings |
 | Windows cannot find tectonic | PATH split on `:`, no `.exe` | platform-aware resolution |
-| 6.7 GB torch environment to verify claims | measured | `eos-onnx` engine: 882 MB cold install, parity in [eos-onnx-parity-2026-10-05.md](benchmarks/eos-onnx-parity-2026-10-05.md) |
+| 6.7 GB torch environment to verify claims | measured | `eos-onnx` engine: 882 MB cold install, parity in [eos-onnx-parity-2026-10-05.md](../benchmarks/eos-onnx-parity-2026-10-05.md) |
 | `typescript` undeclared | `pnpm exec tsc` worked only transitively | declared devDependency |
 
 ## Hermes memos: claims checked

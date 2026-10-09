@@ -42,7 +42,7 @@ const arg = (name: string, fallback?: string): string | undefined => {
 };
 const phase = arg("phase", "retrieval")!;
 const datasetDir = arg("dataset", "benchmarks/datasets/claim-verification-v1")!;
-const pdfRoot = arg("pdf-root", "../test_papers")!;
+const pdfRoot = arg("pdf-root", "test_papers")!;
 const outDir = arg("out", "docs/benchmarks")!;
 const date = arg("date", new Date().toISOString().slice(0, 10))!;
 const chunkTokens = Number(arg("chunk-tokens", "8192"));

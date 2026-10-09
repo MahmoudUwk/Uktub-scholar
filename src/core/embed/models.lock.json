@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "comment": "Pinned artifacts for the managed embedding runtime. Every download is verified against its sha256 and size before use; a changed pin is a reviewed change to this file, re-run through the parity gate (docs/review-2026-10-04.md). Platform keys are node's process.platform-process.arch. The build tag is the newest llama.cpp release with binaries when pinned (the v0.x semver releases carry no assets). Linux x64 is verified by running the server; the other five are digest-pinned and extraction-verified.",
+  "comment": "Pinned artifacts for the managed embedding runtime. Every download is verified against its sha256 and size before use; a changed pin is a reviewed change to this file, re-run through the parity gate (docs/reviews/review-2026-10-04.md). Platform keys are node's process.platform-process.arch. The build tag is the newest llama.cpp release with binaries when pinned (the v0.x semver releases carry no assets). Linux x64 is verified by running the server; the other five are digest-pinned and extraction-verified.",
   "runtime": {
     "name": "llama.cpp",
     "version": "b11476",

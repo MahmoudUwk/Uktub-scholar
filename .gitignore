@@ -29,3 +29,7 @@ coverage/
 *.bak
 *.orig
 *.swp
+
+# local material that never leaves the machine: the owner's benchmark PDFs (licensed) and the interactive sandbox state (`pnpm sandbox`)
+test_papers/
+.sandbox/

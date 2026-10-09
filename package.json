@@ -46,7 +46,8 @@
     "live:direct": "node scripts/live/run.ts --suite direct",
     "live:agent": "node scripts/live/run.ts --suite agent",
     "experiment": "node scripts/live/experiment.ts",
-    "evolve": "node scripts/live/evolve.ts"
+    "evolve": "node scripts/live/evolve.ts",
+    "sandbox": "node scripts/live/shell.ts"
   },
   "devDependencies": {
     "@earendil-works/pi-coding-agent": "^1.1.0",
