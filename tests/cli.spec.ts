@@ -217,20 +217,13 @@ describe("uktub-scholar error paths", () => {
 });
 
 describe("uktub-scholar compile (offline paths)", () => {
-  it("refuses with COMPILE_NO_ENTRY when no engine-independent entry exists", async () => {
-    // Engine resolution happens first: fake the engine away via a PATH that
-    // cannot exist, so the test never spawns anything. The engine refusal
-    // precedes entry resolution by design (detect before touch).
-    const capture = io();
-    const prevPath = process.env.PATH;
-    process.env.PATH = "/uktub/no/such/bin";
-    try {
-      const code = await runCli(["compile"], capture);
-      assert.equal(code, 1);
-      assert.match(capture.lines.err.join("\n"), /COMPILE_ENGINE_MISSING/);
-    } finally {
-      process.env.PATH = prevPath;
-    }
+  it("refuses with COMPILE_ENGINE_MISSING when no engine can be found, before touching any entry", async () => {
+    // Engine resolution happens first (detect before touch). The environment is injected through the CLI's env seam: no PATH to search and an
+    // empty cache, so a managed Tectonic installed on the developer's machine cannot make the test pass or fail.
+    const capture = io({ env: { PATH: "/uktub/no/such/bin", UKTUB_CACHE_DIR: join(root, ".empty-cache") } });
+    const code = await runCli(["compile"], capture);
+    assert.equal(code, 1);
+    assert.match(capture.lines.err.join("\n"), /COMPILE_ENGINE_MISSING/);
   });
 
   it("compile appears in the usage text", async () => {

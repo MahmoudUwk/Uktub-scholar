@@ -6,6 +6,7 @@ author: Mahmoud Sallam (mahmoudsallam), Hermes Agent
 license: MIT
 platforms: [linux, macos, windows]
 metadata:
+  internal: true
   hermes:
     tags: [openalex, papers, authors, citations, open-access, research, api, datasets]
     related_skills: [semantic-scholar, arxiv, crawl4ai]

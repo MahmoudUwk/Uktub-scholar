@@ -257,6 +257,30 @@ describe("describeOutcome hints (a precise engine error the model still cannot a
   });
 });
 
+describe("describeOutcome: what a failed build looks like for a real manuscript (live: an Elsevier paper with 49 warnings and one error)", () => {
+  const failedWith = (diagnostics: Array<{ severity: "error" | "warning"; message: string; file?: string; line?: number }>) => ({
+    kind: "errors" as const, entry: "manuscript/main.tex", engineVersion: "0.15.0", diagnostics, truncated: false,
+  });
+
+  it("lists the errors before the warnings, so the cause is the first line read, not the 50th", () => {
+    const text = describeOutcome(failedWith([
+      { severity: "warning", file: "manuscript/intro.tex", line: 10, message: "Underfull \\vbox (badness 1496) has occurred while \\output is active" },
+      { severity: "warning", file: "manuscript/results.tex", line: 26, message: "Overfull \\hbox (5.2pt too wide) in paragraph at lines 26--26" },
+      { severity: "error", message: 'pdf: image inclusion failed for "fig.eps" (page=1).' },
+    ]));
+    const lines = text.split("\n");
+    assert.match(lines[1] ?? "", /^- error/, lines.slice(0, 3).join(" | "));
+    assert.ok(lines.findIndex((l) => l.startsWith("- warning")) > lines.findIndex((l) => l.startsWith("- error")));
+  });
+
+  it("an EPS figure that the engine cannot include gets the working recipe (PDF or PNG, and the converted file when it exists)", () => {
+    const text = describeOutcome(failedWith([{ severity: "error", message: 'pdf: image inclusion failed for "daily_avg_comparison.eps" (page=1).' }]));
+    assert.match(text, /hint:/i);
+    assert.match(text, /EPS/);
+    assert.match(text, /PDF|PNG/);
+  });
+});
+
 describe("describeOutcome: known engine behavior", () => {
   // Seen in real sessions (experiments/runs/rf-llm-literature-review/iter-04 and iter-06): the agent spent 6+ extra compile/edit cycles switching
   // bibliography styles to clear the two Tectonic 0.15.0 main.bbl warnings the README already calls spurious.

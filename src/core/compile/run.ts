@@ -59,7 +59,12 @@ export type CompileOutcome =
  * bibliography at refs/references.bib beside manuscript/, so a biblatex setup fails with an error that is precise but not actionable.
  */
 const BIBTEX_HINT = "Tectonic runs BibTeX, not biber, so biblatex with \\addbibresource cannot read the bibliography through `../`. From manuscript/ use `\\bibliographystyle{plain}` and `\\bibliography{../refs/references}` (no biblatex), cite with \\cite{citekey}, and do not copy or edit refs/references.bib.";
-const HINTS: { test: RegExp }[] = [{ test: /relative parent paths are not supported for the external tool/i }, { test: /biber\b.*(not found|no such file)|(not found|no such file).*biber\b/i }];
+const EPS_HINT = "Tectonic cannot include EPS figures (its PDF driver reads PDF, PNG and JPEG). Convert each .eps to PDF (`epstopdf fig.eps`, or Inkscape) or use its PNG, then point \\includegraphics at that file; a folder compiled before with pdfLaTeX often already holds `name-eps-converted-to.pdf`.";
+const HINTS: { test: RegExp; text: string }[] = [
+  { test: /relative parent paths are not supported for the external tool/i, text: BIBTEX_HINT },
+  { test: /biber\b.*(not found|no such file)|(not found|no such file).*biber\b/i, text: BIBTEX_HINT },
+  { test: /image inclusion failed for "[^"]+\.e?ps"/i, text: EPS_HINT },
+];
 
 /** The two warnings Tectonic 0.15.0 prints on every bibliography build (README: spurious; 0.17.0 does not print them). */
 const TECTONIC_015_BBL_WARNINGS = [/internal consistency problem when checking if main\.bbl changed/i, /TeX rerun seems needed, but stopping at \d+ passes/i];
@@ -73,12 +78,13 @@ export function describeOutcome(outcome: Exclude<CompileOutcome, { kind: "refusa
     outcome.kind === "compiled"
       ? `Compiled ${outcome.entry} with tectonic ${outcome.engineVersion} → ${outcome.pdfPath} (${outcome.pdfSizeBytes} bytes). ${errors.length} error(s), ${warnings.length} warning(s).`
       : `Compile failed: ${outcome.entry} — ${errors.length} error(s), ${warnings.length} warning(s) from tectonic ${outcome.engineVersion}.`;
-  const lines = d.map((x) => {
+  // Errors first: a real manuscript prints dozens of warnings, and the cause of a failure must be the first line read (each group keeps engine order).
+  const lines = [...errors, ...warnings].map((x) => {
     const at = [x.file, x.line].filter((v) => v !== undefined).join(":");
     return `- ${x.severity}${at ? ` ${at}` : ""}: ${x.message}`;
   });
   if (outcome.truncated) lines.push(`- (diagnostics truncated at the ${d.length} shown)`);
-  const hint = d.some((x) => x.severity === "error" && HINTS.some((h) => h.test.test(x.message))) ? [`hint: ${BIBTEX_HINT}`] : [];
+  const hint = [...new Set(HINTS.filter((h) => errors.some((x) => h.test.test(x.message))).map((h) => h.text))].map((t) => `hint: ${t}`);
   const known = outcome.kind === "compiled" && outcome.engineVersion.startsWith("0.15") && warnings.some((x) => TECTONIC_015_BBL_WARNINGS.some((re) => re.test(x.message))) ? [KNOWN_BBL_NOTE] : [];
   return [head, ...lines, ...hint, ...known].join("\n");
 }

@@ -1,6 +1,8 @@
 ---
 name: self-improving-harness
 description: Design and recursively improve an LLM agent harness while resisting benchmark overfitting and context bloat. Uses modular harness components, compact task-specific context, trace-driven diagnosis, sparse attributable edits, leakage screening, noise-aware and cost-aware promotion, structural pruning, rollback, and held-out transfer checks.
+metadata:
+  internal: true
 ---
 
 # Self-Improving Agent Harness

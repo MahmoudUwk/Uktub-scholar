@@ -45,6 +45,7 @@
     "live:probe": "node scripts/live/boundary-probe.ts experiments/runs/acceptance/probe-$(date +%Y%m%dT%H%M%S)",
     "live:direct": "node scripts/live/run.ts --suite direct",
     "live:agent": "node scripts/live/run.ts --suite agent",
+    "live:skills": "node scripts/live/run.ts --suite skills",
     "experiment": "node scripts/live/experiment.ts",
     "evolve": "node scripts/live/evolve.ts",
     "sandbox": "node scripts/live/shell.ts"
@@ -67,6 +68,7 @@
     "bin",
     "dist",
     "skills",
+    "!**/__pycache__",
     "scripts/*.py",
     "scripts/*.json",
     "scripts/build-assets.mjs",

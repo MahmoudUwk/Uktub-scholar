@@ -6,6 +6,7 @@ author: Mahmoud Sallam (mahmoudsallam)
 license: MIT
 platforms: [linux, macos, windows]
 metadata:
+  internal: true
   tags: [hermes, subagent, research, cli, orchestration, system-design]
 ---
 

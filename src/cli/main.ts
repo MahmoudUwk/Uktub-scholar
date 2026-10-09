@@ -18,6 +18,7 @@ import type { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 
 import { RegistryError, createRegistry, deregisterPapers, findEnclosingProject, listPapers, openRegistry, syncBibliography } from "../core/registry.ts";
+import { reviewManuscript } from "../core/review/run.ts";
 import { compileDocument, describeOutcome, prodSpawn } from "../core/compile/run.ts";
 import { installTectonic, managedTectonicPath, readTectonicLock } from "../core/compile/managed.ts";
 import { installedEosOnnx, readEosOnnxLock } from "../core/verify/eos-onnx.ts";
@@ -41,6 +42,8 @@ export interface CliIo {
   err: (line: string) => void;
   /** Project root; defaults to process.cwd() — the bin passes nothing. */
   cwd?: string;
+  /** Test seam: the clock (the review report is named by date). */
+  now?: () => Date;
   /** Test seams; the bin passes none and the real network/env/engine are used. */
   fetch?: ToolContext["fetch"];
   download?: ToolContext["download"];
@@ -63,6 +66,9 @@ commands:
   list                          print registered papers in citekey order
   compile [entry.tex]           compile with tectonic (PDF in build/); entry defaults
                                 to manuscript/main.tex, then main.tex, then a lone .tex
+  review [entry.tex] [--out <report.md>]
+                                deterministic manuscript review (four structural measures, no model):
+                                full report with file:line evidence in reviews/<date>-slop.md
   register <id>...              register papers by DOI or arxiv:ID (same tool the agent uses)
   attach <doi|citekey> <file>   prepare a local PDF/TEI inside the project as a paper's source
   verify <claim> [--papers all|<doi|citekey>,...] [--query <words>] [--continuation <token>]
@@ -634,12 +640,25 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
         }
         return 0;
       }
+      case "review": {
+        let entry: string | undefined;
+        let outPath: string | undefined;
+        for (let i = 0; i < args.length; i++) {
+          if (args[i] === "--out") { outPath = args[++i]; if (outPath === undefined) { err(`error: --out needs a path\n${USAGE}`); return 1; } }
+          else if (entry === undefined && !String(args[i]).startsWith("--")) entry = args[i];
+          else { err(`error: unexpected argument ${args[i]}\n${USAGE}`); return 1; }
+        }
+        const outcome = reviewManuscript({ root, entry, out: outPath, now: io.now ?? (() => new Date()) });
+        if (!outcome.ok) { err(`error: ${outcome.message}`); return 1; }
+        for (const l of outcome.summary) out(l);
+        return 0;
+      }
       case "compile": {
         const [entry] = args;
         const outcome = await compileDocument(
           {
             root,
-            env: process.env as Record<string, string | undefined>,
+            env: io.env ?? (process.env as Record<string, string | undefined>),
             spawn: prodSpawn,
           },
           entry,
