@@ -37,7 +37,7 @@ export interface ParsedStreams {
 const DIAG_LINE = /^(error|warning):\s+(?:(.+?):(\d+):\s+)?(.+)$/;
 
 export function parseTectonicStreams(stdout: string, stderr: string): ParsedStreams {
-  const diagnostics: CompileDiagnostic[] = [];
+  const all: CompileDiagnostic[] = [];
   const seen = new Set<string>();
   let truncated = false;
   let wrotePdf: string | null = null;
@@ -60,16 +60,22 @@ export function parseTectonicStreams(stdout: string, stderr: string): ParsedStre
     // deterministic (client policy).
     if (seen.has(key)) continue;
     seen.add(key);
-    if (diagnostics.length >= MAX_DIAGNOSTICS) {
-      truncated = true;
-      continue;
-    }
-    diagnostics.push({
+    all.push({
       severity,
       ...(file !== undefined ? { file } : {}),
       ...(lineNo !== undefined ? { line: lineNo } : {}),
       message,
     });
+  }
+  // The cap bounds the result, but never lets warnings crowd out errors (many Overfull \hbox warnings can precede the one error):
+  // errors are kept first, warnings fill what is left, and the kept diagnostics stay in the order the engine printed them.
+  let diagnostics = all;
+  if (all.length > MAX_DIAGNOSTICS) {
+    truncated = true;
+    const keep = new Set<number>();
+    all.forEach((d, i) => { if (d.severity === "error" && keep.size < MAX_DIAGNOSTICS) keep.add(i); });
+    all.forEach((_, i) => { if (keep.size < MAX_DIAGNOSTICS) keep.add(i); });
+    diagnostics = all.filter((_, i) => keep.has(i));
   }
   return { diagnostics, truncated, wrotePdf };
 }

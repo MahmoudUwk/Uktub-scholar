@@ -1,0 +1,111 @@
+version: 1
+baseline_id: H0
+incumbent_id: H0
+best_reliable_score: 1
+noise_tolerance_delta: 0
+noise_cost_rel: 0.5966575205786977
+noise_provisional: false
+baseline_note: H0 = the harness as of experiment iter-14 (2026-10-07). iter-12
+  ran before the PMC route and the read-only bibliography, iter-13 and iter-14
+  after; same scenario, keyed, same model. Re-measure with unchanged-H0 repeats
+  when the first candidate is proposed.
+bounded_horizon_rounds: 20
+edit_budget:
+  early_max: 4
+  late_min: 1
+stall_window_rounds: 3
+prune_window_rounds: 4
+metrics:
+  - task_score
+  - first_pass_delivery
+  - end_to_end_success
+  - input_tokens
+  - output_tokens
+  - total_policy_tokens
+  - tool_calls
+  - steps
+  - wall_time
+  - cost
+  - budget_stops
+policy:
+  maxCostIncreaseWithGain: 0.25
+  minCostReduction: 0.1
+  maxStructuralCostIncrease: 0.1
+  minRuns: 2
+  maxBlockedShare: 0.3333333333333333
+components:
+  prompt:
+    - src/core/agent-rules.ts
+    - src/core/refusals.ts
+  skill:
+    - skills/**
+  client_tool:
+    - src/mcp/server.ts
+    - src/core/tools/*.ts
+  output_plumbing:
+    - src/core/notices.ts
+    - src/core/bibrender.ts
+  context_mgmt:
+    - src/core/rag/**
+    - src/core/chunk.ts
+    - src/core/chunk-document.ts
+    - src/core/sections.ts
+  control_flow:
+    - src/core/verify/workflow.ts
+    - src/core/source/prepare.ts
+    - src/core/compile/run.ts
+  config:
+    - config/**
+    - src/core/config.ts
+  memory: []
+  subagent:
+    - src/pi/writer/**
+    - src/pi/subagent/**
+protected:
+  - scripts/live/**
+  - experiments/simulator.md
+  - experiments/scenarios/**
+  - experiments/harness/manifest.yaml
+  - tests/evolution.spec.ts
+  - src/core/tool-owned.ts
+  - src/pi/index.ts
+  - src/core/source/download.ts
+  - src/core/safe-detail.ts
+surfaces:
+  evolve:
+    - rf-llm-literature-review
+  heldout:
+    - heldout-federated-medical-segmentation
+  ood:
+    - ood-claim-check-genomics
+incumbent_stats:
+  runs: 3
+  blocked: 0
+  score: 1
+  successRate: 1
+  costUsd: 0.8018000000000001
+  inputTokens: 369567
+  outputTokens: 66204.66666666667
+  toolCalls: 53.666666666666664
+  wallMs: 1068633.6666666667
+reference:
+  heldout:
+    runs: 1
+    blocked: 0
+    score: 0.8888888888888888
+    successRate: 0
+    costUsd: 1.2552
+    inputTokens: 513808
+    outputTokens: 65850
+    toolCalls: 93
+    wallMs: 1564327
+  ood:
+    runs: 1
+    blocked: 0
+    score: 1
+    successRate: 1
+    costUsd: 0.1327
+    inputTokens: 97472
+    outputTokens: 10200
+    toolCalls: 17
+    wallMs: 327030

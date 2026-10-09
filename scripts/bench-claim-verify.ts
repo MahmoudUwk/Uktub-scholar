@@ -26,12 +26,12 @@
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
-import { dirname, join } from "node:path";
+import { basename, dirname, join } from "node:path";
 
 import { chunkText, targetChars, overlapChars, type ChunkTextConfig, type TextChunk } from "../src/core/chunk.ts";
 import { loadChunkConfig } from "../src/core/config.ts";
 import {
-  bevEngine, DEFAULT_MIN_CONFIDENCE, EngineError, juliaEngine, k2Engine, layaEngine, lummaEngine,
+  bevEngine, DEFAULT_MIN_CONFIDENCE, EngineError, juliaEngine, k2Engine, layaEngine, lummaEngine, velaEngine, VELA_MODEL, VELA_REVISION,
   minConfidenceFromEnv, openrouterChatEngine, openrouterDecisionsEngine, type ClaimEngine,
 } from "../src/core/verify/claim.ts";
 import { resolveScores, scoreKey, sha256, type Label } from "./bench-metrics.ts";
@@ -90,7 +90,7 @@ if (rerender) {
   process.exit(0);
 }
 
-const KNOWN = ["julia", "k2", "laya", "bev", "lumma", "openrouter", "openrouter-chat", "decision2-kai", "decision2-eos"];
+const KNOWN = ["julia", "k2", "laya", "bev", "lumma", "openrouter", "openrouter-chat", "decision2-kai", "decision2-eos", "vela"];
 if (!KNOWN.includes(engineName)) {
   console.error(`engine "${engineName}" has no adapter yet (implemented: ${KNOWN.join(", ")})`);
   process.exit(2);
@@ -191,6 +191,7 @@ function makeScorer(workersFlag: number | undefined, configWorkers: number): Sco
     k2: ["k2:IFM/K2-Type-0.9B", () => k2Engine({ env }), lanes],
     bev: ["bev:avbiswas/bev-decider-0.4B", () => bevEngine({ env }), lanes],
     lumma: ["lumma:FrontiersMind/lumma-fev-0.6b", () => lummaEngine({ env }), lanes],
+    vela: [`vela:${env.UKTUB_VELA_REVISION === undefined ? VELA_MODEL : basename(env.UKTUB_VELA_DIR ?? "unset")}@${(env.UKTUB_VELA_REVISION ?? VELA_REVISION).slice(0, 12)}`, () => velaEngine({ env }), 1], // one resident model session
   };
   const [id, make, n] = resident[engineName];
   return legacyScorer(id, make(), n);

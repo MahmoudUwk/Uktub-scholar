@@ -8,7 +8,7 @@ import { describe, it, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync, existsSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 
 import { compileDocument, describeOutcome, timeoutMsFromEnv, DEFAULT_COMPILE_TIMEOUT_MS, type EngineSpawn } from "../src/core/compile/run.ts";
 
@@ -30,7 +30,7 @@ function fakeSpawn(responds: { stdout: string; stderr: string; code: number; tim
     if (args[0] === "--version") return { stdout: "Tectonic 0.15.0\n", stderr: "", code: 0, timedOut: false };
     assert.equal(args[0], "-X");
     assert.deepEqual(args.slice(1, 3), ["compile", args[2]]);
-    assert.equal(opts.cwd, join(root, "manuscript"));
+    assert.equal(opts.cwd, dirname(args[2] as string), "tectonic runs in the entry's own directory");
     if (writesPdf) {
       const outdir = args[args.indexOf("--outdir") + 1];
       writeFileSync(join(outdir, writesPdf), "%PDF-fake");
@@ -93,6 +93,45 @@ describe("compileDocument", () => {
     assert.equal(outcome.kind, "errors");
     if (outcome.kind === "errors") {
       assert.equal(outcome.diagnostics.length, 2);
+    }
+  });
+
+  it("errors: a non-zero exit that printed no error line still says why, never a bare '0 error(s)' failure", async () => {
+    mkdirSync(join(root, "manuscript"), { recursive: true });
+    writeFileSync(join(root, "manuscript", "main.tex"), "x");
+    const outcome = await compileDocument({
+      root,
+      env: ENGINE_ENV,
+      fs: engineFs,
+      spawn: fakeSpawn({ stdout: "note: Running TeX ...\n", stderr: "warning: main.tex:5: Overfull \\hbox (3pt too wide) in paragraph at lines 5--5\n", code: 3 }),
+    });
+    assert.equal(outcome.kind, "errors");
+    if (outcome.kind === "errors") {
+      const errors = outcome.diagnostics.filter((d) => d.severity === "error");
+      assert.equal(errors.length, 1);
+      assert.match(errors[0]?.message ?? "", /exited with code 3 without printing an error line/);
+      assert.match(describeOutcome(outcome), /1 error\(s\)/);
+    }
+  });
+
+  it("diagnostics name files as project-relative paths with their extension, so the agent can open them (live: tectonic prints `sections/intro`)", async () => {
+    mkdirSync(join(root, "manuscript", "multi", "sections"), { recursive: true });
+    writeFileSync(join(root, "manuscript", "multi", "main.tex"), "\\input{sections/intro}");
+    writeFileSync(join(root, "manuscript", "multi", "sections", "intro.tex"), "\\undefinedcmd");
+    const outcome = await compileDocument({
+      root,
+      env: ENGINE_ENV,
+      fs: engineFs,
+      spawn: fakeSpawn({
+        stdout: "",
+        stderr: "warning: main.tex:1: Overfull \\hbox (1pt too wide) in paragraph at lines 1--1\nerror: sections/intro:1: Undefined control sequence\nerror: ghost/missing:4: not a file we can find\nerror: halted on potentially-recoverable error as specified\n",
+        code: 1,
+      }),
+    }, "manuscript/multi/main.tex");
+    assert.equal(outcome.kind, "errors");
+    if (outcome.kind === "errors") {
+      assert.deepEqual(outcome.diagnostics.map((d) => d.file), ["manuscript/multi/main.tex", "manuscript/multi/sections/intro.tex", "ghost/missing", undefined]);
+      assert.equal(outcome.diagnostics[1]?.line, 1);
     }
   });
 
@@ -215,5 +254,31 @@ describe("describeOutcome hints (a precise engine error the model still cannot a
 
   it("an ordinary error gets no hint, and a clean build none", () => {
     assert.doesNotMatch(describeOutcome(failed("LaTeX Error: Environment itemze undefined.")), /hint:/i);
+  });
+});
+
+describe("describeOutcome: known engine behavior", () => {
+  // Seen in real sessions (experiments/runs/rf-llm-literature-review/iter-04 and iter-06): the agent spent 6+ extra compile/edit cycles switching
+  // bibliography styles to clear the two Tectonic 0.15.0 main.bbl warnings the README already calls spurious.
+  const compiled = (engineVersion: string, messages: string[]) => ({
+    kind: "compiled" as const,
+    entry: "manuscript/main.tex",
+    engineVersion,
+    pdfPath: "build/main.pdf",
+    pdfSizeBytes: 100,
+    diagnostics: messages.map((message) => ({ severity: "warning" as const, message })),
+    truncated: false,
+  });
+  const BBL = ["internal consistency problem when checking if main.bbl changed", "TeX rerun seems needed, but stopping at 6 passes"];
+
+  it("the two Tectonic 0.15.0 main.bbl warnings are listed AND explained as a known engine behavior that editing the document does not clear", () => {
+    const text = describeOutcome(compiled("0.15.0", BBL));
+    assert.match(text, /- warning: internal consistency problem/, "the warning is still disclosed");
+    assert.match(text, /note: .*0\.15\.0.*every bibliography build.*not caused by the document/i);
+  });
+
+  it("other warnings, or a clean build, get no such note", () => {
+    assert.doesNotMatch(describeOutcome(compiled("0.15.0", ["Overfull \\hbox (33pt too wide) detected at line 131"])), /note:/i);
+    assert.doesNotMatch(describeOutcome(compiled("0.17.0", [])), /note:/i);
   });
 });

@@ -2,7 +2,7 @@
 """
 Parity gate for an embedding server: do its vectors reproduce the reference model's?
 
-  python scripts/embed-parity.py http://127.0.0.1:8080 [--reference google/embeddinggemma-300m]
+  python scripts/embed-parity.py http://127.0.0.1:8080 [--reference google/embeddinggemma-2]
 
 Compares, on 20 sentences with the model's documented prompts, the server's /v1/embeddings output with sentence-transformers'
 (`encode_document` / `encode_query`, normalised): per-sentence cosine, pairwise-similarity correlation, and top-1 retrieval
@@ -21,7 +21,7 @@ import numpy as np
 
 ap = argparse.ArgumentParser()
 ap.add_argument("url")
-ap.add_argument("--reference", default="google/embeddinggemma-300m")
+ap.add_argument("--reference", default="google/embeddinggemma-2")
 ap.add_argument("--model", default="x", help="model name sent in the request (llama-server ignores it)")
 args = ap.parse_args()
 

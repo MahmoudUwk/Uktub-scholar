@@ -5,7 +5,7 @@
  */
 import { describe, it, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
@@ -226,6 +226,18 @@ describe("read", () => {
     assert.equal(refusedCode(await call(makeCtx(root, NO_FETCH), { action: "read", limit: 2, cursor })), "CONTINUATION_INVALID", "registry changed since the cursor was issued");
   });
 
+  it("a cursor that decodes to JSON null, an array, a primitive or malformed JSON is refused as invalid, not thrown", async () => {
+    await seed();
+    const bibBefore = readFileSync(join(root, BIBLIOGRAPHY_REL_PATH), "utf8");
+    const papersBefore = listPapers(db).map((p) => p.citekey);
+    for (const decoded of ["null", "[]", "1", '"string"', "{}", "{not json"]) {
+      const cursor = Buffer.from(decoded, "utf8").toString("base64url");
+      assert.equal(refusedCode(await call(makeCtx(root, NO_FETCH), { action: "read", limit: 2, cursor })), "CONTINUATION_INVALID", decoded);
+    }
+    assert.deepEqual(listPapers(db).map((p) => p.citekey), papersBefore);
+    assert.equal(readFileSync(join(root, BIBLIOGRAPHY_REL_PATH), "utf8"), bibBefore);
+  });
+
   it("caps page size by weight: light projections 100, abstract/BibTeX projections 25", async () => {
     await seed();
     const light = await call(makeCtx(root, NO_FETCH), { action: "read", limit: 5000 });
@@ -333,6 +345,7 @@ describe("sync_bibliography", () => {
   it("re-renders the derived bibliography from the registry, never importing human edits", async () => {
     await seed();
     const bibPath = join(root, BIBLIOGRAPHY_REL_PATH);
+    chmodSync(bibPath, 0o644); // the rendered file is read-only; the human makes it writable on purpose
     writeFileSync(bibPath, "@article{human, title={Hand edit}}\n");
     const r = await call(makeCtx(root, NO_FETCH), { action: "sync_bibliography" });
     assert.equal(r.structuredContent!.synced, 4);

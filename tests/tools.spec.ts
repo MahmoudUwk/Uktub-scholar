@@ -174,6 +174,16 @@ describe("search_papers", () => {
   });
 
 
+  // Seen in a real session (experiments/runs/rf-llm-literature-review/iter-02): the agent searched an exact DOI, got five unrelated records and no
+  // guidance. The model reads only the text, so the register hint cannot stay in `details`.
+  it("a DOI-shaped query tells the model, in the text it reads, to register that DOI directly", async () => {
+    const { fetchFn } = createSearchFetch({ openalex: fakeWorks("oa", 3), crossref: fakeWorks("cr", 3), semanticScholar: "rate-limited" });
+    const text = (await searchPapersTool(makeCtx(fetchFn), { query: "10.1038/nature12373" })).content[0]?.text ?? "";
+    assert.match(text, /hint: .*paper_registry.*register.*10\.1038\/nature12373/);
+    const plain = (await searchPapersTool(makeCtx(fetchFn), { query: "microplastics" })).content[0]?.text ?? "";
+    assert.doesNotMatch(plain, /hint:/, "a non-DOI query carries no hint");
+  });
+
   it("names each failing provider in the text the model reads (a bare count lets the agent claim all providers answered)", async () => {
     const { fetchFn } = createSearchFetch({ openalex: fakeWorks("oa", 3), crossref: fakeWorks("cr", 3), semanticScholar: "rate-limited" });
     const text = (await searchPapersTool(makeCtx(fetchFn), { query: "microplastics" })).content[0]?.text ?? "";

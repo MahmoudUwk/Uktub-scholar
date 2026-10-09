@@ -6,3 +6,26 @@ node_modules/
 opencode.json
 dist/
 __pycache__/
+
+# third-party repos cloned for study (read-only, untrusted data; never committed)
+reference_repos/
+
+# local secrets (the live harness reads provider keys from here, scripts/live/keys.ts)
+.env
+.env.*
+
+# live-run and experiment output: large, local evidence cited from the docs, never committed (experiments/harness, scenarios and the READMEs are tracked)
+experiments/runs/
+
+# python, editor and OS leftovers
+*.pyc
+.pytest_cache/
+.venv/
+*.tsbuildinfo
+coverage/
+.vscode/
+.idea/
+.DS_Store
+*.bak
+*.orig
+*.swp

@@ -58,6 +58,24 @@ describe("tectonic stream parser", () => {
     assert.ok(!parsed.diagnostics.some((d) => d.file === undefined && d.severity === "error"));
   });
 
+  it("the cap never lets warnings crowd out errors: a real error after many warnings is kept, order preserved", () => {
+    // Seen live (rf-llm-literature-review iter-12): 50 Overfull \hbox warnings printed before the one error, so the
+    // old first-come cap dropped the error and the tool reported "Compile failed: 0 error(s)" with no cause.
+    const lines: string[] = [];
+    for (let i = 1; i <= MAX_DIAGNOSTICS + 10; i++) lines.push(`warning: main.tex:${i}: Overfull \\hbox (${i}pt too wide) in paragraph at lines ${i}--${i}`);
+    lines.push("error: main.tex:296: Illegal parameter number in definition of \\Hy@tempa");
+    lines.push("error: halted on potentially-recoverable error as specified");
+    const parsed = parseTectonicStreams("", lines.join("\n"));
+    assert.equal(parsed.diagnostics.length, MAX_DIAGNOSTICS);
+    assert.equal(parsed.truncated, true);
+    const errors = parsed.diagnostics.filter((d) => d.severity === "error");
+    assert.deepEqual(errors.map((d) => d.message), ["Illegal parameter number in definition of \\Hy@tempa", "halted on potentially-recoverable error as specified"]);
+    assert.equal(errors[0]?.line, 296);
+    // kept diagnostics stay in the order the engine printed them (warnings first, then the errors)
+    const severities = parsed.diagnostics.map((d) => d.severity);
+    assert.deepEqual(severities, [...severities].sort((a, b) => (a === b ? 0 : a === "warning" ? -1 : 1)));
+  });
+
   it("ignores non-diagnostic stream noise", () => {
     const parsed = parseTectonicStreams(
       "note: Running TeX ...\nnote: Rerunning TeX because \"main.aux\" changed ...\n",

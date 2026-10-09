@@ -33,6 +33,7 @@ import { managedCacheDir } from "../core/embed/config.ts";
 import { BIN_PATH } from "../core/launch.ts";
 import { RuntimeError, installRuntime, installedPaths, platformKey, readLock, type RuntimeLock } from "../core/embed/runtime.ts";
 import { createMcpServer, validateTargetDir } from "../mcp/server.ts";
+import { handshakeTraceEnabled, traceHandshake } from "../mcp/trace.ts";
 
 /** Injected I/O: the bin passes console writers; tests capture arrays. */
 export interface CliIo {
@@ -537,6 +538,8 @@ async function mcpCommand(args: string[], io: CliIo): Promise<number> {
 
   const transport = io.mcpTransport ?? new StdioServerTransport();
   await server.connect(transport);
+  // Installed in the same tick as connect(), before any stdin callback can deliver the first message. stderr: stdout is the protocol.
+  if (handshakeTraceEnabled(io.env ?? process.env)) traceHandshake(transport, io.err);
   return 0;
 }
 

@@ -119,7 +119,8 @@ registration.
 | `remove` | `handles[]` (≤ 50): explicit DOIs or citekeys | `removed` / `duplicate` / `absent` / `refused` per input, one transaction, bibliography re-rendered. There is no remove-all |
 | `read` | optional `handles[]`, `fields[]`, `limit`, `cursor` | Citekey-ordered records. Default fields: DOI, citekey, title, year, citable. Optional: `authors`, `venue`, `bibtex`, `bibtexSource`, `abstract`, `source`, `refreshedAt`. Unsupported fields are refused. A page holds ≤ 100 light rows or ≤ 25 with abstract/BibTeX; `cursor` continues the same request and is refused if the registry changed |
 | `attach_source` | `attachments[]` (≤ 10): `{handle, path}` to a PDF or GROBID TEI inside the project | Source readiness, revision and counts. The file is neither copied nor deleted; its text is never returned |
-| `sync_bibliography` | — | Re-renders `refs/references.bib` from the registry (human edits are not imported) |
+| `sync_bibliography` | — | Re-renders `refs/references.bib` from the registry (human edits are not imported). The file is written read-only (mode 0444), so no editor or agent write can add an entry to it; the next registry write replaces it, and a human who wants to edit it makes it writable on purpose |
+| `acquire` | `handles` (omit for every paper without a source) | Fetches an open-access source (see Sources) and reports a typed status per paper: `ready` (with its kind), `unavailable` or `failed` with the code and reason, `deferred` (at most 20 per call; repeat to continue), `absent` for an unknown handle |
 
 A paper without provider BibTeX registers as `citable: false` (`BIBTEX_UNAVAILABLE`);
 a later registration can upgrade it without moving the citekey. Citekeys are never
@@ -196,9 +197,10 @@ vector ranking fused with Reciprocal Rank Fusion (k = 60). Two ways to have a se
 - **Managed runtime (Linux, macOS, Windows; x64 and arm64):** `uktub-scholar embed install --yes` downloads two pinned
   artifacts once into a shared cache (`UKTUB_CACHE_DIR`, default `~/.cache/uktub-scholar`; not project state, safe to delete)
   and verifies each against the sha256 and size in [`models.lock.json`](src/core/embed/models.lock.json): the official
-  [llama.cpp](https://github.com/ggml-org/llama.cpp) CPU build `b11398` for your platform (12–19 MB, MIT; `.tar.gz` on
-  Linux/macOS, `.zip` on Windows) and [EmbeddingGemma-300m](https://huggingface.co/google/embeddinggemma-300m) QAT Q8_0 with the
-  sentence-transformers dense modules (334 MB, **Gemma terms of use — `install` shows them and requires `--yes`**). The
+  [llama.cpp](https://github.com/ggml-org/llama.cpp) CPU build `b11476` for your platform (12–19 MB, MIT; `.tar.gz` on
+  Linux/macOS, `.zip` on Windows) and [EmbeddingGemma 2](https://huggingface.co/google/embeddinggemma-2) in Q4_K_XL
+  (176 MB, **Apache-2.0**; the file is the `unsloth/embeddinggemma-2-GGUF` conversion, pinned by commit and sha256; `install`
+  shows the licence and requires `--yes`). The
   archive is extracted safely (`..`, absolute paths, drive letters and escaping links are refused). After that,
   `search_passages` starts `llama-server` on loopback as a supervised child process (resident for the session, restarted if
   it dies, killed when the host exits) — a search never downloads anything. `uktub-scholar embed status` shows what is
@@ -214,6 +216,7 @@ vector ranking fused with Reciprocal Rank Fusion (k = 60). Two ways to have a se
 | `UKTUB_EMBED_MODEL` | optional declared model name; matched against the server's `/v1/models` entry (by id or file name) |
 | `UKTUB_EMBED_PROFILE` | prompt profile: `embeddinggemma` (default; adds the model's query/document task prefixes) or `none` |
 | `UKTUB_CACHE_DIR` | where the managed runtime and model live |
+| `UKTUB_MCP_TRACE` | `1` makes `uktub-scholar mcp` write one line per handshake to stderr (`uktub-scholar: handshake client=<name> <version> requested=<revision> negotiated=<revision>`), to see which MCP revision a host speaks; off by default |
 
 Vectors are cached in the registry keyed by passage content and the served model (the managed runtime's identity is the
 pinned model hash; for your own server its size and quantisation), so they are embedded once, survive rechunking that keeps
@@ -223,19 +226,32 @@ states `vector search unavailable (…)`. **Requirements for your own server** (
 `--embeddings --pooling mean -c 2048 -b 2048 -ub 2048` — the default physical batch of 512 tokens rejects a chunk of ≈ 570
 tokens — and use a GGUF **converted with the sentence-transformers dense modules**: the
 `ggml-org/embeddinggemma-300m-qat-q8_0-GGUF` file omits them and its vectors have cosine ≈ 0.01 with the reference model
-(measured). In October 2026, ggml-org published the first-party ungated repository `ggml-org/embeddinggemma-300M-GGUF`
-(`embeddinggemma-300M-Q8_0.gguf`, 316 tensors including `dense_2.weight` and `dense_3.weight`), which reproduces the
-reference model near-perfectly (mean cosine 0.9997, pairwise Pearson correlation 0.9999, top-1 agreement 1.00 on the parity
-gate). This first-party ungated model is now the pinned model in `models.lock.json`.
-Measured value: [passage search benchmark](docs/benchmarks/rag-search-section-512-2026-10-04.md).
+(measured). The pinned model is EmbeddingGemma 2 (Q4_K_XL), which loads from llama.cpp `b11454` onward; its parity against
+`google/embeddinggemma-2` is mean cosine 0.995, Pearson 0.993 on the parity gate (the previous EmbeddingGemma 300M Q8_0 pin
+measured 0.9997). Measured against that previous model on this repository's own benchmark: the file is 47 % smaller
+(176 MB against 334 MB), embedding speed is about the same, and hybrid retrieval recall is lower (all-papers @10 80.2 % against
+84.7 %; own-paper @10 91.9 % against 93.7 %): see [DECISIONS](docs/DECISIONS.md) 2026-10-07 and
+[BACKLOG](docs/BACKLOG.md) section 8. Earlier measurement: [passage search benchmark](docs/benchmarks/rag-search-section-512-2026-10-04.md).
 
 ### Sources
 
-Registration stores metadata only. `verify_claim` prepares sources on demand, from
-OpenAlex only (Unpaywall is deprecated into it): open-access `pdf_url` candidates from the
-work record, then the OpenAlex Content API at the record's own `content_urls` (GROBID TEI,
-then PDF; **needs `OPENALEX_API_KEY` and costs about $0.01 per download**). URLs are never
-synthesized and landing pages are never scraped. Downloads are HTTPS-only to public
+Registration stores metadata only, and in a long-lived host (the MCP server) it starts the open-access acquisition of what it registered in the background (bounded, one acquisition per paper at a time, shared with `verify_claim` and `acquire`; `UKTUB_ACQUIRE_ON_REGISTER=0` turns it off). `paper_registry read` with `source` shows each paper's status: `metadata_only`, `acquiring`, `ready`, `unavailable` or `failed`. A "no open copy" answer is not looked up again for an hour, a failed acquisition not for a day. `verify_claim` prepares sources on demand from any lawful
+open-access copy a provider record names (owner decision 2026-10-07; Unpaywall is deprecated
+into OpenAlex and is not used). In order: open-access `pdf_url` candidates from the OpenAlex
+work record; the arXiv PDF (`arxiv.org/pdf/<id>`) when the paper's own DOI is an arXiv DOI or an
+open location is an arXiv page; OpenAlex's `open_access.oa_url`; the OpenAlex Content API at
+the record's own `content_urls` (GROBID TEI, then PDF; **needs `OPENALEX_API_KEY` and costs
+about $0.01 per download**); and only if all of those give nothing, the PubMed Central open-data copy of the
+PMCID Europe PMC reports for the DOI (keyless; stored as `pmc-pdf` with its licence) and open-access PDF links Europe PMC lists on
+other hosts (`epmc-pdf`; europepmc.org's own `?pdf=render` links answer scripted clients with a bot challenge and are never fetched),
+then Semantic Scholar's `openAccessPdf.url` and the arXiv preprint named by its `externalIds.ArXiv`. A source taken from
+an arXiv preprint of a work published under another DOI is stored as `arxiv-preprint-pdf` and
+`verify_claim` says so (`preprint:` line): the preprint may differ from the published version.
+arXiv requests are spaced 3 seconds apart (its documented limit for programmatic access), and an HTTP 429 or 403 from arXiv
+puts it on a cooldown (60 s, doubling to 10 min) during which its candidates are skipped.
+Landing pages are never scraped (a DOI link or `oa_url` that answers HTML is simply not a
+document) and no URL is built from a title; an arXiv URL is built only from an identifier a
+provider or the paper's own DOI carries. Downloads are HTTPS-only to public
 addresses (re-checked after every redirect, connection pinned to the checked address),
 credential-scoped to the Content API origin, bounded in size (64 MiB) and time, and the
 extracted text must match the registered paper's title or DOI. PDFs come from
@@ -247,9 +263,10 @@ hours (a retry can cost a download); a failed local attach never throttles acqui
 `paper_registry` `attach_source` to supply your own file instead. A write that waits out the
 5-second SQLite lock is refused as `REGISTRY_BUSY`.
 
-Key-less acquisition succeeds only for papers whose OpenAlex record carries a direct `pdf_url`
-(for example a J-STAGE PDF downloaded live); OpenAlex often lists landing pages only (a
-PeerJ paper and an arXiv preprint did), which are not scraped — attach a file or set the key.
+Key-less acquisition succeeds for papers with a direct `pdf_url`, an arXiv copy, or a Semantic
+Scholar open-access PDF or arXiv preprint. OpenAlex often lists a publisher landing page only
+(gold-OA IEEE papers did); such a page is not scraped, so when no arXiv copy exists either, attach
+a file or set the key.
 
 ## CLI
 
@@ -308,6 +325,9 @@ Engines:
   needs `OPENROUTER_API_KEY`; `UKTUB_OPENROUTER_MODEL` selects another compatible model.
 - `llama-cpp`: local `/v1/systemone` endpoint (`UKTUB_VERIFY_URL`, default
   `http://127.0.0.1:8080`); its served model id (`/v1/models`) is the judgment identity.
+- `vela`: [Vela 2.0](https://huggingface.co/vllm-sr/Vela-2.0-0.3B) 0.3B (ONNX Runtime, no PyTorch) or 0.8B (PyTorch, `UKTUB_VELA_BACKEND=torch`),
+  from a snapshot you provide (`UKTUB_VELA_DIR`; the worker refuses weights that differ from the pinned sha256). Benchmarked and **not adopted**:
+  AUC 0.866 / 0.884 against Eos 0.968 ([decision](docs/DECISIONS.md)); selectable only.
 - `k2`, `bev`, `lumma`, `julia`, `laya`: retained adapters; selection is not an
   endorsement. Setup lives in [engines.ts](src/core/verify/engines.ts), quality and
   license decisions in the dated [benchmark reports](docs/benchmarks/).
@@ -343,14 +363,15 @@ pnpm typecheck
 pnpm test
 ```
 
-The test suite uses offline provider fakes. Real-Pi smoke and live API evidence
-are separate tiers; the exercised checkout evidence is in [the independent system review](docs/review-2026-10-04.md).
+The test suite uses offline provider fakes. Live acceptance (every tool and action against real providers and engines, directly and through a real Pi
+session in an isolated Docker sandbox) and user-simulation experiments are separate tiers with their own commands: see [docs/testing.md](docs/testing.md).
+Earlier checkout evidence is in [the independent system review](docs/review-2026-10-04.md).
 [Dated benchmark reports](docs/benchmarks/) preserve measurements of engines and
 evidence quality; a score is evidence about one dataset, not a guarantee.
 
-`scripts/test-sandbox.sh` runs an optional Docker Pi test environment, mounts the package and
-read-only ADC, and persists project/session data in `../uktub-sandbox/`.
-`--fresh` deletes that persisted data.
+`scripts/test-sandbox.sh` runs an optional interactive Docker Pi environment (it mounts the package and
+read-only ADC, and persists project/session data in `../uktub-sandbox/`; `--fresh` deletes that persisted data). The automated
+live tiers use the same image but mount only a packed install, never the repository.
 
 [NOTICE.md](NOTICE.md) records borrowed-code provenance. License: AGPL-3.0-only.
 Companion research/deliverable skills and their adoption triggers live in the backlog.

@@ -14,6 +14,7 @@
 
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 import { Type, type Static } from "typebox";
 
@@ -36,10 +37,11 @@ import type { PaperRecord, ProviderConfig } from "../providers/types.ts";
 import { REFUSALS, WARNINGS, type RefusalCode, type WarningCode } from "../refusals.ts";
 import { MAX_SOURCE_BYTES, SourceError } from "../source/extract.ts";
 import { prepareFromBytes } from "../source/prepare.ts";
+import { isAcquiring, prepareSources, type SourceReport } from "../verify/acquire.ts";
 import { getSource, publishSource, recordSourceFailure, type SourceRow } from "../verify/store.ts";
 import { providerConfigOf, refusalResult, resolveProjectFile, type RenderedWarning, type ToolContext, type ToolResult } from "./context.ts";
 
-export const REGISTRY_ACTIONS = ["register", "remove", "read", "attach_source", "sync_bibliography"] as const;
+export const REGISTRY_ACTIONS = ["register", "remove", "read", "attach_source", "sync_bibliography", "acquire"] as const;
 export const READ_FIELDS = ["title", "year", "citable", "authors", "venue", "bibtex", "bibtexSource", "abstract", "source", "refreshedAt"] as const;
 type ReadField = (typeof READ_FIELDS)[number];
 
@@ -61,7 +63,7 @@ export const BIBTEX_MAX_CHARS = 2_000;
 
 export const PaperRegistryParams = Type.Object({
   action: Type.Union(REGISTRY_ACTIONS.map((a) => Type.Literal(a)), {
-    description: "register | remove | read | attach_source | sync_bibliography",
+    description: "register | remove | read | attach_source | sync_bibliography | acquire",
   }),
   identifiers: Type.Optional(
     Type.Array(Type.String(), {
@@ -72,7 +74,7 @@ export const PaperRegistryParams = Type.Object({
   handles: Type.Optional(
     Type.Array(Type.String(), {
       maxItems: REMOVE_BATCH_MAX,
-      description: `remove: DOIs or citekeys to delete (required, never "all"); read: restrict to these papers (omit for every paper); at most ${REMOVE_BATCH_MAX}`,
+      description: `remove: DOIs or citekeys to delete (required, never "all"); read: restrict to these papers (omit for every paper); acquire: papers to fetch an open-access source for (omit for every paper without a source); at most ${REMOVE_BATCH_MAX}`,
     }),
   ),
   fields: Type.Optional(
@@ -107,6 +109,8 @@ const OutcomeSchema = Type.Object({
     Type.Object({
       status: Type.String(),
       revision: Nullable(Type.String()),
+      kind: Type.Optional(Nullable(Type.String())),
+      failureDetail: Type.Optional(Nullable(Type.String())),
       reused: Type.Optional(Type.Boolean()),
       failureCode: Type.Optional(Nullable(Type.String())),
       characters: Type.Optional(Type.Integer()),
@@ -140,6 +144,7 @@ const ACCEPTS: Record<(typeof REGISTRY_ACTIONS)[number], readonly (keyof PaperRe
   read: ["handles", "fields", "limit", "cursor"],
   attach_source: ["attachments"],
   sync_bibliography: [],
+  acquire: ["handles"],
 };
 
 export async function paperRegistryTool(ctx: ToolContext, args: PaperRegistryArgs): Promise<ToolResult<PaperRegistryStructured>> {
@@ -170,6 +175,8 @@ export async function paperRegistryTool(ctx: ToolContext, args: PaperRegistryArg
         return readAction(db, args);
       case "attach_source":
         return await attachAction(ctx, db, args.attachments);
+      case "acquire":
+        return await acquireAction(ctx, db, args.handles);
       default:
         return await syncAction(ctx, db);
     }
@@ -338,6 +345,24 @@ async function registerAction(ctx: ToolContext, db: DatabaseSync, identifiers: s
     }
     return { ...first, index, input, status: "duplicate", duplicateOf: firstIndex.get(doi)!, warnings: [], rendered: undefined } as Outcome;
   });
+  // Typed source status of what was just registered, and the hook: acquisition starts in the background where the host supports it.
+  const toAcquire: string[] = [];
+  for (const o of outcomes) {
+    if ((o.status !== "registered" && o.status !== "updated") || o.doi === null) continue;
+    const src = getSource(db, o.doi);
+    if (src?.status === "ready") o.source = { status: "ready", revision: src.revision, kind: src.kind };
+    else if (ctx.afterRegister !== undefined) {
+      o.source = { status: "acquiring", revision: null };
+      toAcquire.push(o.doi);
+    } else o.source = { status: src?.status ?? "metadata_only", revision: null };
+  }
+  if (toAcquire.length > 0) {
+    try {
+      ctx.afterRegister?.(toAcquire);
+    } catch {
+      // The hook only improves the next call; it can never fail a committed registration.
+    }
+  }
   const lines = [summarize("register", outcomes), ...outcomes.map(outcomeLine), ...warnings.map((w) => `warning ${w.code}: ${w.message}. Next: ${w.next}`)];
   return { content: [{ type: "text", text: lines.join("\n") }], structuredContent: { action: "register", outcomes, warnings }, details: { order: "input order" } };
 }
@@ -364,15 +389,70 @@ async function removeAction(ctx: ToolContext, db: DatabaseSync, handles: string[
   };
 }
 
+// ── acquire ─────────────────────────────────────────────────────────────────
+
+/** Fetch an open-access source for registered papers (explicit form of what `verify_claim` does on demand and the registration hook does in the background). */
+async function acquireAction(ctx: ToolContext, db: DatabaseSync, handles: string[] | undefined): Promise<ToolResult<PaperRegistryStructured>> {
+  if (handles !== undefined && handles.length === 0) return invalid("`handles` is empty; omit it to acquire every paper that has no source");
+  if (handles !== undefined && handles.length > REMOVE_BATCH_MAX) {
+    return refusalResult({ code: "BATCH_TOO_LARGE", message: `${handles.length} handles exceed the ${REMOVE_BATCH_MAX}-handle batch cap (client policy)` });
+  }
+  let cfg;
+  try {
+    cfg = loadChunkConfig(ctx.root, { env: ctx.env });
+  } catch (err) {
+    if (err instanceof ConfigError) return refusalResult({ code: "CONFIG_INVALID", message: err.message });
+    throw err;
+  }
+  type Target = { index: number; input: string; paper: { doi: string; citekey: string; title: string } | null };
+  const targets: Target[] = [];
+  if (handles === undefined) {
+    selectPapers(db, { limit: 1_000_000 }).filter((p) => getSource(db, p.doi)?.status !== "ready").forEach((p, i) => targets.push({ index: i, input: p.doi, paper: { doi: p.doi, citekey: p.citekey, title: p.title } }));
+  } else {
+    handles.forEach((h, i) => {
+      const row = resolveHandle(db, h);
+      targets.push({ index: i, input: h, paper: row === null ? null : { doi: row.doi, citekey: row.citekey, title: row.title } });
+    });
+  }
+  const report: SourceReport = [];
+  const seen = new Set<string>();
+  await prepareSources(ctx, db, targets.flatMap((t) => (t.paper !== null && !seen.has(t.paper.doi) && seen.add(t.paper.doi) ? [{ ...t.paper, citable: true }] : [])), cfg, report);
+  const outcomes: Outcome[] = targets.map((t) => {
+    const base = { index: t.index, input: t.input, doi: t.paper?.doi ?? null, citekey: t.paper?.citekey ?? null, citable: null, duplicateOf: null, refusalCode: null, refusalMessage: null, refusalNext: null, warnings: [] as string[] };
+    if (t.paper === null) return { ...base, status: "absent", source: null };
+    const src = getSource(db, t.paper.doi);
+    const rep = report.find((r) => r.doi === t.paper!.doi);
+    if (src?.status === "ready") return { ...base, status: "ready", source: { status: "ready", revision: src.revision, kind: src.kind } };
+    const status = rep?.code === "deferred" ? "deferred" : (src?.status ?? rep?.status ?? "metadata_only");
+    return { ...base, status, source: { status: src?.status ?? rep?.status ?? "metadata_only", revision: null, failureCode: rep?.code ?? src?.failureCode ?? null, failureDetail: rep?.detail ?? src?.failureDetail ?? null } };
+  });
+  const counts = new Map<string, number>();
+  for (const o of outcomes) counts.set(o.status, (counts.get(o.status) ?? 0) + 1);
+  const lines = [
+    `acquire: ${outcomes.length} paper(s) — ${[...counts].map(([k, v]) => `${v} ${k}`).join(", ") || "nothing to do"}`,
+    ...outcomes.map((o) => {
+      const id = `${o.citekey ?? "-"} ${o.doi ?? ""}`.trim();
+      if (o.status === "absent") return `[${o.index}] absent ${o.input} — no registered paper has this DOI or citekey`;
+      if (o.status === "ready") return `[${o.index}] ready ${id} via ${o.source?.kind ?? "?"}`;
+      return `[${o.index}] ${o.status} ${o.source?.failureCode ?? ""} ${id}${o.source?.failureDetail ? ` — ${o.source.failureDetail}` : ""}`.replace(/\s+/g, " ");
+    }),
+  ];
+  return { content: [{ type: "text", text: lines.join("\n") }], structuredContent: { action: "acquire", outcomes }, details: { order: handles === undefined ? "papers without a source" : "input order" } };
+}
+
 // ── read ───────────────────────────────────────────────────────────────────
 
 const digest = (s: string): string => createHash("sha256").update(s).digest("hex").slice(0, 12);
 
-function sourceView(row: SourceRow | null): Record<string, unknown> {
-  if (row === null) return { status: "metadata_only" };
-  if (row.status === "ready") {
+/** The workspace root of an open registry handle (the directory holding `.registry/`). */
+const rootOf = (db: DatabaseSync): string => resolve(dirname(db.location() ?? ""), "..");
+
+function sourceView(row: SourceRow | null, acquiring = false): Record<string, unknown> {
+  if (row?.status === "ready") {
     return { status: "ready", kind: row.kind, ref: row.ref, revision: row.revision, license: row.license, extraction: row.extraction, preparedAt: row.preparedAt };
   }
+  if (acquiring) return { status: "acquiring" };
+  if (row === null) return { status: "metadata_only" };
   return { status: row.status, failureCode: row.failureCode, failureDetail: row.failureDetail, preparedAt: row.preparedAt };
 }
 
@@ -399,7 +479,7 @@ function project(db: DatabaseSync, p: PaperDetail, fields: ReadField[]): Record<
             ? { kind: "unavailable" }
             : { kind: "provider_abstract", provider: p.abstractSource, text: p.abstract.slice(0, ABSTRACT_MAX_CHARS), truncated: p.abstract.length > ABSTRACT_MAX_CHARS };
         break;
-      case "source": rec.source = sourceView(getSource(db, p.doi)); break;
+      case "source": rec.source = sourceView(getSource(db, p.doi), isAcquiring(rootOf(db), p.doi)); break;
     }
   }
   return rec;
@@ -469,6 +549,7 @@ function readAction(db: DatabaseSync, args: PaperRegistryArgs): ToolResult<Paper
     } catch {
       return refusalResult({ code: "CONTINUATION_INVALID", message: "the cursor is not a token this tool issued" });
     }
+    if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) return refusalResult({ code: "CONTINUATION_INVALID", message: "the cursor is not a token this tool issued" });
     if (parsed.v !== token.v || typeof parsed.a !== "string") return refusalResult({ code: "CONTINUATION_INVALID", message: "the cursor is not a token this tool issued" });
     if (parsed.s !== token.s || parsed.f !== token.f) return refusalResult({ code: "CONTINUATION_INVALID", message: "the cursor was issued for a different selection or field list" });
     if (parsed.g !== token.g) return refusalResult({ code: "CONTINUATION_INVALID", message: "the registry changed since the cursor was issued" });

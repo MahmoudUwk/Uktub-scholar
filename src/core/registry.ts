@@ -16,7 +16,7 @@
  * `now` (KTD6).
  */
 import { cliCommand } from "./launch.ts";
-import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join, parse, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import type { SQLInputValue, StatementSync } from "node:sqlite";
@@ -661,6 +661,9 @@ function writeBibliography(db: DatabaseSync): { syncedCount: number } {
   const staged = `${target}.${process.pid}.tmp`;
   try {
     writeFileSync(staged, content, "utf-8");
+    // Read-only on disk: the bibliography is rendered, never hand-written, and no host's edit tool can append an invented entry to it.
+    // The rename below replaces a read-only target (it needs the directory, not the file); the human may chmod it on purpose.
+    chmodSync(staged, 0o444);
     renameSync(staged, target);
   } catch (err) {
     try {

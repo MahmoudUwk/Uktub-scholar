@@ -1,9 +1,8 @@
 /**
- * Configured verification-engine registry (KTD6): maps
- * `verification.engine` from config/chunking.yaml to a ClaimEngine, with
- * `mercury-decide:free` (OpenRouter System One) as the default and a local
- * llama.cpp System One endpoint as the offline path. Every knob is a named
- * env; the engine itself never reads ambient state.
+ * Configured verification-engine registry (KTD6): maps `verification.engine` from config/chunking.yaml to a ClaimEngine. The default
+ * is `eos` (a local resident worker, owner decision 2026-10-04); every other engine is selectable only (OpenRouter Mercury Decide is
+ * the best measured; `vela` was benchmarked and not adopted, docs/DECISIONS.md). Every knob is a named env; the engine itself never
+ * reads ambient state.
  */
 
 import { readEosOnnxLock, withManagedEosOnnx } from "./eos-onnx.ts";
@@ -23,6 +22,9 @@ import {
   lummaEngine,
   openrouterDecisionsEngine,
   systemoneEndpointEngine,
+  velaEngine,
+  VELA_MODEL,
+  VELA_REVISION,
   type ClaimEngine,
 } from "./claim.ts";
 
@@ -42,6 +44,7 @@ export const VERIFICATION_ENGINES = [
   "lumma",
   "julia",
   "laya",
+  "vela",
 ] as const;
 
 /** Decision protocol the System One engines speak: one `noul` question per
@@ -59,6 +62,7 @@ const PROTOCOLS: Record<(typeof VERIFICATION_ENGINES)[number], string> = {
   lumma: SYSTEMONE_PROTOCOL,
   julia: "julia-v1",
   laya: "laya-router-v1",
+  vela: "vela2-halu-v1",
 };
 
 export interface EngineIdentity {
@@ -147,6 +151,15 @@ export async function resolveEngineIdentity(
       return { model: `julia:${localModelRef(env.UKTUB_JULIA_MODEL ?? "SupersonicLabs/Julia-1")}`, protocol: "julia-v1" };
     case "laya":
       return { model: `laya:${localModelRef("convaiinnovations/laya-multilingual")}`, protocol: "laya-router-v1" };
+    case "vela": {
+      // Same rule as eos-onnx: under the pinned digests the worker refuses any other weights or inference code, so the pin IS the
+      // identity (and moving the snapshot keeps cached judgments). An override of the revision, a digest or the export drops that
+      // guarantee: fingerprint the directory instead.
+      const revision = (env.UKTUB_VELA_REVISION ?? VELA_REVISION).slice(0, 12);
+      const overridden = ["UKTUB_VELA_REVISION", "UKTUB_VELA_WEIGHTS_SHA256", "UKTUB_VELA_INFERENCE_SHA256", "UKTUB_VELA_WEIGHTS_FILE", "UKTUB_VELA_BACKEND"].some((k) => env[k] !== undefined);
+      const dir = env.UKTUB_VELA_DIR;
+      return { model: `vela:${overridden && dir !== undefined && dir !== "" ? localModelRef(dir) : VELA_MODEL}@${revision}`, protocol: "vela2-halu-v1" };
+    }
     default:
       throw new Error(`unknown verification engine: ${engine}`);
   }
@@ -155,7 +168,7 @@ export async function resolveEngineIdentity(
 /** Resident worker engines (a model loaded into GPU memory) are shared per process and
  *  configuration, so a long-lived host does not reload the model for every call. */
 const resident = new Map<string, ClaimEngine>();
-const RESIDENT_ENGINES = new Set(["eos", "eos-onnx", "julia", "laya"]);
+const RESIDENT_ENGINES = new Set(["eos", "eos-onnx", "julia", "laya", "vela"]);
 
 function residentKey(env: Record<string, string | undefined>, engine: string): string {
   return `${engine}|${Object.entries(env).filter(([k, v]) => v !== undefined && k.startsWith("UKTUB_")).sort(([a], [b]) => (a < b ? -1 : 1)).map(([k, v]) => `${k}=${v}`).join("&")}`;
@@ -198,6 +211,8 @@ function buildEngine(env: Record<string, string | undefined>, engine: string): C
       return juliaEngine({ env });
     case "laya":
       return layaEngine({ env });
+    case "vela":
+      return velaEngine({ env });
     default:
       throw new Error(
         `unknown verification.engine "${engine}" (known: ${VERIFICATION_ENGINES.join(", ")})`,

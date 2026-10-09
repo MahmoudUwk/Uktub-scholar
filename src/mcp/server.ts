@@ -8,7 +8,6 @@ import { readFileSync } from "node:fs";
 import { AGENT_RULES } from "../core/agent-rules.ts";
 import { resolve } from "node:path";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
@@ -16,6 +15,7 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 
 import { WriteQueue } from "../core/queue.ts";
+import { startBackgroundAcquisition } from "../core/verify/acquire.ts";
 import { createSafeDownloader } from "../core/source/download.ts";
 import {
   refusalResult,
@@ -88,6 +88,9 @@ export const TOOL_DEFINITIONS = [
       REFUSAL_SEMANTICS,
     inputSchema: SearchPapersParams,
     outputSchema: SearchPapersOutput,
+    title: "Search papers",
+    // fixed provider APIs only; writes nothing
+    annotations: { title: "Search papers", readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true },
   },
   {
     name: "paper_registry",
@@ -99,10 +102,16 @@ export const TOOL_DEFINITIONS = [
       "bibtex, bibtexSource, abstract, source, refreshedAt), paged with a cursor. " +
       "action=attach_source: prepare a PDF or GROBID TEI file inside the project as a paper's source (at most 10); the file is neither copied " +
       "nor deleted and its text is never shown to you. action=sync_bibliography: re-render refs/references.bib from the registry. " +
+      "action=acquire: fetch an open-access source for papers that have none (omit handles for all of them; the same work registration starts in the background); " +
+      "read with the source field shows each paper's source status: metadata_only, acquiring, ready, unavailable or failed. " +
       "A paper without provider BibTeX is citable: false — BibTeX is never synthesized. " +
       REFUSAL_SEMANTICS,
     inputSchema: PaperRegistryParams,
     outputSchema: PaperRegistryOutput,
+    title: "Paper registry",
+    // one annotation covers every action, so it is their union: `remove` deletes rows (cascading to sources and chunks), `sync_bibliography`
+    // and `attach_source` overwrite, `register` refreshes records, `register` and `acquire` contact providers
+    annotations: { title: "Paper registry", readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true },
   },
   {
     name: "compile_document",
@@ -115,6 +124,9 @@ export const TOOL_DEFINITIONS = [
       REFUSAL_SEMANTICS,
     inputSchema: CompileDocumentParams,
     outputSchema: CompileDocumentOutput,
+    title: "Compile document",
+    // writes only regenerable build/ output and fetches only its own TeX bundle
+    annotations: { title: "Compile document", readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
   },
   {
     name: "verify_claim",
@@ -129,6 +141,9 @@ export const TOOL_DEFINITIONS = [
       REFUSAL_SEMANTICS,
     inputSchema: VerifyClaimParams,
     outputSchema: VerifyClaimOutput,
+    title: "Verify claim",
+    // adds a run and evidence rows on each fresh call and acquires sources on demand
+    annotations: { title: "Verify claim", readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
   },
   {
     name: "search_passages",
@@ -141,6 +156,9 @@ export const TOOL_DEFINITIONS = [
       REFUSAL_SEMANTICS,
     inputSchema: SearchPassagesParams,
     outputSchema: SearchPassagesOutput,
+    title: "Search passages",
+    // builds a derived passage index (converges after the first call); no network on the default path
+    annotations: { title: "Search passages", readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
   },
 ] as const;
 
@@ -223,7 +241,15 @@ export function createMcpServer(targetDirOrOptions?: string | McpServerOptions):
     if (!confinement.ok) {
       return refusalResult({ code: confinement.code, message: confinement.message });
     }
-    return { ...rawCtx, root };
+    const ctx: ToolContext = { ...rawCtx, root };
+    // The registration hook: this process is long-lived, so a newly registered paper's open-access copy is fetched in the background
+    // (bounded, deduplicated with verify_claim and `acquire`). UKTUB_ACQUIRE_ON_REGISTER=0 turns it off.
+    if (!/^(0|false|off)$/i.test(env.UKTUB_ACQUIRE_ON_REGISTER ?? "")) {
+      ctx.afterRegister = (dois) => {
+        void startBackgroundAcquisition({ ...ctx, signal: undefined }, dois);
+      };
+    }
+    return ctx;
   }
 
   const server = new Server(
@@ -243,7 +269,9 @@ export function createMcpServer(targetDirOrOptions?: string | McpServerOptions):
     return {
       tools: TOOL_DEFINITIONS.map((tool) => ({
         name: tool.name,
+        title: tool.title,
         description: tool.description,
+        annotations: tool.annotations,
         inputSchema: tool.inputSchema as unknown as {
           type: "object";
           properties?: Record<string, unknown>;
@@ -314,10 +342,4 @@ export function createMcpServer(targetDirOrOptions?: string | McpServerOptions):
   });
 
   return server;
-}
-
-export async function runMcpServer(targetDirOrOptions?: string | McpServerOptions): Promise<void> {
-  const server = createMcpServer(targetDirOrOptions);
-  const transport = new StdioServerTransport();
-  await server.connect(transport);
 }

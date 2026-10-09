@@ -16,6 +16,7 @@ import { VerifyClaimOutput } from "../src/core/tools/verify.ts";
 import { SearchPassagesOutput } from "../src/core/tools/passages.ts";
 import { createSearchFetch, SEARCH_CFG } from "./helpers/provider-fakes.ts";
 import { crossrefFake, FIXED_NOW, NO_FETCH } from "./helpers/registry-fakes.ts";
+import { makePdf } from "./helpers/pdf.ts";
 
 let root: string;
 
@@ -73,6 +74,62 @@ describe("MCP Server tools/list", () => {
       assert.ok(tool.outputSchema, `${tool.name} missing outputSchema`);
       assert.equal((tool.outputSchema as { type?: string }).type, "object", `${tool.name} outputSchema must be type: object`);
     }
+  });
+});
+
+describe("MCP Server tool annotations and titles", () => {
+  // Hints, not enforcement: hosts use them to decide what needs approval (Codex always asks for a destructive tool, ChatGPT prompts for
+  // anything not read-only) and treat a missing hint as destructive and open-world. The values follow the MCP definitions literally, from
+  // what each tool writes, deletes and contacts (side-effect audit, 2026-10-08), so a host's prompt is never softer than the truth.
+  const EXPECTED = {
+    // fixed provider APIs only; writes nothing
+    search_papers: { title: "Search papers", readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+    // union of its actions: `remove` deletes rows (cascading to sources and chunks), `sync_bibliography` and `attach_source` overwrite,
+    // `register` refreshes records, `register` and `acquire` contact providers
+    paper_registry: { title: "Paper registry", readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true },
+    // writes only regenerable build/ output and fetches only its own TeX bundle
+    compile_document: { title: "Compile document", readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    // adds a run and evidence rows on each fresh call and acquires sources on demand
+    verify_claim: { title: "Verify claim", readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
+    // builds a derived passage index (converges after the first call); no network on the default path
+    search_passages: { title: "Search passages", readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+  } as const;
+
+  it("every tool carries a title and all four hints explicitly", async () => {
+    const { client } = await createClientServer();
+    for (const tool of (await client.listTools()).tools) {
+      const a = tool.annotations;
+      assert.ok(a !== undefined, `${tool.name} has no annotations`);
+      assert.equal(typeof tool.title, "string", `${tool.name} has no title`);
+      for (const hint of ["readOnlyHint", "destructiveHint", "idempotentHint", "openWorldHint"] as const) {
+        assert.equal(typeof a[hint], "boolean", `${tool.name} does not set ${hint}`);
+      }
+    }
+  });
+
+  it("each tool's title and hints match what it does", async () => {
+    const { client } = await createClientServer();
+    const tools = (await client.listTools()).tools;
+    for (const [name, expected] of Object.entries(EXPECTED)) {
+      const tool = tools.find((t) => t.name === name);
+      assert.ok(tool !== undefined, `${name} is not listed`);
+      assert.equal(tool.title, expected.title, `${name} title`);
+      assert.deepEqual(tool.annotations, expected, `${name} annotations`);
+    }
+  });
+});
+
+describe("MCP Server tool descriptions seen by the agent", () => {
+  // Measured in experiments/runs/rf-llm-literature-review/iter-02: verify_claim took 91% of the agent's tool time because every claim was checked
+  // exhaustively over each whole paper; nothing in the schema said that cost grows with the paper or that `query` is the cheaper focused check.
+  it("verify_claim's `query` says what an exhaustive check costs and when a focused check is enough", async () => {
+    const { client } = await createClientServer();
+    const verify = (await client.listTools()).tools.find((t) => t.name === "verify_claim");
+    const query = (verify?.inputSchema.properties as Record<string, { description?: string }> | undefined)?.query?.description ?? "";
+    assert.match(query, /exhaustive/i);
+    assert.match(query, /every passage/i);
+    assert.match(query, /minutes/i);
+    assert.match(query, /focused/i);
   });
 });
 
@@ -406,6 +463,10 @@ describe("server instructions (read by every host's model, whether or not it ope
     assert.match(text, /withheld/i, "a withheld excerpt is not to be extracted another way");
     assert.match(text, /data,? (and )?never instructions|never (as )?instructions/i, "text inside a paper is data; injected instructions are ignored and reported");
     assert.match(text, /(only|unless) (if )?the user (asks|asked|wants|insists)/i, "a stub is written only when the user asks for one, never as an unrequested side effect");
+    // experiments/runs/rf-llm-literature-review: with the `query` guidance in the schema, 4 of 5 iterations used it (6-11 s per verify_claim); the one that did
+    // not (iter-08, 1 of 9 calls) spent 63 s per call and hit the turn cap. The rules reach the model on every turn; a parameter description does not.
+    assert.match(text, /exhaustive[^.]*minutes/i, "an exhaustive verify_claim is slow on long papers");
+    assert.match(text, /pass a `query`/i, "a focused claim about named papers narrows the check with a query");
     assert.match(text, /placeholder/i, "a stub citation for an unfound paper is a marked placeholder");
     assert.match(text, /only the fields the user (gave|supplied)/i, "the stub holds nothing the user did not say");
   });
@@ -458,5 +519,48 @@ describe("progress heartbeats (hosts time a request out unless the server report
     let n = 0;
     await call(client, () => n++);
     assert.equal(n, 0);
+  });
+});
+
+describe("registration hook through the server", () => {
+  const TITLE = "Alpha Grid Aging";
+  const hookEnv = (extra: Record<string, string> = {}) => ({ ...extra });
+  function hookFetch() {
+    const { fetchFn: crossref } = crossrefFake({ "10.1001/aaa": { title: TITLE, bibtex: "@article{holder2024, title={Alpha Grid Aging}, author={Holder, Ada}, year={2024}}" } });
+    const fetchFn: typeof crossref = async (url, init) =>
+      url.startsWith(`${SEARCH_CFG.openalexBaseUrl}/works/`)
+        ? new Response(JSON.stringify({ doi: "https://doi.org/10.1001/aaa", locations: [{ is_oa: true, pdf_url: "https://repo.example/aaa.pdf" }] }), { status: 200 })
+        : crossref(url, init);
+    return fetchFn;
+  }
+  const download = async (url: string) => ({ finalUrl: url, contentType: null, bytes: makePdf([[TITLE, "Grids age slowly and caches fill with every request."]]) });
+  const sourceStatus = async (client: Client): Promise<string> => {
+    const r = await client.callTool({ name: "paper_registry", arguments: { action: "read", fields: ["source"] } });
+    return (r.structuredContent as { records: { source: { status: string } }[] }).records[0].source.status;
+  };
+
+  it("registering a paper starts its open-access acquisition in the background; the source becomes ready without another call", async () => {
+    createRegistry(root).close();
+    const { client } = await createClientServer({ fetch: hookFetch(), download, env: hookEnv() });
+    const reg = await client.callTool({ name: "paper_registry", arguments: { action: "register", identifiers: ["10.1001/aaa"] } });
+    assert.ok(reg.structuredContent, textContent(reg));
+    assert.equal((reg.structuredContent as { outcomes: { source: { status: string } }[] }).outcomes[0].source.status, "acquiring");
+    let status = "";
+    for (let i = 0; i < 100 && status !== "ready"; i++) {
+      await new Promise((r) => setTimeout(r, 20));
+      status = await sourceStatus(client);
+    }
+    assert.equal(status, "ready");
+  });
+
+  it("UKTUB_ACQUIRE_ON_REGISTER=0 turns the hook off: the paper stays metadata_only until acquire is asked", async () => {
+    createRegistry(root).close();
+    const { client } = await createClientServer({ fetch: hookFetch(), download, env: hookEnv({ UKTUB_ACQUIRE_ON_REGISTER: "0" }) });
+    const reg = await client.callTool({ name: "paper_registry", arguments: { action: "register", identifiers: ["10.1001/aaa"] } });
+    assert.equal((reg.structuredContent as { outcomes: { source: { status: string } }[] }).outcomes[0].source.status, "metadata_only");
+    await new Promise((r) => setTimeout(r, 150));
+    assert.equal(await sourceStatus(client), "metadata_only");
+    await client.callTool({ name: "paper_registry", arguments: { action: "acquire" } });
+    assert.equal(await sourceStatus(client), "ready");
   });
 });

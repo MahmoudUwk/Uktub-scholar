@@ -170,6 +170,17 @@ describe("search_passages — results", () => {
     assert.match(r.content[0].text, /usable source/i);
     assert.equal((r.structuredContent as any).result.found, false);
   });
+
+  // Seen in a real session (experiments/runs/rf-llm-literature-review/iter-01): the agent was told to "acquire sources" but nothing named
+  // how; it learned by accident that verify_claim acquires open-access sources on demand. The answer must name the actions.
+  it("with no searchable source the answer names the actions that produce one, and each unsearchable paper says why in plain words", async () => {
+    addPaper("10.1234/ccc", "Paper C", null);
+    const text = (await run({ query: "battery" })).content[0].text;
+    assert.match(text, /verify_claim/, "verify_claim acquires open-access sources on demand");
+    assert.match(text, /attach_source/, "attach_source supplies a local file");
+    assert.match(text, /narrow `?query`?/i, "a narrow query keeps the on-demand check short (an exhaustive check judges every passage)");
+    assert.match(text, /not searchable: \S+ \(10\.1234\/ccc\) — metadata_only \(no source acquired or attached yet\)/);
+  });
 });
 
 describe("search_passages — review findings", () => {

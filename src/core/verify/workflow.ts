@@ -20,9 +20,9 @@ import type { DatabaseSync } from "node:sqlite";
 import { ConfigError, loadChunkConfig, type ChunkConfig } from "../config.ts";
 import { selectPapers } from "../registry.ts";
 import type { RefusalCode } from "../refusals.ts";
-import { acquireSource } from "../source/prepare.ts";
-import type { SourceFailureCode } from "../source/extract.ts";
-import { providerConfigOf, type ToolContext } from "../tools/context.ts";
+import type { ToolContext } from "../tools/context.ts";
+import { MAX_ACQUISITIONS_PER_CALL, RETRY_FAILED_AFTER_MS, SOURCE_PREP_CONCURRENCY, prepareSources } from "./acquire.ts";
+export { MAX_ACQUISITIONS_PER_CALL, RETRY_FAILED_AFTER_MS, SOURCE_PREP_CONCURRENCY };
 import type { ClaimEngine } from "./claim.ts";
 import { createConfiguredEngine, resolveEngineIdentity, type EngineIdentity } from "./engines.ts";
 import { EXCERPT_MAX_CHARS, containEvidence, localizePassages, type ContainedEvidence, type PriorDelivery, type SupportedPassage } from "./evidence.ts";
@@ -40,8 +40,6 @@ import {
   getSourceText,
   pageOf,
   passageHashOf,
-  publishSource,
-  recordSourceFailure,
   resolvePointer,
   saveEvidence,
   setRunState,
@@ -55,10 +53,6 @@ import {
 
 /** Client policy: rows per engine call — bounds how long a cancellation waits. */
 export const JUDGE_BATCH_SIZE = 8;
-/** Client policy: papers whose sources are acquired at once (provider courtesy). */
-export const SOURCE_PREP_CONCURRENCY = 3;
-/** Client policy: a failed acquisition is not retried sooner than this (a retry can cost a paid download). */
-export const RETRY_FAILED_AFTER_MS = 24 * 60 * 60 * 1000;
 /** Client policy: evidence records per response, and excerpt characters per response (≈ 3k tokens). */
 export const MAX_EVIDENCE_PER_PAGE = 20;
 export const MAX_PAGE_EXCERPT_CHARS = 12_000;
@@ -427,7 +421,7 @@ async function registryWorkflow(
       result: { supportFound: available > 0, searched: query === null ? "exhaustive" : "query_limited", complete, limitations },
       engine: { name: engineName, model: effective?.model ?? null, protocol: snapshot.protocol, minConfidence: bar, cache: effective !== null },
       coverage: {
-        sources: { selected: snapshot.selected, ready: snapshot.papers.length, unavailable: carry.unavailable, unresolved: carry.unresolved },
+        sources: { selected: snapshot.selected, ready: snapshot.papers.length, unavailable: carry.unavailable, unresolved: carry.unresolved, preprint: snapshot.papers.filter((p) => getSource(db, p.doi)?.kind === "arxiv-preprint-pdf").map((p) => citekeyOf(p.doi)) },
         candidates: {
           total: all.length,
           perPaper: candidateStats.map((p) => ({ doi: p.doi, citekey: citekeyOf(p.doi), chunks: p.chunksTotal, matched: p.matched, selected: p.selected })),
@@ -439,62 +433,6 @@ async function registryWorkflow(
       continuation,
     },
   };
-}
-
-// ── source preparation ──────────────────────────────────────────────────────
-
-/** Client policy: acquisitions (lookup + download + parse) attempted per call. Each can cost a download
- *  and seconds of parsing; the rest are reported as deferred and reached on the next call. */
-export const MAX_ACQUISITIONS_PER_CALL = 20;
-
-async function prepareSources(ctx: ToolContext, db: DatabaseSync, papers: ScopePaper[], cfg: ChunkConfig, report: SourceReport): Promise<void> {
-  const state = new Map(papers.map((p) => [p.doi, getSource(db, p.doi)]));
-  const candidates = papers.filter((p) => {
-    const src = state.get(p.doi);
-    if (src?.status === "ready") return false;
-    // A recent failed ACQUISITION is not retried (a retry can cost a download). A failed local attach says
-    // nothing about open-access availability, so it never throttles acquisition.
-    if (src?.status === "failed" && src.kind !== "local-file" && Date.parse(src.preparedAt) > ctx.now().getTime() - RETRY_FAILED_AFTER_MS) return false;
-    return true;
-  });
-  // Never-attempted papers first, then the longest-waiting: repeated calls reach every paper.
-  candidates.sort((a, b) => {
-    const sa = state.get(a.doi);
-    const sb = state.get(b.doi);
-    if ((sa === null) !== (sb === null)) return sa === null ? -1 : 1;
-    return (sa?.preparedAt ?? "") < (sb?.preparedAt ?? "") ? -1 : (sa?.preparedAt ?? "") > (sb?.preparedAt ?? "") ? 1 : 0;
-  });
-  const need = candidates.slice(0, MAX_ACQUISITIONS_PER_CALL);
-  for (const p of candidates.slice(MAX_ACQUISITIONS_PER_CALL)) {
-    report.push({ doi: p.doi, citekey: p.citekey, status: "unavailable", code: "deferred", detail: `not attempted in this call (at most ${MAX_ACQUISITIONS_PER_CALL} acquisitions per call); repeat the request to continue` });
-  }
-  let next = 0;
-  const lane = async (): Promise<void> => {
-    while (next < need.length) {
-      ctx.signal?.throwIfAborted();
-      const p = need[next++];
-      if (ctx.download === undefined) {
-        report.push({ doi: p.doi, citekey: p.citekey, status: "unavailable", code: "acquisition_disabled" satisfies SourceFailureCode, detail: "this host provides no document download" });
-        continue;
-      }
-      const got = await acquireSource({ fetch: ctx.fetch, download: ctx.download, cfg: providerConfigOf(ctx), signal: ctx.signal }, { doi: p.doi, title: p.title });
-      if (got.ok) {
-        const published = await ctx.queue.runExclusive(() => publishSource(db, p.doi, got.source, cfg.chunking, ctx.now()));
-        if (published === null) report.push({ doi: p.doi, citekey: p.citekey, status: "unavailable", code: "no_open_copy", detail: "the paper was removed while its source was prepared" });
-      } else {
-        await ctx.queue.runExclusive(() => recordSourceFailure(db, p.doi, got.status, got.code, got.detail, ctx.now()));
-        report.push({ doi: p.doi, citekey: p.citekey, status: got.status, code: got.code, detail: got.detail });
-      }
-    }
-  };
-  await Promise.all(Array.from({ length: Math.min(SOURCE_PREP_CONCURRENCY, need.length) }, lane));
-  // Papers skipped by the retry policy keep their stored reason in the report.
-  for (const p of papers) {
-    const src = getSource(db, p.doi);
-    if (src !== null && src.status !== "ready" && !report.some((r) => r.doi === p.doi)) {
-      report.push({ doi: p.doi, citekey: p.citekey, status: src.status, code: src.failureCode, detail: src.failureDetail });
-    }
-  }
 }
 
 // ── direct passages ─────────────────────────────────────────────────────────
@@ -594,7 +532,7 @@ async function directWorkflow(
       result: { supportFound: evidence.length > 0, searched: "direct", complete: interruption === null && items.every((i) => i.status === "judged") && staleDropped === 0, limitations },
       engine: { name: cfg.verification.engine, model: identity?.model ?? null, protocol: evidenceIdentity.protocol, minConfidence: bar, cache: identity !== null },
       coverage: {
-        sources: { selected: items.filter((i) => i.kind === "registered").length, ready: items.filter((i) => i.kind === "registered" && i.status === "judged").length, unavailable: [], unresolved: [] },
+        sources: { selected: items.filter((i) => i.kind === "registered").length, ready: items.filter((i) => i.kind === "registered" && i.status === "judged").length, unavailable: [], unresolved: [], preprint: [] },
         candidates: { total: items.length, perPaper: [] },
         work: { checked: judgeable.length, fresh, cached, unchecked: 0, localizationFresh: 0, complete: interruption === null, interruption },
         output: { available: evidence.length, returned: evidence.length, deliveredEarlier: 0, withheld: evidence.filter((e) => e.excerpt === null).length, staleDropped },

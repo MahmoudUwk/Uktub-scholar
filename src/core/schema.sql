@@ -48,7 +48,7 @@ CREATE TABLE IF NOT EXISTS papers (
 CREATE TABLE IF NOT EXISTS paper_sources (
   doi TEXT PRIMARY KEY REFERENCES papers(doi) ON DELETE CASCADE,
   status TEXT NOT NULL CHECK (status IN ('ready','unavailable','failed')),
-  -- openalex-pdf-url | openalex-content-tei | openalex-content-pdf | local-file
+  -- openalex-pdf-url | openalex-oa-url | openalex-content-tei | openalex-content-pdf | s2-open-access-pdf | epmc-pdf | pmc-pdf | arxiv-pdf | arxiv-preprint-pdf | local-file
   kind TEXT,
   -- Nonsecret origin: URL without credentials, or project-relative file path.
   ref TEXT,

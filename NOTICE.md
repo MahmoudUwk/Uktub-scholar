@@ -22,6 +22,14 @@ This package is licensed under AGPL-3.0-only. Third-party provenance is recorded
 - No Feynman source files are copied into this package in v0. If a future version copies
   Feynman code, list each file here with its upstream path and commit.
 
+## Reference-repository studies (2026-10-07; ideas and public API shapes only, no code copied)
+
+- aipoch/open-science (Apache-2.0, commit 2102e6d), alphaXiv/OpenResearch (MIT, commit b9ce4f3) and synthetic-sciences/OpenScience
+  (Apache-2.0, commit 44d0334) were cloned shallow into the gitignored `reference_repos/` and read, never executed. Adopted as design
+  ideas: the Europe PMC DOI lookup and the PubMed Central open-data bucket route for open-access PDFs (aipoch `src/main/literature/full-text-sources.ts`;
+  both are public services documented by their operators), and the arXiv 429/403 cooldown (OpenScience `connectors/literature/arxiv.ts`).
+  Reading list for what was not adopted and why: [docs/plans/2026-10-07-reference-repos-integration-plan.md](docs/plans/2026-10-07-reference-repos-integration-plan.md).
+
 ## OpenScience (Apache-2.0, Synthetic Sciences)
 
 - Design reference only in v0 (RRF merge shape, per-host HTTP-layer patterns). No

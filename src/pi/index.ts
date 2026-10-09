@@ -24,14 +24,25 @@ export default function uktubScholarExtension(pi: ExtensionAPI): void {
   // Honesty layer: models drop tool failures and warnings from their answers, so any notice a uktub tool result carried that the final
   // answer does not mention is appended to it (rules in the prompt are not enough for a small model).
   const pending = new Map<string, Notice>();
-  pi.on("agent_start", () => void pending.clear());
+  const continuationRuns = new Map<string, string>();
+  pi.on("agent_start", () => {
+    pending.clear();
+    continuationRuns.clear();
+  });
   pi.on("tool_result", (event) => {
     const name = (event as { toolName?: string }).toolName ?? "";
     const text = event.content.map((c) => (c.type === "text" ? c.text : "")).join("\n");
     if (!name.startsWith(TOOL_PREFIX) && !text.startsWith(BLOCK_PREFIX)) return undefined;
     const tool = name.startsWith(TOOL_PREFIX) ? name.slice(TOOL_PREFIX.length) : name;
-    for (const id of clearedIds(tool, text)) pending.delete(id);
-    for (const n of extractNotices(tool, text, event.isError)) pending.set(n.id ?? `${n.key}|${n.line}`, n);
+    let runId: string | undefined;
+    const { toolCallId, input } = event as { toolCallId?: string; input?: { continuation?: unknown } };
+    if (tool === "verify_claim" && toolCallId !== undefined) {
+      runId = typeof input?.continuation === "string" ? (continuationRuns.get(input.continuation) ?? toolCallId) : toolCallId;
+      const next = /^continuation: "([^"]+)"/m.exec(text)?.[1];
+      if (next !== undefined) continuationRuns.set(next, runId);
+    }
+    for (const id of clearedIds(tool, text, runId)) pending.delete(id);
+    for (const n of extractNotices(tool, text, event.isError, runId)) pending.set(n.id ?? `${n.key}|${n.line}`, n);
     return undefined;
   });
   pi.on("message_end", (event) => {

@@ -9,7 +9,7 @@
 import { describe, it, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
@@ -143,6 +143,7 @@ describe("sync-bib recovery", () => {
 
     // The human edits the generated file (the header forbids it; the registry wins).
     const edited = `${renderAfterOne}\n@manual{i edited this by hand, title={My Note}}\n`;
+    chmodSync(join(root, BIBLIOGRAPHY_REL_PATH), 0o644); // read-only when rendered; a human edit is a deliberate chmod first
     writeFileSync(join(root, BIBLIOGRAPHY_REL_PATH), edited, "utf-8");
 
     // Documented stance: the next register destroys the human edit — the file
@@ -153,6 +154,7 @@ describe("sync-bib recovery", () => {
     assert.match(renderAfterTwo, /@article\{holder2024beta,/);
 
     // A second human edit survives until sync-bib runs, then heals byte-identically.
+    chmodSync(join(root, BIBLIOGRAPHY_REL_PATH), 0o644);
     writeFileSync(join(root, BIBLIOGRAPHY_REL_PATH), "garbage", "utf-8");
     const out: string[] = [];
     const err: string[] = [];

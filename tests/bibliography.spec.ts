@@ -12,7 +12,7 @@
  */
 import { describe, it, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
@@ -24,6 +24,12 @@ import type { PaperRecord } from "../src/core/registry.ts";
 /** node:sqlite hands back `Record<string, SQLOutputValue>` rows; one boundary cast, then typed reads. */
 function allRows<T extends object>(statement: StatementSync, ...params: SQLInputValue[]): T[] {
   return statement.all(...params) as T[];
+}
+
+/** The human is trusted: editing the read-only rendered bibliography is a deliberate chmod first. */
+function humanEdit(path: string, content: string): void {
+  chmodSync(path, 0o644);
+  writeFileSync(path, content);
 }
 
 // ── fixtures ───────────────────────────────────────────────────────────────
@@ -172,6 +178,22 @@ describe("bibliography render", () => {
     assert.deepEqual(bibKeys(), registryBibKeys());
   });
 
+  it("the rendered file is read-only, so no host's edit tool can add a fabricated entry; a re-render still replaces it", () => {
+    const a = register(paper("Quantum Networks"));
+    const bib = join(refsDir(), "references.bib");
+    assert.equal(statSync(bib).mode & 0o222, 0, "no write bit on the rendered bibliography");
+    if (process.getuid?.() !== 0) {
+      assert.throws(() => writeFileSync(bib, `${bibText()}@article{invented, title={Not a real paper}}\n`), /EACCES|EPERM/);
+      assert.deepEqual(bibKeys(), [a.citekey], "the refused write changed nothing");
+    }
+    const b = register(paper("Sensing Things", { authors: ["Bob Brown"], year: 2021 }));
+    assert.deepEqual(bibKeys(), [a.citekey, b.citekey].sort(), "the next registry write replaces the read-only file");
+    assert.equal(statSync(bib).mode & 0o222, 0, "and the new image is read-only again");
+    chmodSync(bib, 0o644); // the human is trusted and may make it writable on purpose
+    writeFileSync(bib, "% a deliberate human edit\n");
+    assert.equal(bibText(), "% a deliberate human edit\n");
+  });
+
   it("sweeps a dead writer's staging file under the lock, and only ours", () => {
     mkdirSync(refsDir(), { recursive: true });
     writeFileSync(join(refsDir(), "references.bib.99999.tmp"), "orphan of a writer killed mid-write");
@@ -193,8 +215,8 @@ describe("syncBibliography", () => {
     const image = bibText();
 
     const damage: Array<[string, () => void]> = [
-      ["a stale older image", () => writeFileSync(join(refsDir(), "references.bib"), "% Generated from .registry/registry.db — no citable papers registered yet.\n")],
-      ["a hand edit", () => writeFileSync(join(refsDir(), "references.bib"), `${image}@article{handwritten, title={Not in the registry}}\n`)],
+      ["a stale older image", () => humanEdit(join(refsDir(), "references.bib"), "% Generated from .registry/registry.db — no citable papers registered yet.\n")],
+      ["a hand edit", () => humanEdit(join(refsDir(), "references.bib"), `${image}@article{handwritten, title={Not in the registry}}\n`)],
       ["a missing file", () => rmSync(join(refsDir(), "references.bib"))],
       ["a missing refs/ directory", () => rmSync(refsDir(), { recursive: true, force: true })],
     ];

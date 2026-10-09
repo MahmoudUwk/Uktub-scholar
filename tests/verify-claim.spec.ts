@@ -14,6 +14,10 @@ import {
   eosOnnxEngine,
   juliaEngine,
   minConfidenceFromEnv,
+  velaEngine,
+  VELA_INFERENCE_SHA256,
+  VELA_WEIGHTS_SHA256,
+  VELA_REVISION,
 } from "../src/core/verify/claim.ts";
 
 describe("confidence bar from the environment", () => {
@@ -92,6 +96,55 @@ describe("eos-onnx engine adapter (the same worker protocol on ONNX Runtime, no 
   it("with no model directory it fails with a message that names the installer", async () => {
     const engine = eosOnnxEngine({ env: { UKTUB_CACHE_DIR: "/nonexistent-cache" }, spawnImpl: fakeSpawn });
     await assert.rejects(engine.run([{ state: "support", instructions: "c" }]), /eos install/);
+  });
+});
+
+describe("vela engine adapter (resident Vela 2.0 worker)", () => {
+  const FAKE = `
+    process.stdout.write(JSON.stringify({ready:true, model:"fake"}) + "\\n");
+    let buf = ""; process.stdin.on("data", d => { buf += d; let i; while ((i = buf.indexOf("\\n")) !== -1) { const line = buf.slice(0, i); buf = buf.slice(i + 1); if (!line.trim()) continue; const row = JSON.parse(line); if (row.exit) process.exit(0); process.stdout.write(JSON.stringify({p_true: row.state === "support" ? 0.995 : 0.05}) + "\\n"); } });
+  `;
+  const calls: { bin: string; args: string[]; env: Record<string, string | undefined> }[] = [];
+  const children: { kill(): boolean }[] = [];
+  const fakeSpawn = ((bin: string, args: string[], opts: { env?: NodeJS.ProcessEnv }) => {
+    calls.push({ bin, args, env: { ...opts.env } });
+    const child = realSpawn(process.execPath, ["-e", FAKE], opts as never);
+    children.push(child);
+    return child;
+  }) as unknown as typeof realSpawn;
+  after(() => children.forEach((c) => c.kill()));
+
+  it("runs scripts/vela_decide.py with the pinned revision and digests and answers rows through it", async () => {
+    const engine = velaEngine({ env: { UKTUB_VELA_DIR: "/models/vela" }, spawnImpl: fakeSpawn });
+    assert.deepEqual(await engine.run([{ state: "support", instructions: "c" }, { state: "other", instructions: "c" }]), [0.995, 0.05]);
+    const call = calls.at(-1)!;
+    assert.equal(call.bin, "python3");
+    assert.match(call.args[0] ?? "", /scripts[\\/]vela_decide\.py$/);
+    assert.equal(call.env.UKTUB_VELA_DIR, "/models/vela");
+    assert.equal(call.env.UKTUB_VELA_REVISION, VELA_REVISION);
+    assert.equal(call.env.UKTUB_VELA_WEIGHTS_SHA256, VELA_WEIGHTS_SHA256);
+    assert.equal(call.env.UKTUB_VELA_INFERENCE_SHA256, VELA_INFERENCE_SHA256);
+  });
+
+  it("honours UKTUB_VELA_PYTHON and a user override of the pins", async () => {
+    const engine = velaEngine({ env: { UKTUB_VELA_DIR: "/m", UKTUB_VELA_PYTHON: "/opt/venv/bin/python", UKTUB_VELA_REVISION: "abc123", UKTUB_VELA_WEIGHTS_SHA256: "f".repeat(64), UKTUB_VELA_INFERENCE_SHA256: "e".repeat(64) }, spawnImpl: fakeSpawn });
+    await engine.run([{ state: "support", instructions: "c" }]);
+    const call = calls.at(-1)!;
+    assert.equal(call.bin, "/opt/venv/bin/python");
+    assert.deepEqual([call.env.UKTUB_VELA_REVISION, call.env.UKTUB_VELA_WEIGHTS_SHA256, call.env.UKTUB_VELA_INFERENCE_SHA256], ["abc123", "f".repeat(64), "e".repeat(64)]);
+  });
+
+  it("an overridden revision does not inherit the pinned 0.3B digests (another model has other files), but backend and device pass through", async () => {
+    const engine = velaEngine({ env: { UKTUB_VELA_DIR: "/m08", UKTUB_VELA_REVISION: "326b01d81f61", UKTUB_VELA_BACKEND: "torch", UKTUB_VELA_DEVICE: "cuda", UKTUB_VELA_WEIGHTS_FILE: "model-00001-of-00001.safetensors" }, spawnImpl: fakeSpawn });
+    await engine.run([{ state: "support", instructions: "c" }]);
+    const call = calls.at(-1)!;
+    assert.deepEqual([call.env.UKTUB_VELA_REVISION, call.env.UKTUB_VELA_WEIGHTS_SHA256, call.env.UKTUB_VELA_INFERENCE_SHA256], ["326b01d81f61", undefined, undefined]);
+    assert.deepEqual([call.env.UKTUB_VELA_BACKEND, call.env.UKTUB_VELA_DEVICE, call.env.UKTUB_VELA_WEIGHTS_FILE], ["torch", "cuda", "model-00001-of-00001.safetensors"]);
+  });
+
+  it("with no model directory it fails with a message that names the variable", async () => {
+    const engine = velaEngine({ env: {}, spawnImpl: fakeSpawn });
+    await assert.rejects(engine.run([{ state: "support", instructions: "c" }]), /UKTUB_VELA_DIR/);
   });
 });
 

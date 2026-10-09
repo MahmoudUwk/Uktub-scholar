@@ -76,6 +76,7 @@ hash and chunk hash; `--cache FILE` or `--no-cache`).
   gold evidence quotes are never an input. `--rerender FILE [--bar X]`
   recomputes every metric and the report from the stored raw scores without a
   model. `UKTUB_VERIFY_MIN_CONFIDENCE` sets the bar (default 0.99).
+- **The bar is a score threshold, not a precision.** `UKTUB_VERIFY_MIN_CONFIDENCE` (default 0.99) is a cut on the engine's raw output; the engines' scores are not calibrated probabilities. Read precision off the report: Eos supports 38 claims at 0.99 and 37 are true (0.97).
 - **Metrics (fixed 2026-10-04).** AUC is tie-corrected (average ranks) over
   each claim's best checked chunk. Support metrics come from raw scores at any
   bar: false supports, support precision/recall, abstention rate, checked

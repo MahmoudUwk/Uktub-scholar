@@ -35,7 +35,7 @@ async function run() {
     } else {
       assert.ok(asset.name.endsWith(".tar.gz"), `${plat} must be a .tar.gz archive`);
       assert.equal(asset.binary, "llama-server", `${plat} binary must be llama-server`);
-      assert.equal(asset.dir, "llama-b11398", `${plat} dir must be llama-b11398`);
+      assert.equal(asset.dir, `llama-${lock.runtime.version}`, `${plat} dir must be llama-${lock.runtime.version}`);
     }
     console.log(`[PASS] ${plat}: ${asset.name} (${(asset.size / 1024 / 1024).toFixed(1)} MB, ${asset.binary})`);
   }

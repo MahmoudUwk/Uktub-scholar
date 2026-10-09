@@ -6,11 +6,53 @@ current behavior; [BACKLOG](BACKLOG.md) owns deferred work; raw benchmark
 evidence lives in [benchmarks/](benchmarks/). Reopen rejected proposals only
 with new evidence. Benchmark rejection does not remove selectable adapters.
 
-Current engine choice: Decision 2.0 Eos (local, owner decision 2026-10-04), bar
-0.99; OpenRouter Mercury Decide remains the best-measured hosted option; K2 a
-local alternative. Earlier “primary” choices and Stage-D candidate lists below
-are superseded. Recorded live/benchmark runs are historical; the latest
-Mercury CLI attempt was quota-blocked, not a new successful live verification.
+Current engine choice: Decision 2.0 Eos (local, owner decision 2026-10-04), score bar 0.99 (a cut on the engine's raw output, not a calibrated probability).
+Canonical measurement: [claim-verification-v1, 135 claims, Policy A paragraph](benchmarks/decision2-eos+chunks-policyA-paragraph-claim-verification-v1-2026-10-04.md):
+AUC 0.968, 38 supports at 0.99 (37 true, 1 false), precision 0.97, recall 0.50. Other engines stay selectable; OpenRouter Mercury Decide is the best
+measured hosted option and K2 a local alternative; Vela 2.0 (0.3B and 0.8B) was tested and not adopted, and the verifier-model search is closed (2026-10-08).
+Entries marked *superseded* below are history. Recorded live and benchmark runs are historical; the latest Mercury CLI attempt was quota-blocked,
+not a new successful live verification.
+
+## 2026-10-08 (Vela 2.0, 0.3B and 0.8B, tested as a replacement for Eos: not adopted)
+
+Owner instruction: test `vllm-sr/Vela-2.0-0.3B` instead of Eos; if it works, remove Eos and adopt it. It does not work well enough, so Eos stays the default and nothing was removed. Measured on `claim-verification-v1` (135 claims, 14 papers) with exactly the Eos Policy A paragraph settings (43 chunks, 416 judgments, bar 0.99), model revision `d6f03aa9baca`, ONNX fp32 on CPU, [report](benchmarks/vela-0.3B+chunks-policyA-paragraph-claim-verification-v1-2026-10-08.md):
+
+| | Vela 2.0 0.3B | Eos 0.8B ([report](benchmarks/decision2-eos+chunks-policyA-paragraph-claim-verification-v1-2026-10-04.md)) |
+|---|---|---|
+| AUC (tie-corrected) | 0.866 | 0.968 |
+| Supported at 0.99 / true / false | 5 / 5 / 0 | 38 / 37 / 1 |
+| Support recall at 0.99 | 0.07 | 0.50 |
+| AUC on finding / method claims | 0.792 / 0.763 | 0.939 / 0.952 |
+| At one false support: bar and true supports | bar 0.90, 25 true | bar 0.99, 37 true |
+| Wall time | 2092 s CPU | 355 s GPU (not the same hardware) |
+
+Even with the bar moved until both engines make one false support, Vela returns about two thirds of what Eos returns.
+
+**Vela 2.0 0.8B (follow-up the same day, after an external consultant pointed out the 0.3B result does not carry over):** fine-tuned from the Eos 0.8B family, torch only, 16,384-token limit, run on the GPU with the identical settings ([report](benchmarks/vela-0.8B+chunks-policyA-paragraph-claim-verification-v1-2026-10-08.md), revision `326b01d81f61`, 370 s). AUC 0.884 (Eos 0.968); **0 supports at the 0.99 bar** (Eos 38); precision 0.94 at recall 0.59 (bar 0.85), where Eos has recall 0.85 at precision 0.94 (bar 0.95). One thing in its favour: at zero false supports it returns 32 true claims (bar 0.90) against 23 for Eos (bar 0.995), a nine-claim difference on 135 claims, not enough to matter next to the AUC gap. AUC by kind: method 0.963 (Eos 0.952), numeric 0.892, finding 0.853 (Eos 0.939), dataset 0.731 (Eos 0.969). Not adopted; Eos stays. Why it was a long shot: Vela is a routing, safety and hallucination-span encoder fine-tuned from the Kai trunk, and Kai also scored below Eos here (supports nothing at 0.99). It is not much smaller on disk either (fp16 ONNX 623 MB, fp32 1.24 GB; Eos 8-bit ONNX 717 MB). Smoke test on the 0.3B: it separated a wrong number and an off-topic claim from a supported one but did not flag a negated claim. Its tokenizer carries the Gemma Terms of Use (record in `NOTICE.md` if ever adopted). Limits of this evidence: one protocol was tested (the model's trained hallucination question, claim as the answer, P(supported) = 1 minus the highest unsupported-word probability); a yes/no question was not (another 35 minutes on CPU); one benchmark, 135 claims. The adapter (`vela`, `scripts/vela_decide.py`, test-first) stays selectable, as with the other rejected adapters; remove it if you do not want the maintenance.
+
+## 2026-10-07 (Embedding model: EmbeddingGemma 2 Q4_K_XL, llama.cpp b11476)
+
+Owner decision, after measurements: "the fastest model that is CPU friendly on normal modest researcher laptops and easy packaging; just use the Gemma embedding Q4"; no older model families (an earlier suggestion of BGE-small, a 2023 model, was withdrawn). Pinned: `unsloth/embeddinggemma-2-GGUF` at commit `031f0d4b…`, `embeddinggemma-2-UD-Q4_K_XL.gguf` (175,673,856 bytes, sha256 `ea905fd0…9493`, Apache-2.0), with llama.cpp `b11476` (all six platform archives digest-checked and their layout inspected). Why this and not the first-party Q8: Q8_0 embeds 41 % slower than the old model; Q4_K_XL is about as fast (176 against 162 ms per passage here) and half the disk. What it costs, measured on this repository's benchmark and accepted by the owner: hybrid all-papers recall @10 84.7 % to 80.2 % and own-paper 93.7 % to 91.9 %; the file is a third-party conversion (the first-party repository has only Q8_0 and BF16) with parity top-1 agreement 0.75 on 20 sentences. What it gains: Apache-2.0 instead of the Gemma terms (no terms acceptance), half the download. What Qdrant's post does not give us: its footprint figures are 1-bit and Matryoshka vector quantization at 10 million vectors; at our 698 passages vectors are 2 MB and the scan takes 3 ms. Peak memory of the embedding server (about 1.3 GB after embedding) is not set by the micro-batch (`-ub` 1024 gives the same, 512 or less rejects long passages), the prompt cache, the context size, or allocator settings (all tested); it needs a smaller model to change, which was not pursued. Vectors re-embed automatically on first use (the embedder identity changes); the old model's rows stay in `passage_vectors` until pruned.
+
+## 2026-10-07 (Registration starts acquisition; typed source status)
+
+Owner request: when a paper is registered, a hook should try to download it if it is open access, so that by the time the main agent summarizes and writes, sources are ready. Built as: `ToolContext.afterRegister` (called after the commit with the DOIs newly registered or refreshed and not yet ready), wired only in the MCP server, the one long-lived process; the CLI exits after one command and cannot hold a background task, so it keeps the explicit `paper_registry acquire` action. Acquisition moved to `src/core/verify/acquire.ts` with an in-process in-flight map keyed by (project, DOI): a hook, an `acquire` call and a `verify_claim` can overlap without repeating a download. A negative answer is cached for an hour (`no_open_copy`) or a day (`failed`), shorter for the first because it can mean only that a provider was busy. The hook never blocks `register`, never uses the request's cancellation signal, and a throwing hook cannot fail a committed registration. Found live: acquisition for an arXiv DOI depended on OpenAlex knowing the work, and tectonic's file names for `\input` files are relative to the entry folder without extension; both fixed.
+
+## 2026-10-07 (Bibliography is read-only on disk)
+
+Owner request: the agent must not be able to fabricate references in `refs/references.bib`. The file is rendered from the registry through a staged file and an atomic rename, so the render writes the file with mode 0444. No host's edit or write tool can then append or replace content (the write fails with EACCES), and the next registry write still replaces the file because a rename needs the directory, not the file. The human stays trusted and can `chmod` it. This is host-neutral enforcement without a hook (a Claude Code hook, as OpenResearch does for its own files, would have contradicted the stance that enforcement lives above the package). An agent with shell access could still `chmod` or delete the file; the Pi shell confirm dialog covers that on Pi, and `sync_bibliography` restores the file from the registry in any case. Tests that simulate a human editing the file now make it writable first.
+
+## 2026-10-07 (Source acquisition: any lawful open-access copy a provider record names)
+
+Owner decision: "I don't mind getting PDFs from any source" — use the open-access URL fields the providers return. Evidence: in the keyed experiment `iter-12`, three registered papers ended `no_open_copy` although a copy existed (a gold-OA IEEE Open Journal paper whose OpenAlex and Semantic Scholar records give only a `doi.org` landing page; an arXiv paper whose OpenAlex record has no `pdf_url`; a closed IEEE Letters paper with an arXiv preprint named by Semantic Scholar's `externalIds.ArXiv`).
+
+- **What changed.** Acquisition tries, in order: OpenAlex `pdf_url` candidates; the arXiv PDF built from an arXiv identifier that the paper's own DOI (`10.48550/arXiv.<id>`) or an open OpenAlex location carries; `open_access.oa_url`; the Content API (key); and last, only if nothing produced a source, Semantic Scholar's `openAccessPdf.url` and the arXiv preprint of its `externalIds.ArXiv`. Semantic Scholar is asked last so a run that already has its source spends no quota there.
+- **What stays.** HTTPS-only public addresses re-checked per redirect, byte and time bounds, the identity check on the extracted text, credential scoping, no landing-page scraping (a `doi.org` link is never fetched as a PDF; `oa_url` or `openAccessPdf.url` that answers HTML fails the document check), no URL built from a title, no Unpaywall (deprecated into OpenAlex), no paywall circumvention. `citation_pdf_url` scraping of publisher pages was considered and not built: IEEE answers scripted clients with an empty bot-challenge page.
+- **Preprints are disclosed.** An arXiv copy of a work registered under another DOI is stored as `arxiv-preprint-pdf`, and `verify_claim` prints `preprint: <citekeys>` with the warning that the text may differ from the published version. Reading an arXiv preprint for local analysis, with no redistribution, is within arXiv's terms (non-exclusive licence; storing e-prints for personal or research purposes is allowed).
+- **arXiv politeness.** One request at a time, at least 3 seconds apart (its API terms for programmatic access; `robots.txt` asks crawlers for 15 s, and this tool fetches the few papers a user named).
+- **Europe PMC and PubMed Central (added the same day, found live).** The first Europe PMC design fetched the `fullTextUrlList` PDF links; against the real service `https://europepmc.org/articles/PMC…?pdf=render` and `/backend/ptpmcrender.fcgi` both answer scripted clients with a Cloudflare challenge (HTTP 403, `cf-mitigated: challenge`), and getting around a bot challenge is circumvention, not acquisition. The route that works is the PubMed Central open-data bucket (`pmc-oa-opendata.s3.amazonaws.com`, built for programmatic access): Europe PMC gives the PMCID for a DOI, the bucket lists versions, the newest version's JSON must carry the same DOI and a `pdf_url` under the same version folder, and the PDF is fetched over HTTPS (its md5 matched the JSON's). Kind `pmc-pdf`, licence from `license_code`. Asked after the OpenAlex tier and before Semantic Scholar, because an open-access publisher or author-manuscript copy is better than a preprint. The studies had dismissed this route as a duplicate; the live run showed it is the working one.
+- **arXiv cooldown.** An HTTP 429 or 403 from arXiv skips arXiv candidates for 60 s, doubling to 10 min while it keeps refusing (arXiv treats ignored 403s as abuse).
+- **Why not a library.** No maintained JS library resolves a DOI across OpenAlex, Semantic Scholar and arXiv; paperscraper is Python and Zotero's resolver depends on Unpaywall. The resolver is a few dozen lines over fields the providers document.
 
 ## 2026-10-05 (Unified Stdio MCP Server & Multi-Host Architecture)
 
@@ -86,7 +128,7 @@ EmbeddingGemma was asked about.
   - *TEI parsing defects discovered and fixed*: OpenAlex Content API returns GROBID TEI wrapped inside `<html><body><tei...>` with lowercase XML tags and leading direct text under `<div>`. Root detection was made case-insensitive, XML tag search relaxed, and long direct text (> 200 chars) inside `<div>` is now preserved as body text rather than silently discarded, preventing document truncation or spurious `no_text_layer` refusals.
   - *Managed runtime process lifecycle*: In `src/core/embed/runtime.ts`, attached active process listeners for termination signals (`SIGTERM`, `SIGINT`, `SIGHUP`), ensuring the child `llama-server` process is actively killed on parent exit rather than orphaned.
   - *Embedding GGUF parity resolved*: Pinned first-party, ungated `ggml-org/embeddinggemma-300M-GGUF` (Q8_0, 316 tensors, sha256 `b5ce9d77a3fc...`) with 0.9997 mean cosine parity and 0.9999 Pearson correlation against reference `sentence-transformers`.
-  - *Eos Decision 2.0 verified*: Verified 40 TRUE claims (95.0% recall) and 30 FALSE claims (96.7% specificity, 97.4% precision) on CUDA GPU; 100% pointer resolution; exact 25% source-share containment compliance.
+  - *Eos Decision 2.0 verified*: Verified 40 TRUE claims (95.0% recall) and 30 FALSE claims (96.7% specificity, 97.4% precision) on CUDA GPU; 100% pointer resolution; exact 25% source-share containment compliance. (The 95.0 / 96.7 / 97.4% figures are not reproducible: the measuring script divided by hard-coded counts; the re-measurement is 90.5% recall, 95.2% specificity, 95.0% precision, docs/review-2026-10-05.md.)
   - *Test-suite isolation*: Isolated `UKTUB_CACHE_DIR` across test runs, eliminating test pollution from developer cache state.
 - **Earlier independent review (12 verified findings, all fixed with regression tests)** — high: a TEI `<head>`
   with no length cap left the source through the `section` label past output containment (labels are now clipped to
@@ -227,7 +269,7 @@ Plan: [the unified plan](plans/2026-10-04-0746-feat-paper-registry-evidence-plan
 ## 2026-10-03 (OpenRouter hosted decision models)
 
 - **Mercury Decide (inception/mercury-decide:free, System One decisions
-  API) is the new primary verification engine**: chunked AUC 0.998, and at
+  API) is the new primary verification engine** *(superseded: Eos has been the default since 2026-10-04)*: chunked AUC 0.998, and at
   the owner's 0.99 bar it decides 109/135 claims with 108 correct,
   ZERO false positives (99.1% decided accuracy) — fixes the numeric-
   fabrication blind spot all local models share. Free tier, 20 req/min
@@ -270,7 +312,7 @@ Plan: [the unified plan](plans/2026-10-04-0746-feat-paper-registry-evidence-plan
   the Julia-1 rejection is final under both input architectures.
 
 - **Corrected-usage retests + external audit — rejections STAND; Stage-D
-  primary candidate switched to MiniCheck.** External best-practices study
+  primary candidate switched to MiniCheck** *(superseded: MiniCheck was never benchmarked and was dropped as too old on 2026-10-08)*. External best-practices study
   (HF cards, package sources, commit history, independent evals) surfaced
   two usage concerns; both retested: Julia-1 at its EVALUATED operating
   point (max_length=1024, head_length=512, abstract context) collapsed to

@@ -88,6 +88,10 @@ export interface ProviderConfig {
   semanticScholarApiKey?: string;
   /** Optional; an OpenAlex key multiplies the daily content/call budget. */
   openalexApiKey?: string;
+  /** Europe PMC REST base (default https://www.ebi.ac.uk/europepmc/webservices/rest); keyless. */
+  europePmcBaseUrl?: string;
+  /** PubMed Central open-data bucket (default https://pmc-oa-opendata.s3.amazonaws.com); keyless. */
+  pmcOpenDataBaseUrl?: string;
   /** Origin the OpenAlex Content API serves from; the API key is only ever
    *  sent to URLs on exactly this origin (default https://content.openalex.org). */
   openalexContentOrigin?: string;

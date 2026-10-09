@@ -55,6 +55,31 @@ describe("interrupted verification", () => {
     assert.deepEqual(clearedIds("verify_claim", COMPLETE("Another claim")).includes(id as string), false);
   });
 
+  it("a legacy standalone query-limited result never clears the exhaustive interruption of the same claim", () => {
+    const claim = "RF fingerprinting is a downstream task";
+    const id = extractNotices("verify_claim", INTERRUPTED(120, claim), false)[0]?.id as string;
+    assert.deepEqual(clearedIds("verify_claim", QUERY_LIMITED), []);
+    assert.deepEqual(clearedIds("verify_claim", COMPLETE(claim)), [id]);
+  });
+
+  it("explicit run ids keep same-claim interruptions distinct, and a completion clears only its own run", () => {
+    const a = extractNotices("verify_claim", INTERRUPTED(120), false, "call-A")[0]?.id;
+    const b = extractNotices("verify_claim", INTERRUPTED(120), false, "call-B")[0]?.id;
+    assert.notEqual(a, b);
+    assert.deepEqual(clearedIds("verify_claim", COMPLETE(), "call-A"), [a]);
+    assert.deepEqual(clearedIds("verify_claim", QUERY_LIMITED, "call-A").includes(b as string), false);
+  });
+
+  it("a query-limited completion within an explicit continuation chain clears that run", () => {
+    const id = extractNotices("verify_claim", INTERRUPTED(1, "RF fingerprinting is a downstream task"), false, "call-A")[0]?.id;
+    assert.deepEqual(clearedIds("verify_claim", QUERY_LIMITED, "call-A"), [id]);
+  });
+
+  it("only a verification result can clear a notice", () => {
+    assert.deepEqual(clearedIds("paper_registry", COMPLETE()), []);
+    assert.deepEqual(clearedIds("search_papers", COMPLETE(), "call-A"), []);
+  });
+
   it("a query-limited result is not a notice (that is how the search was asked), and neither is a complete one", () => {
     assert.deepEqual(extractNotices("verify_claim", QUERY_LIMITED, false), []);
     assert.deepEqual(extractNotices("verify_claim", COMPLETE(), false), []);
@@ -95,6 +120,35 @@ describe("registry changes are an audit trail", () => {
     const f = footerFor("Done, the paragraph is written.", n) ?? "";
     assert.match(f, /registered chen2024role/);
     assert.match(f, /updated wang2025federated/);
+  });
+
+  it("a per-item refusal is a notice naming its index and code, even though the batch is not an error", () => {
+    const text = 'register: 1 input(s) — 1 refused\n[0] refused INVALID_DOI — not a DOI or arXiv identifier: "not-a-doi". Next: check the identifier';
+    const n = extractNotices("paper_registry", text, false);
+    assert.equal(n.length, 1);
+    assert.equal(n[0]?.key, "INVALID_DOI");
+    assert.match(n[0]?.line ?? "", /\[0\].*INVALID_DOI/);
+    assert.notEqual(footerFor("Done.", n), null);
+    assert.equal(footerFor("The identifier was INVALID_DOI so nothing was registered.", n), null);
+  });
+
+  it("mixed batches keep both the change audit and the refusal; an attachment path refusal is a notice", () => {
+    const mixed = "register: 2 input(s) — 1 registered, 1 refused\n[0] registered chen2024role 10.1109/mwc.005.2300481\n[1] refused INVALID_DOI — not a DOI or arXiv identifier: \"x\". Next: check the identifier";
+    assert.deepEqual(extractNotices("paper_registry", mixed, false).map((n) => n.key), ["chen2024role", "INVALID_DOI"]);
+    const attach = "attach_source: 1 input(s) — 1 refused\n[0] refused PATH_REFUSED — the file is outside the project. Next: copy it inside";
+    assert.deepEqual(extractNotices("paper_registry", attach, false).map((n) => n.key), ["PATH_REFUSED"]);
+  });
+
+  it("a registry warning line is a bounded notice keyed by its code", () => {
+    const text = "register: 1 input(s) — 1 registered\n[0] registered chen2024role 10.1109/mwc.005.2300481\nwarning BIBTEX_UNAVAILABLE: no provider BibTeX was available. Next: add the entry by hand";
+    const n = extractNotices("paper_registry", text, false);
+    assert.deepEqual(n.map((x) => x.key), ["chen2024role", "BIBTEX_UNAVAILABLE"]);
+    assert.ok((n[1]?.line.length ?? 0) < 400);
+    assert.match(footerFor("Done.", n) ?? "", /BIBTEX_UNAVAILABLE/);
+  });
+
+  it("other tools never produce registry item notices", () => {
+    assert.deepEqual(extractNotices("search_papers", "[0] refused INVALID_DOI — x. Next: y", false), []);
   });
 
   it("other tools never produce registry-change notices", () => {
@@ -221,6 +275,110 @@ describe("the Pi extension appends unmentioned notices to the final answer only"
     const texts = out.message.content.map((c) => c.text ?? "").join("\n");
     assert.match(texts, /458 of 698/, "the latest page's counts, once");
     assert.doesNotMatch(texts, /578 of 698/);
+  });
+
+  describe("registry notices from separate calls keep their own identity", () => {
+    const R = "mcp__uktub_scholar__paper_registry";
+    const refused = (what: string) => `register: 1 input(s) — 1 refused\n[0] refused INVALID_DOI — not a DOI or arXiv identifier: "${what}". Next: check the identifier`;
+    const footerOf = (h: Record<string, H>) => {
+      const out = h.message_end?.({ message: assistant("Done.") } as never) as { message: { content: { text?: string }[] } } | undefined;
+      return out === undefined ? "" : out.message.content.map((c) => c.text ?? "").join("\n");
+    };
+
+    it("two refused index-0 items for different inputs both reach the footer; an identical repeat does not duplicate", () => {
+      const h = wire();
+      h.agent_start?.({ type: "agent_start" } as never);
+      h.tool_result?.(toolResult(R, refused("bad-one")) as never);
+      h.tool_result?.(toolResult(R, refused("bad-two")) as never);
+      h.tool_result?.(toolResult(R, refused("bad-two")) as never);
+      const f = footerOf(h);
+      assert.match(f, /bad-one/);
+      assert.equal(f.match(/bad-two/g)?.length, 1);
+    });
+
+    it("warnings with one code and a shared 60-character prefix for different papers both survive", () => {
+      const prefix = "no provider BibTeX was available, so the entry was built from ";
+      const warn = (handle: string) => `register: 1 input(s) — 1 registered\nwarning BIBTEX_UNAVAILABLE: ${prefix}${handle}. Next: add the entry by hand`;
+      const h = wire();
+      h.agent_start?.({ type: "agent_start" } as never);
+      h.tool_result?.(toolResult(R, warn("10.1001/aaa")) as never);
+      h.tool_result?.(toolResult(R, warn("10.1001/bbb")) as never);
+      const f = footerOf(h);
+      assert.match(f, /10\.1001\/aaa/);
+      assert.match(f, /10\.1001\/bbb/);
+    });
+  });
+
+  describe("verification runs are told apart by their originating call", () => {
+    const V = "mcp__uktub_scholar__verify_claim";
+    const withToken = (text: string, tok: string) => text.replace(/^continuation: "[^"]*"/m, `continuation: "${tok}"`);
+    const call = (id: string, text: string, input: Record<string, unknown> = {}) => ({ ...toolResult(V, text), toolCallId: id, input });
+    const footer = (h: Record<string, H>) => {
+      const out = h.message_end?.({ message: assistant("An exhaustive check found no support.") } as never) as { message: { content: { text?: string }[] } } | undefined;
+      return out === undefined ? "" : out.message.content.map((c) => c.text ?? "").join("\n");
+    };
+    const QUERY_LIMITED_INTERRUPTED = INTERRUPTED(1, "RF fingerprinting is a downstream task").replace("exhaustive — every usable passage (698) of 14 paper(s) selected for checking", "query-limited — only passages matching the locator were checked (3 of 30)");
+
+    it("a separate narrow complete call for the same claim leaves the earlier interruption standing", () => {
+      const h = wire();
+      h.agent_start?.({ type: "agent_start" } as never);
+      h.tool_result?.(call("A", withToken(INTERRUPTED(120), "tokA")) as never);
+      h.tool_result?.(call("B", COMPLETE()) as never);
+      assert.match(footer(h), /578 of 698/);
+    });
+
+    it("a continuation call carrying the issued token and completing leaves no footer", () => {
+      const h = wire();
+      h.agent_start?.({ type: "agent_start" } as never);
+      h.tool_result?.(call("A", withToken(INTERRUPTED(120), "tokA")) as never);
+      h.tool_result?.(call("C", COMPLETE(), { continuation: "tokA" }) as never);
+      assert.equal(footer(h), "");
+    });
+
+    it("a continuation that is interrupted again hands its new token on to the same run", () => {
+      const h = wire();
+      h.agent_start?.({ type: "agent_start" } as never);
+      h.tool_result?.(call("A", withToken(INTERRUPTED(120), "tokA")) as never);
+      h.tool_result?.(call("C", withToken(INTERRUPTED(240), "tokC"), { continuation: "tokA" }) as never);
+      h.tool_result?.(call("D", COMPLETE(), { continuation: "tokC" }) as never);
+      assert.equal(footer(h), "");
+    });
+
+    it("two independent interrupted runs for the same claim do not overwrite each other", () => {
+      const h = wire();
+      h.agent_start?.({ type: "agent_start" } as never);
+      h.tool_result?.(call("A", withToken(INTERRUPTED(120), "tokA")) as never);
+      h.tool_result?.(call("B", withToken(INTERRUPTED(240), "tokB")) as never);
+      const f = footer(h);
+      assert.match(f, /578 of 698/);
+      assert.match(f, /458 of 698/);
+    });
+
+    it("an unknown continuation token never clears an earlier run", () => {
+      const h = wire();
+      h.agent_start?.({ type: "agent_start" } as never);
+      h.tool_result?.(call("A", withToken(INTERRUPTED(120), "tokA")) as never);
+      h.tool_result?.(call("C", COMPLETE(), { continuation: "mystery" }) as never);
+      assert.match(footer(h), /578 of 698/);
+    });
+
+    it("a query-limited continuation completion clears its own notice", () => {
+      const h = wire();
+      h.agent_start?.({ type: "agent_start" } as never);
+      h.tool_result?.(call("A", withToken(QUERY_LIMITED_INTERRUPTED, "tokA")) as never);
+      h.tool_result?.(call("C", QUERY_LIMITED, { continuation: "tokA" }) as never);
+      assert.equal(footer(h), "");
+    });
+
+    it("tokens do not survive into the next agent run", () => {
+      const h = wire();
+      h.agent_start?.({ type: "agent_start" } as never);
+      h.tool_result?.(call("A", withToken(INTERRUPTED(120), "tokA")) as never);
+      h.agent_start?.({ type: "agent_start" } as never);
+      h.tool_result?.(call("A2", INTERRUPTED(120)) as never);
+      h.tool_result?.(call("C", COMPLETE(), { continuation: "tokA" }) as never);
+      assert.match(footer(h), /578 of 698/);
+    });
   });
 
   it("notices do not leak into the next run, and other tools' results are ignored", () => {

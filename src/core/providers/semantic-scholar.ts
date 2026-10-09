@@ -90,7 +90,7 @@ const semanticScholarSpacers = new Map<
   { sleep: (ms: number) => Promise<void>; spacer: StartSpacer }
 >();
 
-function semanticScholarSpacer(cfg: ProviderConfig): StartSpacer {
+export function semanticScholarSpacer(cfg: ProviderConfig): StartSpacer {
   const sleep = cfg.sleep ?? defaultSleep;
   const existing = semanticScholarSpacers.get(cfg.semanticScholarBaseUrl);
   if (existing !== undefined && existing.sleep === sleep) return existing.spacer;

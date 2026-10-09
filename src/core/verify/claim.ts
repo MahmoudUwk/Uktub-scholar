@@ -9,7 +9,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { readEosOnnxLock, withManagedEosOnnx } from "./eos-onnx.ts";
 
-/** Owner bar for scientific writing: support needs ≥99% engine confidence. */
+/** Owner bar for scientific writing: support needs an engine score of at least 0.99. A raw score, not a calibrated probability: Eos's measured support precision at this bar is 0.97 (docs/benchmarks/). */
 export const DEFAULT_MIN_CONFIDENCE = 0.99;
 /** Env override for the bar (labelled client policy, not a provider limit). */
 export const MIN_CONFIDENCE_ENV = "UKTUB_VERIFY_MIN_CONFIDENCE";
@@ -115,6 +115,52 @@ export function eosOnnxEngine(opts: {
     script: "decision2_onnx.py",
     envName: "UKTUB_EOS_ONNX_PYTHON",
     label: "eos-onnx",
+  });
+}
+
+/** Pinned Vela 2.0 0.3B checkpoint (HF commit and file digests recorded 2026-10-08; apache-2.0, ONNX fp32 export in the repo). */
+export const VELA_MODEL = "vllm-sr/Vela-2.0-0.3B";
+export const VELA_REVISION = "d6f03aa9baca4f9017fa8f8e9c2764d3bed3f409";
+export const VELA_WEIGHTS_SHA256 = "5096731c509b3462ade7d4e304a457de4722d12c2d833ca4d4ea52f6c11ec66a";
+export const VELA_INFERENCE_SHA256 = "d3e140c7bc9d291e0862b85894f03ecb1d4c95f0c58bbf705da775b1f63cbf22";
+
+/**
+ * Vela 2.0 engine (engine `vela`): `scripts/vela_decide.py` runs the pinned 0.3B ONNX export with onnxruntime, numpy and tokenizers
+ * only, or any Vela 2.0 size on PyTorch (`UKTUB_VELA_BACKEND=torch`, `UKTUB_VELA_DEVICE=cuda`; the 0.8B has no ONNX export). A claim
+ * is posed as Vela's trained hallucination question over the passage; P(supported) = 1 - the highest probability that a word of the
+ * claim is unsupported. The snapshot directory (`UKTUB_VELA_DIR`: vela2_inference.py, config.json, calibration.json, tokenizer.json,
+ * weights) is the user's. With no `UKTUB_VELA_REVISION` the worker refuses weights or inference code that differ from the pinned
+ * 0.3B sha256 values; a given revision means another snapshot, so it brings its own `UKTUB_VELA_WEIGHTS_SHA256` /
+ * `_INFERENCE_SHA256` (and `UKTUB_VELA_WEIGHTS_FILE`). Interpreter: `UKTUB_VELA_PYTHON` (default `python3`).
+ */
+export function velaEngine(opts: {
+  env: Record<string, string | undefined>;
+  pythonBin?: string;
+  spawnImpl?: typeof spawn;
+}): ClaimEngine {
+  const dir = opts.env.UKTUB_VELA_DIR;
+  if (dir === undefined || dir === "") {
+    return {
+      run: async () => {
+        throw new EngineError("vela engine: no model directory; set UKTUB_VELA_DIR to a snapshot of vllm-sr/Vela-2.0-0.3B (vela2_inference.py, config.json, calibration.json, tokenizer.json, onnx/model.onnx)");
+      },
+    } as ClaimEngine;
+  }
+  return workerEngine({
+    ...opts,
+    env: {
+      ...opts.env,
+      UKTUB_VELA_REVISION: opts.env.UKTUB_VELA_REVISION ?? VELA_REVISION,
+      ...(opts.env.UKTUB_VELA_REVISION === undefined
+        ? {
+            UKTUB_VELA_WEIGHTS_SHA256: opts.env.UKTUB_VELA_WEIGHTS_SHA256 ?? VELA_WEIGHTS_SHA256,
+            UKTUB_VELA_INFERENCE_SHA256: opts.env.UKTUB_VELA_INFERENCE_SHA256 ?? VELA_INFERENCE_SHA256,
+          }
+        : {}),
+    },
+    script: "vela_decide.py",
+    envName: "UKTUB_VELA_PYTHON",
+    label: "vela",
   });
 }
 

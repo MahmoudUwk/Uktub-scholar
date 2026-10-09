@@ -61,6 +61,10 @@ export type CompileOutcome =
 const BIBTEX_HINT = "Tectonic runs BibTeX, not biber, so biblatex with \\addbibresource cannot read the bibliography through `../`. From manuscript/ use `\\bibliographystyle{plain}` and `\\bibliography{../refs/references}` (no biblatex), cite with \\cite{citekey}, and do not copy or edit refs/references.bib.";
 const HINTS: { test: RegExp }[] = [{ test: /relative parent paths are not supported for the external tool/i }, { test: /biber\b.*(not found|no such file)|(not found|no such file).*biber\b/i }];
 
+/** The two warnings Tectonic 0.15.0 prints on every bibliography build (README: spurious; 0.17.0 does not print them). */
+const TECTONIC_015_BBL_WARNINGS = [/internal consistency problem when checking if main\.bbl changed/i, /TeX rerun seems needed, but stopping at \d+ passes/i];
+const KNOWN_BBL_NOTE = "note: the main.bbl / TeX rerun warnings above are Tectonic 0.15.0 behavior on every bibliography build (0.17.0 does not print them); they are not caused by the document, so editing it or changing the bibliography style will not clear them.";
+
 export function describeOutcome(outcome: Exclude<CompileOutcome, { kind: "refusal" }>): string {
   const d = outcome.diagnostics;
   const errors = d.filter((x) => x.severity === "error");
@@ -75,7 +79,8 @@ export function describeOutcome(outcome: Exclude<CompileOutcome, { kind: "refusa
   });
   if (outcome.truncated) lines.push(`- (diagnostics truncated at the ${d.length} shown)`);
   const hint = d.some((x) => x.severity === "error" && HINTS.some((h) => h.test.test(x.message))) ? [`hint: ${BIBTEX_HINT}`] : [];
-  return [head, ...lines, ...hint].join("\n");
+  const known = outcome.kind === "compiled" && outcome.engineVersion.startsWith("0.15") && warnings.some((x) => TECTONIC_015_BBL_WARNINGS.some((re) => re.test(x.message))) ? [KNOWN_BBL_NOTE] : [];
+  return [head, ...lines, ...hint, ...known].join("\n");
 }
 
 /** Resolve the entry .tex: explicit param (confined) or the documented defaults. */
@@ -124,6 +129,15 @@ export function resolveEntry(root: string, entryParam?: string): { ok: true; abs
     ok: false,
     message: `multiple .tex entries (${unique.slice(0, 5).join(", ")}${unique.length > 5 ? ", …" : ""}) — pass entry naming the main file`,
   };
+}
+
+/** A diagnostic's file as a project-relative path with its extension, when it resolves to a file inside the project; otherwise as printed. */
+export function projectPathOf(root: string, entryDir: string, printed: string): string {
+  for (const name of [printed, `${printed}.tex`]) {
+    const abs = resolve(entryDir, name);
+    if (abs.startsWith(root + sep) && existsSync(abs) && statSync(abs).isFile()) return relative(root, abs);
+  }
+  return printed;
 }
 
 /** Timeout budget: env override (seconds) wins, else the client-policy default. */
@@ -194,8 +208,15 @@ export async function compileDocument(input: CompileInput, entryParam?: string):
   }
 
   const parsed = parseTectonicStreams(run.stdout, run.stderr);
+  // The engine names files as written in the source (`sections/intro`, relative to the entry's folder, no extension): give the agent a
+  // path it can open, relative to the project root, whenever that file exists.
+  for (const d of parsed.diagnostics) if (d.file !== undefined) d.file = projectPathOf(input.root, dirname(entry.abs), d.file);
   const hasErrors = parsed.diagnostics.some((x) => x.severity === "error") || run.code !== 0;
   if (hasErrors) {
+    // A failure must say why: a non-zero exit with no parsed error line gets one synthetic error instead of a bare "0 error(s)".
+    if (!parsed.diagnostics.some((x) => x.severity === "error")) {
+      parsed.diagnostics.push({ severity: "error", message: `tectonic exited with code ${run.code} without printing an error line (see the warnings above, if any)` });
+    }
     return { kind: "errors", engineVersion: engine.engine.version, entry: entry.rel, ...parsed };
   }
   const pdfAbs = parsed.wrotePdf ? resolve(dirname(entry.abs), parsed.wrotePdf) : null;

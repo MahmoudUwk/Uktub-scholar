@@ -5,6 +5,7 @@ date: 2026-10-04
 artifact_contract: ce-unified-plan/v1
 product_contract_source: ce-plan-bootstrap
 execution: code
+status: implemented 2026-10-04 (see CHANGELOG 0.2.0 and docs/DECISIONS.md)
 ---
 
 # Paper Registry and Supporting Evidence - Plan

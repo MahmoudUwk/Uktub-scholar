@@ -54,6 +54,30 @@ describe("resolveEngineIdentity", () => {
     }
   });
 
+  it("vela: under the pinned digests the pin is the identity wherever the snapshot lives; an override fingerprints the directory", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "uktub-vela-"));
+    try {
+      const weights = join(dir, "model.onnx");
+      writeFileSync(weights, "v1");
+      utimesSync(weights, 1_700_000_000, 1_700_000_000);
+      const pinned = await resolveEngineIdentity({ UKTUB_VELA_DIR: dir }, "vela");
+      assert.deepEqual(pinned, { model: "vela:vllm-sr/Vela-2.0-0.3B@d6f03aa9baca", protocol: "vela2-halu-v1" });
+      assert.deepEqual(await resolveEngineIdentity({}, "vela"), pinned, "the directory is not part of a pinned identity");
+      const digest = { UKTUB_VELA_DIR: dir, UKTUB_VELA_WEIGHTS_SHA256: "a".repeat(64) };
+      const a = await resolveEngineIdentity(digest, "vela");
+      assert.match(a!.model, /^vela:.+@d6f03aa9baca$/);
+      assert.notEqual(a!.model, pinned.model, "a digest override is not the pinned model");
+      writeFileSync(weights, "version-two");
+      utimesSync(weights, 1_800_000_000, 1_800_000_000);
+      const b = await resolveEngineIdentity(digest, "vela");
+      assert.notEqual(a!.model, b!.model, "replacing weights in an overridden directory changes the identity");
+      const c = await resolveEngineIdentity({ UKTUB_VELA_DIR: dir, UKTUB_VELA_REVISION: "f".repeat(40) }, "vela");
+      assert.match(c!.model, /@ffffffffffff$/, "a different revision is a different model");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it("eos: the pinned checkpoint revision is the identity; a different revision or replaced local weights is a different model", async () => {
     const a = await resolveEngineIdentity({}, "eos");
     assert.deepEqual(a, { model: "eos:vllm-sr/Decision-2.0-Eos-0.8B@3594047d69f4", protocol: "decision2-noul-v1" });

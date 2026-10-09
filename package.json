@@ -41,10 +41,15 @@
     "prepare": "npm run build",
     "typecheck": "tsc --noEmit",
     "pretest": "npm run build",
-    "test": "node --test \"tests/*.spec.ts\""
+    "test": "node --test \"tests/*.spec.ts\"",
+    "live:probe": "node scripts/live/boundary-probe.ts experiments/runs/acceptance/probe-$(date +%Y%m%dT%H%M%S)",
+    "live:direct": "node scripts/live/run.ts --suite direct",
+    "live:agent": "node scripts/live/run.ts --suite agent",
+    "experiment": "node scripts/live/experiment.ts",
+    "evolve": "node scripts/live/evolve.ts"
   },
   "devDependencies": {
-    "@earendil-works/pi-coding-agent": "^1.0.0",
+    "@earendil-works/pi-coding-agent": "^1.1.0",
     "@types/node": "^22.20.5",
     "typebox": "^1.3.34",
     "typescript": "^5.9.3"

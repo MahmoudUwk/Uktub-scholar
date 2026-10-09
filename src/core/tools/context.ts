@@ -30,6 +30,9 @@ export interface ToolContext {
   /** Document acquisition transport (SSRF-safe in production). Absent: no
    *  network acquisition is attempted and papers report no usable source. */
   download?: DownloadLike;
+  /** Called after a registration commits with the DOIs that were newly registered or refreshed. A long-lived host (the MCP server) uses it to
+   *  start source acquisition in the background; a throwing hook never fails the registration. Absent in the CLI, whose process exits. */
+  afterRegister?: (dois: string[]) => void;
   /** Cancellation from the host; checked between units of work. */
   signal?: AbortSignal;
 }

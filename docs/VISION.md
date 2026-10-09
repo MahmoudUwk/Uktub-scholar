@@ -47,7 +47,7 @@ dedicated thin workbench above this package — never an adopted office suite.
 
 Drafting/writing tools, manuscript-wide review, and OCR. The package returns supporting
 evidence for ONE claim at a time (never a verdict that a claim is false) and keeps full
-paper text internal. Source acquisition is OpenAlex-only and lawful; scanned documents are
+paper text internal. Source acquisition uses lawful open-access copies named by provider records (OpenAlex, arXiv, Semantic Scholar) with every transport guard; scanned documents are
 refused. `compile_document` covers build-and-diagnostics only; thesis-scale orchestration
 stays with the user.
 Accounts and a UI are out. Model Context Protocol (MCP) provides universal multi-host integration across Claude Code, Pi, Cursor, Codex, OpenCode, and Antigravity.

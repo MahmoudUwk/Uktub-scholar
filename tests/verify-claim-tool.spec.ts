@@ -176,6 +176,31 @@ describe("source preparation inside verification (R7, AE3)", () => {
     assert.ok(chunksOf(db, "10.1234/cells").length > 0);
   });
 
+  it("a source taken from an arXiv preprint of the work is disclosed as a preprint; an ordinary source is not", async () => {
+    addPaper("10.1234/cells", TITLE, null);
+    const lines = [TITLE, ...paperText("Z", 48, 23).paragraphs.flatMap((p) => p.match(/.{1,90}(\s|$)/g) ?? [])];
+    const pdf = makePdf(Array.from({ length: Math.ceil(lines.length / 45) }, (_, i) => lines.slice(i * 45, i * 45 + 45)));
+    const { fetchFn } = createFakeFetch([
+      { match: (u) => u.startsWith("https://api.openalex.test/works/"), body: JSON.stringify({ doi: "https://doi.org/10.1234/cells", locations: [], open_access: { is_oa: false } }) },
+      { match: (u) => u.startsWith("https://api.semanticscholar.test/graph/v1/paper/DOI:"), body: JSON.stringify({ externalIds: { DOI: "10.1234/cells", ArXiv: "2511.04015" }, openAccessPdf: { url: "" } }) },
+    ]);
+    const download: DownloadLike = async (url) => {
+      assert.equal(url, "https://arxiv.org/pdf/2511.04015");
+      return { finalUrl: url, contentType: null, bytes: pdf };
+    };
+    const providerConfig = { openalexBaseUrl: "https://api.openalex.test", semanticScholarBaseUrl: "https://api.semanticscholar.test", sleep: async () => {} };
+    const r = await run({ papers: "all" }, engine().hooks, ctx({ fetch: fetchFn, download, providerConfig }));
+    assert.equal(S(r).result.supportFound, true, text(r));
+    assert.equal(getSource(db, "10.1234/cells")!.kind, "arxiv-preprint-pdf");
+    const [{ citekey }] = S(r).coverage.candidates.perPaper;
+    assert.deepEqual(S(r).coverage.sources.preprint, [citekey]);
+    assert.match(text(r), new RegExp(`preprint: ${citekey}[^\\n]*may differ from the published version`));
+    addPaper("10.1111/aaa", "Alpha", paperText("A", 30, 5).text);
+    const plain = await run({ papers: ["10.1111/aaa"] }, engine().hooks);
+    assert.deepEqual(S(plain).coverage.sources.preprint, []);
+    assert.doesNotMatch(text(plain), /preprint/i);
+  });
+
   it("a paper whose source cannot be acquired is reported with its reason; others still contribute", async () => {
     addPaper("10.1111/aaa", "Alpha", paperText("A", 30, 5).text);
     addPaper("10.2222/bbb", "Beta Unreachable", null);
@@ -723,9 +748,11 @@ describe("review regressions: acquisition throttle and bounds", () => {
   it("source preparation is bounded per call; never-attempted papers go first; the rest is reported as deferred", async () => {
     for (let i = 0; i < 25; i++) addPaper(`10.8${String(i).padStart(3, "0")}/p${i}`, `Paper Number ${i}`, null);
     const looked: string[] = [];
-    const c = ctx({ fetch: (async (u: string) => { looked.push(u); return new Response("{}", { status: 404 }); }) as unknown as ToolContext["fetch"], download: async () => { throw new Error("unused"); } });
+    // The bound is on papers attempted per call: each costs one OpenAlex lookup, plus, when OpenAlex gives no source, one Europe PMC and one Semantic Scholar lookup (at most three per paper).
+    const c = ctx({ fetch: (async (u: string) => { looked.push(u); return new Response("{}", { status: 404 }); }) as unknown as ToolContext["fetch"], download: async () => { throw new Error("unused"); }, providerConfig: { sleep: async () => {} } });
     const r = await run({ papers: "all" }, NO_ENGINE, c);
-    assert.ok(looked.length <= 20, `${looked.length} lookups`);
+    assert.ok(looked.filter((u) => u.includes("openalex")).length <= 20, `${looked.length} lookups`);
+    assert.ok(looked.length <= 60, `${looked.length} lookups`);
     assert.ok(S(r).result.limitations.includes("sources_deferred"));
     const deferred = S(r).coverage.sources.unavailable.filter((u: { code: string }) => u.code === "deferred");
     assert.equal(deferred.length, 5);

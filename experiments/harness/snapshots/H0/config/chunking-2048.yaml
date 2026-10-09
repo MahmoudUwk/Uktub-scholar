@@ -1,0 +1,12 @@
+# 2048-token chunk arm: bev-decider's documented state limit is 2,048 tokens
+# (trained ≤1,024; benchmarks at 2,048). Same calibration as the 8k config.
+chunking:
+  chunk_tokens: 2048
+  overlap_tokens: 128
+  chars_per_token: 2.8
+  boundary: paragraph
+verification:
+  engine: bev
+  min_confidence: 0.99
+  workers: 4
+  max_judgments: 120

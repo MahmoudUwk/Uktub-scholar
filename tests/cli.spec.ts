@@ -13,6 +13,7 @@ import { DatabaseSync } from "node:sqlite";
 
 import { runCli } from "../src/cli/main.ts";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { chunksOf, getSource } from "../src/core/verify/store.ts";
 import { makePdf } from "./helpers/pdf.ts";
 import { bib, crossrefFake } from "./helpers/registry-fakes.ts";
@@ -658,6 +659,23 @@ describe("mcp command", () => {
     const c = io({ mcpTransport: serverTransport });
     assert.equal(await runCli(["mcp"], c), 0);
     await clientTransport.close();
+  });
+
+  it("mcp reports the host's handshake on stderr only when UKTUB_MCP_TRACE is set", async () => {
+    const handshakes = async (env: Record<string, string>): Promise<string[]> => {
+      const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+      const c = io({ mcpTransport: serverTransport, env });
+      assert.equal(await runCli(["mcp"], c), 0);
+      const client = new Client({ name: "cli-trace-host", version: "2.0.0" }, { capabilities: {} });
+      await client.connect(clientTransport);
+      await client.listTools();
+      await client.close();
+      return c.lines.err.filter((l) => l.startsWith("uktub-scholar: handshake"));
+    };
+    const traced = await handshakes({ UKTUB_MCP_TRACE: "1" });
+    assert.equal(traced.length, 1);
+    assert.match(traced[0] as string, /client=cli-trace-host 2\.0\.0 requested=\S+ negotiated=\S+/);
+    assert.deepEqual(await handshakes({}), []);
   });
 });
 
