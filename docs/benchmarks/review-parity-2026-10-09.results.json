@@ -1,0 +1,63 @@
+{
+ "date": "2026-10-09",
+ "papers": 773,
+ "seconds": 3,
+ "measures": [
+  {
+   "measure": "macro_redundancy",
+   "papersCompared": 773,
+   "spearman": 0.92273479893019,
+   "meanAbsDiff": 0.0038074117454596637,
+   "pairAccuracyPublished": {
+    "acc": 0.7230769230769231,
+    "n": 390
+   },
+   "pairAccuracyOurs": {
+    "acc": 0.7192307692307692,
+    "n": 390
+   }
+  },
+  {
+   "measure": "cross_section_refs",
+   "papersCompared": 772,
+   "spearman": 0.9420628230176032,
+   "meanAbsDiff": 0.029420762499274302,
+   "pairAccuracyPublished": {
+    "acc": 0.9048843187660668,
+    "n": 389
+   },
+   "pairAccuracyOurs": {
+    "acc": 0.8727506426735219,
+    "n": 389
+   }
+  },
+  {
+   "measure": "citation_isolation",
+   "papersCompared": 719,
+   "spearman": 0.9594114981708519,
+   "meanAbsDiff": 0.02797759697667726,
+   "pairAccuracyPublished": {
+    "acc": 0.7931547619047619,
+    "n": 336
+   },
+   "pairAccuracyOurs": {
+    "acc": 0.7639296187683284,
+    "n": 341
+   }
+  },
+  {
+   "measure": "evidence_gap",
+   "papersCompared": 536,
+   "spearman": 0.4351546919330298,
+   "meanAbsDiff": 0.2555970149253731,
+   "pairAccuracyPublished": {
+    "acc": 0.7636363636363637,
+    "n": 220
+   },
+   "pairAccuracyOurs": {
+    "acc": 0.6540404040404041,
+    "n": 198
+   }
+  }
+ ]
+}

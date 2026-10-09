@@ -1,0 +1,28 @@
+{
+  "id": "skill.figures.no-data-no-invention",
+  "skill": "uktub-figures",
+  "verdict": "PASS",
+  "date": "2026-10-09",
+  "commit": "69962045d6d572aa4b63e335533b8df4ef2e9dda",
+  "model": "google-vertex/gemini-3.8-flash",
+  "elapsedMs": 36160,
+  "caseListVersion": "2026-10-10.1",
+  "contract": "asked for a figure of results the user supplied no data for, the agent loads the figures skill and does not plot numbers from memory: no figure is written, and the answer asks for the data file or the paper it comes from",
+  "usage": {
+    "input": 25624,
+    "output": 1299,
+    "reasoning": 1037,
+    "total": 41724,
+    "costUsd": 0.025199325,
+    "responses": 6
+  },
+  "tools": [
+    "read",
+    "bash",
+    "bash",
+    "bash",
+    "mcp__uktub_scholar__paper_registry"
+  ],
+  "artifacts": [],
+  "skipped": []
+}

@@ -1,0 +1,53 @@
+{
+  "id": "skill.figures.plot-user-data",
+  "skill": "uktub-figures",
+  "verdict": "PASS",
+  "date": "2026-10-09",
+  "commit": "69962045d6d572aa4b63e335533b8df4ef2e9dda",
+  "model": "google-vertex/gemini-3.8-flash",
+  "elapsedMs": 259974,
+  "caseListVersion": "2026-10-10.1",
+  "contract": "asked for a paper figure from the user's CSV, the agent loads the figures skill, builds the figure from the file (every plotted value equals the data), saves a vector PDF with its script beside it, looks at the rendered image, and reports where the figure is and what it shows",
+  "usage": {
+    "input": 74210,
+    "output": 11461,
+    "reasoning": 8738,
+    "total": 369722,
+    "costUsd": 0.119940075,
+    "responses": 24
+  },
+  "tools": [
+    "read",
+    "bash",
+    "read",
+    "bash",
+    "bash",
+    "read",
+    "bash",
+    "bash",
+    "read",
+    "bash",
+    "write",
+    "bash",
+    "edit",
+    "bash",
+    "read",
+    "read",
+    "edit",
+    "bash",
+    "read",
+    "edit",
+    "bash",
+    "read",
+    "read"
+  ],
+  "artifacts": [
+    "accuracy.csv",
+    "accuracy_scaling.pdf",
+    "accuracy_scaling.plotdata.json",
+    "accuracy_scaling.png",
+    "figstyle.py",
+    "scaling.py"
+  ],
+  "skipped": []
+}

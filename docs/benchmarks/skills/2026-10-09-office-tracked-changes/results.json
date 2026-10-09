@@ -1,0 +1,32 @@
+{
+  "id": "skill.office.tracked-changes",
+  "skill": "uktub-office",
+  "verdict": "PASS",
+  "date": "2026-10-09",
+  "commit": "69962045d6d572aa4b63e335533b8df4ef2e9dda",
+  "model": "google-vertex/gemini-3.8-flash",
+  "elapsedMs": 39113,
+  "caseListVersion": "2026-10-10.1",
+  "contract": "given a .docx a co-author returned with tracked changes and a comment, the agent loads the office skill, lists every change and the comment exactly (author, text), flags that the changed number disagrees with the paper, reports nothing that is not there, and leaves the user's files untouched",
+  "usage": {
+    "input": 34474,
+    "output": 3529,
+    "reasoning": 2281,
+    "total": 60241,
+    "costUsd": 0.0407571,
+    "responses": 8
+  },
+  "tools": [
+    "read",
+    "bash",
+    "bash",
+    "read",
+    "read",
+    "bash",
+    "bash"
+  ],
+  "artifacts": [
+    "coauthor.docx"
+  ],
+  "skipped": []
+}

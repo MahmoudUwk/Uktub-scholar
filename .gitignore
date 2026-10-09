@@ -33,3 +33,6 @@ coverage/
 # local material that never leaves the machine: the owner's benchmark PDFs (licensed) and the interactive sandbox state (`pnpm sandbox`)
 test_papers/
 .sandbox/
+
+# Evidence from live runs on the owner's own paper quotes it: kept local, only a content-free summary is committed
+docs/benchmarks/skills/private/
