@@ -28,7 +28,17 @@ work is in [docs/BACKLOG.md](docs/BACKLOG.md).
   `uktub-scholar tectonic status | install --yes` (pinned 0.17.0). Experimental `vela` engine (Vela 2.0 0.3B and 0.8B),
   benchmarked and not adopted.
 
+- **Product skills** ([README](README.md#skills-for-the-agent)): `uktub-figures` (page-width vector plots from the user's data with a style helper, an audit and a record of the plotted
+  numbers), `uktub-diagrams` (TikZ system diagrams), `uktub-review`, `uktub-slides` (Beamer from a paper, or an editable PowerPoint `.pptx` through pandoc, read back with a stdlib script), `uktub-office` (LaTeX to `.docx`; a reader for a co-author's
+  tracked changes and comments) and `uktub-grants` (Specific Aims). Each was adopted test first against a real model (`pnpm live:skills`); the evidence is in
+  [docs/benchmarks/skills](docs/benchmarks/skills/README.md). The `.pptx` route is built but its live case still fails one check ([handoff](docs/handoff.md)).
+- **`uktub-scholar review [entry.tex]`**: the four deterministic scientific-slop measures (cross-section references, macro redundancy, citation isolation, evidence gap),
+  reimplemented from arXiv 2610.00531, with a full report of file:line evidence in `reviews/<date>-slop.md`. On the paper's own benchmark they rank papers like the published
+  scores (Spearman 0.92 to 0.96; [parity report](docs/benchmarks/review-parity-2026-10-09.md)).
+
 ### Changed
+- The coding-agent skills in `.agents/skills/` carry `metadata.internal: true`, so `npx skills add` does not offer them to users.
+- `compile_document` lists errors before warnings (a real 23-page paper printed 49 warnings above its one error) and explains EPS figures, which Tectonic cannot include.
 - **One repository root**: skills (`.agents/skills/`), benchmark PDFs (`test_papers/`) and sandbox state (`.sandbox/`, both
   gitignored) now live here; dated reviews are in `docs/reviews/`; one `AGENTS.md`, one backlog, one handoff.
 - **Embedding model**: EmbeddingGemma 2 Q4_K_XL (176 MB, Apache-2.0) on llama.cpp `b11476`, replacing EmbeddingGemma 300M Q8_0
@@ -38,6 +48,7 @@ work is in [docs/BACKLOG.md](docs/BACKLOG.md).
   project-relative path.
 
 ### Fixed
+- The published package no longer ships Python bytecode (`__pycache__`) from the skills' helper scripts; a test lists what `npm pack` would ship.
 - The Pi package was inert after `pi install` and `mcp install` wrote a command no host could spawn; every host config now
   launches `node <absolute bin> mcp`, and installed copies ship compiled `dist/`.
 - Semantic Scholar was never reached (doubled `/graph/v1`); the SSRF guard covers the IPv4-translated range; `mcp install` no

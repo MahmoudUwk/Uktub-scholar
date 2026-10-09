@@ -39,8 +39,9 @@ never by enforcement inside it.
 
 Today: search, registry, compile, claim support, passage search, acquisition of open-access sources, a live test harness
 and a Docker sandbox. Next, each step gated on evidence from real sessions: a traceable multi-section writing workflow
-([plan](plans/2026-10-07-document-writing-workflow-plan.md)), better host adapters, and further research outputs (figures,
-grant proposals, analysis) adopted one capability at a time from the skill libraries recorded in the backlog.
+([plan](plans/2026-10-07-document-writing-workflow-plan.md)), better host adapters, and further skills for the Uktub agent (slide
+and Word, Excel and PDF editing, scientific figures, manuscript review, grant proposals), each adopted on evidence from the
+skill libraries recorded in [BACKLOG §7](BACKLOG.md).
 
 ## Non-goals
 

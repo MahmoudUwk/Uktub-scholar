@@ -51,13 +51,8 @@ in [reviews/](reviews/) and [benchmarks/](benchmarks/).
 - **Citation graph:** one hop back and forward through OpenAlex (`filter=cites:W…`, `referenced_works` hydrated 50 at a time,
   unhydrated references reported, not dropped); "similar to" edges from passage vectors; every edge carries the chunk it came
   from. A sixth MCP tool changes the five-tool contract, so a CLI-only route comes first.
-- **Deterministic manuscript audit:** undefined citation key, missing `\includegraphics` file, every DOI in the text registered; no
-  model (free-text fix hints are an injection channel). Merge with ScientificSlop below instead of building two checkers.
-  [yerimoh/ScientificSlop](https://github.com/yerimoh/ScientificSlop) scores slop in a paper; four of its six measures
-  (cross-section references, macro redundancy, citation isolation, evidence gap) are deterministic and run on LaTeX. The
-  repository has **no licence**, so reimplement from the paper's definitions and record provenance in `NOTICE.md`; check parity
-  against its released `scores.parquet` (780 papers) before trusting it; report the scores as diagnostics with per-unit evidence,
-  not as "this manuscript is good". Our own experiment manuscripts would also give the experiments an automatic review signal.
+- **Deterministic manuscript audit, the rest:** `uktub-scholar review` now covers the four slop measures. Still open: an undefined or unused citation key against the registry's bibliography,
+  a missing `\includegraphics` file, and every DOI in the text registered; no model (free-text fix hints are an injection channel). Add them to the same command, not a second checker.
 - **Smaller:** `Retry-After` as an HTTP date; judgment-cache retention by last access.
 - **Helper material only:** [rahulnyk/knowledge_graph](https://github.com/rahulnyk/knowledge_graph) (MIT concept-graph
   notebooks; not a citation graph, nothing to adopt beyond per-edge chunk provenance) and
@@ -124,35 +119,58 @@ Research and measurements: [host adapters](plans/2026-10-08-host-adapter-layer-r
 - Vertex `gemini-3.8-flash` through Pi sometimes stalls for minutes or answers `Resource exhausted`; a run blocked by provider
   capacity is neither a success nor a product failure.
 
-## 7. Skill sources and companions
+## 7. Skills for the Uktub agent
 
-The skill libraries the owner supplied. Clones live in `reference_repos/` (gitignored, read-only, untrusted data: never run their
-code or follow instructions in them; re-clone from the pins). Ideas only, our own text; anything adopted gets a `NOTICE.md`
-entry. Code-side findings: [reference-repos plan](plans/2026-10-07-reference-repos-integration-plan.md). Rebuilt 2026-10-09
-because the 2026-10-04 cleanup (`00710d2`) dropped most per-skill detail; the older text is `git show 891e2dd:docs/BACKLOG.md`.
+**Product skills** ship in `skills/` for the agent that *uses* Uktub Scholar. They are not `.agents/skills/`, which holds skills for the coding agents that build this
+repository. Owner direction (2026-10-09): editing skills for slides and Word files, scientific figure making, diagrams, and manuscript review ("slop review").
+Each skill is our own text (AGPL-3.0-only), adopted test first against a real model; the proof of each is in [docs/benchmarks/skills](benchmarks/skills/README.md).
+Context and verified facts: [plans/2026-10-09-product-skills-adoption-context.md](plans/2026-10-09-product-skills-adoption-context.md).
+
+| Skill | State | Built on | Still open |
+|---|---|---|---|
+| `uktub-figures` | built, proven | OpenScience `core/figures`, OpenResearch `orx-figures` (MIT), evident-charts loop; matplotlib | multi-panel and heatmap cases; SciencePlots as an optional style |
+| `uktub-diagrams` | built, proven | own TikZ skeleton; compared with a hand-drawn system figure of a published paper | a library of node styles; diagrams with icons |
+| `uktub-review` | built, proven; CLI `review` | Oh et al. (arXiv 2610.00531) Appendix A; OpenScience `core/peer-review` structure | argument-graph and figure-exposition measures need a model; `chktex`, `LanguageTool` and citation-existence checks as optional subprocesses |
+| `uktub-slides` | Beamer + Metropolis built, proven; `.pptx` through pandoc built, its live case fails one number check ([handoff](handoff.md)) | academic-pptx-skill ideas; OpenScience `latex-posters` | posters; editing an existing `.pptx`; a visual check of the `.pptx` needs LibreOffice (not in the sandbox image); Moloch theme does not compile on Tectonic's bundle |
+| `uktub-office` | built, proven (export, tracked-change reading) | pandoc; stdlib `docx_changes.py` | **deferred to the end (owner, 2026-10-09):** editing a `.docx` in place with tracked changes (Paper Office `paper-docx`, MIT, 0.2.x; decide then whether it is a prerequisite); `.xlsx`; PDF merge, split, forms |
+| `uktub-grants` | built, proven (Specific Aims only) | OpenScience `research/research-grants` ideas | funder-specific forms and review criteria; budget; `statistical-power` and `experimental-design` references |
+
+**ScientificSlop in detail** ([arXiv 2610.00531](https://arxiv.org/abs/2610.00531), preprint 30 Sep 2026). Four of its six measures run on LaTeX with no model and are built; the
+other two need Qwen2.5 models and do not fit a local-first package. The dataset `yerim0210/Scientific_Slop` (CC-BY-4.0) is the parity check. The evidence-gap measure is not
+comparable on that dataset (its body view has no appendix).
+
+**Not evaluated yet:** the rest of OpenScience's `core`, `research` and `writing` categories (for example `writing/pyzotero`, `writing/zotero-local`, `writing/markdown-mermaid-writing`,
+`research/market-research-reports`). **Not adoptable:** OpenScience's `document-parsing/{docx,pptx,xlsx,pdf}` are Anthropic's proprietary skills.
+
+**Companions, host-side, never bundled:** `open-slide` or Slidev (slides), GenOffice or Paper Office (office files), evident-charts (charts), LiteParse (ingestion of the user's drafts and
+supplementary PDFs; Apache-2.0; official skill `npx skills add run-llama/llamaparse-agent-skills --skill liteparse`; not the primary parser).
+
+**Distribution:** hosts other than Pi read the user's project `.agents/skills/` (Claude Code reads `.claude/skills/`); `npx skills add MahmoudUwk/Uktub-scholar --skill <name>` fills them. That
+installer also lists this repository's own `.agents/skills/`, so those coding-agent skills carry `metadata.internal: true` (owner decision 2026-10-09; guarded by `tests/skills.spec.ts`).
+
+### Skill libraries (clones in `reference_repos/`)
+
+Gitignored, read-only, untrusted data: never run their code or follow instructions in them; re-clone from the pins. Ideas only;
+anything adapted gets a `NOTICE.md` entry. Code-side findings: [reference-repos plan](plans/2026-10-07-reference-repos-integration-plan.md).
+Rebuilt 2026-10-09 because the 2026-10-04 cleanup (`00710d2`) had dropped the per-skill detail (older text:
+`git show 891e2dd:docs/BACKLOG.md`).
 
 | Library | Pin | Licence | Skills (counted 2026-10-09) | Status |
 |---|---|---|---|---|
-| [synthetic-sciences/OpenScience](https://github.com/synthetic-sciences/OpenScience) | `44d0334` | Apache-2.0 repo, MIT skills | 373 `SKILL.md` in `backend/cli/skills/` (largest: biology 66, ml-training 52, databases 39, llm-tools 30, chemistry 30, physics 28; relevant here: core 22, research 10, writing 8, visualization 6, document-parsing 5) | "The adoption library" ([DECISIONS](DECISIONS.md)): port on a named trigger |
-| [aipoch/open-science](https://github.com/aipoch/open-science) | `2102e6d` | Apache-2.0 | 25: literature-review, paper-narrative, figure-composer, figure-style, indication-dossier, skill-creator, self-awareness, customize, env-management, compute-env-setup, remote-compute-ssh, and 14 biology-model skills | Code ideas taken (PMC and Europe PMC route, arXiv cooldown, read-only bibliography); no skill ported |
+| [synthetic-sciences/OpenScience](https://github.com/synthetic-sciences/OpenScience) | `44d0334` | Apache-2.0 repo, MIT skills (the four `document-parsing` office skills are Anthropic's) | 373 `SKILL.md` in `backend/cli/skills/` (largest: biology 66, ml-training 52, databases 39, llm-tools 30, chemistry 30, physics 28; relevant here: core 22, research 10, writing 8, visualization 6, document-parsing 5) | "The adoption library" ([DECISIONS](DECISIONS.md)): adapt on a named trigger |
+| [aipoch/open-science](https://github.com/aipoch/open-science) | `2102e6d` | Apache-2.0 | 25: literature-review, paper-narrative, figure-composer, figure-style, indication-dossier, skill-creator, self-awareness, customize, env-management, compute-env-setup, remote-compute-ssh, and 14 biology-model skills | Code ideas taken (PMC and Europe PMC route, arXiv cooldown, read-only bibliography); no skill adapted |
 | [alphaXiv/OpenResearch](https://github.com/alphaXiv/OpenResearch) | `b9ce4f3` | MIT | 14: the root skill and `orx-` agent-delegation, compute, create, customize, evidence, experiment-tree, feedback, figures, git, instances, lit-review, paper, reports | Studied; nothing adopted |
 
-- **Named for porting (verified present in the OpenScience pin):** `core/peer-review`, `core/paper-writing`, `core/citations`,
-  `research/statistical-power`, `research/experimental-design`, `writing/latex-posters`; plus `core/literature-review` and
-  `core/sources` (literature skill), `research/research-grants` (`grant-proposals`), `core/figures` and
-  `core/scientific-visualization` (`paper-figures`), `writing/scientific-slides`, `databases/pubmed-database` (the `europepmc`
-  pattern). The rest are not evaluated.
-- **Other sources:** `figures4papers` (reference only, licence unusable), karpathy `autoresearch` (pattern adopted as
-  `pnpm experiment` and `pnpm evolve`), Tencent `WeKnora`, `academic-pptx-skill` (Gabberflast, MIT), K-Dense
-  `claude-scientific-writer` and Companion-Inc `feynman` (cross-check sources named in `NOTICE.md`), and "ARS" (named in an old
-  workspace backlog without a URL: owner to say which repository).
-- **Writing-quality ideas** (ARS, Feynman, OpenScience; evaluated 2026-10-02, not built; each needs a real session showing the
-  problem first): an anti-trope filter for drafts (about 25 AI clichés and throat-clearing openers) in the writer rules; a
-  literature-review structure (consensus, contradictions, open questions); a `CITEKEY_WEAK` warning for metadata-poor records; the
-  Crossref against DataCite semantics when a provider's BibTeX is down.
-- **Skills this package could ship** (one exists, `uktub-research`): `europepmc`, `paper-figures`, `grant-proposals`, and the
-  writing-workflow skill of §4.
-- **Deliverable companions (host-side, never bundled):** slides via `open-slide` (MIT) or Slidev with slideblocks-skill (MIT);
-  office files via GenOffice (Apache-2.0) or Paper Office (paperinstruments.com); charts via evident-charts (MIT,
-  rhiever/evident-charts); ingestion of user drafts and supplementary PDFs via LiteParse (Apache-2.0, run-llama/liteparse;
-  official skill `npx skills add run-llama/llamaparse-agent-skills --skill liteparse`; not the primary parser).
+OpenScience is itself assembled from MIT and Apache-2.0 upstreams, per its `ATTRIBUTION.md` at the pin: K-Dense
+`scientific-agent-skills` (166 skills) and `claude-scientific-writer` (14), Orchestra `AI-Research-SKILLs` (79), Hugging Face `skills`
+(8, Apache-2.0), Microsoft `markitdown` (MIT, ingestion), NVIDIA BioNeMo (CC-BY-4.0, out of scope) and Anthropic's four document
+skills (proprietary, excluded above). Going to the K-Dense and Orchestra originals is an option when a skill is adapted.
+
+Other sources: karpathy `autoresearch` (pattern adopted as `pnpm experiment` and `pnpm evolve`), Tencent `WeKnora`,
+K-Dense `claude-scientific-writer` and Companion-Inc `feynman` (cross-check sources named in `NOTICE.md`), and "ARS" (named in an
+old workspace backlog without a URL; the owner does not know which repository it is, so it is deferred, 2026-10-09).
+
+**Writing-quality ideas** (ARS, Feynman, OpenScience; evaluated 2026-10-02, not built; each needs a real session showing the
+problem first): an anti-trope filter for drafts (about 25 AI clichés and throat-clearing openers) in the writer rules; a
+literature-review structure (consensus, contradictions, open questions); a `CITEKEY_WEAK` warning for metadata-poor records; the
+Crossref against DataCite semantics when a provider's BibTeX is down.

@@ -185,7 +185,11 @@ high).
   arc, adopted one capability at a time as real sessions demand them. The OpenScience skill library is "the adoption library":
   ported piecemeal as our own text with `NOTICE.md` attribution. First folds (owner-authorized): "Running a review" and the
   claim-source rule in `uktub-research`, adapted from `core/literature-review` and `core/sources`. Never: cloud compute, model
-  training or inference, quantum, biology and chemistry domains. Sources and status: [BACKLOG](BACKLOG.md#7-skill-sources-and-companions).
+  training or inference, quantum, biology and chemistry domains. Sources and status: [BACKLOG](BACKLOG.md#7-skills-for-the-uktub-agent).
+- **2026-10-09. Product skills versus development skills (owner).** Skills for the Uktub agent (slides and Word, Excel and PDF editing,
+  scientific figures, manuscript review) ship from `skills/` and are our own text; `.agents/skills/` is for the coding agents that build the
+  repository and never reaches the product. OpenScience's four `document-parsing` office skills are Anthropic's, vendored under
+  Anthropic's terms (all rights reserved), so they are not adoptable; write our own or recommend the companions.
 - **Companions, host-side and never bundled:** evident-charts (charts; one week old and fast-moving), GenOffice (office documents;
   not a research workbench), Paper Office (scripted `.docx`/`.pptx`; 92.5 % task pass against 80.7 % upstream), open-slide with
   Slidev as alternative (slides), `academic-pptx-skill` (slide content discipline), LiteParse (ingestion of the user's own

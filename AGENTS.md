@@ -6,7 +6,7 @@ For coding agents and contributors. Uktub Scholar is open-source software (AGPL-
 
 - [README](README.md): setup and behavior. [docs/DECISIONS.md](docs/DECISIONS.md): rationale. [docs/BACKLOG.md](docs/BACKLOG.md): the only backlog. [CHANGELOG](CHANGELOG.md): release notes. Keep each fact in one of them.
 - [docs/handoff.md](docs/handoff.md): current state, last verification, next step. [docs/testing.md](docs/testing.md): test layers, Docker isolation, live acceptance, experiments, `pnpm sandbox` (try the package in a fresh Pi in Docker; the host's Pi is not used).
-- `src/core/` is host-independent; `src/mcp/`, `src/pi/`, `src/cli/` are adapters. `benchmarks/` is dataset and protocol, `docs/benchmarks/` measured evidence. `docs/plans/` and `docs/reviews/` are dated history, not contracts. `.agents/skills/` holds skills for agents working here.
+- `src/core/` is host-independent; `src/mcp/`, `src/pi/`, `src/cli/` are adapters. `benchmarks/` is dataset and protocol, `docs/benchmarks/` measured evidence. `docs/plans/` and `docs/reviews/` are dated history, not contracts. `.agents/skills/` holds skills for coding agents working here, not for the Uktub agent (its skills ship from `skills/`; what is built and what is open is in BACKLOG §7).
 
 ## Product stance (binding)
 

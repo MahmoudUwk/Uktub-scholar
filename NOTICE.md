@@ -47,3 +47,18 @@ This package is licensed under AGPL-3.0-only. Third-party provenance is recorded
 - evident-charts (MIT, https://github.com/rhiever/evident-charts) and GenOffice
   (Apache-2.0, https://github.com/genspark-ai/genoffice) are recommended
   host-side companions; nothing from either is included in this package.
+
+## Product skills (ideas adapted; our own text and code, nothing copied)
+
+- `skills/uktub-figures`: the rules and process derive from OpenScience `core/figures` (MIT, itself adapted from alphaXiv
+  OpenResearch `orx-figures`, MIT; pins in [docs/BACKLOG.md](docs/BACKLOG.md) §7) and from the render-then-look review loop of
+  rhiever/evident-charts (MIT). `scripts/figstyle.py` is our own implementation; its palette is the Okabe-Ito colour-blind-safe set
+  (Okabe and Ito, 2008).
+- `skills/uktub-review` and `src/core/review/`: the four measures are reimplemented from the definitions in Appendix A of Oh et al., "Science or Slop?"
+  (arXiv 2610.00531); the authors' repository carries no licence and none of its code was used. The review structure (blocking and minor findings, no verdict)
+  draws on OpenScience `core/peer-review` (MIT upstream). The parity check uses the CC-BY-4.0 dataset `yerim0210/Scientific_Slop`.
+- `skills/uktub-slides`: ideas (action titles, one exhibit per slide) from `Gabberflast/academic-pptx-skill` (MIT; its `SKILL.md` frontmatter says "Proprietary" while the
+  repository `LICENSE` is MIT, so only ideas are taken). The Metropolis Beamer theme is used as a LaTeX package at compile time, not distributed here.
+- `skills/uktub-diagrams`, `skills/uktub-office`, `skills/uktub-grants`: our own text and code (`docx_changes.py` is standard-library Python). The Specific Aims
+  structure follows common funder guidance and OpenScience `research/research-grants` (MIT upstream) as an idea only. pandoc (GPL) and LibreOffice are
+  programs the user installs; nothing of them is included.

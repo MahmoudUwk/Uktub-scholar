@@ -167,6 +167,22 @@ write that waits out the 5-second SQLite lock is refused as `REGISTRY_BUSY`.
 Keyless acquisition works for papers with a direct `pdf_url`, an arXiv copy, or a Semantic Scholar open-access PDF or preprint.
 When OpenAlex lists only a publisher landing page and no arXiv copy exists, use `attach_source` or set the key.
 
+## Skills for the agent
+
+Skills ship in [`skills/`](skills/) and load on demand (Pi reads them through the package; other hosts from the project's `.agents/skills/`). Each is our own text,
+adopted one at a time and tested against a real model: [docs/benchmarks/skills](docs/benchmarks/skills/README.md) (the `.pptx` route of `uktub-slides` still fails one live check; see [docs/handoff.md](docs/handoff.md)). They state their prerequisites and install
+nothing.
+
+| Skill | What the agent can do | Needs |
+|---|---|---|
+| `uktub-research` | Use the five tools: search, register, cite, verify, search passages, compile | the package |
+| `uktub-figures` | Publication-quality plots from the user's data (page-width vector PDF, colour-blind palette, audit, a record of the plotted numbers) | python3, matplotlib |
+| `uktub-diagrams` | System and architecture diagrams as vector TikZ, checked by looking at the render | LaTeX (the compile tool), pdftoppm |
+| `uktub-review` | Referee-style review of a manuscript, grounded in `uktub-scholar review` | node |
+| `uktub-slides` | A conference talk from the paper as Beamer slides (Metropolis), or an editable PowerPoint `.pptx` built with pandoc | LaTeX, pdftoppm; pandoc for `.pptx` |
+| `uktub-office` | LaTeX to `.docx` for co-authors; list the tracked changes and comments of a returned `.docx` | pandoc; python3 |
+| `uktub-grants` | A one-page Specific Aims draft from the paper's own limitations | none |
+
 ## CLI
 
 `uktub-scholar` uses the same core functions as the MCP server and the Pi extension:
@@ -178,6 +194,7 @@ When OpenAlex lists only a publisher landing page and no arXiv copy exists, use 
 | `attach <doi\|citekey> <file>` | Attach a local PDF or TEI inside the project as a paper's source |
 | `list` / `sync-bib` | Print registered papers / re-render `refs/references.bib` |
 | `compile [entry.tex]` | Compile with Tectonic into `build/` |
+| `review [entry.tex] [--out <report.md>]` | Deterministic manuscript review (four structural measures, no model): full report with file:line evidence in `reviews/<date>-slop.md`, a few lines printed |
 | `verify <claim> [--papers all\|<handle>,...] [--query <words>] [--continuation <token>]` | Supporting passages for one claim |
 | `search <query> [--papers all\|<handle>,...] [--limit <n>]` | Passage search |
 | `embed status` / `embed install --yes` | Managed embedding runtime |
@@ -255,14 +272,14 @@ evidence about one dataset, not a guarantee.
 | Path | What it is |
 |---|---|
 | `src/core/` | Host-independent domain code; `src/mcp/`, `src/pi/`, `src/cli/` are the adapters |
-| `bin/`, `skills/` | The CLI entry point and the research skill that ship with the package |
+| `bin/`, `skills/` | The CLI entry point and the skills that ship with the package for the Uktub agent (today `uktub-research`) |
 | `tests/` | Offline suite; no provider quota |
 | `scripts/` | Engine workers, build step, benchmark tools ([index](scripts/README.md)); `scripts/live/` is the live harness |
 | `benchmarks/`, `docs/benchmarks/` | Dataset and protocol; dated measurement reports |
 | `experiments/` | User-simulation scenarios and the self-improving loop (local run evidence is gitignored) |
 | `docs/` | `VISION`, `DECISIONS`, `BACKLOG` (the only backlog), `handoff`, `testing`; dated `plans/` and `reviews/` are history |
 | `docker/` | The sandbox image behind `pnpm sandbox` and the live tiers |
-| `.agents/skills/` | Skills for agents working on this repository |
+| `.agents/skills/` | Skills for the coding agents that build this repository (not for the Uktub agent, marked `metadata.internal: true`; the product skills are in `skills/`) |
 | `reference_repos/`, `test_papers/`, `.sandbox/` | Local only, gitignored: studied clones and manuals, the benchmark PDFs, sandbox state |
 
 [NOTICE.md](NOTICE.md) records borrowed-code provenance. License: AGPL-3.0-only.

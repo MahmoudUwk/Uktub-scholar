@@ -79,3 +79,9 @@ node scripts/bench-evidence.ts --phase review-in --labels <labels.json>
 Papers split by source: even-indexed tune, odd-indexed are held out. Committed results keep spans, scores and 160-character
 exemplars only; full excerpts stay outside the repository. Reports: `docs/benchmarks/evidence-retrieval-*`,
 `evidence-quality-*`, `evidence-review-*`.
+
+## Skills and the manuscript review
+
+Skill acceptance runs (a real model, a real paper) are archived in [docs/benchmarks/skills/](../docs/benchmarks/skills/README.md). The four deterministic measures of
+`uktub-scholar review` are checked against the published scores of SciSlopBench with `scripts/bench-review-parity.ts`
+([latest report](../docs/benchmarks/review-parity-2026-10-09.md)).
