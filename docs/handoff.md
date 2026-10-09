@@ -1,21 +1,20 @@
 ---
 artifact_contract: "ce-handoff/v1"
-created_at: "2026-10-08T23:30:00Z"
+created_at: "2026-10-09T00:30:00Z"
 title: "Uktub-scholar: current state, last verification, open owner decisions"
 summary: "Five MCP tools plus a Pi extension, a Docker-isolated live harness and a user-simulation loop, all green on Pi 1.1.0. Eos stays the verifier (Vela 0.3B and 0.8B tested and not adopted). Open items are owner decisions, not harness work."
 keywords: ["uktub-scholar", "pi", "mcp", "live-testing", "eos", "vela", "evidence"]
 cwd: "/home/mahmoud/Desktop/AI_Projects/UktubAI/Uktub-scholar"
 repository: "Uktub-scholar"
 branch: "main"
-head: "3f7235189c74df64349e2f622daffbcd374877cf"
+head: "decd5fe"
 resume_focus: "Keep the existing tools working: rerun the live tiers after any product change and act only on evidence. Owner decisions are in docs/BACKLOG.md."
 ---
 
 # Current state
 
-Nothing is committed: all work is local on `main` (HEAD above). Owner directives apply: work stays on existing functionality, the harness and real testing; no delivery or sharing action without an explicit request; stage reviewed paths only ([AGENTS.md](../AGENTS.md)).
+All work is committed and pushed to `origin/main` (HEAD above). Owner directives apply: work stays on existing functionality, the harness and real testing; no delivery or sharing action without an explicit request; stage reviewed paths only ([AGENTS.md](../AGENTS.md)).
 
-- **Untracked but required by `package.json` scripts and tests** (a commit that omits them breaks `pnpm live:*`, `pnpm experiment` and `pnpm evolve`): `scripts/live/`, `experiments/` (`README.md`, `simulator.md`, `scenarios/`, `harness/`), `docs/testing.md`, the new `docs/plans/` files, the new specs under `tests/`, `src/core/source/arxiv.ts`, `src/core/verify/acquire.ts`, `src/mcp/trace.ts`, `scripts/vela_decide.py`, and the Vela reports in `docs/benchmarks/`. `experiments/runs/` (about 9 GB of local evidence cited from the docs) is gitignored.
 - **Provider keys** for the live harness come from the shell or a gitignored `.env` in this repository (`scripts/live/keys.ts`). The product repository `UktubAI_Agentic` was archived to `../archive/UktubAI_Agentic`; nothing here reads from it. Without keys a run is keyless and says so in its manifest.
 - Verifier: `eos` (default). Vela 2.0 0.3B and 0.8B are selectable and not adopted; the model search is closed ([DECISIONS](DECISIONS.md), 2026-10-08).
 
@@ -32,7 +31,7 @@ The direct and agent runs (2026-10-08, Pi 1.1.0, keyed) are `experiments/runs/ac
 
 ## Open owner decisions
 
-- **Rotate the exposed provider keys?** OpenAlex and Semantic Scholar key values reached 13 evidence files (redacted in place, `NOTE.md` in each run) and, because an agent printed its environment, the model provider's context ([BACKLOG §7](BACKLOG.md)).
+- **Exposed provider keys:** OpenAlex and Semantic Scholar key values reached 13 evidence files (redacted in place, `NOTE.md` in each run) and, because an agent printed its environment, the model provider's context ([BACKLOG §7](BACKLOG.md)). Owner decision 2026-10-09: no rotation.
 - **Put the keys in `.env`** in this repository, or the live tiers run keyless.
 - **Host adapters** (installer: `add-mcp` or own writer; `paper_registry` approval cost; MCP SDK v1 or v2; whether ChatGPT is in scope), **codemode**, **web client** and **embedding candidates**: [BACKLOG §12](BACKLOG.md).
 - **Vela adapter:** kept selectable per the decision-log rule that a benchmark rejection does not remove an adapter; removal is about ten minutes if wanted.
