@@ -12,7 +12,7 @@ import { join } from "node:path";
 import { REGISTRY_SCHEMA_VERSION, RegistryError, createRegistry, openRegistry, listPapers } from "../src/core/registry.ts";
 import { DatabaseSync } from "node:sqlite";
 import { mkdirSync } from "node:fs";
-import { LEGACY_PAPER, V3_PAPER, buildForeignRegistry, buildLegacyRegistry, buildV3Registry, buildV4Registry } from "./helpers/legacy-registry.ts";
+import { LEGACY_PAPER, V3_PAPER, V5_PAPER, buildForeignRegistry, buildLegacyRegistry, buildV3Registry, buildV4Registry, buildV5Registry } from "./helpers/legacy-registry.ts";
 
 let root: string;
 beforeEach(() => {
@@ -84,6 +84,26 @@ describe("registry migration", () => {
     for (const gone of ["claim_pointers", "claim_verdicts"]) assert.ok(!names.includes(gone), `${gone} dropped`);
     assert.equal((db.prepare("SELECT count(*) n FROM chunks").get() as { n: number }).n, 0, "unsourced chunk rows are not carried over");
     db.close();
+  });
+
+  it("a v5 registry gains the empty claim_ledger in place and keeps its evidence rows", () => {
+    buildV5Registry(root);
+    const db = openRegistry(root);
+    assert.equal((db.prepare("PRAGMA user_version").get() as { user_version: number }).user_version, REGISTRY_SCHEMA_VERSION);
+    assert.ok(tables(db).includes("claim_ledger"), "the v6 ledger table exists");
+    assert.equal((db.prepare("SELECT COUNT(*) n FROM claim_ledger").get() as { n: number }).n, 0, "the migration backfills nothing: v5 evidence expired by contract");
+    assert.equal((db.prepare("SELECT COUNT(*) n FROM claim_evidence").get() as { n: number }).n, 2, "released and unreleased evidence rows are untouched");
+    assert.equal(listPapers(db)[0].doi, V5_PAPER.doi);
+    const cols = (db.prepare("PRAGMA table_info(claim_ledger)").all() as { name: string }[]).map((c) => c.name);
+    assert.deepEqual(cols, ["claim_hash", "claim_text", "doi", "revision", "char_start", "char_end", "page", "chunk_id", "model_id", "protocol", "min_confidence", "p_true", "created_at"]);
+    db.close();
+  });
+
+  it("a v7 registry is refused for writing without mutation", () => {
+    const file = buildForeignRegistry(root, 7);
+    const before = readFileSync(file);
+    assert.throws(() => openRegistry(root), (e) => e instanceof RegistryError && e.code === "REGISTRY_SCHEMA_UNSUPPORTED");
+    assert.deepEqual(readFileSync(file), before, "database bytes unchanged");
   });
 
   it("a v2 registry that held legacy rows is backed up before they are dropped", () => {

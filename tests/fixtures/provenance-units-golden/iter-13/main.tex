@@ -1,0 +1,88 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{microtype}
+\usepackage{cite}
+\usepackage{hyperref}
+
+\title{\textbf{Adapting Language Models Under GPU Memory Constraints:\\
+Methods, Trade-offs, and an Empirical Evaluation Protocol}}
+\author{\textbf{Research Note}}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\section{Introduction and GPU Memory Allocation}
+Fine-tuning language models under GPU memory limits balances base weights, optimizer states, gradients, and activations. In 16-bit full tuning, adaptive optimizers like Adam require 12 to 16 bytes per trainable parameter for master weights and momentum buffers. Gradients add 2 to 4 bytes per parameter, while activations scale with sequence length and batch size. On 16GB to 24GB GPUs, these demands exceed capacity for models beyond a few billion parameters.
+
+Parameter-efficient methods address this bottleneck through two paradigms: structural parameter decompositions and base-model quantization with optimizer projection. Decompositions freeze base weights and adapt low-rank matrices, removing optimizer states for frozen weights. Quantization compresses base weights and optimizer states, reducing footprint and activation spikes.
+
+Recently, an informal statement circulated in our lab. Specifically, someone in our lab says, ``Our pilot halves training memory compared with LoRA.'' Yet no protocol, model details, or telemetry was provided. Lacking reproducible measurements, the statement remains unverified. It cannot serve as an established result or premise. This note analyzes verified adaptation methods and outlines a controlled benchmarking protocol.
+
+\section{Subspace Parameter Decompositions}
+Low-rank adaptation restructures parameter updates into lower-dimensional subspaces. In standard LoRA, the pre-trained weight matrix $W_0 \in \mathbb{R}^{d \times k}$ remains frozen while rank decomposition matrices $B \in \mathbb{R}^{d \times r}$ and $A \in \mathbb{R}^{r \times k}$ are injected, with rank $r \ll \min(d, k)$. Matrix $A$ receives Gaussian initialization while $B$ begins at zero. For a large Transformer trained with Adam, LoRA reduces VRAM usage by up to 2/3 if the rank is much smaller than the model dimension, because optimizer states are not stored for frozen parameters~\cite{hu2021lora}. Compared to GPT-3 175B fine-tuned with Adam, LoRA can reduce the number of trainable parameters by 10,000 times and the GPU memory requirement by 3 times~\cite{hu2021lora}. However, this three-fold reduction is an empirical result tied to that model and training setup; it cannot be transferred to smaller models or long contexts where activations dominate.
+
+Standard LoRA applies a uniform rank across all layers. AdaLoRA addresses this rigidity by allocating parameter budgets adaptively across matrices. AdaLoRA parameterizes the incremental updates in the form of singular value decomposition~\cite{zhang2023adalora}. Here, updates take the form $\Delta W = P \Lambda Q$, where $P$ and $Q$ represent orthogonal singular vectors and $\Lambda$ holds singular values. AdaLoRA dynamically allocates the parameter budget among incremental matrices by manipulating the singular values based on an importance metric~\cite{zhang2023adalora}. This formulation prunes redundant singular values while retaining singular vectors, preserving future recovery capacity.
+
+Addressing adaptation dynamics, Weight-Decomposed Low-Rank Adaptation (DoRA) investigates update patterns in magnitude and direction. Full fine-tuning exhibits decoupled variations in weight magnitude and directional angles, whereas standard LoRA couples them. DoRA decomposes the pre-trained weight into two components, magnitude and direction, for fine-tuning, specifically employing LoRA for directional updates to efficiently minimize the number of trainable parameters~\cite{liu2024dora}. Because column-norm normalization introduces backpropagation overhead, the authors detached the norm term from the gradient computation graph. The proposed gradient detachment modification leads to a training memory reduction of approximately 24.4% in fine-tuning LLaMA and 12.4% in VL-BART~\cite{liu2024dora}.
+
+\section{Quantization and Optimizer Compression}
+Rather than solely freezing weights, quantization techniques directly compress the base model footprint. QLoRA combines 4-bit NormalFloat (NF4) base weights, double quantization of constants, and paged optimizers managing memory spikes. QLORA reduces memory usage enough to finetune a 65B parameter model on a single 48GB GPU~\cite{dettmers2023qlora}. Double Quantization quantizes the quantization constants, saving an average of about 0.37 bits per parameter~\cite{dettmers2023qlora}. At runtime, 4-bit weights dequantize to 16-bit floating point for computation, trading throughput for reduced VRAM.
+
+Aggressive low-bit quantization can introduce severe initialization discrepancies. LoftQ tackles this problem through alternating optimization during setup. LoftQ simultaneously quantizes an LLM and finds a proper low-rank initialization for LoRA fine-tuning~\cite{li2023loftq}. LoftQ outperforms existing quantization methods, especially in the challenging 2-bit and 2/4-bit mixed precision regimes~\cite{li2023loftq}.
+
+Taking a distinct approach, GaLore performs full-parameter adaptation by projecting weight gradients into low-rank subspaces, compressing optimizer states rather than restricting weights permanently. When pre-training LLaMA 7B on C4 dataset, 8-bit GaLore, combined with 8-bit optimizers and layer-wise weight updates techniques, achieves comparable performance to its full-rank counterpart, with less than 10% memory cost of optimizer states~\cite{zhao2024galore}. In practice, GaLore yields up to 30% memory reduction compared to LoRA during pre-training~\cite{zhao2024galore}.
+
+\section{Practical Trade-offs and Comparison}
+Selecting an adaptation method requires distinguishing architectural design choices from reported empirical findings. Table~\ref{tab:comparison} explicitly separates structural formulations from measured results and their specific evaluation setups.
+
+\begin{table}[htbp]
+\centering
+\scriptsize
+\begin{tabularx}{\textwidth}{l >{\raggedright\arraybackslash}p{2.6cm} >{\raggedright\arraybackslash}p{2.2cm} >{\raggedright\arraybackslash}X}
+\toprule
+\textbf{Method} & \multicolumn{2}{c}{\textbf{Structural Design Choices}} & \textbf{Reported Empirical Findings (Measured)} \\
+\cmidrule(lr){2-3} \cmidrule(lr){4-4}
+& \textbf{Representation \& Parameterization} & \textbf{Trainable State} & \textbf{Measured Metric, Model \& Benchmark Setting} \\
+\midrule
+LoRA & 16-bit frozen; update $\Delta W = BA$ & Static rank $r$ matrices & 3 times VRAM reduction on GPT-3 175B with Adam~\cite{hu2021lora} \\
+AdaLoRA & 16-bit frozen; SVD update $P\Lambda Q$ & Dynamic singular value pruning & 88.78\% F1 at 0.16\% budget on DeBERTaV3-base SQuADv2~\cite{zhang2023adalora} \\
+DoRA & 16-bit frozen; magnitude + direction & Magnitude vector + LoRA direction & 24.4\% memory cut with detached norm on LLaMA-7B~\cite{liu2024dora} \\
+QLoRA & 4-bit NF4 frozen; double quant. & 16-bit LoRA adapters & Finetunes 65B model on single 48GB GPU; 0.37 bits/param saved~\cite{dettmers2023qlora} \\
+LoftQ & 2-bit or 4-bit frozen; joint SVD & Alternating init. LoRA & Achieves 7.85 perplexity at 2-bit on LLaMA-2-7b WikiText-2~\cite{li2023loftq} \\
+GaLore & 16-bit full weights; gradient proj. & Full weights via subspace gradient & Less than 10\% optimizer memory on LLaMA 7B pre-training~\cite{zhao2024galore} \\
+\bottomrule
+\end{tabularx}
+\caption{Comparison separating structural design choices from reported empirical measurements across specific models and evaluation benchmarks.}
+\label{tab:comparison}
+\end{table}
+
+Serving requirements introduce practical trade-offs. Fully unquantized methods (LoRA, AdaLoRA, DoRA) allow adapter weights to fold directly into base parameters ($W = W_0 + \Delta W$), incurring zero serving latency. Conversely, 4-bit methods (QLoRA, LoftQ) require on-the-fly dequantization during generation, introducing latency unless weights are re-quantized.
+
+\section{Proposed Experiment: Single-GPU Adaptation Benchmark}
+To evaluate these methods systematically and test unverified claims, we propose a controlled benchmark on a single 24GB GPU (NVIDIA RTX 4090).
+
+\textbf{Standardized Parameter Controls.} To isolate method overhead from setup discrepancies, all conditions enforce four strict controls:
+\begin{enumerate}
+    \item \textbf{Activation Checkpointing Implementation:} Uniform full checkpointing via native PyTorch \texttt{checkpoint} routines across all layers guarantees identical activation recomputation.
+    \item \textbf{Token Sequence Lengths:} Sequence length is fixed to 2,048 tokens across all runs without sequence packing, preventing batch activation variance. Micro-batch size is 2 with 8 accumulation steps (effective batch 16).
+    \item \textbf{Target Layer Coverage:} Low-rank adaptation uniformly covers all seven linear modules per layer ($W_q, W_k, W_v, W_o, W_{\text{gate}}, W_{\text{up}}, W_{\text{down}}$), eliminating coverage discrepancies.
+    \item \textbf{Optimizer State Precision:} Uncompressed methods use 32-bit AdamW ($\beta_1=0.9, \beta_2=0.999$, weight decay 0.01). Quantized 8-bit optimizers (paged AdamW in QLoRA, GaLore AdamW) are treated as distinct independent factors.
+\end{enumerate}
+
+\textbf{Evaluated Conditions.} On LLaMA-3-8B, we evaluate five conditions: (1) 16-bit LoRA ($r=16$); (2) QLoRA (4-bit NF4, double quantization, 8-bit paged AdamW); (3) DoRA ($r=16$, gradient detachment); (4) AdaLoRA (initial budget 288, final budget 192); and (5) 8-bit GaLore ($r=128$, 200-step update interval). All runs use Alpaca across 3 epochs.
+
+\textbf{Metrics and Hypothesis Testing.} We record peak VRAM via PyTorch tracking, separated into weights, optimizer states, and activations. Throughput is measured in tokens per second and step latency. Downstream accuracy is evaluated on ARC-Challenge, HellaSwag, and MMLU. This setup tests the lab colleague's claim as an empirical hypothesis: does any method reduce peak training VRAM by 50\% relative to 16-bit LoRA under identical context lengths and checkpointing?
+
+\section{Limitations}
+Several limitations govern this analysis. Reported memory reductions depend heavily on sequence context and batch size; at long contexts, activations dominate total allocation, diminishing the relative advantage of low-rank optimizers. Furthermore, reported metrics reflect disparate hardware architectures (A100 vs.\ V100), software environments, and kernel implementations. Regarding the registry, all six registered papers were acquired in full text; a provider metadata title mismatch for DOI \texttt{10.48550/arxiv.2106.09685} was resolved against canonical LoRA content. Finally, the colleague's pilot claim lacks documentation or empirical logs, and remains unverified.
+
+\bibliographystyle{plain}
+\bibliography{../refs/references}
+
+\end{document}

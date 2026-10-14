@@ -276,14 +276,33 @@ function workerEngine(opts: {
   };
 }
 
-/** Shared TypeSafe System One HTTP client: one `noul` row per request, `answers.c.noul` = P(true). Stateless, worker-safe. */
+/** Shared TypeSafe System One HTTP client: one `noul` row per request, `answers.c.noul` = P(true). Stateless, worker-safe. An
+ *  optional API key is sent only as an `Authorization: Bearer` header to an HTTPS origin (a key for a plain-HTTP URL is a
+ *  construction-time EngineError, never sent and never logged); an optional model id rides in the request body. */
 export function systemoneEndpointEngine(opts: {
-  env: Record<string, string | undefined>;
+  env?: Record<string, string | undefined>;
   fetchImpl?: typeof fetch;
   url: string;
   label: string;
+  /** Bearer key for a hosted endpoint (held in the closure, never logged, never in an error). HTTPS only. */
+  apiKey?: string;
+  /** Model id a hosted endpoint routes on (sent as the `model` field). */
+  model?: string;
 }): ClaimEngine {
   const doFetch = opts.fetchImpl ?? fetch;
+  const apiKey = opts.apiKey !== undefined && opts.apiKey !== "" ? opts.apiKey : undefined;
+  const model = opts.model !== undefined && opts.model !== "" ? opts.model : undefined;
+  if (apiKey !== undefined) {
+    let https = false;
+    try {
+      https = new URL(opts.url).protocol === "https:";
+    } catch {
+      https = false;
+    }
+    // Credentials are scoped to their origin: a key travels only over HTTPS to the configured endpoint.
+    if (!https) throw new EngineError(`${opts.label} engine: refusing to use an API key with a non-HTTPS URL ${opts.url}`);
+  }
+  const headers = { "content-type": "application/json", ...(apiKey === undefined ? {} : { authorization: `Bearer ${apiKey}` }) };
   return {
     async run(rows) {
       if (rows.length === 0) return [];
@@ -291,14 +310,21 @@ export function systemoneEndpointEngine(opts: {
       for (const row of rows) {
         const res = await doFetch(opts.url, {
           method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ state: row.state, questions: { c: { type: "noul", instructions: row.instructions } } }),
+          headers,
+          body: JSON.stringify({ ...(model === undefined ? {} : { model }), state: row.state, questions: { c: { type: "noul", instructions: row.instructions } } }),
           signal: AbortSignal.timeout(120_000), // client policy: local cold-start outliers
         }).catch((e: unknown) => {
           throw new EngineError(`${opts.label} engine unreachable at ${opts.url}: ${e instanceof Error ? e.message : String(e)}`);
         });
+        if (res.status === 401) throw new EngineError(`${opts.label} engine HTTP 401 at ${opts.url}: unauthorized — set UKTUB_VERIFY_API_KEY (the key itself is never logged)`);
         if (!res.ok) throw new EngineError(`${opts.label} engine HTTP ${res.status}: ${(await res.text()).slice(-300)}`);
-        const parsed = (await res.json()) as { answers?: Record<string, { noul?: number }> };
+        const parsed = (await res.json()) as { answers?: Record<string, { noul?: number }>; model?: unknown };
+        // The server echoes the answering model id in every response: when a model is configured, an echo naming
+        // another model means the weights behind the id changed, so judgments must not be cached under this identity.
+        const echoed = parsed.model;
+        if (model !== undefined && echoed !== undefined && echoed !== model) {
+          throw new EngineError(`${opts.label} engine: the server reports model ${JSON.stringify(String(echoed)).slice(0, 120)}, not the configured ${model} — refusing judgments under a wrong identity`);
+        }
         const p = parsed.answers?.c?.noul;
         if (typeof p !== "number") throw new EngineError(`${opts.label} engine: response missing answers.c.noul`);
         pTrues.push(p);

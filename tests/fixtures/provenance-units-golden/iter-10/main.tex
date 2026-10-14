@@ -1,0 +1,101 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{microtype}
+\usepackage{cite}
+\usepackage{hyperref}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    citecolor=blue,
+    urlcolor=blue
+}
+
+\title{\textbf{Adapting Language Models Under Limited GPU Memory:\\Architectures, Tradeoffs, and Empirical Methodologies}}
+\author{\textbf{Research Note}}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+Fine-tuning large language models on budget-constrained hardware requires mitigating memory bottlenecks across weights, optimizer states, and activations. We synthesize six adaptation strategies: bottleneck adapters, Low-Rank Adaptation (LoRA), AdaLoRA, Weight-Decomposed Low-Rank Adaptation (DoRA), Quantized LoRA (QLoRA), and Gradient Low-Rank Projection (GaLore), distinguishing architectural designs from measured hardware metrics. We also address an unverified laboratory claim, evaluate tradeoffs, and present a controlled single-GPU experimental protocol.
+\end{abstract}
+
+\section{Introduction and GPU Memory Allocation}
+
+Adapting pretrained language models is constrained by GPU memory. In 16-bit fine-tuning with AdamW, memory decomposes into weights, gradients, optimizer states, and activations:
+\begin{equation}
+M_{\text{total}} = M_{\text{weights}} + M_{\text{gradients}} + M_{\text{optimizer}} + M_{\text{activations}}
+\end{equation}
+For $\Phi$ parameters, weights and gradients take $2\Phi$ bytes each. Standard 32-bit AdamW maintains momentum states ($8\Phi$ bytes), consuming four times the static weights. Activations scale with batch size, sequence length, and depth, dominating peak VRAM unless checkpointed.
+
+PEFT freezes base parameters $\Phi_0$ and tunes auxiliary parameters $\Theta \ll \Phi_0$, restricting gradients and optimizer states to $\Theta$. Within our laboratory, an informal pilot led to the assertion: \textit{``Our pilot halves training memory compared with LoRA.''} However, this statement remains an unverified pilot claim. No experimental report, measurement logs, batch configurations, or hardware profiles have been provided to substantiate it. In scientific research, anecdotal assertions cannot serve as measured results or experimental premises. Rigorous memory assessment demands empirical profiling that separates design choices from hardware metrics.
+
+\section{Methodological Landscape of Parameter-Efficient Adaptation}
+
+Houlsby et al.~\cite{houlsby2019parameter} introduced bottleneck adapter layers after attention and feedforward projections while freezing pre-trained weights. On the GLUE benchmark, the adapter strategy almost matches the performance of the fully fine-tuned BERT, but uses only 3\% task-specific parameters~\cite{houlsby2019parameter}. However, sequential adapters modify forward paths, creating inference latency overhead.
+
+To resolve inference latency, Hu et al.~\cite{hu2021lora} proposed Low-Rank Adaptation (LoRA). LoRA freezes the pre-trained model weights and injects trainable rank decomposition matrices into each layer of the Transformer architecture~\cite{hu2021lora}. For base weight $W_0 \in \mathbb{R}^{d \times k}$, updates follow $\Delta W = \frac{\alpha}{r} B A$ ($r \ll \min(d, k)$). Compared to GPT-3 175B fine-tuned with Adam, LoRA can reduce the number of trainable parameters by 10,000 times and the GPU memory requirement by 3 times~\cite{hu2021lora}. When deployed in production, LoRA can explicitly compute and store the merged weights to eliminate additional inference latency compared to a fine-tuned model~\cite{hu2021lora}.
+
+Subsequent work addressed parameter distribution. In AdaLoRA, AdaLoRA parameterizes the incremental updates in the form of singular value decomposition~\cite{zhang2023adalora}. Formulating updates as $\Delta W = P \Lambda Q$, AdaLoRA iteratively prunes unimportant singular values to dynamically allocate parameter budgets.
+
+Liu et al.~\cite{liu2024dora} observed that LoRA's coupled updates differ from full fine-tuning dynamics. DoRA decomposes the pre-trained weight into its magnitude and directional components and finetunes both of them~\cite{liu2024dora}. With $W = m \frac{V + \Delta V}{\lVert V + \Delta V \rVert_c}$, DoRA optimizes directional update $\Delta V = B A$ alongside magnitude vector $m$. Empirically, DoRA consistently surpasses all baseline methods across both LLaMA-7B/13B, LLaMA2-7B and LLaMA3-8B~\cite{liu2024dora}. To reduce gradient graph memory consumption during backpropagation, DoRA treats the column-wise norm of the directional update as a constant and detaches it from the gradient graph~\cite{liu2024dora}.
+
+Targeting base weight memory, Dettmers et al.~\cite{dettmers2023qlora} developed QLoRA. QLoRA backpropagates gradients through a frozen, 4-bit quantized pretrained language model into Low Rank Adapters~\cite{dettmers2023qlora}. QLoRA introduces 4-bit NormalFloat (NF4), Double Quantization, and Paged Optimizers. Specifically, Double Quantization quantizes the quantization constants, saving an average of about 0.37 bits per parameter~\cite{dettmers2023qlora}. Empirically, QLoRA reduces memory usage enough to finetune a 65B parameter model on a single 48GB GPU while preserving full 16-bit finetuning task performance~\cite{dettmers2023qlora}.
+
+For full-parameter learning, Zhao et al.~\cite{zhao2024galore} proposed Gradient Low-Rank Projection (GaLore). Rather than restricting weight updates to a fixed low-rank manifold, GaLore projects the gradient matrix of the weight matrix into a low-rank form to reduce the memory cost of optimizer states~\cite{zhao2024galore}. Through periodic SVD projection updates, GaLore enables full-rank parameter learning with low-rank Adam states. GaLore reduces memory usage by up to 65.5\% in optimizer states while maintaining efficiency and performance for pre-training on LLaMA 1B and 7B architectures with the C4 dataset~\cite{zhao2024galore}.
+
+\section{Practical Tradeoffs: Design Choices versus Measured Results}
+
+Selecting an adaptation strategy requires balancing parameter count, memory footprint, runtime overhead, and serving requirements, as compared in Table~\ref{tab:comparison}.
+
+\begin{table}[htbp]
+\centering
+\scriptsize
+\setlength{\tabcolsep}{3pt}
+\caption{Taxonomy of adaptation methods: separating architectural design specifications from reported empirical findings.}
+\label{tab:comparison}
+\noindent\begin{tabularx}{\linewidth}{@{}l c >{\raggedright\arraybackslash}p{2.1cm} >{\raggedright\arraybackslash}p{2.1cm} c >{\raggedright\arraybackslash}X@{}}
+\toprule
+ & \multicolumn{3}{c}{\textbf{Architectural Design Properties}} & \multicolumn{2}{c}{\textbf{Reported Measured Results}} \\
+\cmidrule(lr){2-4} \cmidrule(lr){5-6}
+\textbf{Method} & \textbf{Base Weight} & \textbf{Adapter} & \textbf{Optimizer} & \textbf{Inference} & \textbf{Empirical Scale} \\
+ & \textbf{Precision} & \textbf{Design} & \textbf{States} & \textbf{Overhead} & \textbf{\& Measured Findings} \\
+\midrule
+Bottleneck~\cite{houlsby2019parameter} & 16-bit & Serial residual block & $8\lvert\Theta\rvert$ & Serial latency & BERT-Large (GLUE): within 0.4\% of FT with 3\% params. \\
+LoRA~\cite{hu2021lora} & 16-bit & Low-rank pair $BA$ & $8\lvert\Theta\rvert$ ($r \ll d$) & Zero (merged) & GPT-3 175B: 3$\times$ VRAM cut (1.2TB to 350GB). \\
+AdaLoRA~\cite{zhang2023adalora} & 16-bit & SVD parameterization & $8\lvert\Theta\rvert$ (dynamic rank) & Zero (merged) & DeBERTaV3 (GLUE): exceeds uniform LoRA. \\
+DoRA~\cite{liu2024dora} & 16-bit & Magnitude $m$ + direction $BA$ & $8\lvert\Theta\rvert$ + $8k$ per layer & Zero (merged) & LLaMA 7B--70B: consistently exceeds LoRA accuracy. \\
+QLoRA~\cite{dettmers2023qlora} & 4-bit (NF4) & Low-rank $BA$ + double quant. & $8\lvert\Theta\rvert$ + CPU paging & Dequant.~cost & 65B LLaMA on 48GB GPU: matches 16-bit baseline. \\
+GaLore~\cite{zhao2024galore} & 16-bit & Full weights (100\% updated) & Projected ($mr+2nr$) & Zero (native) & LLaMA 7B on 24GB: 65.5\% optimizer VRAM reduction. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Importantly, reported memory savings cannot be generalized across model scales or hardware without direct evidence. The 3$\times$ VRAM reduction reported for LoRA on GPT-3 175B reflects an extreme scale where 32-bit Adam states dominate total VRAM; on 7B models, base weights and activations dominate, yielding smaller relative gains. Similarly, QLoRA enables 65B tuning on a 48\,GB GPU, but on-the-fly 4-bit dequantization slows runtime throughput. Conversely, DoRA achieves superior benchmark accuracy, yet its decomposed gradient graph adds computation and slight memory overhead relative to standard LoRA.
+
+\section{Proposed Controlled Experiment on Consumer Hardware}
+
+To resolve practical performance tradeoffs, we propose an empirical experiment evaluating LoRA, QLoRA, DoRA, and GaLore on a single 24\,GB NVIDIA RTX 4090 GPU.
+
+\paragraph{Protocol and Parameter Matching.} We adapt LLaMA-3-8B on Alpaca (2,048 tokens). For LoRA and QLoRA, adapter ranks are evaluated across $r \in \{8, 16, 32\}$ with $\alpha = 2r$ over all projection matrices ($W_q, W_k, W_v, W_o$, and MLP gates/up/down). Because DoRA adds a trainable magnitude vector $m \in \mathbb{R}^{1 \times k}$ per layer, we match parameter budgets by evaluating DoRA at identical ranks $r \in \{8, 16, 32\}$ while isolating $m$'s marginal parameter overhead ($k$ scalar weights per matrix, $<0.01\%$ total parameters), alongside an iso-parameter configuration adjusting DoRA's rank. For GaLore, gradient projection rank is $r=128$ with subspace update frequency $T=200$ steps.
+
+\paragraph{Training and Profiling Controls.} Optimization follows standard configurations: AdamW ($\beta_1 = 0.9, \beta_2 = 0.999$, $\epsilon = 10^{-8}$), zero weight decay, cosine decay with 3\% warmup, and peak learning rate $2\times 10^{-4}$ ($10^{-4}$ for GaLore). All trials use batch size $b=2$, 8 accumulation steps, and FlashAttention-2 with gradient checkpointing. Profiling enforces strict controls: 50 warm-up steps before logging to stabilize memory fragmentation, explicit CUDA synchronization, and cache resets via PyTorch memory tracking routines. All metrics are averaged across three random seeds with reported standard deviations.
+
+\paragraph{Target Metrics and Hypotheses.} We record peak VRAM using PyTorch peak memory tracking, training throughput ($\text{tokens/s}$), and zero-shot accuracy on ARC-Challenge and HellaSwag. We hypothesize that QLoRA will achieve lowest VRAM but lower throughput, while DoRA will yield highest downstream accuracy with slightly higher training memory than LoRA.
+
+\section{Limitations and Scope}
+
+Several methodological boundaries govern this note. First, the laboratory pilot claim of halving training memory relative to LoRA remains unverified; without empirical data or code, it cannot serve as a valid result or experimental premise. Reported parameter and memory savings from specific architectures and hardware setups cannot be assumed to transfer identically to consumer-grade GPUs or different model families without dedicated profiling. Third, software kernel optimizations, such as FlashAttention and custom 4-bit GEMM implementations, significantly influence real-world memory and execution speed beyond theoretical parameter calculations.
+
+\bibliographystyle{plain}
+\bibliography{../refs/references}
+
+\end{document}

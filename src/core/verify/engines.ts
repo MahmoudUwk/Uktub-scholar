@@ -28,6 +28,14 @@ import {
 export const DEFAULT_OPENROUTER_MODEL = "inception/mercury-decide:free";
 /** Local llama.cpp System One endpoint (`llama-server` default port). */
 export const DEFAULT_LLAMA_CPP_URL = "http://127.0.0.1:8080";
+/** Hosted System One endpoint (d3-mini): the request URL, the model id it routes on, and its key. */
+export const VERIFY_URL_ENV = "UKTUB_VERIFY_URL";
+export const VERIFY_MODEL_ENV = "UKTUB_VERIFY_MODEL";
+export const VERIFY_API_KEY_ENV = "UKTUB_VERIFY_API_KEY";
+/** The `hosted` engine: d3-mini on the hosted System One endpoint; a free key is one click away at HOSTED_KEY_URL. */
+export const HOSTED_URL = "https://decision.vllm-sr.ai";
+export const HOSTED_MODEL = "vllm-sr/d3-mini";
+export const HOSTED_KEY_URL = "https://decision.vllm-sr.ai/";
 
 export const VERIFICATION_ENGINES = [
   "eos",
@@ -35,6 +43,7 @@ export const VERIFICATION_ENGINES = [
   "openrouter",
   "llama-cpp",
   "vela",
+  "hosted",
 ] as const;
 
 /** Decision protocol the System One engines speak: one `noul` question per
@@ -48,6 +57,7 @@ const PROTOCOLS: Record<(typeof VERIFICATION_ENGINES)[number], string> = {
   openrouter: SYSTEMONE_PROTOCOL,
   "llama-cpp": SYSTEMONE_PROTOCOL,
   vela: "vela2-halu-v1",
+  hosted: SYSTEMONE_PROTOCOL,
 };
 
 export interface EngineIdentity {
@@ -75,10 +85,19 @@ function localModelRef(ref: string): string {
   }
 }
 
-/** Ask an OpenAI-style `/v1/models` listing which model the endpoint serves. */
-async function probeServedModel(baseUrl: string, fetchImpl: typeof fetch): Promise<string | null> {
+/** Ask an OpenAI-style `/v1/models` listing which model the endpoint serves. With a key for an HTTPS origin the probe
+ *  authenticates the same way a judgment request does (the key is scoped to that origin and never logged); otherwise it
+ *  asks anonymously, as before. */
+async function probeServedModel(baseUrl: string, fetchImpl: typeof fetch, apiKey?: string): Promise<string | null> {
   try {
-    const res = await fetchImpl(`${baseUrl.replace(/\/+$/, "")}/v1/models`, { signal: AbortSignal.timeout(5_000) }); // client policy: identity probe must not stall a call
+    let https = false;
+    try {
+      https = new URL(baseUrl).protocol === "https:";
+    } catch {
+      https = false;
+    }
+    const headers: Record<string, string> = apiKey !== undefined && apiKey !== "" && https ? { authorization: `Bearer ${apiKey}` } : {};
+    const res = await fetchImpl(`${baseUrl.replace(/\/+$/, "")}/v1/models`, { headers, signal: AbortSignal.timeout(5_000) }); // client policy: identity probe must not stall a call
     if (!res.ok) return null;
     const body = (await res.json()) as { data?: { id?: unknown }[] };
     const id = body.data?.[0]?.id;
@@ -120,8 +139,19 @@ export async function resolveEngineIdentity(
     case "openrouter":
       return { model: `openrouter:${env.UKTUB_OPENROUTER_MODEL ?? DEFAULT_OPENROUTER_MODEL}`, protocol: SYSTEMONE_PROTOCOL };
     case "llama-cpp": {
-      const served = await probeServedModel(env.UKTUB_VERIFY_URL ?? DEFAULT_LLAMA_CPP_URL, fetchImpl);
-      return served === null ? null : { model: `llama-cpp:${served}`, protocol: SYSTEMONE_PROTOCOL };
+      const base = env[VERIFY_URL_ENV] ?? DEFAULT_LLAMA_CPP_URL;
+      const served = await probeServedModel(base, fetchImpl, env[VERIFY_API_KEY_ENV]);
+      if (served !== null) return { model: `llama-cpp:${served}`, protocol: SYSTEMONE_PROTOCOL };
+      // A hosted endpoint may serve no models listing (404): the configured model id stands in. It is the id the
+      // server echoes back in every judgment response, and the engine refuses an echo naming another model,
+      // so reuse under it stays sound. With neither, there is no identity and reuse stays disabled.
+      const configured = env[VERIFY_MODEL_ENV]?.trim();
+      return configured ? { model: `llama-cpp:${configured}`, protocol: SYSTEMONE_PROTOCOL } : null;
+    }
+    case "hosted": {
+      const served = await probeServedModel(HOSTED_URL, fetchImpl, env[VERIFY_API_KEY_ENV]);
+      // The host serves no models listing today: the requested model stands in, guarded by the per-response echo check.
+      return { model: `hosted:${served ?? HOSTED_MODEL}`, protocol: SYSTEMONE_PROTOCOL };
     }
     case "vela": {
       // Same rule as eos-onnx: under the pinned digests the worker refuses any other weights or inference code, so the pin IS the
@@ -170,9 +200,18 @@ function buildEngine(env: Record<string, string | undefined>, engine: string): C
     case "llama-cpp":
       return systemoneEndpointEngine({
         env,
-        url: (env.UKTUB_VERIFY_URL ?? DEFAULT_LLAMA_CPP_URL).replace(/\/+$/, "") + "/v1/systemone",
+        url: (env[VERIFY_URL_ENV] ?? DEFAULT_LLAMA_CPP_URL).replace(/\/+$/, "") + "/v1/systemone",
         label: "llama-cpp",
+        apiKey: env[VERIFY_API_KEY_ENV],
+        model: env[VERIFY_MODEL_ENV],
       });
+    case "hosted": {
+      const apiKey = env[VERIFY_API_KEY_ENV]?.trim();
+      if (!apiKey) {
+        throw new Error(`the hosted verifier needs a free key: get one at ${HOSTED_KEY_URL} and set ${VERIFY_API_KEY_ENV} (or use the local engine "eos")`);
+      }
+      return systemoneEndpointEngine({ env, url: `${HOSTED_URL}/v1/systemone`, label: "hosted", apiKey, model: HOSTED_MODEL });
+    }
     case "vela":
       return velaEngine({ env });
     default:

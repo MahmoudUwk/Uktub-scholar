@@ -214,6 +214,7 @@ export function publishSource(
          sections_json=excluded.sections_json, prepared_at=excluded.prepared_at, failure_code=NULL, failure_detail=NULL`,
     ).run(doi, source.kind, source.ref, source.license, source.digest, source.extraction, revision, source.text, source.pageStarts === null ? null : JSON.stringify(source.pageStarts), sectionsJson, iso(now));
     db.prepare("DELETE FROM claim_evidence WHERE doi = ? AND revision != ?").run(doi, revision);
+    db.prepare("DELETE FROM claim_ledger WHERE doi = ? AND revision != ?").run(doi, revision);
     const chunkCount = writeChunks(db, doi, revision, source.text, sections, cfg);
     bumpGeneration(db);
     return { revision, chunkCount, reused: false };
@@ -449,12 +450,36 @@ export interface RunEvidence extends EvidenceRow {
   releasedChars: number | null;
 }
 
-/** Record that these evidence rows were delivered, and how much text each released (exactly-once paging). */
-export function markDelivered(db: DatabaseSync, runId: string, items: { doi: string; revision: string; start: number; end: number; released: number }[]): void {
+/** Record that these evidence rows were delivered, and how much text each released (exactly-once paging).
+ *  Every released span is also written to the durable `claim_ledger` with the verbatim claim, so provenance
+ *  survives the 24 h sweep that prunes runs and their evidence. Re-delivery is idempotent (DO NOTHING). */
+export function markDelivered(
+  db: DatabaseSync,
+  runId: string,
+  items: { doi: string; revision: string; start: number; end: number; released: number }[],
+  release: { claim: string; now: Date },
+): void {
   if (items.length === 0) return;
   inTransaction(db, () => {
     const up = db.prepare("UPDATE claim_evidence SET released_chars = ? WHERE run_id = ? AND doi = ? AND revision = ? AND char_start = ? AND char_end = ?");
     for (const i of items) up.run(i.released, runId, i.doi, i.revision, i.start, i.end);
+    const sel = db.prepare(
+      "SELECT doi, revision, char_start, char_end, page, chunk_id, model_id, protocol, min_confidence, p_true FROM claim_evidence WHERE run_id = ? AND doi = ? AND revision = ? AND char_start = ? AND char_end = ?",
+    );
+    const ins = db.prepare(
+      `INSERT INTO claim_ledger (claim_hash, claim_text, doi, revision, char_start, char_end, page, chunk_id, model_id, protocol, min_confidence, p_true, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT(claim_hash, doi, revision, char_start, char_end) DO NOTHING`,
+    );
+    const hash = claimHashOf(release.claim);
+    const at = iso(release.now);
+    for (const i of items) {
+      const row = sel.get(runId, i.doi, i.revision, i.start, i.end) as
+        | { doi: string; revision: string; char_start: number; char_end: number; page: number | null; chunk_id: string; model_id: string; protocol: string; min_confidence: number; p_true: number }
+        | undefined;
+      if (row === undefined) continue;
+      ins.run(hash, release.claim, row.doi, row.revision, row.char_start, row.char_end, row.page, row.chunk_id, row.model_id, row.protocol, row.min_confidence, row.p_true, at);
+    }
   });
 }
 

@@ -21,6 +21,12 @@ export interface EngineSpec {
   adapter?: { script: string; python: string; env: Record<string, string>; declaredId: string };
   /** The model's own System One server, started for the run and stopped after it; rows are posted over HTTP in the given wording. */
   server?: { cwd: string; command: string[]; env: Record<string, string>; url: string; wording: "criteria" | "native"; declaredId: string };
+  /**
+   * A hosted System One endpoint: no local server is started; rows are posted with the model id and a key the runner reads from
+   * its own environment (never stored in the spec). `concurrency` bounds the rows in flight (client policy: under the key's
+   * per-minute token budget of the endpoint).
+   */
+  remote?: { url: string; wording: "criteria" | "native"; model: string; declaredId: string; concurrency: number };
 }
 
 const KAI_REVISION = "cd49ea3813fd8ba0928a9a23ef6c9a0f2f0cd764";
@@ -103,6 +109,20 @@ export function engineSpecs(home: string): Record<string, EngineSpec> {
     },
     "kev-0.8b": kev("criteria"),
     "kev-0.8b-native": kev("native"),
+    // The hosted vLLM Semantic Router Decision 3.0 model d3-mini (4B): the same `criteria` wording over HTTPS, the model id routed
+    // by the request body and the key from the runner's environment. No revision pin: the weights are the provider's, so the
+    // declared identity names the model id and the wording, and a rerun of the same claims is the parity check.
+    "d3-mini-api": {
+      engine: "llama-cpp",
+      env: {},
+      remote: {
+        url: "https://decision.vllm-sr.ai",
+        wording: WORDING,
+        model: "vllm-sr/d3-mini",
+        declaredId: "vllm-sr/d3-mini:criteria",
+        concurrency: 3,
+      },
+    },
     // Eos on CPU is the product's 8-bit ONNX export (pinned by the product's own lock file); the table's CPU gate figure for Eos comes from this spec.
     "eos-onnx": { engine: "eos-onnx", env: {} },
     // The portable 8-bit ONNX artifact of Eos (the file a browser or any ONNX runtime would load) run on the GPU through the product's eos-onnx engine, in the

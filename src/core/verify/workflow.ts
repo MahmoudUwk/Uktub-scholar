@@ -373,7 +373,7 @@ async function registryWorkflow(
     page.push(e);
     chars += len;
   }
-  await ctx.queue.runExclusive(() => markDelivered(db, runId, page.map((e) => ({ doi: e.doi, revision: e.revision, start: e.start, end: e.end, released: e.excerpt?.length ?? 0 }))));
+  await ctx.queue.runExclusive(() => markDelivered(db, runId, page.map((e) => ({ doi: e.doi, revision: e.revision, start: e.start, end: e.end, released: e.excerpt?.length ?? 0 })), { claim: req.claim, now: ctx.now() }));
   const outputRemaining = contained.length - page.length;
   const continuation = nextWork !== null || outputRemaining > 0 ? encodeToken(runId) : null;
   const available = delivered.length + contained.length;

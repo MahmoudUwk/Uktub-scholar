@@ -6,7 +6,7 @@
 -- `doi` is the PRIMARY KEY: DOIs are case-insensitive, and the canonical
 -- lowercase form is what makes the uniqueness meaningful.
 --
--- Version 5 (current). Migration from v1–v4 is explicit in registry.ts; this
+-- Version 6 (current). Migration from v1–v5 is explicit in registry.ts; this
 -- file is the whole current schema and is idempotent (IF NOT EXISTS).
 -- Every column names its consumer.
 
@@ -175,6 +175,34 @@ CREATE TABLE IF NOT EXISTS claim_evidence (
   PRIMARY KEY (run_id, doi, revision, char_start, char_end)
 );
 
+-- Durable verified evidence (v6): one row per verified wording + supporting
+-- span, written exactly when its `claim_evidence` row is released to the agent
+-- (`released_chars` set). It lives as long as its paper (FK cascade) and its
+-- source revision (deleted with it on republication), and never expires by
+-- time; `verify_runs` + `claim_evidence` stay the 24 h continuation state.
+-- Provenance takes `verified` only from here. No backfill: v5 evidence
+-- expired after 24 h by contract, so `claim_text` stays NOT NULL.
+CREATE TABLE IF NOT EXISTS claim_ledger (
+  claim_hash TEXT NOT NULL,
+  -- The verbatim claim the agent asked to verify (the wording variants hash to `claim_hash`).
+  claim_text TEXT NOT NULL,
+  doi TEXT NOT NULL REFERENCES papers(doi) ON DELETE CASCADE,
+  revision TEXT NOT NULL,
+  char_start INTEGER NOT NULL,
+  char_end INTEGER NOT NULL,
+  -- Grounded page number (1-based) when the extractor maps pages.
+  page INTEGER,
+  chunk_id TEXT NOT NULL,
+  model_id TEXT NOT NULL,
+  protocol TEXT NOT NULL,
+  -- The bar the run judged under; provenance applies the CURRENT bar on read instead.
+  min_confidence REAL NOT NULL,
+  p_true REAL NOT NULL,
+  created_at TEXT NOT NULL,
+  PRIMARY KEY (claim_hash, doi, revision, char_start, char_end)
+);
+CREATE INDEX IF NOT EXISTS idx_claim_ledger_hash ON claim_ledger(claim_hash);
+
 -- Single-row change counter: continuation tokens reject a registry that
 -- changed since they were issued.
 CREATE TABLE IF NOT EXISTS registry_state (
@@ -183,4 +211,4 @@ CREATE TABLE IF NOT EXISTS registry_state (
 );
 INSERT OR IGNORE INTO registry_state (id, generation) VALUES (1, 0);
 
-PRAGMA user_version = 5;
+PRAGMA user_version = 6;

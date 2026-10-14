@@ -9,11 +9,24 @@ import { join } from "node:path";
 import { compactionsOf } from "./behavior.ts";
 import { Blocked } from "./cases.ts";
 import { redact } from "./redact.ts";
-import { type SandboxSpec, spawnSandboxed } from "./sandbox.ts";
+import { type GraderSandboxSpec, type SandboxSpec, spawnSandboxed } from "./sandbox.ts";
 
 export const MODEL = { provider: "google-vertex", id: "gemini-3.8-flash" } as const;
 /** Owner decision 2026-10-07: when gemini-3.8-flash is quota limited (HTTP 429 / RESOURCE_EXHAUSTED), rerun that turn once on this model. Explicit, per turn, always labelled in the evidence; never an implicit fallback. */
 export const FALLBACK_MODEL = { provider: "google-vertex", id: "gemini-3.5-flash-lite" } as const;
+
+/** Models are harness settings (Pi `provider/id` strings), not hard-coded: the agent driver accepts one per session. */
+export interface ModelRef {
+  provider: string;
+  id: string;
+}
+/** Split a `provider/id` setting (e.g. `--assistant-model`). Anything else is a harness error, never a guess. */
+export function parseModelSetting(text: string): ModelRef {
+  const slash = text.indexOf("/");
+  if (slash <= 0 || slash === text.length - 1) throw new Error(`model must be provider/id, got ${JSON.stringify(text)}`);
+  return { provider: text.slice(0, slash), id: text.slice(slash + 1) };
+}
+export const formatModel = (m: ModelRef): string => `${m.provider}/${m.id}`;
 export const isQuotaFailure = (text: string): boolean => /\b429\b|RESOURCE_EXHAUSTED|Resource exhausted/i.test(text);
 const TOOL_PREFIX = "mcp__uktub__";
 export const AGENT_POLICY = {
@@ -78,12 +91,19 @@ const textOf = (result: any): string => (result?.content ?? []).filter((c: any) 
 export interface StartOptions {
   /** Prefix of this agent's evidence files (two agents can share one evidence dir). */
   label?: string;
+  /** Pi provider/id for this session (default MODEL), so a later grader can run Pi sessions on other models. */
+  model?: { provider: string; id: string };
   /** Let Pi retry transient provider failures (experiments only; acceptance keeps it off so a provider failure stays visible). Every retry is logged and recorded on the turn. */
   autoRetry?: boolean;
   /** Smoke-test seam only: treat the first fresh-session turn's primary attempt as quota limited, to exercise the fallback path on demand. */
   simulateQuotaOnce?: boolean;
   /** Extra Pi flags (e.g. a tool-less, extension-less user simulator with its own system prompt). */
   piArgs?: string[];
+  /**
+   * Override how the Pi RPC process is spawned (grader sessions run in a different container layout;
+   * see sandbox.ts GraderSandboxSpec). Receives the same `pi --mode rpc ...` argv spawnSandboxed gets.
+   */
+  spawnPi?: (args: string[]) => ChildProcess;
   /**
    * Optional hook fired on every `tool_execution_end` event, at tool-result
    * time (before the model continues the turn). Used by the experiment driver
@@ -93,9 +113,12 @@ export interface StartOptions {
   onToolEnd?: (end: ToolEnd) => void;
 }
 
-export async function startAgent(spec: SandboxSpec, outDir: string, log: (l: string) => void, opts: StartOptions = {}): Promise<{ agent: Agent; stop(): Promise<void> }> {
+export async function startAgent(spec: SandboxSpec | GraderSandboxSpec, outDir: string, log: (l: string) => void, opts: StartOptions = {}): Promise<{ agent: Agent; stop(): Promise<void> }> {
   const label = opts.label ?? "pi";
-  const proc: ChildProcess = spawnSandboxed(spec, ["pi", "--mode", "rpc", "--provider", MODEL.provider, "--model", MODEL.id, "--no-session", ...(opts.piArgs ?? [])]);
+  const selected: { provider: string; id: string } = opts.model ?? MODEL;
+  const piArgs = ["pi", "--mode", "rpc", "--provider", selected.provider, "--model", selected.id, "--no-session", ...(opts.piArgs ?? [])];
+  const proc: ChildProcess = opts.spawnPi?.(piArgs)
+    ?? spawnSandboxed(spec as SandboxSpec, piArgs); // spawnPi callers pass a grader spec and must set spawnPi
   const events: any[] = [];
   const pending = new Map<string, { resolve: (v: any) => void; reject: (e: Error) => void; timer: NodeJS.Timeout }>();
   const waiters = new Set<{ type: string; resolve: (e: any) => void; reject: (e: Error) => void; timer: NodeJS.Timeout }>();
@@ -174,14 +197,14 @@ export async function startAgent(spec: SandboxSpec, outDir: string, log: (l: str
   };
 
   const state = (await command("get_state")) as any;
-  if (state.model?.provider !== MODEL.provider || state.model?.id !== MODEL.id) throw new Error(`Pi selected ${state.model?.provider}/${state.model?.id}, not ${MODEL.provider}/${MODEL.id}: refusing to fall back`);
+  if (state.model?.provider !== selected.provider || state.model?.id !== selected.id) throw new Error(`Pi selected ${state.model?.provider}/${state.model?.id}, not ${selected.provider}/${selected.id}: refusing to fall back`);
   const contextWindow = Number(state.model?.contextWindow ?? 0);
   await command("set_auto_retry", { enabled: opts.autoRetry ?? AGENT_POLICY.autoRetry });
-  log(`PI READY [${label}] ${MODEL.provider}/${MODEL.id} (container ${spec.name})`);
+  log(`PI READY [${label}] ${selected.provider}/${selected.id} (container ${spec.name})`);
 
-  let desired: { provider: string; id: string } = MODEL;
+  let desired: { provider: string; id: string } = { ...selected };
   let simulate = opts.simulateQuotaOnce === true;
-  let current: { provider: string; id: string } = MODEL;
+  let current: { provider: string; id: string } = { ...selected };
   const selectModel = async (m: { provider: string; id: string }): Promise<void> => {
     if (current.provider === m.provider && current.id === m.id) return;
     await command("set_model", { provider: m.provider, modelId: m.id });
@@ -195,7 +218,7 @@ export async function startAgent(spec: SandboxSpec, outDir: string, log: (l: str
     async turn(id, prompt, opts) {
       if (opts?.newSession !== false) {
         await command("new_session");
-        current = MODEL; // a new Pi session starts on the default model: apply the one this turn is meant to run on
+        current = { ...selected }; // a new Pi session starts on the default model: apply the one this turn is meant to run on
         await selectModel(desired);
       }
       const want = current;
@@ -267,11 +290,11 @@ export async function startAgent(spec: SandboxSpec, outDir: string, log: (l: str
     ...agent0,
     async turn(id, prompt, opts) {
       const fresh = opts?.newSession !== false;
-      if (fresh) desired = MODEL;
+      if (fresh) desired = { ...selected };
       try {
         if (simulate && fresh) {
           simulate = false;
-          throw new TurnBlocked("turn: provider/model error: simulated HTTP 429 RESOURCE_EXHAUSTED (smoke test of the fallback path)", { id, prompt, calls: [], ends: [], final: "", dialogs: [], elapsedMs: 0, retries: [], messages: [], compactions: [], model: `${MODEL.provider}/${MODEL.id}`, usage: { input: 0, output: 0, reasoning: 0, total: 0, costUsd: 0, responses: 0 } });
+          throw new TurnBlocked("turn: provider/model error: simulated HTTP 429 RESOURCE_EXHAUSTED (smoke test of the fallback path)", { id, prompt, calls: [], ends: [], final: "", dialogs: [], elapsedMs: 0, retries: [], messages: [], compactions: [], model: `${selected.provider}/${selected.id}`, usage: { input: 0, output: 0, reasoning: 0, total: 0, costUsd: 0, responses: 0 } });
         }
         return await agent0.turn(id, prompt, opts);
       } catch (e) {

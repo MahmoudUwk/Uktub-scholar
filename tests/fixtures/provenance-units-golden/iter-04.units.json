@@ -1,0 +1,431 @@
+[
+  {
+    "id": "u1",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 21,
+    "section": "",
+    "text": "Adapting large language models under GPU memory limits requires balancing weights, optimizer states, gradients, and activations.",
+    "cites": []
+  },
+  {
+    "id": "u2",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 22,
+    "section": "",
+    "text": "This note evaluates LoRA, QLoRA, DoRA, AdaLoRA, LongLoRA, and QA-LoRA.",
+    "cites": []
+  },
+  {
+    "id": "u3",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 22,
+    "section": "",
+    "text": "We separate architectural designs from measured benchmarks, evaluate an unverified laboratory claim, and specify a controlled experimental protocol.",
+    "cites": []
+  },
+  {
+    "id": "u4",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 27,
+    "section": "Low-Rank Decomposition and Weight Reparameterization",
+    "text": "Full fine-tuning stores 16 bytes per parameter under Adam.",
+    "cites": []
+  },
+  {
+    "id": "u5",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 27,
+    "section": "Low-Rank Decomposition and Weight Reparameterization",
+    "text": "Parameter-efficient fine-tuning (PEFT) freezes base weights, eliminating optimizer memory for the backbone.",
+    "cites": []
+  },
+  {
+    "id": "u6",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 29,
+    "section": "Low-Rank Decomposition and Weight Reparameterization",
+    "text": "Low-Rank Adaptation establishes factorized tuning: LoRA freezes the pre-trained model weights and injects trainable rank decomposition matrices into each layer of the Transformer architecture, greatly reducing the number of trainable parameters for downstream tasks. In benchmarked evaluations: Compared to GPT-3 175B fine-tuned with Adam, LoRA can reduce the number of trainable parameters by 10,000 times and the GPU memory requirement by 3 times. This reduction is specific to 175B parameters; it cannot be transferred to 7B models where activations dominate peak VRAM.",
+    "cites": [
+      "hu2021lora"
+    ]
+  },
+  {
+    "id": "u7",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 31,
+    "section": "Low-Rank Decomposition and Weight Reparameterization",
+    "text": "Adaptive Low-Rank Adaptation dynamically allocates rank across layers: AdaLoRA parameterizes the incremental updates in the form of singular value decomposition. Pruning minor singular values yields high efficiency: For example, AdaLoRA achieves 88.7% F1 on SQuADv2.0 with the smallest budget 0.08%.",
+    "cites": [
+      "zhang2023adalora"
+    ]
+  },
+  {
+    "id": "u8",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 33,
+    "section": "Low-Rank Decomposition and Weight Reparameterization",
+    "text": "Weight-Decomposed Low-Rank Adaptation isolates magnitude and direction: DoRA decomposes the pre-trained weight into two components, magnitude and direction, for fine-tuning, specifically employing LoRA for directional updates to efficiently minimize the number of trainable parameters. Detaching the directional norm eliminates backpropagation overhead: The results indicate that the modification leads to a training memory reduction of approximately 24.4% in fine-tuning LLaMA and 12.4% in VL-BART.",
+    "cites": [
+      "liu2024dora"
+    ]
+  },
+  {
+    "id": "u9",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 37,
+    "section": "Base Model Quantization and Activation Scaling",
+    "text": "Quantized adaptation targets 16-bit base weights.",
+    "cites": []
+  },
+  {
+    "id": "u10",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 37,
+    "section": "Base Model Quantization and Activation Scaling",
+    "text": "QLoRA backpropagates gradients through a frozen, 4-bit quantized pretrained language model into Low Rank Adapters. Utilizing 4-bit NormalFloat (NF4), double quantization, and paged optimizers: QLoRA reduces the average memory requirements of finetuning a 65B parameter model from >780GB of GPU memory to <48GB without degrading the runtime or predictive performance compared to a 16-bit fully finetuned baseline.",
+    "cites": [
+      "dettmers2023qlora"
+    ]
+  },
+  {
+    "id": "u11",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 39,
+    "section": "Base Model Quantization and Activation Scaling",
+    "text": "To avoid quantization error during low-bit deployment: QA-LoRA addresses the issue by introducing group-wise operators which increase the degree of freedom of low-bit quantization and decrease that of LoRA. This enables direct INT4 matrix fusion: Additionally, during the inference stage, QA-LoRA is also more than 50% faster than QLoRA because the fine-tuned model (after weight integration) is still in INT4, unlike QLoRA that converts it back to FP16.",
+    "cites": [
+      "xu2023qa"
+    ]
+  },
+  {
+    "id": "u12",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 41,
+    "section": "Base Model Quantization and Activation Scaling",
+    "text": "When context windows expand, activations dominate VRAM.",
+    "cites": []
+  },
+  {
+    "id": "u13",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 41,
+    "section": "Base Model Quantization and Activation Scaling",
+    "text": "In addition to training LoRA weights in linear layers, LongLoRA further makes embedding and normalization layers trainable. Utilizing Shifted Sparse Attention (S2-Attn): LongLoRA closes the accuracy gap that between conventional LoRA and full fine-tuning, while still maintaining up to 1.8× lower memory cost than full fine-tuning.",
+    "cites": [
+      "chen2023longlora"
+    ]
+  },
+  {
+    "id": "u14",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 45,
+    "section": "Practical Tradeoffs and Critical Analysis",
+    "text": "Selecting an adaptation strategy requires balancing parameter savings, activations, and deployment latency.",
+    "cites": []
+  },
+  {
+    "id": "u15",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 45,
+    "section": "Practical Tradeoffs and Critical Analysis",
+    "text": "Table contrasts architectural choices against reported empirical outcomes.",
+    "cites": []
+  },
+  {
+    "id": "u16",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 47,
+    "section": "Practical Tradeoffs and Critical Analysis",
+    "text": "2mm 3pt",
+    "cites": []
+  },
+  {
+    "id": "u17",
+    "kind": "caption",
+    "file": "main.tex",
+    "line": 50,
+    "section": "Practical Tradeoffs and Critical Analysis",
+    "text": "Parameter-efficient adaptation methods distinguishing architectural design choices from measured empirical results.",
+    "cites": []
+  },
+  {
+    "id": "u18",
+    "kind": "row",
+    "file": "main.tex",
+    "line": 56,
+    "section": "Practical Tradeoffs and Critical Analysis",
+    "text": "Method | 2cArchitectural Design Choices | 2cMeasured Empirical Results",
+    "cites": []
+  },
+  {
+    "id": "u19",
+    "kind": "row",
+    "file": "main.tex",
+    "line": 58,
+    "section": "Practical Tradeoffs and Critical Analysis",
+    "text": " | Base & Target Layers | Deployment Merge | Evaluation Baseline | Key Measured Outcome",
+    "cites": []
+  },
+  {
+    "id": "u20",
+    "kind": "row",
+    "file": "main.tex",
+    "line": 60,
+    "section": "Practical Tradeoffs and Critical Analysis",
+    "text": "LoRA | 16-bit; attention (Wq, Wv) | Exact 16-bit matrix fusion | GPT-3 175B, Adam | 3× VRAM reduction; 10,000× param cut",
+    "cites": [
+      "hu2021lora"
+    ]
+  },
+  {
+    "id": "u21",
+    "kind": "row",
+    "file": "main.tex",
+    "line": 61,
+    "section": "Practical Tradeoffs and Critical Analysis",
+    "text": "AdaLoRA | 16-bit; dynamic SVD on att./MLP | Matrix fusion after prune | DeBERTaV3, SQuADv2.0 | 88.7% F1 at 0.08% budget",
+    "cites": [
+      "zhang2023adalora"
+    ]
+  },
+  {
+    "id": "u22",
+    "kind": "row",
+    "file": "main.tex",
+    "line": 62,
+    "section": "Practical Tradeoffs and Critical Analysis",
+    "text": "DoRA | 16-bit; magnitude/direction split | Exact 16-bit matrix fusion | LLaMA-7B fine-tuning | 24.4% train memory cut via detached norm",
+    "cites": [
+      "liu2024dora"
+    ]
+  },
+  {
+    "id": "u23",
+    "kind": "row",
+    "file": "main.tex",
+    "line": 63,
+    "section": "Practical Tradeoffs and Critical Analysis",
+    "text": "QLoRA | 4-bit NF4; all linear layers | Unmerged mixed precision | 65B LLaMA on 1×48GB | <48GB VRAM vs >780GB full FT baseline",
+    "cites": [
+      "dettmers2023qlora"
+    ]
+  },
+  {
+    "id": "u24",
+    "kind": "row",
+    "file": "main.tex",
+    "line": 64,
+    "section": "Practical Tradeoffs and Critical Analysis",
+    "text": "QA-LoRA | 4-bit INT4; grouped projections | Direct INT4 matrix fusion | LLaMA-7B inference | >50% faster inference vs QLoRA",
+    "cites": [
+      "xu2023qa"
+    ]
+  },
+  {
+    "id": "u25",
+    "kind": "row",
+    "file": "main.tex",
+    "line": 65,
+    "section": "Practical Tradeoffs and Critical Analysis",
+    "text": "LongLoRA | 16-bit; S2-Attn, norm/emb | Full dense attention | LLaMA-2 7B, 8k--32k | Up to 1.8× lower memory vs full FT",
+    "cites": [
+      "chen2023longlora"
+    ]
+  },
+  {
+    "id": "u26",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 72,
+    "section": "Practical Tradeoffs and Critical Analysis",
+    "text": "An informal laboratory assertion claims: ``Our pilot halves training memory compared with LoRA.'' This statement is entirely unverified: Our pilot halves training memory compared with LoRA.",
+    "cites": []
+  },
+  {
+    "id": "u27",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 72,
+    "section": "Practical Tradeoffs and Critical Analysis",
+    "text": "No technical specification, log, batch size, or sequence length was provided to substantiate it.",
+    "cites": []
+  },
+  {
+    "id": "u28",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 74,
+    "section": "Practical Tradeoffs and Critical Analysis",
+    "text": "On a 7B model with 16-bit LoRA, base weights consume ≈14 GB, while adapter states take <150 MB.",
+    "cites": []
+  },
+  {
+    "id": "u29",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 74,
+    "section": "Practical Tradeoffs and Critical Analysis",
+    "text": "With gradient checkpointing, base weights dominate over 80% of allocated VRAM.",
+    "cites": []
+  },
+  {
+    "id": "u30",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 74,
+    "section": "Practical Tradeoffs and Critical Analysis",
+    "text": "Halving total training memory cannot occur through adapter reparameterization alone; it strictly requires 4-bit base quantization, offloading, or sequence truncation.",
+    "cites": []
+  },
+  {
+    "id": "u31",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 74,
+    "section": "Practical Tradeoffs and Critical Analysis",
+    "text": "Hence, this claim is rejected as an empirical finding and excluded from experimental planning.",
+    "cites": []
+  },
+  {
+    "id": "u32",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 78,
+    "section": "Proposed Experimental Protocol",
+    "text": "To establish rigorous memory and throughput boundaries, we specify a controlled benchmark on a 24 GB GPU (NVIDIA RTX 4090).",
+    "cites": []
+  },
+  {
+    "id": "u33",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 80,
+    "section": "Proposed Experimental Protocol",
+    "text": "We evaluate LLaMA-3-8B across four conditions: 16-bit LoRA, 4-bit QLoRA (NF4), 16-bit DoRA, and 4-bit QA-LoRA (INT4) (r=16, =32 across attention and MLP projections).",
+    "cites": []
+  },
+  {
+    "id": "u34",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 80,
+    "section": "Proposed Experimental Protocol",
+    "text": "All runs enforce identical AdamW settings (1=0.9, 2=0.999, =10-8, weight decay 0.0), a cosine schedule (2 × 10-4 to 2 × 10-5 with 3% warmup), and fixed seed 42 for shuffling, initialization, and dropout.",
+    "cites": []
+  },
+  {
+    "id": "u35",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 82,
+    "section": "Proposed Experimental Protocol",
+    "text": "We fix effective batch size strictly at 16 across all runs via per-device batch size 2 and 8 accumulation steps (2 × 8 = 16).",
+    "cites": []
+  },
+  {
+    "id": "u36",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 82,
+    "section": "Proposed Experimental Protocol",
+    "text": "Training uses 10,000 Alpaca examples under sequence lengths L \\512, 2048, 4096 evaluated with and without gradient checkpointing.",
+    "cites": []
+  },
+  {
+    "id": "u37",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 84,
+    "section": "Proposed Experimental Protocol",
+    "text": "Telemetry distinguishes peak allocated VRAM (active tensors via torch.cuda.max_memory_allocated) from peak reserved VRAM (caching allocator overhead and fragmentation via torch.cuda.max_memory_reserved).",
+    "cites": []
+  },
+  {
+    "id": "u38",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 84,
+    "section": "Proposed Experimental Protocol",
+    "text": "Step throughput is logged in tokens per second.",
+    "cites": []
+  },
+  {
+    "id": "u39",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 84,
+    "section": "Proposed Experimental Protocol",
+    "text": "Downstream accuracy is evaluated on 5-shot MMLU and ARC-Challenge; inference latency is profiled across batch sizes 1 to 8.",
+    "cites": []
+  },
+  {
+    "id": "u40",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 88,
+    "section": "Limitations",
+    "text": "Several methodological boundaries govern this note.",
+    "cites": []
+  },
+  {
+    "id": "u41",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 88,
+    "section": "Limitations",
+    "text": "Reported memory savings and training speedups from published benchmarks cannot be assumed to generalize across differing model architectures, sequence lengths, batch sizes, or GPU hardware without direct empirical measurement.",
+    "cites": []
+  },
+  {
+    "id": "u42",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 88,
+    "section": "Limitations",
+    "text": "Specifically, 4-bit dequantization latency depends heavily on Tensor Core support and GPU memory bandwidth.",
+    "cites": []
+  },
+  {
+    "id": "u43",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 88,
+    "section": "Limitations",
+    "text": "Shifted Sparse Attention requires rotary position embeddings and does not transfer to absolute position encodings without adaptation.",
+    "cites": []
+  },
+  {
+    "id": "u44",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 88,
+    "section": "Limitations",
+    "text": "Finally, published metrics cited here were verified against archival sources, whereas informal laboratory assertions remain strictly unverified.",
+    "cites": []
+  },
+  {
+    "id": "u45",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 90,
+    "section": "Limitations",
+    "text": "plain",
+    "cites": []
+  }
+]

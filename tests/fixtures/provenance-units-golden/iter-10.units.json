@@ -1,0 +1,671 @@
+[
+  {
+    "id": "u1",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 27,
+    "section": "",
+    "text": "Fine-tuning large language models on budget-constrained hardware requires mitigating memory bottlenecks across weights, optimizer states, and activations.",
+    "cites": []
+  },
+  {
+    "id": "u2",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 28,
+    "section": "",
+    "text": "We synthesize six adaptation strategies: bottleneck adapters, Low-Rank Adaptation (LoRA), AdaLoRA, Weight-Decomposed Low-Rank Adaptation (DoRA), Quantized LoRA (QLoRA), and Gradient Low-Rank Projection (GaLore), distinguishing architectural designs from measured hardware metrics.",
+    "cites": []
+  },
+  {
+    "id": "u3",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 28,
+    "section": "",
+    "text": "We also address an unverified laboratory claim, evaluate tradeoffs, and present a controlled single-GPU experimental protocol.",
+    "cites": []
+  },
+  {
+    "id": "u4",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 33,
+    "section": "Introduction and GPU Memory Allocation",
+    "text": "Adapting pretrained language models is constrained by GPU memory.",
+    "cites": []
+  },
+  {
+    "id": "u5",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 33,
+    "section": "Introduction and GPU Memory Allocation",
+    "text": "In 16-bit fine-tuning with AdamW, memory decomposes into weights, gradients, optimizer states, and activations:",
+    "cites": []
+  },
+  {
+    "id": "u6",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 37,
+    "section": "Introduction and GPU Memory Allocation",
+    "text": "For parameters, weights and gradients take 2 bytes each.",
+    "cites": []
+  },
+  {
+    "id": "u7",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 37,
+    "section": "Introduction and GPU Memory Allocation",
+    "text": "Standard 32-bit AdamW maintains momentum states (8 bytes), consuming four times the static weights.",
+    "cites": []
+  },
+  {
+    "id": "u8",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 37,
+    "section": "Introduction and GPU Memory Allocation",
+    "text": "Activations scale with batch size, sequence length, and depth, dominating peak VRAM unless checkpointed.",
+    "cites": []
+  },
+  {
+    "id": "u9",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 39,
+    "section": "Introduction and GPU Memory Allocation",
+    "text": "PEFT freezes base parameters 0 and tunes auxiliary parameters 0, restricting gradients and optimizer states to.",
+    "cites": []
+  },
+  {
+    "id": "u10",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 39,
+    "section": "Introduction and GPU Memory Allocation",
+    "text": "Within our laboratory, an informal pilot led to the assertion: ``Our pilot halves training memory compared with LoRA.'' However, this statement remains an unverified pilot claim.",
+    "cites": []
+  },
+  {
+    "id": "u11",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 39,
+    "section": "Introduction and GPU Memory Allocation",
+    "text": "No experimental report, measurement logs, batch configurations, or hardware profiles have been provided to substantiate it.",
+    "cites": []
+  },
+  {
+    "id": "u12",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 39,
+    "section": "Introduction and GPU Memory Allocation",
+    "text": "In scientific research, anecdotal assertions cannot serve as measured results or experimental premises.",
+    "cites": []
+  },
+  {
+    "id": "u13",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 39,
+    "section": "Introduction and GPU Memory Allocation",
+    "text": "Rigorous memory assessment demands empirical profiling that separates design choices from hardware metrics.",
+    "cites": []
+  },
+  {
+    "id": "u14",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 43,
+    "section": "Methodological Landscape of Parameter-Efficient Adaptation",
+    "text": "Houlsby et al. introduced bottleneck adapter layers after attention and feedforward projections while freezing pre-trained weights.",
+    "cites": [
+      "houlsby2019parameter"
+    ]
+  },
+  {
+    "id": "u15",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 43,
+    "section": "Methodological Landscape of Parameter-Efficient Adaptation",
+    "text": "On the GLUE benchmark, the adapter strategy almost matches the performance of the fully fine-tuned BERT, but uses only 3% task-specific parameters.",
+    "cites": [
+      "houlsby2019parameter"
+    ]
+  },
+  {
+    "id": "u16",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 43,
+    "section": "Methodological Landscape of Parameter-Efficient Adaptation",
+    "text": "However, sequential adapters modify forward paths, creating inference latency overhead.",
+    "cites": []
+  },
+  {
+    "id": "u17",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 45,
+    "section": "Methodological Landscape of Parameter-Efficient Adaptation",
+    "text": "To resolve inference latency, Hu et al. proposed Low-Rank Adaptation (LoRA).",
+    "cites": [
+      "hu2021lora"
+    ]
+  },
+  {
+    "id": "u18",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 45,
+    "section": "Methodological Landscape of Parameter-Efficient Adaptation",
+    "text": "LoRA freezes the pre-trained model weights and injects trainable rank decomposition matrices into each layer of the Transformer architecture.",
+    "cites": [
+      "hu2021lora"
+    ]
+  },
+  {
+    "id": "u19",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 45,
+    "section": "Methodological Landscape of Parameter-Efficient Adaptation",
+    "text": "For base weight W0 Rd × k, updates follow W = r B A (r (d, k)).",
+    "cites": []
+  },
+  {
+    "id": "u20",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 45,
+    "section": "Methodological Landscape of Parameter-Efficient Adaptation",
+    "text": "Compared to GPT-3 175B fine-tuned with Adam, LoRA can reduce the number of trainable parameters by 10,000 times and the GPU memory requirement by 3 times.",
+    "cites": [
+      "hu2021lora"
+    ]
+  },
+  {
+    "id": "u21",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 45,
+    "section": "Methodological Landscape of Parameter-Efficient Adaptation",
+    "text": "When deployed in production, LoRA can explicitly compute and store the merged weights to eliminate additional inference latency compared to a fine-tuned model.",
+    "cites": [
+      "hu2021lora"
+    ]
+  },
+  {
+    "id": "u22",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 47,
+    "section": "Methodological Landscape of Parameter-Efficient Adaptation",
+    "text": "Subsequent work addressed parameter distribution.",
+    "cites": []
+  },
+  {
+    "id": "u23",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 47,
+    "section": "Methodological Landscape of Parameter-Efficient Adaptation",
+    "text": "In AdaLoRA, AdaLoRA parameterizes the incremental updates in the form of singular value decomposition.",
+    "cites": [
+      "zhang2023adalora"
+    ]
+  },
+  {
+    "id": "u24",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 47,
+    "section": "Methodological Landscape of Parameter-Efficient Adaptation",
+    "text": "Formulating updates as W = P Q, AdaLoRA iteratively prunes unimportant singular values to dynamically allocate parameter budgets.",
+    "cites": []
+  },
+  {
+    "id": "u25",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 49,
+    "section": "Methodological Landscape of Parameter-Efficient Adaptation",
+    "text": "Liu et al. observed that LoRA's coupled updates differ from full fine-tuning dynamics.",
+    "cites": [
+      "liu2024dora"
+    ]
+  },
+  {
+    "id": "u26",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 49,
+    "section": "Methodological Landscape of Parameter-Efficient Adaptation",
+    "text": "DoRA decomposes the pre-trained weight into its magnitude and directional components and finetunes both of them.",
+    "cites": [
+      "liu2024dora"
+    ]
+  },
+  {
+    "id": "u27",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 49,
+    "section": "Methodological Landscape of Parameter-Efficient Adaptation",
+    "text": "With W = m V + V V + V c, DoRA optimizes directional update V = B A alongside magnitude vector m.",
+    "cites": []
+  },
+  {
+    "id": "u28",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 49,
+    "section": "Methodological Landscape of Parameter-Efficient Adaptation",
+    "text": "Empirically, DoRA consistently surpasses all baseline methods across both LLaMA-7B/13B, LLaMA2-7B and LLaMA3-8B.",
+    "cites": [
+      "liu2024dora"
+    ]
+  },
+  {
+    "id": "u29",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 49,
+    "section": "Methodological Landscape of Parameter-Efficient Adaptation",
+    "text": "To reduce gradient graph memory consumption during backpropagation, DoRA treats the column-wise norm of the directional update as a constant and detaches it from the gradient graph.",
+    "cites": [
+      "liu2024dora"
+    ]
+  },
+  {
+    "id": "u30",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 51,
+    "section": "Methodological Landscape of Parameter-Efficient Adaptation",
+    "text": "Targeting base weight memory, Dettmers et al. developed QLoRA.",
+    "cites": [
+      "dettmers2023qlora"
+    ]
+  },
+  {
+    "id": "u31",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 51,
+    "section": "Methodological Landscape of Parameter-Efficient Adaptation",
+    "text": "QLoRA backpropagates gradients through a frozen, 4-bit quantized pretrained language model into Low Rank Adapters.",
+    "cites": [
+      "dettmers2023qlora"
+    ]
+  },
+  {
+    "id": "u32",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 51,
+    "section": "Methodological Landscape of Parameter-Efficient Adaptation",
+    "text": "QLoRA introduces 4-bit NormalFloat (NF4), Double Quantization, and Paged Optimizers.",
+    "cites": []
+  },
+  {
+    "id": "u33",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 51,
+    "section": "Methodological Landscape of Parameter-Efficient Adaptation",
+    "text": "Specifically, Double Quantization quantizes the quantization constants, saving an average of about 0.37 bits per parameter.",
+    "cites": [
+      "dettmers2023qlora"
+    ]
+  },
+  {
+    "id": "u34",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 51,
+    "section": "Methodological Landscape of Parameter-Efficient Adaptation",
+    "text": "Empirically, QLoRA reduces memory usage enough to finetune a 65B parameter model on a single 48GB GPU while preserving full 16-bit finetuning task performance.",
+    "cites": [
+      "dettmers2023qlora"
+    ]
+  },
+  {
+    "id": "u35",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 53,
+    "section": "Methodological Landscape of Parameter-Efficient Adaptation",
+    "text": "For full-parameter learning, Zhao et al. proposed Gradient Low-Rank Projection (GaLore).",
+    "cites": [
+      "zhao2024galore"
+    ]
+  },
+  {
+    "id": "u36",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 53,
+    "section": "Methodological Landscape of Parameter-Efficient Adaptation",
+    "text": "Rather than restricting weight updates to a fixed low-rank manifold, GaLore projects the gradient matrix of the weight matrix into a low-rank form to reduce the memory cost of optimizer states.",
+    "cites": [
+      "zhao2024galore"
+    ]
+  },
+  {
+    "id": "u37",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 53,
+    "section": "Methodological Landscape of Parameter-Efficient Adaptation",
+    "text": "Through periodic SVD projection updates, GaLore enables full-rank parameter learning with low-rank Adam states.",
+    "cites": []
+  },
+  {
+    "id": "u38",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 53,
+    "section": "Methodological Landscape of Parameter-Efficient Adaptation",
+    "text": "GaLore reduces memory usage by up to 65.5% in optimizer states while maintaining efficiency and performance for pre-training on LLaMA 1B and 7B architectures with the C4 dataset.",
+    "cites": [
+      "zhao2024galore"
+    ]
+  },
+  {
+    "id": "u39",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 57,
+    "section": "Practical Tradeoffs: Design Choices versus Measured Results",
+    "text": "Selecting an adaptation strategy requires balancing parameter count, memory footprint, runtime overhead, and serving requirements, as compared in Table.",
+    "cites": []
+  },
+  {
+    "id": "u40",
+    "kind": "caption",
+    "file": "main.tex",
+    "line": 63,
+    "section": "Practical Tradeoffs: Design Choices versus Measured Results",
+    "text": "Taxonomy of adaptation methods: separating architectural design specifications from reported empirical findings.",
+    "cites": []
+  },
+  {
+    "id": "u41",
+    "kind": "row",
+    "file": "main.tex",
+    "line": 67,
+    "section": "Practical Tradeoffs: Design Choices versus Measured Results",
+    "text": " | 3cArchitectural Design Properties | 2cReported Measured Results",
+    "cites": []
+  },
+  {
+    "id": "u42",
+    "kind": "row",
+    "file": "main.tex",
+    "line": 69,
+    "section": "Practical Tradeoffs: Design Choices versus Measured Results",
+    "text": "Method | Base Weight | Adapter | Optimizer | Inference | Empirical Scale",
+    "cites": []
+  },
+  {
+    "id": "u43",
+    "kind": "row",
+    "file": "main.tex",
+    "line": 70,
+    "section": "Practical Tradeoffs: Design Choices versus Measured Results",
+    "text": " | Precision | Design | States | Overhead | & Measured Findings",
+    "cites": []
+  },
+  {
+    "id": "u44",
+    "kind": "row",
+    "file": "main.tex",
+    "line": 72,
+    "section": "Practical Tradeoffs: Design Choices versus Measured Results",
+    "text": "Bottleneck | 16-bit | Serial residual block | 8 | Serial latency | BERT-Large (GLUE): within 0.4% of FT with 3% params.",
+    "cites": [
+      "houlsby2019parameter"
+    ]
+  },
+  {
+    "id": "u45",
+    "kind": "row",
+    "file": "main.tex",
+    "line": 73,
+    "section": "Practical Tradeoffs: Design Choices versus Measured Results",
+    "text": "LoRA | 16-bit | Low-rank pair BA | 8 (r d) | Zero (merged) | GPT-3 175B: 3× VRAM cut (1.2TB to 350GB).",
+    "cites": [
+      "hu2021lora"
+    ]
+  },
+  {
+    "id": "u46",
+    "kind": "row",
+    "file": "main.tex",
+    "line": 74,
+    "section": "Practical Tradeoffs: Design Choices versus Measured Results",
+    "text": "AdaLoRA | 16-bit | SVD parameterization | 8 (dynamic rank) | Zero (merged) | DeBERTaV3 (GLUE): exceeds uniform LoRA.",
+    "cites": [
+      "zhang2023adalora"
+    ]
+  },
+  {
+    "id": "u47",
+    "kind": "row",
+    "file": "main.tex",
+    "line": 75,
+    "section": "Practical Tradeoffs: Design Choices versus Measured Results",
+    "text": "DoRA | 16-bit | Magnitude m + direction BA | 8 + 8k per layer | Zero (merged) | LLaMA 7B--70B: consistently exceeds LoRA accuracy.",
+    "cites": [
+      "liu2024dora"
+    ]
+  },
+  {
+    "id": "u48",
+    "kind": "row",
+    "file": "main.tex",
+    "line": 76,
+    "section": "Practical Tradeoffs: Design Choices versus Measured Results",
+    "text": "QLoRA | 4-bit (NF4) | Low-rank BA + double quant. | 8 + CPU paging | Dequant. cost | 65B LLaMA on 48GB GPU: matches 16-bit baseline.",
+    "cites": [
+      "dettmers2023qlora"
+    ]
+  },
+  {
+    "id": "u49",
+    "kind": "row",
+    "file": "main.tex",
+    "line": 77,
+    "section": "Practical Tradeoffs: Design Choices versus Measured Results",
+    "text": "GaLore | 16-bit | Full weights (100% updated) | Projected (mr+2nr) | Zero (native) | LLaMA 7B on 24GB: 65.5% optimizer VRAM reduction.",
+    "cites": [
+      "zhao2024galore"
+    ]
+  },
+  {
+    "id": "u50",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 82,
+    "section": "Practical Tradeoffs: Design Choices versus Measured Results",
+    "text": "Importantly, reported memory savings cannot be generalized across model scales or hardware without direct evidence.",
+    "cites": []
+  },
+  {
+    "id": "u51",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 82,
+    "section": "Practical Tradeoffs: Design Choices versus Measured Results",
+    "text": "The 3× VRAM reduction reported for LoRA on GPT-3 175B reflects an extreme scale where 32-bit Adam states dominate total VRAM; on 7B models, base weights and activations dominate, yielding smaller relative gains.",
+    "cites": []
+  },
+  {
+    "id": "u52",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 82,
+    "section": "Practical Tradeoffs: Design Choices versus Measured Results",
+    "text": "Similarly, QLoRA enables 65B tuning on a 48 GB GPU, but on-the-fly 4-bit dequantization slows runtime throughput.",
+    "cites": []
+  },
+  {
+    "id": "u53",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 82,
+    "section": "Practical Tradeoffs: Design Choices versus Measured Results",
+    "text": "Conversely, DoRA achieves superior benchmark accuracy, yet its decomposed gradient graph adds computation and slight memory overhead relative to standard LoRA.",
+    "cites": []
+  },
+  {
+    "id": "u54",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 86,
+    "section": "Proposed Controlled Experiment on Consumer Hardware",
+    "text": "To resolve practical performance tradeoffs, we propose an empirical experiment evaluating LoRA, QLoRA, DoRA, and GaLore on a single 24 GB NVIDIA RTX 4090 GPU.",
+    "cites": []
+  },
+  {
+    "id": "u55",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 88,
+    "section": "Proposed Controlled Experiment on Consumer Hardware",
+    "text": "We adapt LLaMA-3-8B on Alpaca (2,048 tokens).",
+    "cites": []
+  },
+  {
+    "id": "u56",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 88,
+    "section": "Proposed Controlled Experiment on Consumer Hardware",
+    "text": "For LoRA and QLoRA, adapter ranks are evaluated across r \\8, 16, 32 with = 2r over all projection matrices (Wq, Wk, Wv, Wo, and MLP gates/up/down).",
+    "cites": []
+  },
+  {
+    "id": "u57",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 88,
+    "section": "Proposed Controlled Experiment on Consumer Hardware",
+    "text": "Because DoRA adds a trainable magnitude vector m R1 × k per layer, we match parameter budgets by evaluating DoRA at identical ranks r \\8, 16, 32 while isolating m's marginal parameter overhead (k scalar weights per matrix, <0.01% total parameters), alongside an iso-parameter configuration adjusting DoRA's rank.",
+    "cites": []
+  },
+  {
+    "id": "u58",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 88,
+    "section": "Proposed Controlled Experiment on Consumer Hardware",
+    "text": "For GaLore, gradient projection rank is r=128 with subspace update frequency T=200 steps.",
+    "cites": []
+  },
+  {
+    "id": "u59",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 90,
+    "section": "Proposed Controlled Experiment on Consumer Hardware",
+    "text": "Optimization follows standard configurations: AdamW (1 = 0.9, 2 = 0.999, = 10-8), zero weight decay, cosine decay with 3% warmup, and peak learning rate 2× 10-4 (10-4 for GaLore).",
+    "cites": []
+  },
+  {
+    "id": "u60",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 90,
+    "section": "Proposed Controlled Experiment on Consumer Hardware",
+    "text": "All trials use batch size b=2, 8 accumulation steps, and FlashAttention-2 with gradient checkpointing.",
+    "cites": []
+  },
+  {
+    "id": "u61",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 90,
+    "section": "Proposed Controlled Experiment on Consumer Hardware",
+    "text": "Profiling enforces strict controls: 50 warm-up steps before logging to stabilize memory fragmentation, explicit CUDA synchronization, and cache resets via PyTorch memory tracking routines.",
+    "cites": []
+  },
+  {
+    "id": "u62",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 90,
+    "section": "Proposed Controlled Experiment on Consumer Hardware",
+    "text": "All metrics are averaged across three random seeds with reported standard deviations.",
+    "cites": []
+  },
+  {
+    "id": "u63",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 92,
+    "section": "Proposed Controlled Experiment on Consumer Hardware",
+    "text": "We record peak VRAM using PyTorch peak memory tracking, training throughput (tokens/s), and zero-shot accuracy on ARC-Challenge and HellaSwag.",
+    "cites": []
+  },
+  {
+    "id": "u64",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 92,
+    "section": "Proposed Controlled Experiment on Consumer Hardware",
+    "text": "We hypothesize that QLoRA will achieve lowest VRAM but lower throughput, while DoRA will yield highest downstream accuracy with slightly higher training memory than LoRA.",
+    "cites": []
+  },
+  {
+    "id": "u65",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 96,
+    "section": "Limitations and Scope",
+    "text": "Several methodological boundaries govern this note.",
+    "cites": []
+  },
+  {
+    "id": "u66",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 96,
+    "section": "Limitations and Scope",
+    "text": "First, the laboratory pilot claim of halving training memory relative to LoRA remains unverified; without empirical data or code, it cannot serve as a valid result or experimental premise.",
+    "cites": []
+  },
+  {
+    "id": "u67",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 96,
+    "section": "Limitations and Scope",
+    "text": "Reported parameter and memory savings from specific architectures and hardware setups cannot be assumed to transfer identically to consumer-grade GPUs or different model families without dedicated profiling.",
+    "cites": []
+  },
+  {
+    "id": "u68",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 96,
+    "section": "Limitations and Scope",
+    "text": "Third, software kernel optimizations, such as FlashAttention and custom 4-bit GEMM implementations, significantly influence real-world memory and execution speed beyond theoretical parameter calculations.",
+    "cites": []
+  },
+  {
+    "id": "u69",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 98,
+    "section": "Limitations and Scope",
+    "text": "plain",
+    "cites": []
+  }
+]

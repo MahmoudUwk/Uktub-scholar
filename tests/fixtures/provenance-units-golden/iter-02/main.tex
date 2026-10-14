@@ -1,0 +1,122 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{hyperref}
+\usepackage{natbib}
+\usepackage{microtype}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    citecolor=blue,
+    urlcolor=blue
+}
+
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+
+\title{\textbf{Memory-Constrained Adaptation of Large Language Models:}\\
+Architectural Paradigms, Practical Tradeoffs, and Empirical Design}
+\author{\textbf{Research Note}}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+Fine-tuning language models under GPU memory limits requires balancing static weights, optimizer states, gradient graphs, and activation footprints. This note evaluates low-rank factorizations, singular value decomposition schedulers, weight decomposition, quantization-aware tuning, and bias tuning. We separate design choices from measured benchmarks, formulate a controlled experiment isolating activation overhead from adapter rank scaling, and evaluate an unverified laboratory memory claim.
+\end{abstract}
+
+\section{Architectural Paradigms for Memory-Efficient Adaptation}
+
+Parameter-efficient fine-tuning (PEFT) mitigates memory bottlenecks by avoiding full-weight optimization. In Low-Rank Adaptation (LoRA) \citep{hu2021lora}, updates to a frozen weight $W_0 \in \mathbb{R}^{d \times k}$ are parameterized as:
+\begin{equation}
+h = W_0 x + \Delta W x = W_0 x + \frac{\alpha}{r} B A x
+\end{equation}
+where $B \in \mathbb{R}^{d \times r}$ and $A \in \mathbb{R}^{r \times k}$ with rank $r \ll \min(d, k)$, scaled by constant $\alpha$. Freezing $W_0$ eliminates gradient computation and optimizer states for base parameters.
+
+Instead of uniform ranks across layers, Adaptive Low-Rank Adaptation (AdaLoRA) \citep{zhang2023adalora} introduces dynamic parameter allocation. Specifically, \citet{zhang2023adalora} establish that AdaLoRA parameterizes the incremental updates in the form of singular value decomposition. Formulated as $\Delta W = P \Lambda Q$, AdaLoRA prunes unimportant singular values, concentrating parameter capacity on critical layers.
+
+Weight-Decomposed Low-Rank Adaptation (DoRA) \citep{liu2024dora} addresses structural divergences between full fine-tuning and low-rank adaptation. \citet{liu2024dora} demonstrate that DoRA decomposes the pre-trained weight into two components, magnitude and direction, for fine-tuning, specifically employing LoRA for directional updates to efficiently minimize the number of trainable parameters. Decomposing weight $W$ into directional vectors $V / \|V\|_c$ and magnitude vector $m$ yields:
+\begin{equation}
+W = m \frac{V + \Delta V}{\|V + \Delta V\|_c} = m \frac{W_0 + B A}{\|W_0 + B A\|_c}
+\end{equation}
+While LoRA alters direction and magnitude jointly, DoRA decouples magnitude scaling from directional updates.
+
+Combining parameter efficiency with precision reduction, Quantized Low-Rank Adaptation (QLoRA) \citep{dettmers2023qlora} backpropagates gradients through 4-bit NormalFloat (NF4) base weights into 16-bit LoRA adapters. To eliminate separate adapter branches at inference, Quantization-Aware Low-Rank Adaptation (QA-LoRA) \citep{xu2023qa} aligns degrees of freedom between quantization and adaptation. \citet{xu2023qa} show that QA-LoRA introduces group-wise operators which increase the degree of freedom of low-bit quantization and decrease that of low-rank adaptation. This enables direct integration of adapters into low-bit weights.
+
+Conversely, coordinate tuning modifies existing parameters. \citet{zaken2022bitfit} show that BitFit is a sparse fine-tuning method where only the bias-terms of the model or a subset of them are being modified. Optimizing bias vectors introduces zero structural modifications or new projections.
+
+\section{Practical Tradeoffs: Precision, Optimizer States, and Activation Memory}
+
+VRAM consumption comprises four components: static parameters, optimizer states, backpropagation activations, and gradient graphs.
+
+Reported empirical savings reflect specific architectural interventions. In evaluating LoRA on massive models, \citet{hu2021lora} demonstrated: Compared to GPT-3 175B fine-tuned with Adam, LoRA can reduce the number of trainable parameters by 10,000 times and the GPU memory requirement by 3 times. This reduction stems from dispensing with Adam optimizer states (8 bytes per parameter in FP32) for frozen base parameters; static weights still occupied 16-bit storage (350\,GB).
+
+When static weights dominate memory, base quantization yields physical compression. In particular, \citet{dettmers2023qlora} established: QLoRA reduces memory usage enough to finetune a 65B parameter model on a single 48GB GPU while preserving full 16-bit finetuning task performance. Furthermore, \citet{dettmers2023qlora} proved: Double Quantization saves an average of about 0.37 bits per parameter by quantizing the quantization constants. Paged optimizers further mitigate memory spikes across mini-batches by paging states across CPU RAM.
+
+However, parameter reduction must not be conflated with overall operational memory savings. Activation memory often dominates peak VRAM during training. Specifically, \citet{dettmers2023qlora} measured: For a 7B LLaMA model trained on FLAN v2 with a batch size of 1, with LoRA weights equivalent to commonly used 0.2\% of the original model weights, the LoRA input gradients have a memory footprint of 567 MB while the LoRA parameters take up only 26 MB. Without activation checkpointing, adapter rank adjustments yield negligible operational memory relief.
+
+Reparameterization schemes can also incur hidden graph overheads. In DoRA, differentiating through the column norm generates a dense computational graph. To mitigate this overhead, \citet{liu2024dora} established that Treating the norm vector as a constant and detaching it from the gradient graph reduces the gradient graph memory consumption drastically without a noticeable difference in accuracy.
+
+Finally, in bias tuning, \citet{zaken2022bitfit} reported: In BitFit, the bias terms parameter vectors amount to less than 0.1\% of the total number of parameters. Although BitFit incurs minimal storage, modern LLM architectures dispense with bias terms in linear projections, limiting BitFit to specific model families.
+
+\section{Systematic Comparison across Adaptation Paradigms}
+
+Table~\ref{tab:comparison} synthesizes surveyed methods, explicitly distinguishing theoretical design formulations from measured empirical benchmarks and hardware contexts.
+
+\begin{table}[ht]
+\centering
+\small
+\caption{Systematic comparison distinguishing theoretical architectural designs from measured empirical results and hardware baselines.}
+\label{tab:comparison}
+\begin{tabularx}{\textwidth}{lL{2.5cm}L{3.2cm}Y}
+\toprule
+\textbf{Method} & \textbf{Architectural Design (Theoretical)} & \textbf{Benchmark Context \& Hardware (Reported)} & \textbf{Measured Empirical Result} \\
+\midrule
+LoRA & Static low-rank factors $\Delta W = \frac{\alpha}{r}BA$; freezes base $W_0$ & GPT-3 175B on cluster nodes; LLaMA-7B on FLAN v2 (A100) & VRAM from 1.2TB to 350GB; input grads (567\,MB) exceed weights (26\,MB) \\
+AdaLoRA & SVD parameterization $\Delta W = P \Lambda Q$; dynamic rank pruning & DeBERTaV3-base on GLUE and SQuADv2 (NVIDIA V100 32GB) & Higher accuracy than static LoRA at identical budget ($\le 1\%$ params) \\
+DoRA & Decouples magnitude $m$ and direction $V$; adapts $V$ via LoRA & LLaMA-7B/13B on Commonsense Reasoning (NVIDIA A100 80GB) & Detached norm cuts VRAM by 24.4\% (37.3GB $\to$ 28.2GB); $+3.7$ avg score \\
+QLoRA & 4-bit NF4 base weights; 16-bit LoRA; paged optimizers & LLaMA-65B and 33B on Vicuna/Flan (NVIDIA A100 48GB/80GB) & 65B tuned on single 48GB GPU; double quant saves 0.37 bits/param \\
+QA-LoRA & Group-wise operators for INT4 post-training merge & LLaMA-7B/13B on Alpaca and MMLU (NVIDIA A100 80GB) & Zero accuracy degradation when merging adapters into INT4 base weights \\
+BitFit & Modifies only existing additive bias vectors $b$ & BERT-Base/Large and RoBERTa on GLUE (NVIDIA V100 32GB) & Tunes $<0.1\%$ params while matching $\ge 95\%$ full fine-tuning score \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Proposed Controlled Experiment: Disentangling Activations from Adapter Rank}
+
+To resolve how adaptation methods behave under strict hardware caps, we propose a rigorously controlled empirical benchmark targeting a single consumer 24\,GB GPU (NVIDIA RTX 4090, 24,564\,MiB VRAM, driver 550.x, CUDA 12.4).
+
+\paragraph{Experimental Baseline Controls.} We evaluate LLaMA-3-8B across Alpaca-Cleaned instruction tuning (51,760 samples). We evaluate three adaptation architectures: standard 16-bit LoRA, QLoRA (NF4 with double quantization), and DoRA (with detached column normalization). All runs share an identical optimizer setup: AdamW ($\beta_1 = 0.9, \beta_2 = 0.999, \epsilon = 10^{-8}$, weight decay 0.01) with a 100-step linear warmup followed by cosine learning rate decay to 10\% of peak ($2\times 10^{-4}$ for LoRA/DoRA, $1\times 10^{-4}$ for QLoRA). Batch execution is strictly fixed to micro-batch size $B = 2$ with gradient accumulation steps $= 8$ (effective batch size 16). Across all runs, random seeds are fixed to $\{42, 1337, 2024\}$ for data shuffling, weight initialization, and dropout masks.
+
+\paragraph{Independent Variables.}
+\begin{enumerate}
+\item Adapter rank: $r \in \{4, 8, 16, 32, 64\}$, fixing scaling factor $\alpha = 2r$.
+\item Target sequence length: $L \in \{512, 1024, 2048\}$ tokens.
+\item Activation checkpointing toggle: (a) Disabled (standard forward activation caching) versus (b) Enabled (full gradient checkpointing via \texttt{torch.utils.checkpoint.checkpoint} on all transformer layers).
+\end{enumerate}
+
+\paragraph{Telemetry Protocol and Metrics.}
+Before logging, we execute 20 warmup optimization steps to stabilize the PyTorch caching allocator. Peak memory is sampled at step boundaries using exact CUDA telemetry hooks: \texttt{max\_memory\_allocated()} (physical tensor memory) and \texttt{max\_memory\_reserved()} (allocator cache pool), with \texttt{reset\_peak\_memory\_stats()} and \texttt{synchronize()} invoked between steps. We decompose memory into static weights ($M_{\text{weights}}$), optimizer states ($M_{\text{opt}}$), and activation tensors ($M_{\text{act}} = M_{\text{peak}} - M_{\text{weights}} - M_{\text{opt}}$). Training throughput (tokens/sec) and downstream accuracy on MMLU (5-shot) and GSM8K (8-shot) are recorded.
+
+\paragraph{Hypothesis.}
+For sequence lengths $L \ge 1024$ without gradient checkpointing, varying rank $r$ from 4 to 64 will alter peak VRAM by less than 4\% across all methods, proving that activation memory dominates out-of-memory limits on 24\,GB hardware.
+
+\section{Limitations, Boundary Conditions, and Unverified Claims}
+
+Hardware and methodological constraints govern low-memory adaptation. Memory reductions cannot be transferred across different GPU architectures; memory bus bandwidth and kernel implementations vary across Ampere, Ada Lovelace, and Hopper architectures. Dequantization and paged memory transfers also incur runtime overheads that degrade training throughput.
+
+We explicitly address an unverified claim circulating in laboratory planning: Someone in our lab says, 'Our pilot halves training memory compared with LoRA.' This statement is entirely undocumented: it specifies no model architecture, precision baseline, batch size, sequence length, or profiling tool. As established by \citet{dettmers2023qlora}, static base weights and activation buffers account for the vast majority of memory in standard LoRA; halving training memory cannot occur via adapter adjustments without altering base weight precision or activation caching. Because no empirical report, hardware telemetry, or code artifacts have been supplied, this assertion remains explicitly unverified and must not serve as an experimental premise or baseline.
+
+Finally, two methodological boundaries must be recognized. First, Transferring reported memory footprints across model families, sequence lengths, or GPU hardware without re-measurement is unverified. Second, the literature reveals no support for the premise: Reducing adapter rank alone is sufficient to eliminate memory bottlenecks in activation-heavy training regimes.
+
+\bibliographystyle{plainnat}
+\bibliography{../refs/references}
+
+\end{document}

@@ -1,0 +1,670 @@
+[
+  {
+    "id": "u1",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 21,
+    "section": "",
+    "text": "Adapting large language models under strict hardware constraints requires navigating tradeoffs among parameter footprint, optimizer states, gradient graphs, and activation memory.",
+    "cites": []
+  },
+  {
+    "id": "u2",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 22,
+    "section": "",
+    "text": "This research note synthesizes core methodologies for memory-efficient fine-tuning, analyzing low-rank parameterization (LoRA, AdaLoRA), structural frameworks, 8-bit optimizer compression, 4-bit base model quantization (QLoRA), and weight decomposition (DoRA).",
+    "cites": []
+  },
+  {
+    "id": "u3",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 22,
+    "section": "",
+    "text": "We separate mathematical formulations from physical hardware measurements, present a structured comparison table, and outline a controlled single-GPU experimental protocol.",
+    "cites": []
+  },
+  {
+    "id": "u4",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 27,
+    "section": "Memory Bottlenecks and Parameter-Efficient Adaptation Mechanics",
+    "text": "Fine-tuning modern language models requires substantial high-bandwidth GPU memory (VRAM).",
+    "cites": []
+  },
+  {
+    "id": "u5",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 27,
+    "section": "Memory Bottlenecks and Parameter-Efficient Adaptation Mechanics",
+    "text": "During standard 16-bit mixed-precision training with 32-bit Adam, VRAM is dominated by four components: static weights (2 bytes per parameter), gradients (2 bytes), master weights and moment statistics (12 bytes per parameter), and dynamic forward activation buffers.",
+    "cites": []
+  },
+  {
+    "id": "u6",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 27,
+    "section": "Memory Bottlenecks and Parameter-Efficient Adaptation Mechanics",
+    "text": "For multi-billion parameter architectures, these 16 bytes per parameter quickly exceed single-GPU capacity before activations are allocated.",
+    "cites": []
+  },
+  {
+    "id": "u7",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 29,
+    "section": "Memory Bottlenecks and Parameter-Efficient Adaptation Mechanics",
+    "text": "Parameter-efficient fine-tuning (PEFT) addresses this bottleneck by freezing pre-trained model weights and updating only auxiliary parameters.",
+    "cites": []
+  },
+  {
+    "id": "u8",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 29,
+    "section": "Memory Bottlenecks and Parameter-Efficient Adaptation Mechanics",
+    "text": "LoRA freezes the pre-trained model weights and injects trainable rank decomposition matrices into each layer of the Transformer architecture.",
+    "cites": [
+      "hu2021lora"
+    ]
+  },
+  {
+    "id": "u9",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 29,
+    "section": "Memory Bottlenecks and Parameter-Efficient Adaptation Mechanics",
+    "text": "Because the vast majority of parameters remain frozen, gradient buffers and optimizer states are restricted to the low-rank matrices.",
+    "cites": []
+  },
+  {
+    "id": "u10",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 29,
+    "section": "Memory Bottlenecks and Parameter-Efficient Adaptation Mechanics",
+    "text": "LoRA reduces VRAM usage by up to 2/3 for a large Transformer trained with Adam by removing optimizer states for frozen parameters.",
+    "cites": [
+      "hu2021lora"
+    ]
+  },
+  {
+    "id": "u11",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 29,
+    "section": "Memory Bottlenecks and Parameter-Efficient Adaptation Mechanics",
+    "text": "Furthermore, at test time, the factorization introduces zero latency.",
+    "cites": []
+  },
+  {
+    "id": "u12",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 29,
+    "section": "Memory Bottlenecks and Parameter-Efficient Adaptation Mechanics",
+    "text": "When deployed in production, LoRA introduces no additional inference latency because the low-rank update can be merged directly into the frozen weights.",
+    "cites": [
+      "hu2021lora"
+    ]
+  },
+  {
+    "id": "u13",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 31,
+    "section": "Memory Bottlenecks and Parameter-Efficient Adaptation Mechanics",
+    "text": "Architectural attachment choices also govern adaptation behavior.",
+    "cites": []
+  },
+  {
+    "id": "u14",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 31,
+    "section": "Memory Bottlenecks and Parameter-Efficient Adaptation Mechanics",
+    "text": "A unified framework frames parameter-efficient tuning methods as different ways to modify the hidden representations of frozen PLMs.",
+    "cites": [
+      "he2021unified"
+    ]
+  },
+  {
+    "id": "u15",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 31,
+    "section": "Memory Bottlenecks and Parameter-Efficient Adaptation Mechanics",
+    "text": "Under this taxonomy, adapter variants vary across functional forms, insertion positions, and composition pathways.",
+    "cites": []
+  },
+  {
+    "id": "u16",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 31,
+    "section": "Memory Bottlenecks and Parameter-Efficient Adaptation Mechanics",
+    "text": "Prefix tuning can be viewed as a form of adapter in a unified framework for parameter-efficient tuning.",
+    "cites": [
+      "he2021unified"
+    ]
+  },
+  {
+    "id": "u17",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 31,
+    "section": "Memory Bottlenecks and Parameter-Efficient Adaptation Mechanics",
+    "text": "Differentiating mathematical design formulations from physical hardware profiles is essential.",
+    "cites": []
+  },
+  {
+    "id": "u18",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 31,
+    "section": "Memory Bottlenecks and Parameter-Efficient Adaptation Mechanics",
+    "text": "Parameter reductions do not guarantee proportional runtime memory savings, because activation buffers frequently dominate actual training VRAM.",
+    "cites": []
+  },
+  {
+    "id": "u19",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 35,
+    "section": "Quantization, Directional Decomposition, and Practical Tradeoffs",
+    "text": "Even with frozen base parameters, 16-bit storage demands substantial VRAM (by our analytical estimate, ≈ 14 GB for a 7B model), requiring compression of optimizer states or base weights.",
+    "cites": []
+  },
+  {
+    "id": "u20",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 37,
+    "section": "Quantization, Directional Decomposition, and Practical Tradeoffs",
+    "text": "Block-wise dynamic quantization enables 8-bit optimizers that maintain 32-bit performance at a fraction of the original memory footprint.",
+    "cites": [
+      "dettmers20218"
+    ]
+  },
+  {
+    "id": "u21",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 37,
+    "section": "Quantization, Directional Decomposition, and Practical Tradeoffs",
+    "text": "Isolating tensors into 2048-element blocks enables 8-bit dynamic quantization of moments, reducing optimizer memory by three-quarters while maintaining numerical stability.",
+    "cites": []
+  },
+  {
+    "id": "u22",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 39,
+    "section": "Quantization, Directional Decomposition, and Practical Tradeoffs",
+    "text": "To reduce base weight memory, QLoRA pairs 4-bit base model quantization with 16-bit low-rank adapters.",
+    "cites": []
+  },
+  {
+    "id": "u23",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 39,
+    "section": "Quantization, Directional Decomposition, and Practical Tradeoffs",
+    "text": "QLoRA backpropagates gradients through a frozen 4-bit quantized pretrained language model into Low Rank Adapters.",
+    "cites": [
+      "dettmers2023qlora"
+    ]
+  },
+  {
+    "id": "u24",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 39,
+    "section": "Quantization, Directional Decomposition, and Practical Tradeoffs",
+    "text": "QLoRA introduces 4-bit NormalFloat (NF4), double quantization, and paged optimizers.",
+    "cites": []
+  },
+  {
+    "id": "u25",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 39,
+    "section": "Quantization, Directional Decomposition, and Practical Tradeoffs",
+    "text": "Double Quantization quantizes the quantization constants, saving an average of about 0.37 bits per parameter.",
+    "cites": [
+      "dettmers2023qlora"
+    ]
+  },
+  {
+    "id": "u26",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 39,
+    "section": "Quantization, Directional Decomposition, and Practical Tradeoffs",
+    "text": "Paged Optimizers use NVIDIA unified memory to avoid memory spikes during gradient checkpointing.",
+    "cites": [
+      "dettmers2023qlora"
+    ]
+  },
+  {
+    "id": "u27",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 39,
+    "section": "Quantization, Directional Decomposition, and Practical Tradeoffs",
+    "text": "QLoRA reduces memory usage enough to finetune a 65B parameter model on a single 48GB GPU while preserving full 16-bit finetuning task performance.",
+    "cites": [
+      "dettmers2023qlora"
+    ]
+  },
+  {
+    "id": "u28",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 41,
+    "section": "Quantization, Directional Decomposition, and Practical Tradeoffs",
+    "text": "Subsequent methods address adapter allocation and weight dynamics.",
+    "cites": []
+  },
+  {
+    "id": "u29",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 41,
+    "section": "Quantization, Directional Decomposition, and Practical Tradeoffs",
+    "text": "AdaLoRA parameterizes the incremental updates in the form of singular value decomposition.",
+    "cites": [
+      "zhang2023adalora"
+    ]
+  },
+  {
+    "id": "u30",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 41,
+    "section": "Quantization, Directional Decomposition, and Practical Tradeoffs",
+    "text": "AdaLoRA dynamically adjusts the rank of incremental updates by importance scoring.",
+    "cites": [
+      "zhang2023adalora"
+    ]
+  },
+  {
+    "id": "u31",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 43,
+    "section": "Quantization, Directional Decomposition, and Practical Tradeoffs",
+    "text": "Weight-Decomposed Low-Rank Adaptation (DoRA) analyzes structural update differences between full fine-tuning and LoRA.",
+    "cites": []
+  },
+  {
+    "id": "u32",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 43,
+    "section": "Quantization, Directional Decomposition, and Practical Tradeoffs",
+    "text": "DoRA decomposes pre-trained weights into magnitude and directional components and applies low-rank adaptation to the directional component.",
+    "cites": [
+      "liu2024dora"
+    ]
+  },
+  {
+    "id": "u33",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 43,
+    "section": "Quantization, Directional Decomposition, and Practical Tradeoffs",
+    "text": "However, backpropagating through the directional normalization layer increases training memory overhead.",
+    "cites": []
+  },
+  {
+    "id": "u34",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 43,
+    "section": "Quantization, Directional Decomposition, and Practical Tradeoffs",
+    "text": "To mitigate this overhead, the authors detach the directional norm from the gradient graph.",
+    "cites": []
+  },
+  {
+    "id": "u35",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 43,
+    "section": "Quantization, Directional Decomposition, and Practical Tradeoffs",
+    "text": "The modification leads to a training memory reduction of approximately 24.4% in fine-tuning LLaMA.",
+    "cites": [
+      "liu2024dora"
+    ]
+  },
+  {
+    "id": "u36",
+    "kind": "caption",
+    "file": "main.tex",
+    "line": 48,
+    "section": "Quantization, Directional Decomposition, and Practical Tradeoffs",
+    "text": "Separation of architectural design formulations and measured empirical results across adaptation methods.",
+    "cites": []
+  },
+  {
+    "id": "u37",
+    "kind": "row",
+    "file": "main.tex",
+    "line": 52,
+    "section": "Quantization, Directional Decomposition, and Practical Tradeoffs",
+    "text": " | 2cArchitectural Design Choices | 2cReported Measured Results",
+    "cites": []
+  },
+  {
+    "id": "u38",
+    "kind": "row",
+    "file": "main.tex",
+    "line": 54,
+    "section": "Quantization, Directional Decomposition, and Practical Tradeoffs",
+    "text": "Method | Form & Precision | Inference Latency | Reported Memory Impact | Evaluation Context",
+    "cites": []
+  },
+  {
+    "id": "u39",
+    "kind": "row",
+    "file": "main.tex",
+    "line": 56,
+    "section": "Quantization, Directional Decomposition, and Practical Tradeoffs",
+    "text": "LoRA | Low-rank factor update W0 + BA; 16-bit float | Zero (merged into base weights) | Reduces VRAM up to 2/3 under Adam | GPT-3 175B, Adam optimizer",
+    "cites": [
+      "hu2021lora"
+    ]
+  },
+  {
+    "id": "u40",
+    "kind": "row",
+    "file": "main.tex",
+    "line": 57,
+    "section": "Quantization, Directional Decomposition, and Practical Tradeoffs",
+    "text": "8-bit Opt. | Block-wise dynamic quant. of moments to 8-bit | None (optimizer modification) | Maintains 32-bit quality with small fraction of optimizer VRAM | 1.5B language modeling, RoBERTa, V100 GPU",
+    "cites": [
+      "dettmers20218"
+    ]
+  },
+  {
+    "id": "u41",
+    "kind": "row",
+    "file": "main.tex",
+    "line": 58,
+    "section": "Quantization, Directional Decomposition, and Practical Tradeoffs",
+    "text": "AdaLoRA | Dynamic SVD parameterization = P Q | Zero (merged into base weights) | Outperforms uniform LoRA under matched budget | DeBERTaV3-base, GLUE",
+    "cites": [
+      "zhang2023adalora"
+    ]
+  },
+  {
+    "id": "u42",
+    "kind": "row",
+    "file": "main.tex",
+    "line": 59,
+    "section": "Quantization, Directional Decomposition, and Practical Tradeoffs",
+    "text": "QLoRA | 4-bit NF4 base, double quant., paged optimizers | Zero if merged, negligible if 4-bit | Finetunes 65B model on a single 48GB GPU | LLaMA 65B, Vicuna benchmark, 48GB GPU",
+    "cites": [
+      "dettmers2023qlora"
+    ]
+  },
+  {
+    "id": "u43",
+    "kind": "row",
+    "file": "main.tex",
+    "line": 60,
+    "section": "Quantization, Directional Decomposition, and Practical Tradeoffs",
+    "text": "DoRA | Magnitude-direction split; directional LoRA | Zero (merged into base weights) | Detached norm saves ≈ 24.4% memory on LLaMA-7B | LLaMA-7B, commonsense tasks",
+    "cites": [
+      "liu2024dora"
+    ]
+  },
+  {
+    "id": "u44",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 65,
+    "section": "Quantization, Directional Decomposition, and Practical Tradeoffs",
+    "text": "In our laboratory, an informal remark claimed: ``Our pilot halves training memory compared with LoRA.'' This statement remains completely unverified, lacking experimental logs, hardware profiles, or measurement code.",
+    "cites": []
+  },
+  {
+    "id": "u45",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 65,
+    "section": "Quantization, Directional Decomposition, and Practical Tradeoffs",
+    "text": "It must not be cited as an established result or adopted as an experimental premise.",
+    "cites": []
+  },
+  {
+    "id": "u46",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 69,
+    "section": "Proposed Empirical Investigation on a Constrained GPU",
+    "text": "To systematically compare these methods on accessible hardware, we outline a controlled experiment executable on a single 24 GB GPU (e.g., an NVIDIA RTX 3090, RTX 4090, or A10G).",
+    "cites": []
+  },
+  {
+    "id": "u47",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 71,
+    "section": "Proposed Empirical Investigation on a Constrained GPU",
+    "text": "Experimental Configuration and Controls. We evaluate LLaMA-3-8B on two reasoning benchmarks: GSM8K and ARC-Challenge.",
+    "cites": []
+  },
+  {
+    "id": "u48",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 71,
+    "section": "Proposed Empirical Investigation on a Constrained GPU",
+    "text": "We define three adaptation conditions alongside a static baseline:",
+    "cites": []
+  },
+  {
+    "id": "u49",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 73,
+    "section": "Proposed Empirical Investigation on a Constrained GPU",
+    "text": "Reference Baseline: Standard 16-bit LoRA with 16-bit AdamW optimizer;",
+    "cites": []
+  },
+  {
+    "id": "u50",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 74,
+    "section": "Proposed Empirical Investigation on a Constrained GPU",
+    "text": "Quantized Base: QLoRA with 4-bit NF4 base weights, double quantization, and 8-bit paged AdamW;",
+    "cites": []
+  },
+  {
+    "id": "u51",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 75,
+    "section": "Proposed Empirical Investigation on a Constrained GPU",
+    "text": "Decomposed Update: DoRA in 16-bit precision with detached directional norm and 16-bit AdamW.",
+    "cites": []
+  },
+  {
+    "id": "u52",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 76,
+    "section": "Proposed Empirical Investigation on a Constrained GPU",
+    "text": "Across all methods, adapter insertion is strictly controlled: identical target modules (Wq, Wk, Wv, Wo, W gate, W up, W down) are evaluated across ranks r \\8, 16, 32 with scaling factor = 2r.",
+    "cites": []
+  },
+  {
+    "id": "u53",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 77,
+    "section": "Proposed Empirical Investigation on a Constrained GPU",
+    "text": "To ensure statistical reliability, all configurations are executed across three fixed random seeds (\\42, 43, 44\\) with three independent trial repetitions per condition to report mean metrics and standard errors.",
+    "cites": []
+  },
+  {
+    "id": "u54",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 79,
+    "section": "Proposed Empirical Investigation on a Constrained GPU",
+    "text": "Memory Isolation Protocol. To isolate adaptation mechanisms from activation variances, sequence length is fixed at 1024 tokens.",
+    "cites": []
+  },
+  {
+    "id": "u55",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 79,
+    "section": "Proposed Empirical Investigation on a Constrained GPU",
+    "text": "Micro-batch size is set to 4 with gradient accumulation calibrated to hold effective batch size at 32 across all runs.",
+    "cites": []
+  },
+  {
+    "id": "u56",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 79,
+    "section": "Proposed Empirical Investigation on a Constrained GPU",
+    "text": "Gradient checkpointing is uniformly enabled.",
+    "cites": []
+  },
+  {
+    "id": "u57",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 79,
+    "section": "Proposed Empirical Investigation on a Constrained GPU",
+    "text": "We profile four distinct memory partitions via PyTorch CUDA memory instrumentation:",
+    "cites": []
+  },
+  {
+    "id": "u58",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 81,
+    "section": "Proposed Empirical Investigation on a Constrained GPU",
+    "text": "Static Model Weights: Measured after model loading before any input tensor allocation.",
+    "cites": []
+  },
+  {
+    "id": "u59",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 82,
+    "section": "Proposed Empirical Investigation on a Constrained GPU",
+    "text": "Optimizer States: Isolated immediately after optimizer initialization and the first parameter update step.",
+    "cites": []
+  },
+  {
+    "id": "u60",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 83,
+    "section": "Proposed Empirical Investigation on a Constrained GPU",
+    "text": "Peak Activation Spikes: Calculated as peak allocated VRAM during forward-backward passes minus static weight and optimizer baselines.",
+    "cites": []
+  },
+  {
+    "id": "u61",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 84,
+    "section": "Proposed Empirical Investigation on a Constrained GPU",
+    "text": "Memory Fragmentation: Quantified by the difference between reserved memory and allocated memory.",
+    "cites": []
+  },
+  {
+    "id": "u62",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 85,
+    "section": "Proposed Empirical Investigation on a Constrained GPU",
+    "text": "Throughput (tokens per second) and validation accuracy after three epochs are logged to evaluate computational efficiency against task performance.",
+    "cites": []
+  },
+  {
+    "id": "u63",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 90,
+    "section": "Limitations and Scope of Evidence",
+    "text": "We explicitly delineate verified literature findings from unverified assumptions.",
+    "cites": []
+  },
+  {
+    "id": "u64",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 90,
+    "section": "Limitations and Scope of Evidence",
+    "text": "All six cited peer-reviewed papers were retrieved and verified against source texts.",
+    "cites": []
+  },
+  {
+    "id": "u65",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 90,
+    "section": "Limitations and Scope of Evidence",
+    "text": "However, key empirical limitations remain.",
+    "cites": []
+  },
+  {
+    "id": "u66",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 90,
+    "section": "Limitations and Scope of Evidence",
+    "text": "First, the reported memory reductions and performance parity from published benchmarks may not transfer directly to other model scales, sequence lengths, or consumer hardware environments without empirical measurement.",
+    "cites": []
+  },
+  {
+    "id": "u67",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 90,
+    "section": "Limitations and Scope of Evidence",
+    "text": "For example, fitting a 65B model into 48 GB does not guarantee proportional memory behavior for an 8B model on a 24 GB card where activation memory forms a larger fraction of total VRAM.",
+    "cites": []
+  },
+  {
+    "id": "u68",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 90,
+    "section": "Limitations and Scope of Evidence",
+    "text": "Second, the anecdotal laboratory pilot claiming a fifty percent memory reduction over LoRA lacks recorded experimental logs, hardware details, and baseline configurations, rendering it an unverified assertion.",
+    "cites": []
+  },
+  {
+    "id": "u69",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 90,
+    "section": "Limitations and Scope of Evidence",
+    "text": "Reliable adaptation research requires rigorous measurement rather than anecdotal claims.",
+    "cites": []
+  },
+  {
+    "id": "u70",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 92,
+    "section": "Limitations and Scope of Evidence",
+    "text": "plain",
+    "cites": []
+  }
+]

@@ -1,0 +1,673 @@
+[
+  {
+    "id": "u1",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 31,
+    "section": "",
+    "text": "Fine-tuning language models under GPU memory limits requires balancing static weights, optimizer states, gradient graphs, and activation footprints.",
+    "cites": []
+  },
+  {
+    "id": "u2",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 32,
+    "section": "",
+    "text": "This note evaluates low-rank factorizations, singular value decomposition schedulers, weight decomposition, quantization-aware tuning, and bias tuning.",
+    "cites": []
+  },
+  {
+    "id": "u3",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 32,
+    "section": "",
+    "text": "We separate design choices from measured benchmarks, formulate a controlled experiment isolating activation overhead from adapter rank scaling, and evaluate an unverified laboratory memory claim.",
+    "cites": []
+  },
+  {
+    "id": "u4",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 37,
+    "section": "Architectural Paradigms for Memory-Efficient Adaptation",
+    "text": "Parameter-efficient fine-tuning (PEFT) mitigates memory bottlenecks by avoiding full-weight optimization.",
+    "cites": []
+  },
+  {
+    "id": "u5",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 37,
+    "section": "Architectural Paradigms for Memory-Efficient Adaptation",
+    "text": "In Low-Rank Adaptation (LoRA), updates to a frozen weight W0 Rd × k are parameterized as:",
+    "cites": [
+      "hu2021lora"
+    ]
+  },
+  {
+    "id": "u6",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 41,
+    "section": "Architectural Paradigms for Memory-Efficient Adaptation",
+    "text": "where B Rd × r and A Rr × k with rank r (d, k), scaled by constant.",
+    "cites": []
+  },
+  {
+    "id": "u7",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 41,
+    "section": "Architectural Paradigms for Memory-Efficient Adaptation",
+    "text": "Freezing W0 eliminates gradient computation and optimizer states for base parameters.",
+    "cites": []
+  },
+  {
+    "id": "u8",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 43,
+    "section": "Architectural Paradigms for Memory-Efficient Adaptation",
+    "text": "Instead of uniform ranks across layers, Adaptive Low-Rank Adaptation (AdaLoRA) introduces dynamic parameter allocation.",
+    "cites": [
+      "zhang2023adalora"
+    ]
+  },
+  {
+    "id": "u9",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 43,
+    "section": "Architectural Paradigms for Memory-Efficient Adaptation",
+    "text": "Specifically, establish that AdaLoRA parameterizes the incremental updates in the form of singular value decomposition.",
+    "cites": [
+      "zhang2023adalora"
+    ]
+  },
+  {
+    "id": "u10",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 43,
+    "section": "Architectural Paradigms for Memory-Efficient Adaptation",
+    "text": "Formulated as W = P Q, AdaLoRA prunes unimportant singular values, concentrating parameter capacity on critical layers.",
+    "cites": []
+  },
+  {
+    "id": "u11",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 45,
+    "section": "Architectural Paradigms for Memory-Efficient Adaptation",
+    "text": "Weight-Decomposed Low-Rank Adaptation (DoRA) addresses structural divergences between full fine-tuning and low-rank adaptation.",
+    "cites": [
+      "liu2024dora"
+    ]
+  },
+  {
+    "id": "u12",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 45,
+    "section": "Architectural Paradigms for Memory-Efficient Adaptation",
+    "text": "demonstrate that DoRA decomposes the pre-trained weight into two components, magnitude and direction, for fine-tuning, specifically employing LoRA for directional updates to efficiently minimize the number of trainable parameters.",
+    "cites": [
+      "liu2024dora"
+    ]
+  },
+  {
+    "id": "u13",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 45,
+    "section": "Architectural Paradigms for Memory-Efficient Adaptation",
+    "text": "Decomposing weight W into directional vectors V / \\|V\\|c and magnitude vector m yields:",
+    "cites": []
+  },
+  {
+    "id": "u14",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 49,
+    "section": "Architectural Paradigms for Memory-Efficient Adaptation",
+    "text": "While LoRA alters direction and magnitude jointly, DoRA decouples magnitude scaling from directional updates.",
+    "cites": []
+  },
+  {
+    "id": "u15",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 51,
+    "section": "Architectural Paradigms for Memory-Efficient Adaptation",
+    "text": "Combining parameter efficiency with precision reduction, Quantized Low-Rank Adaptation (QLoRA) backpropagates gradients through 4-bit NormalFloat (NF4) base weights into 16-bit LoRA adapters.",
+    "cites": [
+      "dettmers2023qlora"
+    ]
+  },
+  {
+    "id": "u16",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 51,
+    "section": "Architectural Paradigms for Memory-Efficient Adaptation",
+    "text": "To eliminate separate adapter branches at inference, Quantization-Aware Low-Rank Adaptation (QA-LoRA) aligns degrees of freedom between quantization and adaptation.",
+    "cites": [
+      "xu2023qa"
+    ]
+  },
+  {
+    "id": "u17",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 51,
+    "section": "Architectural Paradigms for Memory-Efficient Adaptation",
+    "text": "show that QA-LoRA introduces group-wise operators which increase the degree of freedom of low-bit quantization and decrease that of low-rank adaptation.",
+    "cites": [
+      "xu2023qa"
+    ]
+  },
+  {
+    "id": "u18",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 51,
+    "section": "Architectural Paradigms for Memory-Efficient Adaptation",
+    "text": "This enables direct integration of adapters into low-bit weights.",
+    "cites": []
+  },
+  {
+    "id": "u19",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 53,
+    "section": "Architectural Paradigms for Memory-Efficient Adaptation",
+    "text": "Conversely, coordinate tuning modifies existing parameters.",
+    "cites": []
+  },
+  {
+    "id": "u20",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 53,
+    "section": "Architectural Paradigms for Memory-Efficient Adaptation",
+    "text": "show that BitFit is a sparse fine-tuning method where only the bias-terms of the model or a subset of them are being modified.",
+    "cites": [
+      "zaken2022bitfit"
+    ]
+  },
+  {
+    "id": "u21",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 53,
+    "section": "Architectural Paradigms for Memory-Efficient Adaptation",
+    "text": "Optimizing bias vectors introduces zero structural modifications or new projections.",
+    "cites": []
+  },
+  {
+    "id": "u22",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 57,
+    "section": "Practical Tradeoffs: Precision, Optimizer States, and Activation Memory",
+    "text": "VRAM consumption comprises four components: static parameters, optimizer states, backpropagation activations, and gradient graphs.",
+    "cites": []
+  },
+  {
+    "id": "u23",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 59,
+    "section": "Practical Tradeoffs: Precision, Optimizer States, and Activation Memory",
+    "text": "Reported empirical savings reflect specific architectural interventions.",
+    "cites": []
+  },
+  {
+    "id": "u24",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 59,
+    "section": "Practical Tradeoffs: Precision, Optimizer States, and Activation Memory",
+    "text": "In evaluating LoRA on massive models, demonstrated: Compared to GPT-3 175B fine-tuned with Adam, LoRA can reduce the number of trainable parameters by 10,000 times and the GPU memory requirement by 3 times.",
+    "cites": [
+      "hu2021lora"
+    ]
+  },
+  {
+    "id": "u25",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 59,
+    "section": "Practical Tradeoffs: Precision, Optimizer States, and Activation Memory",
+    "text": "This reduction stems from dispensing with Adam optimizer states (8 bytes per parameter in FP32) for frozen base parameters; static weights still occupied 16-bit storage (350 GB).",
+    "cites": []
+  },
+  {
+    "id": "u26",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 61,
+    "section": "Practical Tradeoffs: Precision, Optimizer States, and Activation Memory",
+    "text": "When static weights dominate memory, base quantization yields physical compression.",
+    "cites": []
+  },
+  {
+    "id": "u27",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 61,
+    "section": "Practical Tradeoffs: Precision, Optimizer States, and Activation Memory",
+    "text": "In particular, established: QLoRA reduces memory usage enough to finetune a 65B parameter model on a single 48GB GPU while preserving full 16-bit finetuning task performance.",
+    "cites": [
+      "dettmers2023qlora"
+    ]
+  },
+  {
+    "id": "u28",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 61,
+    "section": "Practical Tradeoffs: Precision, Optimizer States, and Activation Memory",
+    "text": "Furthermore, proved: Double Quantization saves an average of about 0.37 bits per parameter by quantizing the quantization constants.",
+    "cites": [
+      "dettmers2023qlora"
+    ]
+  },
+  {
+    "id": "u29",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 61,
+    "section": "Practical Tradeoffs: Precision, Optimizer States, and Activation Memory",
+    "text": "Paged optimizers further mitigate memory spikes across mini-batches by paging states across CPU RAM.",
+    "cites": []
+  },
+  {
+    "id": "u30",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 63,
+    "section": "Practical Tradeoffs: Precision, Optimizer States, and Activation Memory",
+    "text": "However, parameter reduction must not be conflated with overall operational memory savings.",
+    "cites": []
+  },
+  {
+    "id": "u31",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 63,
+    "section": "Practical Tradeoffs: Precision, Optimizer States, and Activation Memory",
+    "text": "Activation memory often dominates peak VRAM during training.",
+    "cites": []
+  },
+  {
+    "id": "u32",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 63,
+    "section": "Practical Tradeoffs: Precision, Optimizer States, and Activation Memory",
+    "text": "Specifically, measured: For a 7B LLaMA model trained on FLAN v2 with a batch size of 1, with LoRA weights equivalent to commonly used 0.2% of the original model weights, the LoRA input gradients have a memory footprint of 567 MB while the LoRA parameters take up only 26 MB.",
+    "cites": [
+      "dettmers2023qlora"
+    ]
+  },
+  {
+    "id": "u33",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 63,
+    "section": "Practical Tradeoffs: Precision, Optimizer States, and Activation Memory",
+    "text": "Without activation checkpointing, adapter rank adjustments yield negligible operational memory relief.",
+    "cites": []
+  },
+  {
+    "id": "u34",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 65,
+    "section": "Practical Tradeoffs: Precision, Optimizer States, and Activation Memory",
+    "text": "Reparameterization schemes can also incur hidden graph overheads.",
+    "cites": []
+  },
+  {
+    "id": "u35",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 65,
+    "section": "Practical Tradeoffs: Precision, Optimizer States, and Activation Memory",
+    "text": "In DoRA, differentiating through the column norm generates a dense computational graph.",
+    "cites": []
+  },
+  {
+    "id": "u36",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 65,
+    "section": "Practical Tradeoffs: Precision, Optimizer States, and Activation Memory",
+    "text": "To mitigate this overhead, established that Treating the norm vector as a constant and detaching it from the gradient graph reduces the gradient graph memory consumption drastically without a noticeable difference in accuracy.",
+    "cites": [
+      "liu2024dora"
+    ]
+  },
+  {
+    "id": "u37",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 67,
+    "section": "Practical Tradeoffs: Precision, Optimizer States, and Activation Memory",
+    "text": "Finally, in bias tuning, reported: In BitFit, the bias terms parameter vectors amount to less than 0.1% of the total number of parameters.",
+    "cites": [
+      "zaken2022bitfit"
+    ]
+  },
+  {
+    "id": "u38",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 67,
+    "section": "Practical Tradeoffs: Precision, Optimizer States, and Activation Memory",
+    "text": "Although BitFit incurs minimal storage, modern LLM architectures dispense with bias terms in linear projections, limiting BitFit to specific model families.",
+    "cites": []
+  },
+  {
+    "id": "u39",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 71,
+    "section": "Systematic Comparison across Adaptation Paradigms",
+    "text": "Table synthesizes surveyed methods, explicitly distinguishing theoretical design formulations from measured empirical benchmarks and hardware contexts.",
+    "cites": []
+  },
+  {
+    "id": "u40",
+    "kind": "caption",
+    "file": "main.tex",
+    "line": 76,
+    "section": "Systematic Comparison across Adaptation Paradigms",
+    "text": "Systematic comparison distinguishing theoretical architectural designs from measured empirical results and hardware baselines.",
+    "cites": []
+  },
+  {
+    "id": "u41",
+    "kind": "row",
+    "file": "main.tex",
+    "line": 80,
+    "section": "Systematic Comparison across Adaptation Paradigms",
+    "text": "Method | Architectural Design (Theoretical) | Benchmark Context & Hardware (Reported) | Measured Empirical Result",
+    "cites": []
+  },
+  {
+    "id": "u42",
+    "kind": "row",
+    "file": "main.tex",
+    "line": 82,
+    "section": "Systematic Comparison across Adaptation Paradigms",
+    "text": "LoRA | Static low-rank factors W = rBA; freezes base W0 | GPT-3 175B on cluster nodes; LLaMA-7B on FLAN v2 (A100) | VRAM from 1.2TB to 350GB; input grads (567 MB) exceed weights (26 MB)",
+    "cites": []
+  },
+  {
+    "id": "u43",
+    "kind": "row",
+    "file": "main.tex",
+    "line": 83,
+    "section": "Systematic Comparison across Adaptation Paradigms",
+    "text": "AdaLoRA | SVD parameterization W = P Q; dynamic rank pruning | DeBERTaV3-base on GLUE and SQuADv2 (NVIDIA V100 32GB) | Higher accuracy than static LoRA at identical budget (≤ 1% params)",
+    "cites": []
+  },
+  {
+    "id": "u44",
+    "kind": "row",
+    "file": "main.tex",
+    "line": 84,
+    "section": "Systematic Comparison across Adaptation Paradigms",
+    "text": "DoRA | Decouples magnitude m and direction V; adapts V via LoRA | LLaMA-7B/13B on Commonsense Reasoning (NVIDIA A100 80GB) | Detached norm cuts VRAM by 24.4% (37.3GB → 28.2GB); +3.7 avg score",
+    "cites": []
+  },
+  {
+    "id": "u45",
+    "kind": "row",
+    "file": "main.tex",
+    "line": 85,
+    "section": "Systematic Comparison across Adaptation Paradigms",
+    "text": "QLoRA | 4-bit NF4 base weights; 16-bit LoRA; paged optimizers | LLaMA-65B and 33B on Vicuna/Flan (NVIDIA A100 48GB/80GB) | 65B tuned on single 48GB GPU; double quant saves 0.37 bits/param",
+    "cites": []
+  },
+  {
+    "id": "u46",
+    "kind": "row",
+    "file": "main.tex",
+    "line": 86,
+    "section": "Systematic Comparison across Adaptation Paradigms",
+    "text": "QA-LoRA | Group-wise operators for INT4 post-training merge | LLaMA-7B/13B on Alpaca and MMLU (NVIDIA A100 80GB) | Zero accuracy degradation when merging adapters into INT4 base weights",
+    "cites": []
+  },
+  {
+    "id": "u47",
+    "kind": "row",
+    "file": "main.tex",
+    "line": 87,
+    "section": "Systematic Comparison across Adaptation Paradigms",
+    "text": "BitFit | Modifies only existing additive bias vectors b | BERT-Base/Large and RoBERTa on GLUE (NVIDIA V100 32GB) | Tunes <0.1% params while matching ≥ 95% full fine-tuning score",
+    "cites": []
+  },
+  {
+    "id": "u48",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 94,
+    "section": "Proposed Controlled Experiment: Disentangling Activations from Adapter Rank",
+    "text": "To resolve how adaptation methods behave under strict hardware caps, we propose a rigorously controlled empirical benchmark targeting a single consumer 24 GB GPU (NVIDIA RTX 4090, 24,564 MiB VRAM, driver 550.x, CUDA 12.4).",
+    "cites": []
+  },
+  {
+    "id": "u49",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 96,
+    "section": "Proposed Controlled Experiment: Disentangling Activations from Adapter Rank",
+    "text": "We evaluate LLaMA-3-8B across Alpaca-Cleaned instruction tuning (51,760 samples).",
+    "cites": []
+  },
+  {
+    "id": "u50",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 96,
+    "section": "Proposed Controlled Experiment: Disentangling Activations from Adapter Rank",
+    "text": "We evaluate three adaptation architectures: standard 16-bit LoRA, QLoRA (NF4 with double quantization), and DoRA (with detached column normalization).",
+    "cites": []
+  },
+  {
+    "id": "u51",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 96,
+    "section": "Proposed Controlled Experiment: Disentangling Activations from Adapter Rank",
+    "text": "All runs share an identical optimizer setup: AdamW (1 = 0.9, 2 = 0.999, = 10-8, weight decay 0.01) with a 100-step linear warmup followed by cosine learning rate decay to 10% of peak (2× 10-4 for LoRA/DoRA, 1× 10-4 for QLoRA).",
+    "cites": []
+  },
+  {
+    "id": "u52",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 96,
+    "section": "Proposed Controlled Experiment: Disentangling Activations from Adapter Rank",
+    "text": "Batch execution is strictly fixed to micro-batch size B = 2 with gradient accumulation steps = 8 (effective batch size 16).",
+    "cites": []
+  },
+  {
+    "id": "u53",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 96,
+    "section": "Proposed Controlled Experiment: Disentangling Activations from Adapter Rank",
+    "text": "Across all runs, random seeds are fixed to \\42, 1337, 2024 for data shuffling, weight initialization, and dropout masks.",
+    "cites": []
+  },
+  {
+    "id": "u54",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 100,
+    "section": "Proposed Controlled Experiment: Disentangling Activations from Adapter Rank",
+    "text": "Adapter rank: r \\4, 8, 16, 32, 64 fixing scaling factor = 2r.",
+    "cites": []
+  },
+  {
+    "id": "u55",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 101,
+    "section": "Proposed Controlled Experiment: Disentangling Activations from Adapter Rank",
+    "text": "Target sequence length: L \\512, 1024, 2048 tokens.",
+    "cites": []
+  },
+  {
+    "id": "u56",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 102,
+    "section": "Proposed Controlled Experiment: Disentangling Activations from Adapter Rank",
+    "text": "Activation checkpointing toggle: (a) Disabled (standard forward activation caching) versus (b) Enabled (full gradient checkpointing via torch.utils.checkpoint.checkpoint on all transformer layers).",
+    "cites": []
+  },
+  {
+    "id": "u57",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 106,
+    "section": "Proposed Controlled Experiment: Disentangling Activations from Adapter Rank",
+    "text": "Before logging, we execute 20 warmup optimization steps to stabilize the PyTorch caching allocator.",
+    "cites": []
+  },
+  {
+    "id": "u58",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 106,
+    "section": "Proposed Controlled Experiment: Disentangling Activations from Adapter Rank",
+    "text": "Peak memory is sampled at step boundaries using exact CUDA telemetry hooks: max_memory_allocated() (physical tensor memory) and max_memory_reserved() (allocator cache pool), with reset_peak_memory_stats() and synchronize() invoked between steps.",
+    "cites": []
+  },
+  {
+    "id": "u59",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 106,
+    "section": "Proposed Controlled Experiment: Disentangling Activations from Adapter Rank",
+    "text": "We decompose memory into static weights (M weights), optimizer states (M opt), and activation tensors (M act = M peak - M weights - M opt).",
+    "cites": []
+  },
+  {
+    "id": "u60",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 106,
+    "section": "Proposed Controlled Experiment: Disentangling Activations from Adapter Rank",
+    "text": "Training throughput (tokens/sec) and downstream accuracy on MMLU (5-shot) and GSM8K (8-shot) are recorded.",
+    "cites": []
+  },
+  {
+    "id": "u61",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 109,
+    "section": "Proposed Controlled Experiment: Disentangling Activations from Adapter Rank",
+    "text": "For sequence lengths L ≥ 1024 without gradient checkpointing, varying rank r from 4 to 64 will alter peak VRAM by less than 4% across all methods, proving that activation memory dominates out-of-memory limits on 24 GB hardware.",
+    "cites": []
+  },
+  {
+    "id": "u62",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 113,
+    "section": "Limitations, Boundary Conditions, and Unverified Claims",
+    "text": "Hardware and methodological constraints govern low-memory adaptation.",
+    "cites": []
+  },
+  {
+    "id": "u63",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 113,
+    "section": "Limitations, Boundary Conditions, and Unverified Claims",
+    "text": "Memory reductions cannot be transferred across different GPU architectures; memory bus bandwidth and kernel implementations vary across Ampere, Ada Lovelace, and Hopper architectures.",
+    "cites": []
+  },
+  {
+    "id": "u64",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 113,
+    "section": "Limitations, Boundary Conditions, and Unverified Claims",
+    "text": "Dequantization and paged memory transfers also incur runtime overheads that degrade training throughput.",
+    "cites": []
+  },
+  {
+    "id": "u65",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 115,
+    "section": "Limitations, Boundary Conditions, and Unverified Claims",
+    "text": "We explicitly address an unverified claim circulating in laboratory planning: Someone in our lab says, 'Our pilot halves training memory compared with LoRA.' This statement is entirely undocumented: it specifies no model architecture, precision baseline, batch size, sequence length, or profiling tool.",
+    "cites": []
+  },
+  {
+    "id": "u66",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 115,
+    "section": "Limitations, Boundary Conditions, and Unverified Claims",
+    "text": "As established by, static base weights and activation buffers account for the vast majority of memory in standard LoRA; halving training memory cannot occur via adapter adjustments without altering base weight precision or activation caching.",
+    "cites": [
+      "dettmers2023qlora"
+    ]
+  },
+  {
+    "id": "u67",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 115,
+    "section": "Limitations, Boundary Conditions, and Unverified Claims",
+    "text": "Because no empirical report, hardware telemetry, or code artifacts have been supplied, this assertion remains explicitly unverified and must not serve as an experimental premise or baseline.",
+    "cites": []
+  },
+  {
+    "id": "u68",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 117,
+    "section": "Limitations, Boundary Conditions, and Unverified Claims",
+    "text": "Finally, two methodological boundaries must be recognized.",
+    "cites": []
+  },
+  {
+    "id": "u69",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 117,
+    "section": "Limitations, Boundary Conditions, and Unverified Claims",
+    "text": "First, Transferring reported memory footprints across model families, sequence lengths, or GPU hardware without re-measurement is unverified.",
+    "cites": []
+  },
+  {
+    "id": "u70",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 117,
+    "section": "Limitations, Boundary Conditions, and Unverified Claims",
+    "text": "Second, the literature reveals no support for the premise: Reducing adapter rank alone is sufficient to eliminate memory bottlenecks in activation-heavy training regimes.",
+    "cites": []
+  },
+  {
+    "id": "u71",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 119,
+    "section": "Limitations, Boundary Conditions, and Unverified Claims",
+    "text": "plainnat",
+    "cites": []
+  }
+]

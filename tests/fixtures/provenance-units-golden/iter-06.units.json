@@ -1,0 +1,650 @@
+[
+  {
+    "id": "u1",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 20,
+    "section": "Introduction and Memory Decomposition",
+    "text": "Adapting large language models (LLMs) under constrained GPU memory requires profiling memory allocations.",
+    "cites": []
+  },
+  {
+    "id": "u2",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 20,
+    "section": "Introduction and Memory Decomposition",
+    "text": "Total VRAM decomposes into static weights (2 bytes in 16-bit precision for parameters), gradients (2 bytes), optimizer states (12--16 bytes in AdamW), and activations.",
+    "cites": []
+  },
+  {
+    "id": "u3",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 20,
+    "section": "Introduction and Memory Decomposition",
+    "text": "Full fine-tuning of an 8B model demands 16 GB--20 GB for parameters alone.",
+    "cites": []
+  },
+  {
+    "id": "u4",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 20,
+    "section": "Introduction and Memory Decomposition",
+    "text": "Activations scale with batch size b, context length s, hidden dimension d, and layers L, dominating at long contexts.",
+    "cites": []
+  },
+  {
+    "id": "u5",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 20,
+    "section": "Introduction and Memory Decomposition",
+    "text": "Crucially, parameter-efficient adaptations do not compress activations, requiring strict separation between architectural design choices and measured memory reductions.",
+    "cites": []
+  },
+  {
+    "id": "u6",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 23,
+    "section": "Methodological Taxonomies",
+    "text": "Parameter-efficient adaptation reduces memory through three paradigms: coordinate-level selection, low-rank factorization, and quantization-aware adaptation.",
+    "cites": []
+  },
+  {
+    "id": "u7",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 26,
+    "section": "Methodological Taxonomies",
+    "text": "Coordinate-level adaptation updates native vectors without inserting modules.",
+    "cites": []
+  },
+  {
+    "id": "u8",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 26,
+    "section": "Methodological Taxonomies",
+    "text": "In BitFit, we freeze most of the transformer-encoder parameters, and train only the bias-terms and the task-specific classification layer.",
+    "cites": [
+      "benzaken2021bitfit"
+    ]
+  },
+  {
+    "id": "u9",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 26,
+    "section": "Methodological Taxonomies",
+    "text": "Because only bias vectors receive gradients while weights remain frozen, optimizer states collapse.",
+    "cites": []
+  },
+  {
+    "id": "u10",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 26,
+    "section": "Methodological Taxonomies",
+    "text": "For BitFit, each new task requires storing only the bias terms parameter vectors, which amount to less than 0.1% of the total number of parameters.",
+    "cites": [
+      "benzaken2021bitfit"
+    ]
+  },
+  {
+    "id": "u11",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 26,
+    "section": "Methodological Taxonomies",
+    "text": "However, BitFit cannot modify attention projection spaces, limiting expressivity on generative tasks.",
+    "cites": []
+  },
+  {
+    "id": "u12",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 29,
+    "section": "Methodological Taxonomies",
+    "text": "Low-rank methods assume weight updates reside in a low-dimensional manifold.",
+    "cites": []
+  },
+  {
+    "id": "u13",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 29,
+    "section": "Methodological Taxonomies",
+    "text": "LoRA freezes the pre-trained model weights and injects trainable rank decomposition matrices into each layer of the Transformer architecture.",
+    "cites": [
+      "hu2021lora"
+    ]
+  },
+  {
+    "id": "u14",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 29,
+    "section": "Methodological Taxonomies",
+    "text": "For frozen weight W0, the forward pass computes h = W0 x + r B A x (B Rd × r, A Rr × k, r (d, k)).",
+    "cites": []
+  },
+  {
+    "id": "u15",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 29,
+    "section": "Methodological Taxonomies",
+    "text": "Compared to GPT-3 175B fine-tuned with Adam, LoRA can reduce the number of trainable parameters by 10,000 times and the GPU memory requirement by 3 times.",
+    "cites": [
+      "hu2021lora"
+    ]
+  },
+  {
+    "id": "u16",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 31,
+    "section": "Methodological Taxonomies",
+    "text": "Addressing LoRA's uniform layer rank allocation, AdaLoRA parameterizes the incremental updates in the form of singular value decomposition to prune redundant singular values based on importance scoring.",
+    "cites": [
+      "zhang2023adalora"
+    ]
+  },
+  {
+    "id": "u17",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 31,
+    "section": "Methodological Taxonomies",
+    "text": "Parameterizing W = P Q with orthogonality regularization, AdaLoRA dynamically prunes singular values.",
+    "cites": []
+  },
+  {
+    "id": "u18",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 31,
+    "section": "Methodological Taxonomies",
+    "text": "Consequently, AdaLoRA achieves better or on par performance compared with existing approaches on all datasets under all budget levels.",
+    "cites": [
+      "zhang2023adalora"
+    ]
+  },
+  {
+    "id": "u19",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 33,
+    "section": "Methodological Taxonomies",
+    "text": "Weight-Decomposed Low-Rank Adaptation isolates directional updates from magnitude adjustments.",
+    "cites": []
+  },
+  {
+    "id": "u20",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 33,
+    "section": "Methodological Taxonomies",
+    "text": "DoRA decomposes the pre-trained weight into two components, magnitude and direction, for fine-tuning, specifically employing LoRA for directional updates to efficiently minimize the number of trainable parameters.",
+    "cites": [
+      "liu2024dora"
+    ]
+  },
+  {
+    "id": "u21",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 33,
+    "section": "Methodological Taxonomies",
+    "text": "Parameterized as W = m (V + V) / \\|V + V\\|c, update dynamics stabilize.",
+    "cites": []
+  },
+  {
+    "id": "u22",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 33,
+    "section": "Methodological Taxonomies",
+    "text": "Furthermore, DoRA can be merged with the pre-trained weight before inference, thereby not introducing any additional latency.",
+    "cites": [
+      "liu2024dora"
+    ]
+  },
+  {
+    "id": "u23",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 33,
+    "section": "Methodological Taxonomies",
+    "text": "Across downstream benchmarks, DoRA consistently outperforms LoRA on fine-tuning LLaMA, LLaVA, and VL-BART on various downstream tasks, such as commonsense reasoning, visual instruction tuning, and image/video-text understanding.",
+    "cites": [
+      "liu2024dora"
+    ]
+  },
+  {
+    "id": "u24",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 36,
+    "section": "Methodological Taxonomies",
+    "text": "While LoRA reduces optimizer memory, static 16-bit weights dominate VRAM.",
+    "cites": []
+  },
+  {
+    "id": "u25",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 36,
+    "section": "Methodological Taxonomies",
+    "text": "QLoRA resolves this by quantizing base weights to 4 bits while updating 16-bit LoRA matrices.",
+    "cites": []
+  },
+  {
+    "id": "u26",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 36,
+    "section": "Methodological Taxonomies",
+    "text": "QLoRA reduces memory usage enough to finetune a 65B parameter model on a single 48GB GPU while preserving full 16-bit finetuning task performance.",
+    "cites": [
+      "dettmers2023qlora"
+    ]
+  },
+  {
+    "id": "u27",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 36,
+    "section": "Methodological Taxonomies",
+    "text": "QLoRA introduces 4-bit NormalFloat (NF4), Paged Optimizers, and Double Quantization.",
+    "cites": []
+  },
+  {
+    "id": "u28",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 36,
+    "section": "Methodological Taxonomies",
+    "text": "Specifically, Double Quantization quantizes the quantization constants, saving an average of about 0.37 bits per parameter.",
+    "cites": [
+      "dettmers2023qlora"
+    ]
+  },
+  {
+    "id": "u29",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 38,
+    "section": "Methodological Taxonomies",
+    "text": "Merging QLoRA adapters into low-bit weights introduces rounding errors.",
+    "cites": []
+  },
+  {
+    "id": "u30",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 38,
+    "section": "Methodological Taxonomies",
+    "text": "Addressing this, QA-LoRA introduces group-wise operations to increase the degrees of freedom of quantization while decreasing that of low-rank adaptation.",
+    "cites": [
+      "xu2023qa"
+    ]
+  },
+  {
+    "id": "u31",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 38,
+    "section": "Methodological Taxonomies",
+    "text": "By aligning group quantization with low-rank adaptation, QA-LoRA enables seamless merging into INT4 representations without post-training accuracy loss.",
+    "cites": []
+  },
+  {
+    "id": "u32",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 41,
+    "section": "Empirical Trade-Offs and Table Comparison",
+    "text": "To separate architectural features from empirical findings, Table partitions design choices from published benchmarks.",
+    "cites": []
+  },
+  {
+    "id": "u33",
+    "kind": "caption",
+    "file": "main.tex",
+    "line": 46,
+    "section": "Empirical Trade-Offs and Table Comparison",
+    "text": "Comparison of parameter-efficient adaptation methods, explicitly partitioning architectural design choices from empirically measured benchmark results reported in literature.",
+    "cites": []
+  },
+  {
+    "id": "u34",
+    "kind": "row",
+    "file": "main.tex",
+    "line": 51,
+    "section": "Empirical Trade-Offs and Table Comparison",
+    "text": " | 3cArchitectural Design Choices |  | 3cReported Measured Results (Literature)",
+    "cites": []
+  },
+  {
+    "id": "u35",
+    "kind": "row",
+    "file": "main.tex",
+    "line": 53,
+    "section": "Empirical Trade-Offs and Table Comparison",
+    "text": "Method | Tunable Target | Base Prec. | Mergeable |  | Evaluated Model & Task | Measured Empirical Result | Source",
+    "cites": []
+  },
+  {
+    "id": "u36",
+    "kind": "row",
+    "file": "main.tex",
+    "line": 55,
+    "section": "Empirical Trade-Offs and Table Comparison",
+    "text": "Full FT | All native weights | 16-bit | Native |  | 8B--65B standard LLMs | OOM on single 24 GB/48 GB GPUs | ---",
+    "cites": []
+  },
+  {
+    "id": "u37",
+    "kind": "row",
+    "file": "main.tex",
+    "line": 56,
+    "section": "Empirical Trade-Offs and Table Comparison",
+    "text": "BitFit | Bias vectors (<0.1%) | 16-bit | Yes |  | BERT-base on GLUE | Matches full FT score (<0.1% params)",
+    "cites": [
+      "benzaken2021bitfit"
+    ]
+  },
+  {
+    "id": "u38",
+    "kind": "row",
+    "file": "main.tex",
+    "line": 57,
+    "section": "Empirical Trade-Offs and Table Comparison",
+    "text": "LoRA | Low-rank matrices BA | 16-bit | Yes |  | GPT-3 175B downstream NLG | 3× VRAM reduction, 10,000× param cut",
+    "cites": [
+      "hu2021lora"
+    ]
+  },
+  {
+    "id": "u39",
+    "kind": "row",
+    "file": "main.tex",
+    "line": 58,
+    "section": "Empirical Trade-Offs and Table Comparison",
+    "text": "AdaLoRA | Dynamic SVD triplets | 16-bit | Yes |  | DeBERTaV3 on GLUE/SQuAD | Outperforms fixed LoRA at 0.08% budget",
+    "cites": [
+      "zhang2023adalora"
+    ]
+  },
+  {
+    "id": "u40",
+    "kind": "row",
+    "file": "main.tex",
+    "line": 59,
+    "section": "Empirical Trade-Offs and Table Comparison",
+    "text": "DoRA | Magnitude + Direction | 16-bit | Yes |  | LLaMA-7B on Commonsense | Outperforms LoRA by +3.7 accuracy points",
+    "cites": [
+      "liu2024dora"
+    ]
+  },
+  {
+    "id": "u41",
+    "kind": "row",
+    "file": "main.tex",
+    "line": 60,
+    "section": "Empirical Trade-Offs and Table Comparison",
+    "text": "QLoRA | NF4 base + LoRA BA | 4-bit | No |  | LLaMA-65B on Alpaca/Vicuna | Runs 65B on 48 GB GPU; matches 16-bit",
+    "cites": [
+      "dettmers2023qlora"
+    ]
+  },
+  {
+    "id": "u42",
+    "kind": "row",
+    "file": "main.tex",
+    "line": 61,
+    "section": "Empirical Trade-Offs and Table Comparison",
+    "text": "QA-LoRA | INT4 group + LoRA BA | 4-bit | Yes |  | LLaMA-7B/13B on MMLU | Matches FP16 LoRA; zero loss in INT4",
+    "cites": [
+      "xu2023qa"
+    ]
+  },
+  {
+    "id": "u43",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 68,
+    "section": "Empirical Trade-Offs and Table Comparison",
+    "text": "Within research groups, informal heuristics often circulate regarding memory savings.",
+    "cites": []
+  },
+  {
+    "id": "u44",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 68,
+    "section": "Empirical Trade-Offs and Table Comparison",
+    "text": "Specifically, a colleague asserts: ``Our pilot halves training memory compared with LoRA.'' However, this claim remains strictly unverified.",
+    "cites": []
+  },
+  {
+    "id": "u45",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 68,
+    "section": "Empirical Trade-Offs and Table Comparison",
+    "text": "No profiling logs, sequence lengths, batch sizes, or hardware setups were supplied.",
+    "cites": []
+  },
+  {
+    "id": "u46",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 68,
+    "section": "Empirical Trade-Offs and Table Comparison",
+    "text": "Because 16-bit base weights and forward activations form the vast majority of LoRA's runtime memory, halving memory cannot occur through adapter adjustments alone; it requires base-model quantization or context truncation.",
+    "cites": []
+  },
+  {
+    "id": "u47",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 68,
+    "section": "Empirical Trade-Offs and Table Comparison",
+    "text": "Consequently, this claim must not be treated as a verified result or serve as a premise for experimental planning.",
+    "cites": []
+  },
+  {
+    "id": "u48",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 71,
+    "section": "Proposed Experimental Protocol",
+    "text": "To evaluate these methods under strictly identical conditions, we specify a controlled benchmark isolating runtime and algorithmic parameters.",
+    "cites": []
+  },
+  {
+    "id": "u49",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 74,
+    "section": "Proposed Experimental Protocol",
+    "text": "Benchmarking uses a single NVIDIA RTX 4090 GPU (24 GB GDDR6X), PyTorch 2.3, FlashAttention-2, and LLaMA-3-8B (BF16).",
+    "cites": []
+  },
+  {
+    "id": "u50",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 74,
+    "section": "Proposed Experimental Protocol",
+    "text": "All runs repeat across three random seeds (S \\42, 1337, 2024\\) controlling initialization, sample order, and dropout, reporting mean and standard deviation over steps 51--200.",
+    "cites": []
+  },
+  {
+    "id": "u51",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 77,
+    "section": "Proposed Experimental Protocol",
+    "text": "We profile six setups: (1) Full fine-tuning (OOM baseline); (2) BitFit (biases); (3) LoRA (r=16, =32); (4) DoRA (r=16, =32); (5) QLoRA (NF4); and (6) QA-LoRA (INT4, L=32).",
+    "cites": []
+  },
+  {
+    "id": "u52",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 77,
+    "section": "Proposed Experimental Protocol",
+    "text": "Four controls strictly isolate implementation differences:",
+    "cites": []
+  },
+  {
+    "id": "u53",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 79,
+    "section": "Proposed Experimental Protocol",
+    "text": "Optimizer States: 16-bit methods use FP32 AdamW (1=0.9, 2=0.999, =10-8, weight decay 0.01).",
+    "cites": []
+  },
+  {
+    "id": "u54",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 79,
+    "section": "Proposed Experimental Protocol",
+    "text": "Quantized methods test both FP32 AdamW and 8-bit Paged AdamW as an isolated ablation.",
+    "cites": []
+  },
+  {
+    "id": "u55",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 80,
+    "section": "Proposed Experimental Protocol",
+    "text": "Activation Checkpointing: Native activation recomputation is applied at every Transformer layer across all runs.",
+    "cites": []
+  },
+  {
+    "id": "u56",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 81,
+    "section": "Proposed Experimental Protocol",
+    "text": "Sequence Length and Batching: Micro-batch b=2, accumulation steps 8 (global batch 16).",
+    "cites": []
+  },
+  {
+    "id": "u57",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 81,
+    "section": "Proposed Experimental Protocol",
+    "text": "Inputs are padded to fixed lengths s \\512, 1024, 2048, 4096\\.",
+    "cites": []
+  },
+  {
+    "id": "u58",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 82,
+    "section": "Proposed Experimental Protocol",
+    "text": "Learning Rates and Schedulers: Cosine decay with 10% linear warmup over 3 epochs on MetaMathQA-50k.",
+    "cites": []
+  },
+  {
+    "id": "u59",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 82,
+    "section": "Proposed Experimental Protocol",
+    "text": "Peak rates are =2× 10-4 for adapters, 5× 10-4 for BitFit, and 2× 10-5 for full FT.",
+    "cites": []
+  },
+  {
+    "id": "u60",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 86,
+    "section": "Proposed Experimental Protocol",
+    "text": "Peak memory is recorded via torch.cuda allocated and reserved counters after step 100 with synchronization.",
+    "cites": []
+  },
+  {
+    "id": "u61",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 86,
+    "section": "Proposed Experimental Protocol",
+    "text": "Throughput is measured in tokens/sec; downstream accuracy on GSM8K and MMLU 5-shot.",
+    "cites": []
+  },
+  {
+    "id": "u62",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 89,
+    "section": "Limitations and Threats to Validity",
+    "text": "Several constraints bound the generalizability of these techniques.",
+    "cites": []
+  },
+  {
+    "id": "u63",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 89,
+    "section": "Limitations and Threats to Validity",
+    "text": "First, reported memory reductions reflect specific baseline environments (e.g., GPT-3 175B or classification encoders) and do not transfer unconditionally across architectures.",
+    "cites": []
+  },
+  {
+    "id": "u64",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 89,
+    "section": "Limitations and Threats to Validity",
+    "text": "Second, 4-bit quantization reduces static memory but adds compute overhead from runtime dequantization.",
+    "cites": []
+  },
+  {
+    "id": "u65",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 89,
+    "section": "Limitations and Threats to Validity",
+    "text": "Third, parameter-efficient adaptations do not compress activations, which scale with sequence length unless paired with sequence parallelism.",
+    "cites": []
+  },
+  {
+    "id": "u66",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 89,
+    "section": "Limitations and Threats to Validity",
+    "text": "The empirical memory reduction of parameter-efficient methods on long sequence lengths exceeding 16,384 tokens remains unverified across diverse Transformer architectures.",
+    "cites": []
+  },
+  {
+    "id": "u67",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 89,
+    "section": "Limitations and Threats to Validity",
+    "text": "In this review, all six primary sources were retrieved and checked in full; no primary source was missing.",
+    "cites": []
+  },
+  {
+    "id": "u68",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 91,
+    "section": "Limitations and Threats to Validity",
+    "text": "plain",
+    "cites": []
+  }
+]

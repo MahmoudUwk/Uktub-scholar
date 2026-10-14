@@ -159,3 +159,86 @@ export function dockerAvailable(image: string): string | undefined {
   const r = spawnSync("docker", ["image", "inspect", image], { encoding: "utf8" });
   return r.status === 0 ? undefined : (r.stderr || String(r.error)).trim();
 }
+
+/**
+ * Grader isolation (PLAN.md rev 3, section 4.6): a grading session sees the note export and the frozen
+ * corpus read-only, one writable output dir, its Pi agent dir and ADC — nothing else (no run logs, no
+ * evidence dirs, no product statuses, no consumer stage, no engine mounts). Secrets travel by name only
+ * (`-e NAME`, value in the docker client's environment), exactly like SandboxSpec.secretEnv.
+ */
+export const GRADER_INSIDE = {
+  home: "/home/eval",
+  note: "/work/note",
+  corpus: "/work/corpus",
+  out: "/work/out",
+  agentDir: "/pi-agent",
+  adc: "/adc/adc.json",
+} as const;
+
+export interface GraderSandboxSpec {
+  image: string;
+  /** Container name, so a stuck grading session can be stopped by name. */
+  name: string;
+  /** Note export directory (mounted read-only at /work/note). */
+  noteDir: string;
+  /** Frozen corpus directory (mounted read-only at /work/corpus). */
+  corpusDir: string;
+  /** Session output directory (writable at /work/out, the working directory). */
+  outDir: string;
+  /** Per-session Pi agent dir (writable at /pi-agent). */
+  agentDir: string;
+  /** Host ADC file (read-only; grader B reaches Vertex through it). */
+  adcFile: string;
+  /** Environment for the process; the container receives nothing else from the host. */
+  env: Record<string, string>;
+  /**
+   * Grader-only secrets (OPENCODE_API_KEY). Passed by name only, so values never appear in an argv,
+   * a log or a manifest. Provider keys (Semantic Scholar/OpenAlex/Crossref) must never be here:
+   * build the value with grade-lib.graderSecretsOnly.
+   */
+  secretEnv?: Record<string, string>;
+}
+
+/** The `docker run` argv (after `docker`) that runs `command` inside the grader boundary. */
+export function graderDockerArgs(spec: GraderSandboxSpec, command: string[]): string[] {
+  const uid = process.getuid?.() ?? 1000;
+  const env: Record<string, string> = {
+    HOME: GRADER_INSIDE.home,
+    PI_CODING_AGENT_DIR: GRADER_INSIDE.agentDir,
+    GOOGLE_APPLICATION_CREDENTIALS: GRADER_INSIDE.adc,
+    ...spec.env,
+  };
+  return [
+    "run", "--rm", "-i", "--init", "--name", spec.name,
+    "--user", `${uid}:${process.getgid?.() ?? 1000}`,
+    "--cap-drop", "ALL", "--security-opt", "no-new-privileges", "--read-only",
+    "--tmpfs", "/tmp", "--tmpfs", `${GRADER_INSIDE.home}:uid=${uid}`, "--tmpfs", `${GRADER_INSIDE.home}/.cache:uid=${uid}`,
+    "--entrypoint", "",
+    "-w", GRADER_INSIDE.out,
+    "-v", `${spec.noteDir}:${GRADER_INSIDE.note}:ro`,
+    "-v", `${spec.corpusDir}:${GRADER_INSIDE.corpus}:ro`,
+    "-v", `${spec.outDir}:${GRADER_INSIDE.out}`,
+    "-v", `${spec.agentDir}:${GRADER_INSIDE.agentDir}`,
+    "-v", `${spec.adcFile}:${GRADER_INSIDE.adc}:ro`,
+    ...Object.entries(env).flatMap(([k, v]) => ["-e", `${k}=${v}`]),
+    ...Object.keys(spec.secretEnv ?? {}).flatMap((k) => ["-e", k]),
+    spec.image, ...command,
+  ];
+}
+
+/** The `docker` invocation for `command`, for a host that spawns the process itself (Pi RPC). */
+export const graderCommand = (spec: GraderSandboxSpec, command: string[]): { command: string; args: string[]; env: Record<string, string> } => ({
+  command: "docker",
+  args: graderDockerArgs(spec, command),
+  env: { ...(process.env as Record<string, string>), ...(spec.secretEnv ?? {}) },
+});
+
+/** Start `command` inside the grader boundary with piped stdio (the Pi RPC process). */
+export function spawnGrader(spec: GraderSandboxSpec, command: string[]): ChildProcess {
+  return spawn("docker", graderDockerArgs(spec, command), { stdio: ["pipe", "pipe", "pipe"], env: { ...(process.env as Record<string, string>), ...(spec.secretEnv ?? {}) } });
+}
+
+/** Run `command` to completion inside the grader boundary. */
+export function runGrader(spec: GraderSandboxSpec, command: string[], timeoutMs = 120000): SpawnSyncReturns<string> {
+  return spawnSync("docker", graderDockerArgs(spec, command), { encoding: "utf8", timeout: timeoutMs, env: { ...(process.env as Record<string, string>), ...(spec.secretEnv ?? {}) } });
+}

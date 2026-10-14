@@ -239,10 +239,17 @@ documented defaults otherwise, then environment overrides. Malformed or unknown 
   (Apache-2.0) and builds a small Python environment, then self-checks the worker; select it with `verification.engine: eos-onnx`. About
   49 ms per judgment on a CUDA GPU, 0.8 s on CPU. `UKTUB_EOS_ONNX_DIR` and `UKTUB_EOS_ONNX_PYTHON` use your own copy;
   `UKTUB_EOS_ONNX_REVISION`, `_SHA256` and `_BOOTSTRAP_PYTHON` adjust the pin and installer.
+- **`hosted`**: `vllm-sr/d3-mini` (4B) on the hosted System One endpoint `https://decision.vllm-sr.ai`, no local model or GPU.
+  Get a free key in one click at [decision.vllm-sr.ai](https://decision.vllm-sr.ai/), set `UKTUB_VERIFY_API_KEY`, and select it with
+  `verification.engine: hosted`; without a key it refuses with that link and never switches engine. On the same 547 claims it supported
+  93 % of the true claims at about 1 % false supports, and at the 0.99 bar 198 of 269 true and 0 of 278 false
+  (`docs/benchmarks/claims-v2-d3-mini-api-2026-10-14.report.md`). The claim and passage text are sent to that service.
 - `openrouter`: `inception/mercury-decide:free` via the System One decisions API; needs `OPENROUTER_API_KEY`;
   `UKTUB_OPENROUTER_MODEL` picks another compatible model, `UKTUB_OPENROUTER_MIN_INTERVAL_MS` sets the throttle.
-- `llama-cpp`: a local `/v1/systemone` endpoint (`UKTUB_VERIFY_URL`, default `http://127.0.0.1:8080`); its served model id is
-  the judgment identity.
+- `llama-cpp`: a System One endpoint (`UKTUB_VERIFY_URL`, default `http://127.0.0.1:8080`); its served model id is
+  the judgment identity. For a hosted endpoint, `UKTUB_VERIFY_MODEL` sets the routed model id sent in each request and
+  `UKTUB_VERIFY_API_KEY` the Bearer key, sent only to an HTTPS origin (a key with a plain-HTTP URL is refused); a 401
+  names the missing key without ever printing it.
 - `vela` (experimental, **not adopted**): [Vela 2.0](https://huggingface.co/vllm-sr/Vela-2.0-0.3B) 0.3B on ONNX Runtime or any
   size on PyTorch (`UKTUB_VELA_BACKEND=torch`), from a snapshot you provide (`UKTUB_VELA_DIR`; also `_REVISION`, `_DEVICE`,
   `_WEIGHTS_FILE`, `_WEIGHTS_SHA256`, `_INFERENCE_SHA256`, `_PYTHON`); refuses weights that differ from the pinned sha256.

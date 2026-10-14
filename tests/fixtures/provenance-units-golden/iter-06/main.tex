@@ -1,0 +1,94 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{microtype}
+\usepackage{cite}
+\usepackage[hidelinks]{hyperref}
+\emergencystretch=1em
+
+\title{\textbf{Adapting Language Models Under Limited GPU Memory:\\Methodologies, Trade-Offs, and Experimental Design}}
+\author{Research Note}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\section{Introduction and Memory Decomposition}
+Adapting large language models (LLMs) under constrained GPU memory requires profiling memory allocations. Total VRAM decomposes into static weights ($2\Phi$ bytes in 16-bit precision for $\Phi$ parameters), gradients ($2\Phi$ bytes), optimizer states ($12\Phi$--$16\Phi$ bytes in AdamW), and activations. Full fine-tuning of an 8B model demands 16\,GB--20\,GB for parameters alone. Activations scale with batch size $b$, context length $s$, hidden dimension $d$, and layers $L$, dominating at long contexts. Crucially, parameter-efficient adaptations do not compress activations, requiring strict separation between architectural design choices and measured memory reductions.
+
+\section{Methodological Taxonomies}
+Parameter-efficient adaptation reduces memory through three paradigms: coordinate-level selection, low-rank factorization, and quantization-aware adaptation.
+
+\subsection{Coordinate-Level Sparsity}
+Coordinate-level adaptation updates native vectors without inserting modules. In BitFit, we freeze most of the transformer-encoder parameters, and train only the bias-terms and the task-specific classification layer~\cite{benzaken2021bitfit}. Because only bias vectors receive gradients while weights remain frozen, optimizer states collapse. For BitFit, each new task requires storing only the bias terms parameter vectors, which amount to less than 0.1\% of the total number of parameters~\cite{benzaken2021bitfit}. However, BitFit cannot modify attention projection spaces, limiting expressivity on generative tasks.
+
+\subsection{Low-Rank Subspace Formulations}
+Low-rank methods assume weight updates reside in a low-dimensional manifold. LoRA freezes the pre-trained model weights and injects trainable rank decomposition matrices into each layer of the Transformer architecture~\cite{hu2021lora}. For frozen weight $W_0$, the forward pass computes $h = W_0 x + \frac{\alpha}{r} B A x$ ($B \in \mathbb{R}^{d \times r}, A \in \mathbb{R}^{r \times k}, r \ll \min(d, k)$). Compared to GPT-3 175B fine-tuned with Adam, LoRA can reduce the number of trainable parameters by 10,000 times and the GPU memory requirement by 3 times~\cite{hu2021lora}.
+
+Addressing LoRA's uniform layer rank allocation, AdaLoRA parameterizes the incremental updates in the form of singular value decomposition to prune redundant singular values based on importance scoring~\cite{zhang2023adalora}. Parameterizing $\Delta W = P \Lambda Q$ with orthogonality regularization, AdaLoRA dynamically prunes singular values. Consequently, AdaLoRA achieves better or on par performance compared with existing approaches on all datasets under all budget levels~\cite{zhang2023adalora}.
+
+Weight-Decomposed Low-Rank Adaptation isolates directional updates from magnitude adjustments. DoRA decomposes the pre-trained weight into two components, magnitude and direction, for fine-tuning, specifically employing LoRA for directional updates to efficiently minimize the number of trainable parameters~\cite{liu2024dora}. Parameterized as $W = m \, (V + \Delta V) / \|V + \Delta V\|_c$, update dynamics stabilize. Furthermore, DoRA can be merged with the pre-trained weight before inference, thereby not introducing any additional latency~\cite{liu2024dora}. Across downstream benchmarks, DoRA consistently outperforms LoRA on fine-tuning LLaMA, LLaVA, and VL-BART on various downstream tasks, such as commonsense reasoning, visual instruction tuning, and image/video-text understanding~\cite{liu2024dora}.
+
+\subsection{Quantization-Aware Low-Rank Methods}
+While LoRA reduces optimizer memory, static 16-bit weights dominate VRAM. QLoRA resolves this by quantizing base weights to 4 bits while updating 16-bit LoRA matrices. QLoRA reduces memory usage enough to finetune a 65B parameter model on a single 48GB GPU while preserving full 16-bit finetuning task performance~\cite{dettmers2023qlora}. QLoRA introduces 4-bit NormalFloat (NF4), Paged Optimizers, and Double Quantization. Specifically, Double Quantization quantizes the quantization constants, saving an average of about 0.37 bits per parameter~\cite{dettmers2023qlora}.
+
+Merging QLoRA adapters into low-bit weights introduces rounding errors. Addressing this, QA-LoRA introduces group-wise operations to increase the degrees of freedom of quantization while decreasing that of low-rank adaptation~\cite{xu2023qa}. By aligning group quantization with low-rank adaptation, QA-LoRA enables seamless merging into INT4 representations without post-training accuracy loss.
+
+\section{Empirical Trade-Offs and Table Comparison}
+To separate architectural features from empirical findings, Table~\ref{tab:comparison} partitions design choices from published benchmarks.
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{Comparison of parameter-efficient adaptation methods, explicitly partitioning architectural design choices from empirically measured benchmark results reported in literature.}
+\label{tab:comparison}
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{l l c c c l l c}
+\toprule
+ & \multicolumn{3}{c}{\textbf{Architectural Design Choices}} & & \multicolumn{3}{c}{\textbf{Reported Measured Results (Literature)}} \\
+\cmidrule(lr){2-4} \cmidrule(lr){6-8}
+\textbf{Method} & \textbf{Tunable Target} & \textbf{Base Prec.} & \textbf{Mergeable} & & \textbf{Evaluated Model \& Task} & \textbf{Measured Empirical Result} & \textbf{Source} \\
+\midrule
+Full FT & All native weights & 16-bit & Native & & 8B--65B standard LLMs & OOM on single 24\,GB/48\,GB GPUs & --- \\
+BitFit & Bias vectors ($<$0.1\%) & 16-bit & Yes & & BERT-base on GLUE & Matches full FT score ($<$0.1\% params) & \cite{benzaken2021bitfit} \\
+LoRA & Low-rank matrices $BA$ & 16-bit & Yes & & GPT-3 175B downstream NLG & 3$\times$ VRAM reduction, 10,000$\times$ param cut & \cite{hu2021lora} \\
+AdaLoRA & Dynamic SVD triplets & 16-bit & Yes & & DeBERTaV3 on GLUE/SQuAD & Outperforms fixed LoRA at 0.08\% budget & \cite{zhang2023adalora} \\
+DoRA & Magnitude + Direction & 16-bit & Yes & & LLaMA-7B on Commonsense & Outperforms LoRA by +3.7 accuracy points & \cite{liu2024dora} \\
+QLoRA & NF4 base + LoRA $BA$ & 4-bit & No & & LLaMA-65B on Alpaca/Vicuna & Runs 65B on 48\,GB GPU; matches 16-bit & \cite{dettmers2023qlora} \\
+QA-LoRA & INT4 group + LoRA $BA$ & 4-bit & Yes & & LLaMA-7B/13B on MMLU & Matches FP16 LoRA; zero loss in INT4 & \cite{xu2023qa} \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}
+
+\subsection{Evaluation of Laboratory Pilot Claims}
+Within research groups, informal heuristics often circulate regarding memory savings. Specifically, a colleague asserts: ``Our pilot halves training memory compared with LoRA.'' However, this claim remains strictly unverified. No profiling logs, sequence lengths, batch sizes, or hardware setups were supplied. Because 16-bit base weights and forward activations form the vast majority of LoRA's runtime memory, halving memory cannot occur through adapter adjustments alone; it requires base-model quantization or context truncation. Consequently, this claim must not be treated as a verified result or serve as a premise for experimental planning.
+
+\section{Proposed Experimental Protocol}
+To evaluate these methods under strictly identical conditions, we specify a controlled benchmark isolating runtime and algorithmic parameters.
+
+\paragraph{Hardware, Foundation Model, and Seeds}
+Benchmarking uses a single NVIDIA RTX 4090 GPU (24\,GB GDDR6X), PyTorch 2.3, FlashAttention-2, and LLaMA-3-8B (BF16). All runs repeat across three random seeds ($\mathcal{S} \in \{42, 1337, 2024\}$) controlling initialization, sample order, and dropout, reporting mean and standard deviation over steps 51--200.
+
+\paragraph{Evaluated Conditions and Controls}
+We profile six setups: (1) Full fine-tuning (OOM baseline); (2) BitFit (biases); (3) LoRA ($r=16, \alpha=32$); (4) DoRA ($r=16, \alpha=32$); (5) QLoRA (NF4); and (6) QA-LoRA (INT4, $L=32$). Four controls strictly isolate implementation differences:
+\begin{itemize}
+    \item \textbf{Optimizer States}: 16-bit methods use FP32 AdamW ($\beta_1=0.9, \beta_2=0.999, \epsilon=10^{-8}$, weight decay 0.01). Quantized methods test both FP32 AdamW and 8-bit Paged AdamW as an isolated ablation.
+    \item \textbf{Activation Checkpointing}: Native activation recomputation is applied at every Transformer layer across all runs.
+    \item \textbf{Sequence Length and Batching}: Micro-batch $b=2$, accumulation steps 8 (global batch 16). Inputs are padded to fixed lengths $s \in \{512, 1024, 2048, 4096\}$.
+    \item \textbf{Learning Rates and Schedulers}: Cosine decay with 10\% linear warmup over 3 epochs on MetaMathQA-50k. Peak rates are $\eta=2\times 10^{-4}$ for adapters, $5\times 10^{-4}$ for BitFit, and $2\times 10^{-5}$ for full FT.
+\end{itemize}
+
+\paragraph{Profiling Metrics}
+Peak memory is recorded via \texttt{torch.cuda} allocated and reserved counters after step 100 with synchronization. Throughput is measured in tokens/sec; downstream accuracy on GSM8K and MMLU 5-shot.
+
+\section{Limitations and Threats to Validity}
+Several constraints bound the generalizability of these techniques. First, reported memory reductions reflect specific baseline environments (e.g., GPT-3 175B or classification encoders) and do not transfer unconditionally across architectures. Second, 4-bit quantization reduces static memory but adds compute overhead from runtime dequantization. Third, parameter-efficient adaptations do not compress activations, which scale with sequence length unless paired with sequence parallelism. The empirical memory reduction of parameter-efficient methods on long sequence lengths exceeding 16,384 tokens remains unverified across diverse Transformer architectures. In this review, all six primary sources were retrieved and checked in full; no primary source was missing.
+
+\bibliographystyle{plain}
+\bibliography{../refs/references}
+
+\end{document}

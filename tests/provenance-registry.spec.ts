@@ -1,6 +1,8 @@
 /**
- * The registry side of the provenance audit: paper texts as captured, and the verify ledger (`verify_runs` + `claim_evidence`),
- * which the package writes itself, so a statement's support never depends on a file the agent authors.
+ * The registry side of the provenance audit: paper texts as captured, and the
+ * durable verify ledger (`claim_ledger`), which the package writes itself when
+ * evidence is released, so a statement's support never depends on a file the
+ * agent authors.
  */
 import { describe, it, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
@@ -11,7 +13,7 @@ import type { DatabaseSync } from "node:sqlite";
 
 import type { ChunkTextConfig } from "../src/core/chunk.ts";
 import { createRegistry, registerPaper } from "../src/core/registry.ts";
-import { createRun, formatPointer, publishSource, saveEvidence, RUN_TTL_MS } from "../src/core/verify/store.ts";
+import { createRun, formatPointer, markDelivered, publishSource, saveEvidence } from "../src/core/verify/store.ts";
 import { readProvenanceInputs } from "../src/core/provenance/read.ts";
 import { claimVariants } from "../src/core/provenance/audit.ts";
 
@@ -38,17 +40,18 @@ afterEach(() => {
   rmSync(root, { recursive: true, force: true });
 });
 
-function verifiedRun(claim: string, doi: string, when: Date, pTrue = 0.995): string {
-  const runId = `run-${claim.length}-${when.getTime()}`;
+function releasedRun(claim: string, doi: string, when: Date, pTrue = 0.995, start = 17, end = 90): string {
+  const runId = `run-${claim.length}-${when.getTime()}-${pTrue}-${start}-${end}`;
   createRun(db, runId, claim, { mode: "query", query: null, requested: "all", papers: [{ doi, revision: revisions[doi]!, policy: "p" }], scopeKey: "all", selected: 1, candidateIds: null, selection: [] } as never, { unavailable: [], unresolved: [], staleDropped: 0 }, when);
-  saveEvidence(db, runId, [{ doi, revision: revisions[doi]!, start: 17, end: 90, page: null, chunkId: "c1", model: "m", protocol: "p", minConfidence: 0.99, pTrue }], when);
+  saveEvidence(db, runId, [{ doi, revision: revisions[doi]!, start, end, page: null, chunkId: "c1", model: "m", protocol: "p", minConfidence: 0.99, pTrue }], when);
+  markDelivered(db, runId, [{ doi, revision: revisions[doi]!, start, end, released: 42 }], { claim, now: when });
   return runId;
 }
 
 describe("readProvenanceInputs", () => {
   it("returns every registered paper with its citekey, doi, title and captured text (null when no source is ready)", () => {
     db.prepare("DELETE FROM paper_sources WHERE doi = ?").run(DORA);
-    const { papers } = readProvenanceInputs(db, NOW);
+    const { papers } = readProvenanceInputs(db);
     assert.equal(papers.length, 2);
     const lora = papers.find((p) => p.doi === LORA)!;
     assert.ok(lora.citekey.length > 0);
@@ -56,24 +59,28 @@ describe("readProvenanceInputs", () => {
     assert.equal(papers.find((p) => p.doi === DORA)!.text, null);
   });
 
-  it("the ledger returns the pointers of a verify run whose claim is one of the statement's wordings", () => {
-    verifiedRun(CLAIM, LORA, NOW);
-    const { ledger } = readProvenanceInputs(db, NOW);
+  it("the ledger returns the pointers of released verify evidence for one of the statement's wordings", () => {
+    releasedRun(CLAIM, LORA, NOW);
+    const { ledger } = readProvenanceInputs(db);
     const hit = ledger(claimVariants(`In benchmarked evaluations: ${CLAIM}`));
     assert.deepEqual(hit?.dois, [LORA]);
     assert.deepEqual(hit?.pointers, [formatPointer(LORA, revisions[LORA]!, 17, 90)]);
     assert.equal(ledger(claimVariants("A statement nobody verified.")), null);
   });
 
-  it("ignores runs older than the retention window, evidence below its own bar, and evidence of a replaced source revision", () => {
-    verifiedRun(CLAIM, LORA, new Date(NOW.getTime() - RUN_TTL_MS - 60_000));
-    assert.equal(readProvenanceInputs(db, NOW).ledger(claimVariants(CLAIM)), null, "an expired run");
-    const fresh = new Date(NOW.getTime() - 1000);
-    verifiedRun(CLAIM, LORA, fresh, 0.5);
-    assert.equal(readProvenanceInputs(db, NOW).ledger(claimVariants(CLAIM)), null, "p_true below the run's min_confidence");
-    verifiedRun(CLAIM, LORA, new Date(NOW.getTime() - 500), 0.999);
-    assert.ok(readProvenanceInputs(db, NOW).ledger(claimVariants(CLAIM)) !== null);
+  it("unreleased evidence is invisible, and evidence below the current bar is filtered on read", () => {
+    createRun(db, "r-unrel", CLAIM, { mode: "query", query: null, requested: "all", papers: [], scopeKey: "all", selected: 1, candidateIds: null, selection: [] } as never, { unavailable: [], unresolved: [], staleDropped: 0 }, NOW);
+    saveEvidence(db, "r-unrel", [{ doi: LORA, revision: revisions[LORA]!, start: 17, end: 90, page: null, chunkId: "c1", model: "m", protocol: "p", minConfidence: 0.99, pTrue: 0.999 }], NOW);
+    assert.equal(readProvenanceInputs(db).ledger(claimVariants(CLAIM)), null, "judged but never delivered");
+    releasedRun(CLAIM, LORA, NOW, 0.5, 0, 30);
+    assert.equal(readProvenanceInputs(db).ledger(claimVariants(CLAIM)), null, "p_true below the current bar");
+    releasedRun(CLAIM, LORA, NOW, 0.999);
+    assert.ok(readProvenanceInputs(db).ledger(claimVariants(CLAIM)) !== null);
+  });
+
+  it("evidence of a replaced source revision is gone with the revision", () => {
+    releasedRun(CLAIM, LORA, NOW);
     publishSource(db, LORA, { kind: "local-file", ref: "x.pdf", license: null, digest: "b".repeat(64), extraction: "t@1", text: "A different capture of the paper.", pageStarts: null }, CFG, NOW);
-    assert.equal(readProvenanceInputs(db, NOW).ledger(claimVariants(CLAIM)), null, "the pointer would resolve stale");
+    assert.equal(readProvenanceInputs(db).ledger(claimVariants(CLAIM)), null, "the ledger row died with its revision");
   });
 });

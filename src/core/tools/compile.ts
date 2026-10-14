@@ -11,6 +11,7 @@ import { Type, type Static } from "typebox";
 import { compileDocument, describeOutcome, prodSpawn, type CompileOutcome } from "../compile/run.ts";
 import { renderSummary } from "../provenance/render.ts";
 import { runProvenance } from "../provenance/run.ts";
+import { minConfidenceFromEnv } from "../verify/claim.ts";
 import { refusalResult, type ToolContext, type ToolResult } from "./context.ts";
 
 export const CompileDocumentParams = Type.Object({
@@ -79,7 +80,7 @@ interface CompileDocumentStructuredDiag {
  */
 export function provenanceBlock(ctx: ToolContext, entry: string): { lines: string[]; structured: Static<typeof ProvenanceOutput> } | null {
   if (/^(0|false|off)$/i.test(ctx.env.UKTUB_PROVENANCE ?? "")) return null;
-  const out = runProvenance({ root: ctx.root, entry, now: ctx.now });
+  const out = runProvenance({ root: ctx.root, entry, now: ctx.now, minConfidence: minConfidenceFromEnv(ctx.env) });
   if (!out.ok) return null;
   const lines = renderSummary(out.audit);
   if (lines.length === 0) return null;

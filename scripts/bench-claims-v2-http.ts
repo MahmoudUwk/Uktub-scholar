@@ -29,25 +29,68 @@ export function criteriaQuestion(claim: string, wording: Wording): Record<string
 
 /** Client policy: one row on a long passage must not stall a run for ever (the CPU path of a 0.8B model takes seconds). */
 const REQUEST_TIMEOUT_MS = 120_000;
+/** Client policy: a hosted endpoint answers 429 with Retry-After when a per-minute budget is used up (docs of decision.vllm-sr.ai); wait it out, bounded, then fail the call rather than read a score that never came. */
+const RETRYABLE_STATUS = new Set([429, 503, 504]);
+const MAX_ATTEMPTS = 10;
+const MAX_SLEEP_MS = 120_000;
 
-export function httpEngine(baseUrl: string, wording: Wording, fetchImpl: typeof fetch = fetch): ClaimEngine {
+export interface HttpEngineOptions {
+  /** Sent as the `model` field of every request (a hosted endpoint routes on it); omitted for a server that needs none. */
+  model?: string;
+  /** Extra headers of every request, e.g. the key of a hosted endpoint (held in the closure, never logged). */
+  headers?: Record<string, string>;
+  /** Rows in flight at once (default 1: one request after another, as before). */
+  concurrency?: number;
+  /** Attempts per row on a retryable status (default MAX_ATTEMPTS); then the call fails. */
+  maxAttempts?: number;
+  /** Per-attempt wall time in milliseconds (feeds the run's latency percentiles). */
+  onLatency?: (ms: number) => void;
+  /** Wait seam (tests stub it; the run sleeps for real). */
+  sleepImpl?: (ms: number) => Promise<void>;
+}
+
+export function httpEngine(baseUrl: string, wording: Wording, fetchImpl: typeof fetch = fetch, opts: HttpEngineOptions = {}): ClaimEngine {
   const url = `${baseUrl.replace(/\/+$/, "")}/v1/systemone`;
-  return {
-    async run(rows) {
-      const out: number[] = [];
-      for (const row of rows) {
-        const res = await fetchImpl(url, {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ state: row.state, questions: { c: criteriaQuestion(row.instructions, wording) } }),
-          signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-        });
-        if (!res.ok) throw new EngineError(`system one server ${url}: HTTP ${res.status}`);
+  const headers = { "content-type": "application/json", ...opts.headers };
+  const concurrency = Math.max(1, Math.floor(opts.concurrency ?? 1));
+  const maxAttempts = Math.max(1, Math.floor(opts.maxAttempts ?? MAX_ATTEMPTS));
+  const sleep = opts.sleepImpl ?? ((ms: number) => new Promise((r) => setTimeout(r, ms)));
+  const postOne = async (row: { state: string; instructions: string }): Promise<number> => {
+    const body = JSON.stringify({ ...(opts.model === undefined ? {} : { model: opts.model }), state: row.state, questions: { c: criteriaQuestion(row.instructions, wording) } });
+    let attempt = 0;
+    for (;;) {
+      attempt += 1;
+      const t = Date.now();
+      const res = await fetchImpl(url, { method: "POST", headers, body, signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
+      opts.onLatency?.(Date.now() - t);
+      if (res.ok) {
         const parsed = (await res.json()) as { answers?: Record<string, { noul?: number }> };
         const p = parsed.answers?.c?.noul;
         if (typeof p !== "number") throw new EngineError(`system one server ${url}: response missing answers.c.noul`);
-        out.push(p);
+        return p;
       }
+      if (attempt < maxAttempts && RETRYABLE_STATUS.has(res.status)) {
+        await res.arrayBuffer().catch(() => null); // release the body before waiting
+        const retryAfter = Number(res.headers.get("retry-after") ?? "NaN");
+        const base = Number.isFinite(retryAfter) && retryAfter >= 0 ? retryAfter * 1000 : 1000 * 2 ** (attempt - 1);
+        await sleep(Math.min(base + Math.random() * 250, MAX_SLEEP_MS));
+        continue;
+      }
+      throw new EngineError(`system one server ${url}: HTTP ${res.status}`);
+    }
+  };
+  return {
+    async run(rows) {
+      const out = new Array<number>(rows.length);
+      let next = 0;
+      const workers = Array.from({ length: Math.min(concurrency, rows.length) }, async () => {
+        for (;;) {
+          const i = next++;
+          if (i >= rows.length) return;
+          out[i] = await postOne(rows[i] as { state: string; instructions: string });
+        }
+      });
+      await Promise.all(workers);
       return out;
     },
   };

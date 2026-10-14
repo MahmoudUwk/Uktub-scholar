@@ -1,0 +1,83 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{microtype}
+\usepackage{cite}
+\usepackage{url}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true,linkcolor=blue,citecolor=blue,urlcolor=blue}
+
+\title{\textbf{Adapting Language Models Under Limited GPU Memory:\\Architectures, Trade-offs, and Evaluation Protocol}}
+\author{\textbf{Research Note}}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+Adapting large language models (LLMs) to downstream tasks is frequently constrained by GPU memory. During full fine-tuning with Adam, memory is dominated by optimizer states, gradients, and activations, far exceeding static weight storage. Parameter-efficient fine-tuning (PEFT) and low-memory algorithms exploit structural redundancies to alleviate these bottlenecks. This note examines architectural decomposition, quantization, and gradient projection paradigms, evaluates memory-throughput trade-offs, and outlines a controlled single-GPU experiment.
+
+\section{Decomposition Architectures and Parameter Efficiency}
+
+Restricting updates to low-rank or sparse subspaces while freezing base weights eliminates optimizer states and gradient buffers for frozen parameters.
+
+Low-Rank Adaptation (LoRA) assumes weight updates during adaptation possess a low intrinsic rank. Rather than updating full matrices directly, LoRA freezes the pre-trained model weights and injects trainable rank decomposition matrices into each layer of the Transformer architecture~\cite{hu2021lora}. For weight dimensions $d \times k$, updates factor into two low-rank matrices of rank $r \ll \min(d, k)$. Compared to GPT-3 175B fine-tuned with Adam, LoRA can reduce the number of trainable parameters by 10,000 times and the GPU memory requirement by 3 times~\cite{hu2021lora}. Crucially, this measured saving was recorded specifically on GPT-3 175B using 16-bit Adam; it cannot be transferred naively to smaller models where intermediate activation tensors dominate total VRAM.
+
+Weight-Decomposed Low-Rank Adaptation (DoRA) investigates the learning dynamics gap between full fine-tuning and LoRA. Full fine-tuning exhibits negative correlations between magnitude and directional updates, whereas LoRA exhibits a positive correlation. To bridge this gap, DoRA decomposes the pre-trained weight into its magnitude and directional components and finetunes both of them, decomposing the directional component with LoRA~\cite{liu2024dora}. Low-rank directional updates maintain parameter efficiency while magnitude vectors scale column norms independently. Furthermore, DoRA can be merged with the pre-trained weight before inference, thereby not introducing any additional latency~\cite{liu2024dora}. However, column norm tracking induces slight runtime and activation overhead compared to standard LoRA.
+
+Ben-Zaken et al.~\cite{benzaken2021bitfit} demonstrated that BitFit is a sparse fine-tuning method where only the bias terms of the model are modified. In BERTBASE and BERTLARGE, bias parameters make up 0.09\% and 0.08\% of the total number of parameters in each model, respectively~\cite{benzaken2021bitfit}. Modifying under 0.1\% of parameters minimizes optimizer overhead. However, modern generative architectures routinely omit bias terms in linear layers. Consequently, BitFit cannot be transferred directly to modern autoregressive backbones without structural modifications.
+
+\section{Quantization, Gradient Projection, and System Trade-offs}
+
+Freezing parameters eliminates optimizer buffers, yet base weights still consume substantial memory. Quantized Low-Rank Adaptation (QLoRA) addresses this footprint. Specifically, QLoRA backpropagates gradients through a frozen, 4-bit quantized pretrained language model into Low Rank Adapters~\cite{dettmers2023qlora}. QLoRA introduces 4-bit NormalFloat (NF4), alongside Double Quantization. Double Quantization quantizes the quantization constants, saving an average of about 0.37 bits per parameter~\cite{dettmers2023qlora}. Furthermore, Paged Optimizers manage gradient checkpointing memory spikes via memory paging. Empirically, QLoRA reduces the average memory requirements of finetuning a 65B parameter model from >780GB of GPU memory to <48GB without degrading the runtime or predictive performance compared to a 16-bit fully finetuned baseline~\cite{dettmers2023qlora}. The trade-off is throughput: dequantizing 4-bit weights into 16-bit buffers increases kernel latency relative to unquantized training.
+
+AdaLoRA recognizes that different transformer layers contribute unequally to adaptation. AdaLoRA parameterizes incremental updates in the form of singular value decomposition and prunes redundant singular values based on an importance metric~\cite{zhang2023adalora}. Allocating rank dynamically toward higher layers and feed-forward networks enhances parameter efficiency, though importance tracking introduces training bookkeeping.
+
+Addressing adapter subspace limits, Gradient Low-Rank Projection (GaLore) exploits the low-rank structure of gradients. GaLore allows full-parameter learning while reducing memory usage by up to 65.5\% in optimizer states~\cite{zhao2024galore}. Rather than freezing base weights, GaLore projects gradients into a low-rank subspace and maintains optimizer statistics within it. Periodically updating projection bases allows the optimizer to optimize full-rank parameters. GaLore demonstrates the feasibility of pre-training a 7B model on consumer GPUs with 24GB memory without model parallel, checkpointing, or offloading strategies~\cite{zhao2024galore}. The primary trade-off is periodic SVD projection overhead.
+
+An informal laboratory claim suggests that a local pilot halves training memory compared with LoRA. Because no hardware configurations, batch sizes, sequence lengths, or measurement logs support this statement, it remains strictly unverified. It cannot be treated as an empirical result, nor can it serve as a premise for experimental design.
+
+\begin{table}[t]
+\centering
+\small
+\caption{Low-memory adaptation: architectural designs vs.\ empirical benchmarks.}
+\label{tab:peft_comparison}
+\begin{tabularx}{\textwidth}{@{} l >{\raggedright\arraybackslash}p{3.8cm} >{\raggedright\arraybackslash}p{2.3cm} >{\raggedright\arraybackslash}X @{}}
+\toprule
+\textbf{Method} & \textbf{Architectural Mechanism \& Target} & \textbf{Theoretical Latency} & \textbf{Measured Benchmark \& Context} \\
+\midrule
+LoRA~\cite{hu2021lora} & Low-rank matrices on projections ($W_q, W_v$) & Zero (when merged) & $3\times$ VRAM cut, $10,000\times$ parameter cut on GPT-3 175B with Adam~\cite{hu2021lora} \\
+\addlinespace
+DoRA~\cite{liu2024dora} & Magnitude vector \& LoRA directional matrix split & Zero (when merged) & Outperforms LoRA on LLaMA-7B/13B; slight activation overhead~\cite{liu2024dora} \\
+\addlinespace
+BitFit~\cite{benzaken2021bitfit} & Sparse bias tuning across transformer linear layers & Zero (native) & $0.09\%$ ($BERT_{BASE}$), $0.08\%$ ($BERT_{LARGE}$) params on GLUE~\cite{benzaken2021bitfit} \\
+\addlinespace
+QLoRA~\cite{dettmers2023qlora} & 4-bit NF4 base + Double Quantization + LoRA & Zero (dequantized) & 65B tuned on 48GB GPU ($>780\text{GB} \to <48\text{GB}$); $0.37$ b/p saved~\cite{dettmers2023qlora} \\
+\addlinespace
+AdaLoRA~\cite{zhang2023adalora} & Dynamic SVD rank allocation and importance pruning & Zero (when merged) & Outperforms uniform LoRA on DeBERTaV3-base at equal budget~\cite{zhang2023adalora} \\
+\addlinespace
+GaLore~\cite{zhao2024galore} & Low-rank gradient projection with subspace switching & Zero (full weights) & Up to $65.5\%$ optimizer cut; 7B pre-trained on 24GB RTX 4090~\cite{zhao2024galore} \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Proposed Empirical Study: Consumer-GPU Adaptation}
+
+To evaluate these methods under controlled consumer limits, we specify an experiment on a single 24GB GPU (RTX 4090, locked clocks).
+
+The backbone is Mistral-7B-v0.1, adapted on Alpaca and evaluated on GSM8K and CommonsenseQA. Configurations share a harness: PyTorch 2.x, Flash\-Attention-2, bfloat16 precision, sequence length 2,048 tokens, and effective batch size 16 (micro-batch 1, 16 accumulation steps). Full activation checkpointing is enabled across all decoder layers to recompute activations during backward passes, isolating parameter and optimizer footprints. Optimizers are fixed: AdamW with 32-bit master states for LoRA, DoRA, and AdaLoRA; 8-bit blockwise AdamW for GaLore; and Paged 32-bit AdamW for QLoRA ($\beta_1=0.9, \beta_2=0.999$, weight decay 0.01).
+
+We compare four setups: (1) LoRA ($r=16, \alpha=32$ on all linear projections); (2) DoRA (matching $r=16, \alpha=32$); (3) QLoRA (4-bit NF4 base, double quantization, $r=16$); and (4) GaLore (rank 128, subspace updates every 200 steps).
+
+Protocol: (i) Post-warmup peak VRAM, tracking \path{torch.cuda.max_memory_allocated()} and \path{torch.cuda.max_memory_reserved()} between steps 50 and 250 across identical 2,048-token inputs; (ii) Steady-state throughput (tokens per second, excluding evaluation and checkpoint I/O); and (iii) Accuracy on held-out benchmarks. This ensures memory comparisons reflect empirical measurement rather than inferred parameter counts.
+
+\section*{Limitations and Source Integrity}
+
+Several boundaries restrict the transfer of published findings. Reported memory reductions measured on very large models do not transfer proportionally to smaller architectures where activation memory dominates over parameter and optimizer states. Architectural differences such as the complete omission of bias terms in modern transformer families prevent direct application of bias-only tuning without structural modifications. Furthermore, memory savings achieved through weight quantization incur runtime latency penalties depending on hardware bandwidth and kernel implementation. Regarding sources, all six cited papers are registered with full-text records and verified against original passages. A title metadata discrepancy between OpenAlex and Crossref was observed for arXiv:2106.09685, which was confirmed as the foundational LoRA manuscript.
+
+\bibliographystyle{plain}
+\bibliography{../refs/references}
+
+\end{document}

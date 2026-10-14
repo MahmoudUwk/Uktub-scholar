@@ -1,0 +1,698 @@
+[
+  {
+    "id": "u1",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 21,
+    "section": "Introduction and GPU Memory Allocation",
+    "text": "Fine-tuning language models under GPU memory limits balances base weights, optimizer states, gradients, and activations.",
+    "cites": []
+  },
+  {
+    "id": "u2",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 21,
+    "section": "Introduction and GPU Memory Allocation",
+    "text": "In 16-bit full tuning, adaptive optimizers like Adam require 12 to 16 bytes per trainable parameter for master weights and momentum buffers.",
+    "cites": []
+  },
+  {
+    "id": "u3",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 21,
+    "section": "Introduction and GPU Memory Allocation",
+    "text": "Gradients add 2 to 4 bytes per parameter, while activations scale with sequence length and batch size.",
+    "cites": []
+  },
+  {
+    "id": "u4",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 21,
+    "section": "Introduction and GPU Memory Allocation",
+    "text": "On 16GB to 24GB GPUs, these demands exceed capacity for models beyond a few billion parameters.",
+    "cites": []
+  },
+  {
+    "id": "u5",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 23,
+    "section": "Introduction and GPU Memory Allocation",
+    "text": "Parameter-efficient methods address this bottleneck through two paradigms: structural parameter decompositions and base-model quantization with optimizer projection.",
+    "cites": []
+  },
+  {
+    "id": "u6",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 23,
+    "section": "Introduction and GPU Memory Allocation",
+    "text": "Decompositions freeze base weights and adapt low-rank matrices, removing optimizer states for frozen weights.",
+    "cites": []
+  },
+  {
+    "id": "u7",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 23,
+    "section": "Introduction and GPU Memory Allocation",
+    "text": "Quantization compresses base weights and optimizer states, reducing footprint and activation spikes.",
+    "cites": []
+  },
+  {
+    "id": "u8",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 25,
+    "section": "Introduction and GPU Memory Allocation",
+    "text": "Recently, an informal statement circulated in our lab.",
+    "cites": []
+  },
+  {
+    "id": "u9",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 25,
+    "section": "Introduction and GPU Memory Allocation",
+    "text": "Specifically, someone in our lab says, ``Our pilot halves training memory compared with LoRA.'' Yet no protocol, model details, or telemetry was provided.",
+    "cites": []
+  },
+  {
+    "id": "u10",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 25,
+    "section": "Introduction and GPU Memory Allocation",
+    "text": "Lacking reproducible measurements, the statement remains unverified.",
+    "cites": []
+  },
+  {
+    "id": "u11",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 25,
+    "section": "Introduction and GPU Memory Allocation",
+    "text": "It cannot serve as an established result or premise.",
+    "cites": []
+  },
+  {
+    "id": "u12",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 25,
+    "section": "Introduction and GPU Memory Allocation",
+    "text": "This note analyzes verified adaptation methods and outlines a controlled benchmarking protocol.",
+    "cites": []
+  },
+  {
+    "id": "u13",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 28,
+    "section": "Subspace Parameter Decompositions",
+    "text": "Low-rank adaptation restructures parameter updates into lower-dimensional subspaces.",
+    "cites": []
+  },
+  {
+    "id": "u14",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 28,
+    "section": "Subspace Parameter Decompositions",
+    "text": "In standard LoRA, the pre-trained weight matrix W0 Rd × k remains frozen while rank decomposition matrices B Rd × r and A Rr × k are injected, with rank r (d, k).",
+    "cites": []
+  },
+  {
+    "id": "u15",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 28,
+    "section": "Subspace Parameter Decompositions",
+    "text": "Matrix A receives Gaussian initialization while B begins at zero.",
+    "cites": []
+  },
+  {
+    "id": "u16",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 28,
+    "section": "Subspace Parameter Decompositions",
+    "text": "For a large Transformer trained with Adam, LoRA reduces VRAM usage by up to 2/3 if the rank is much smaller than the model dimension, because optimizer states are not stored for frozen parameters.",
+    "cites": [
+      "hu2021lora"
+    ]
+  },
+  {
+    "id": "u17",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 28,
+    "section": "Subspace Parameter Decompositions",
+    "text": "Compared to GPT-3 175B fine-tuned with Adam, LoRA can reduce the number of trainable parameters by 10,000 times and the GPU memory requirement by 3 times.",
+    "cites": [
+      "hu2021lora"
+    ]
+  },
+  {
+    "id": "u18",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 28,
+    "section": "Subspace Parameter Decompositions",
+    "text": "However, this three-fold reduction is an empirical result tied to that model and training setup; it cannot be transferred to smaller models or long contexts where activations dominate.",
+    "cites": []
+  },
+  {
+    "id": "u19",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 30,
+    "section": "Subspace Parameter Decompositions",
+    "text": "Standard LoRA applies a uniform rank across all layers.",
+    "cites": []
+  },
+  {
+    "id": "u20",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 30,
+    "section": "Subspace Parameter Decompositions",
+    "text": "AdaLoRA addresses this rigidity by allocating parameter budgets adaptively across matrices.",
+    "cites": []
+  },
+  {
+    "id": "u21",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 30,
+    "section": "Subspace Parameter Decompositions",
+    "text": "AdaLoRA parameterizes the incremental updates in the form of singular value decomposition.",
+    "cites": [
+      "zhang2023adalora"
+    ]
+  },
+  {
+    "id": "u22",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 30,
+    "section": "Subspace Parameter Decompositions",
+    "text": "Here, updates take the form W = P Q, where P and Q represent orthogonal singular vectors and holds singular values.",
+    "cites": []
+  },
+  {
+    "id": "u23",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 30,
+    "section": "Subspace Parameter Decompositions",
+    "text": "AdaLoRA dynamically allocates the parameter budget among incremental matrices by manipulating the singular values based on an importance metric.",
+    "cites": [
+      "zhang2023adalora"
+    ]
+  },
+  {
+    "id": "u24",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 30,
+    "section": "Subspace Parameter Decompositions",
+    "text": "This formulation prunes redundant singular values while retaining singular vectors, preserving future recovery capacity.",
+    "cites": []
+  },
+  {
+    "id": "u25",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 32,
+    "section": "Subspace Parameter Decompositions",
+    "text": "Addressing adaptation dynamics, Weight-Decomposed Low-Rank Adaptation (DoRA) investigates update patterns in magnitude and direction.",
+    "cites": []
+  },
+  {
+    "id": "u26",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 32,
+    "section": "Subspace Parameter Decompositions",
+    "text": "Full fine-tuning exhibits decoupled variations in weight magnitude and directional angles, whereas standard LoRA couples them.",
+    "cites": []
+  },
+  {
+    "id": "u27",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 32,
+    "section": "Subspace Parameter Decompositions",
+    "text": "DoRA decomposes the pre-trained weight into two components, magnitude and direction, for fine-tuning, specifically employing LoRA for directional updates to efficiently minimize the number of trainable parameters.",
+    "cites": [
+      "liu2024dora"
+    ]
+  },
+  {
+    "id": "u28",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 32,
+    "section": "Subspace Parameter Decompositions",
+    "text": "Because column-norm normalization introduces backpropagation overhead, the authors detached the norm term from the gradient computation graph.",
+    "cites": []
+  },
+  {
+    "id": "u29",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 32,
+    "section": "Subspace Parameter Decompositions",
+    "text": "The proposed gradient detachment modification leads to a training memory reduction of approximately 24.4",
+    "cites": []
+  },
+  {
+    "id": "u30",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 35,
+    "section": "Quantization and Optimizer Compression",
+    "text": "Rather than solely freezing weights, quantization techniques directly compress the base model footprint.",
+    "cites": []
+  },
+  {
+    "id": "u31",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 35,
+    "section": "Quantization and Optimizer Compression",
+    "text": "QLoRA combines 4-bit NormalFloat (NF4) base weights, double quantization of constants, and paged optimizers managing memory spikes.",
+    "cites": []
+  },
+  {
+    "id": "u32",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 35,
+    "section": "Quantization and Optimizer Compression",
+    "text": "QLORA reduces memory usage enough to finetune a 65B parameter model on a single 48GB GPU.",
+    "cites": [
+      "dettmers2023qlora"
+    ]
+  },
+  {
+    "id": "u33",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 35,
+    "section": "Quantization and Optimizer Compression",
+    "text": "Double Quantization quantizes the quantization constants, saving an average of about 0.37 bits per parameter.",
+    "cites": [
+      "dettmers2023qlora"
+    ]
+  },
+  {
+    "id": "u34",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 35,
+    "section": "Quantization and Optimizer Compression",
+    "text": "At runtime, 4-bit weights dequantize to 16-bit floating point for computation, trading throughput for reduced VRAM.",
+    "cites": []
+  },
+  {
+    "id": "u35",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 37,
+    "section": "Quantization and Optimizer Compression",
+    "text": "Aggressive low-bit quantization can introduce severe initialization discrepancies.",
+    "cites": []
+  },
+  {
+    "id": "u36",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 37,
+    "section": "Quantization and Optimizer Compression",
+    "text": "LoftQ tackles this problem through alternating optimization during setup.",
+    "cites": []
+  },
+  {
+    "id": "u37",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 37,
+    "section": "Quantization and Optimizer Compression",
+    "text": "LoftQ simultaneously quantizes an LLM and finds a proper low-rank initialization for LoRA fine-tuning.",
+    "cites": [
+      "li2023loftq"
+    ]
+  },
+  {
+    "id": "u38",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 37,
+    "section": "Quantization and Optimizer Compression",
+    "text": "LoftQ outperforms existing quantization methods, especially in the challenging 2-bit and 2/4-bit mixed precision regimes.",
+    "cites": [
+      "li2023loftq"
+    ]
+  },
+  {
+    "id": "u39",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 39,
+    "section": "Quantization and Optimizer Compression",
+    "text": "Taking a distinct approach, GaLore performs full-parameter adaptation by projecting weight gradients into low-rank subspaces, compressing optimizer states rather than restricting weights permanently.",
+    "cites": []
+  },
+  {
+    "id": "u40",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 39,
+    "section": "Quantization and Optimizer Compression",
+    "text": "When pre-training LLaMA 7B on C4 dataset, 8-bit GaLore, combined with 8-bit optimizers and layer-wise weight updates techniques, achieves comparable performance to its full-rank counterpart, with less than 10",
+    "cites": []
+  },
+  {
+    "id": "u41",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 42,
+    "section": "Practical Trade-offs and Comparison",
+    "text": "Selecting an adaptation method requires distinguishing architectural design choices from reported empirical findings.",
+    "cites": []
+  },
+  {
+    "id": "u42",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 42,
+    "section": "Practical Trade-offs and Comparison",
+    "text": "Table explicitly separates structural formulations from measured results and their specific evaluation setups.",
+    "cites": []
+  },
+  {
+    "id": "u43",
+    "kind": "row",
+    "file": "main.tex",
+    "line": 49,
+    "section": "Practical Trade-offs and Comparison",
+    "text": "Method | 2cStructural Design Choices | Reported Empirical Findings (Measured)",
+    "cites": []
+  },
+  {
+    "id": "u44",
+    "kind": "row",
+    "file": "main.tex",
+    "line": 51,
+    "section": "Practical Trade-offs and Comparison",
+    "text": " | Representation & Parameterization | Trainable State | Measured Metric, Model & Benchmark Setting",
+    "cites": []
+  },
+  {
+    "id": "u45",
+    "kind": "row",
+    "file": "main.tex",
+    "line": 53,
+    "section": "Practical Trade-offs and Comparison",
+    "text": "LoRA | 16-bit frozen; update W = BA | Static rank r matrices | 3 times VRAM reduction on GPT-3 175B with Adam",
+    "cites": [
+      "hu2021lora"
+    ]
+  },
+  {
+    "id": "u46",
+    "kind": "row",
+    "file": "main.tex",
+    "line": 54,
+    "section": "Practical Trade-offs and Comparison",
+    "text": "AdaLoRA | 16-bit frozen; SVD update P Q | Dynamic singular value pruning | 88.78% F1 at 0.16% budget on DeBERTaV3-base SQuADv2",
+    "cites": [
+      "zhang2023adalora"
+    ]
+  },
+  {
+    "id": "u47",
+    "kind": "row",
+    "file": "main.tex",
+    "line": 55,
+    "section": "Practical Trade-offs and Comparison",
+    "text": "DoRA | 16-bit frozen; magnitude + direction | Magnitude vector + LoRA direction | 24.4% memory cut with detached norm on LLaMA-7B",
+    "cites": [
+      "liu2024dora"
+    ]
+  },
+  {
+    "id": "u48",
+    "kind": "row",
+    "file": "main.tex",
+    "line": 56,
+    "section": "Practical Trade-offs and Comparison",
+    "text": "QLoRA | 4-bit NF4 frozen; double quant. | 16-bit LoRA adapters | Finetunes 65B model on single 48GB GPU; 0.37 bits/param saved",
+    "cites": [
+      "dettmers2023qlora"
+    ]
+  },
+  {
+    "id": "u49",
+    "kind": "row",
+    "file": "main.tex",
+    "line": 57,
+    "section": "Practical Trade-offs and Comparison",
+    "text": "LoftQ | 2-bit or 4-bit frozen; joint SVD | Alternating init. LoRA | Achieves 7.85 perplexity at 2-bit on LLaMA-2-7b WikiText-2",
+    "cites": [
+      "li2023loftq"
+    ]
+  },
+  {
+    "id": "u50",
+    "kind": "row",
+    "file": "main.tex",
+    "line": 58,
+    "section": "Practical Trade-offs and Comparison",
+    "text": "GaLore | 16-bit full weights; gradient proj. | Full weights via subspace gradient | Less than 10% optimizer memory on LLaMA 7B pre-training",
+    "cites": [
+      "zhao2024galore"
+    ]
+  },
+  {
+    "id": "u51",
+    "kind": "caption",
+    "file": "main.tex",
+    "line": 61,
+    "section": "Practical Trade-offs and Comparison",
+    "text": "Comparison separating structural design choices from reported empirical measurements across specific models and evaluation benchmarks.",
+    "cites": []
+  },
+  {
+    "id": "u52",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 65,
+    "section": "Practical Trade-offs and Comparison",
+    "text": "Serving requirements introduce practical trade-offs.",
+    "cites": []
+  },
+  {
+    "id": "u53",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 65,
+    "section": "Practical Trade-offs and Comparison",
+    "text": "Fully unquantized methods (LoRA, AdaLoRA, DoRA) allow adapter weights to fold directly into base parameters (W = W0 + W), incurring zero serving latency.",
+    "cites": []
+  },
+  {
+    "id": "u54",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 65,
+    "section": "Practical Trade-offs and Comparison",
+    "text": "Conversely, 4-bit methods (QLoRA, LoftQ) require on-the-fly dequantization during generation, introducing latency unless weights are re-quantized.",
+    "cites": []
+  },
+  {
+    "id": "u55",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 68,
+    "section": "Proposed Experiment: Single-GPU Adaptation Benchmark",
+    "text": "To evaluate these methods systematically and test unverified claims, we propose a controlled benchmark on a single 24GB GPU (NVIDIA RTX 4090).",
+    "cites": []
+  },
+  {
+    "id": "u56",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 70,
+    "section": "Proposed Experiment: Single-GPU Adaptation Benchmark",
+    "text": "Standardized Parameter Controls. To isolate method overhead from setup discrepancies, all conditions enforce four strict controls:",
+    "cites": []
+  },
+  {
+    "id": "u57",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 72,
+    "section": "Proposed Experiment: Single-GPU Adaptation Benchmark",
+    "text": "Activation Checkpointing Implementation: Uniform full checkpointing via native PyTorch checkpoint routines across all layers guarantees identical activation recomputation.",
+    "cites": []
+  },
+  {
+    "id": "u58",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 73,
+    "section": "Proposed Experiment: Single-GPU Adaptation Benchmark",
+    "text": "Token Sequence Lengths: Sequence length is fixed to 2,048 tokens across all runs without sequence packing, preventing batch activation variance.",
+    "cites": []
+  },
+  {
+    "id": "u59",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 73,
+    "section": "Proposed Experiment: Single-GPU Adaptation Benchmark",
+    "text": "Micro-batch size is 2 with 8 accumulation steps (effective batch 16).",
+    "cites": []
+  },
+  {
+    "id": "u60",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 74,
+    "section": "Proposed Experiment: Single-GPU Adaptation Benchmark",
+    "text": "Target Layer Coverage: Low-rank adaptation uniformly covers all seven linear modules per layer (Wq, Wk, Wv, Wo, W gate, W up, W down), eliminating coverage discrepancies.",
+    "cites": []
+  },
+  {
+    "id": "u61",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 75,
+    "section": "Proposed Experiment: Single-GPU Adaptation Benchmark",
+    "text": "Optimizer State Precision: Uncompressed methods use 32-bit AdamW (1=0.9, 2=0.999, weight decay 0.01).",
+    "cites": []
+  },
+  {
+    "id": "u62",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 75,
+    "section": "Proposed Experiment: Single-GPU Adaptation Benchmark",
+    "text": "Quantized 8-bit optimizers (paged AdamW in QLoRA, GaLore AdamW) are treated as distinct independent factors.",
+    "cites": []
+  },
+  {
+    "id": "u63",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 78,
+    "section": "Proposed Experiment: Single-GPU Adaptation Benchmark",
+    "text": "Evaluated Conditions. On LLaMA-3-8B, we evaluate five conditions: (1) 16-bit LoRA (r=16); (2) QLoRA (4-bit NF4, double quantization, 8-bit paged AdamW); (3) DoRA (r=16, gradient detachment); (4) AdaLoRA (initial budget 288, final budget 192); and (5) 8-bit GaLore (r=128, 200-step update interval).",
+    "cites": []
+  },
+  {
+    "id": "u64",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 78,
+    "section": "Proposed Experiment: Single-GPU Adaptation Benchmark",
+    "text": "All runs use Alpaca across 3 epochs.",
+    "cites": []
+  },
+  {
+    "id": "u65",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 80,
+    "section": "Proposed Experiment: Single-GPU Adaptation Benchmark",
+    "text": "Metrics and Hypothesis Testing. We record peak VRAM via PyTorch tracking, separated into weights, optimizer states, and activations.",
+    "cites": []
+  },
+  {
+    "id": "u66",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 80,
+    "section": "Proposed Experiment: Single-GPU Adaptation Benchmark",
+    "text": "Throughput is measured in tokens per second and step latency.",
+    "cites": []
+  },
+  {
+    "id": "u67",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 80,
+    "section": "Proposed Experiment: Single-GPU Adaptation Benchmark",
+    "text": "Downstream accuracy is evaluated on ARC-Challenge, HellaSwag, and MMLU.",
+    "cites": []
+  },
+  {
+    "id": "u68",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 80,
+    "section": "Proposed Experiment: Single-GPU Adaptation Benchmark",
+    "text": "This setup tests the lab colleague's claim as an empirical hypothesis: does any method reduce peak training VRAM by 50% relative to 16-bit LoRA under identical context lengths and checkpointing?",
+    "cites": []
+  },
+  {
+    "id": "u69",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 83,
+    "section": "Limitations",
+    "text": "Several limitations govern this analysis.",
+    "cites": []
+  },
+  {
+    "id": "u70",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 83,
+    "section": "Limitations",
+    "text": "Reported memory reductions depend heavily on sequence context and batch size; at long contexts, activations dominate total allocation, diminishing the relative advantage of low-rank optimizers.",
+    "cites": []
+  },
+  {
+    "id": "u71",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 83,
+    "section": "Limitations",
+    "text": "Furthermore, reported metrics reflect disparate hardware architectures (A100 vs. V100), software environments, and kernel implementations.",
+    "cites": []
+  },
+  {
+    "id": "u72",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 83,
+    "section": "Limitations",
+    "text": "Regarding the registry, all six registered papers were acquired in full text; a provider metadata title mismatch for DOI 10.48550/arxiv.2106.09685 was resolved against canonical LoRA content.",
+    "cites": []
+  },
+  {
+    "id": "u73",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 83,
+    "section": "Limitations",
+    "text": "Finally, the colleague's pilot claim lacks documentation or empirical logs, and remains unverified.",
+    "cites": []
+  },
+  {
+    "id": "u74",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 85,
+    "section": "Limitations",
+    "text": "plain",
+    "cites": []
+  }
+]

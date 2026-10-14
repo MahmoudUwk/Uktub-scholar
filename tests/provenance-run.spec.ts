@@ -8,7 +8,7 @@ import type { DatabaseSync } from "node:sqlite";
 
 import type { ChunkTextConfig } from "../src/core/chunk.ts";
 import { createRegistry, registerPaper } from "../src/core/registry.ts";
-import { createRun, publishSource, saveEvidence } from "../src/core/verify/store.ts";
+import { createRun, markDelivered, publishSource, saveEvidence } from "../src/core/verify/store.ts";
 import { runProvenance } from "../src/core/provenance/run.ts";
 
 const NOW = new Date("2026-10-04T00:00:00Z");
@@ -28,6 +28,7 @@ beforeEach(() => {
   }
   createRun(db, "r1", "LoRA can reduce the number of trainable parameters by 10,000 times.", { mode: "query", query: null, requested: "all", papers: [], scopeKey: "all", selected: 1, candidateIds: null, selection: [] } as never, { unavailable: [], unresolved: [], staleDropped: 0 }, NOW);
   saveEvidence(db, "r1", [{ doi: LORA, revision: revisions[LORA]!, start: 0, end: 60, page: null, chunkId: "c", model: "m", protocol: "p", minConfidence: 0.99, pTrue: 0.999 }], NOW);
+  markDelivered(db, "r1", [{ doi: LORA, revision: revisions[LORA]!, start: 0, end: 60, released: 60 }], { claim: "LoRA can reduce the number of trainable parameters by 10,000 times.", now: NOW });
   const key = (doi: string) => (db.prepare("SELECT citekey FROM papers WHERE doi = ?").get(doi) as { citekey: string }).citekey;
   mkdirSync(join(root, "manuscript"), { recursive: true });
   writeFileSync(

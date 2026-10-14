@@ -1,0 +1,116 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[margin=1in]{geometry}
+\usepackage{booktabs}
+\usepackage{amsmath,amssymb}
+\usepackage{cite}
+\usepackage{hyperref}
+\usepackage{microtype}
+\usepackage{tabularx}
+
+\title{\textbf{Adapting Large Language Models Under Memory Constraints:\\Mechanisms, Tradeoffs, and Experimental Design}}
+\author{\textbf{Research Note}}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Adapting large language models (LLMs) under GPU memory limits requires addressing weights, optimizer states, and activations. We analyze six methods: LoRA, QLoRA, DoRA, AdaLoRA, LoftQ, and GaLore, distinguishing design formulations from reported empirical benchmarks. We provide a comparison table, appraise an unverified lab observation, examine remaining operational limitations, and specify a controlled 8B adaptation benchmark on a 24\,GB GPU.
+\end{abstract}
+
+\section{Memory Allocation Bottlenecks and Adaptation Mechanisms}
+
+During standard 16-bit AdamW fine-tuning with $\Phi$ parameters, memory is dominated by optimizer states ($12\Phi$ bytes), alongside weights ($2\Phi$ bytes), gradients ($2\Phi$ bytes), and activations.
+
+\textbf{Low-Rank Parameter Adaptation (LoRA).} LoRA freezes base weights $W_0 \in \mathbb{R}^{d \times k}$ and injects low-rank matrices $W = W_0 + B A$, where $B \in \mathbb{R}^{d \times r}$, $A \in \mathbb{R}^{r \times k}$, and $r \ll \min(d, k)$ \cite{hu2021lora}. For a large Transformer trained with Adam, LoRA reduces VRAM usage by up to 2/3 because optimizer states do not need to be stored for frozen parameters \cite{hu2021lora}. At inference, $B A$ folds into $W_0$ without latency.
+
+\textbf{Quantized Adaptation (QLoRA).} QLoRA backpropagates gradients through a frozen, 4-bit quantized pretrained language model into Low Rank Adapters \cite{dettmers2023qlora}. It combines 4-bit NormalFloat (NF4), Double Quantization for scale constants, and Paged Optimizers using unified memory to manage checkpointing spikes.
+
+\textbf{Weight-Decomposed Adaptation (DoRA).} LoRA couples directional and magnitude updates within $BA$. In contrast, DoRA decomposes the pre-trained weight into two components, magnitude and direction, for fine-tuning, specifically employing LoRA for directional updates to efficiently minimize the number of trainable parameters \cite{liu2024dora}. Decomposed weights are $W = m \frac{V + \Delta V}{\|V + \Delta V\|_c}$, with the norm gradient detached during backpropagation.
+
+\textbf{Dynamic Parameter Allocation (AdaLoRA).} Standard LoRA fixes rank $r$ across all layers. AdaLoRA parameterizes the incremental updates in the form of singular value decomposition to prune redundant singular values based on an importance metric \cite{zhang2023adalora}. Setting $\Delta W = P \Lambda Q$, AdaLoRA dynamically prunes singular values under a budget schedule.
+
+\textbf{Joint Quantization and Initialization (LoftQ).} Post-training quantization introduces initialization discrepancy on low-bit backbones. LoftQ simultaneously quantizes an LLM and finds a proper low-rank initialization for LoRA fine-tuning \cite{li2023loftq}. Alternating optimization between quantized weights $Q$ and low-rank matrices $A, B$ minimizes $\|W_0 - Q - AB^\top\|_F$.
+
+\textbf{Gradient Low-Rank Projection (GaLore).} Unlike adapter methods, GaLore is a training strategy that allows full-parameter learning by projecting the gradient matrix into a low-rank form \cite{zhao2024galore}. Projecting gradients into low-rank representations ($P^\top G$ or $G Q$), GaLore stores optimizer states in compressed form while enabling full weight updates.
+
+\section{Measured Empirical Results Versus Methodological Design}
+
+A strict distinction must be maintained between design formulations and reported empirical results.
+
+\textbf{Reported Low-Rank Adaptation Benchmarks.} On GPT-3 175B, Compared to GPT-3 175B fine-tuned with Adam, LoRA can reduce the number of trainable parameters by 10,000 times and the GPU memory requirement by 3 times \cite{hu2021lora}. However, this reduction stems from eliminating Adam optimizer states on frozen weights; relative savings are smaller with memory-lean optimizers.
+
+\textbf{Reported Quantization Benchmarks.} In instruction tuning, QLoRA reduces memory usage enough to finetune a 65B parameter model on a single 48GB GPU while preserving full 16-bit finetuning task performance \cite{dettmers2023qlora}. Regarding compaction, Double Quantization is a method that quantizes the quantization constants, saving an average of about 0.37 bits per parameter \cite{dettmers2023qlora}. In low-precision regimes, In GSM8K, LoftQ achieves 20.9\% accuracy using 2-bit precision, where QLoRA does not converge \cite{li2023loftq}.
+
+\textbf{Reported Decomposition and Gradient Benchmarks.} In DoRA ablations, The proposed modification leads to a training memory reduction of approximately 24.4\% in fine-tuning LLaMA and 12.4\% in VL-BART \cite{liu2024dora}. For AdaLoRA, When the parameter budget is 0.3M, AdaLoRA achieves 87.36\% accuracy on RTE, which is 1.8\% higher than the best-performing baseline \cite{zhang2023adalora}. For GaLore, GaLore reduces memory usage by up to 65.5\% in optimizer states while maintaining both efficiency and performance for pre-training on LLaMA 1B and 7B architectures with C4 dataset \cite{zhao2024galore}. On downstream evaluation, When fine-tuning RoBERTa-Base on GLUE tasks with a rank of 4, GaLore achieves an average score of 85.89, outperforming LoRA, which achieves a score of 85.61 \cite{zhao2024galore}.
+
+\textbf{Non-Transferability Across Settings.} Practitioners cannot assume these reported numbers transfer to alternate operational domains. QLoRA's 48\,GB footprint on 65B models relies on batch size 1 and checkpointing; longer sequence lengths induce activation footprints that quickly exceed 48\,GB. Similarly, AdaLoRA's gains on DeBERTa cannot be assumed to replicate on autoregressive LLMs without direct evaluation.
+
+\section{Comparative Analysis of Adaptation Frameworks}
+
+Table~\ref{tab:comparison} contrasts the six frameworks, separating architectural design characteristics from reported empirical benchmarks under specific hardware and model settings.
+
+\begin{table*}[htbp]
+\centering
+\scriptsize
+\setlength{\tabcolsep}{3.5pt}
+\caption{Systematic comparison separating architectural design characteristics from reported empirical benchmarks.}
+\label{tab:comparison}
+\begin{tabularx}{\textwidth}{@{}l >{\hsize=0.95\hsize\raggedright\arraybackslash}X >{\hsize=0.85\hsize\raggedright\arraybackslash}X >{\hsize=0.95\hsize\raggedright\arraybackslash}X >{\hsize=1.15\hsize\raggedright\arraybackslash}X >{\hsize=1.1\hsize\raggedright\arraybackslash}X@{}}
+\toprule
+& \multicolumn{2}{c}{\textbf{Architectural Design}} & \multicolumn{3}{c}{\textbf{Reported Benchmarks}} \\
+\cmidrule(lr){2-3} \cmidrule(lr){4-6}
+\textbf{Method} & \textbf{Precision \& Form} & \textbf{Targeted Sink} & \textbf{Reported Setting} & \textbf{Measured Memory} & \textbf{Reported Score} \\
+\midrule
+LoRA & 16-bit FP; Low-rank $BA$ & Optimizer states & GPT-3 175B (Adam) & $3\times$ GPU mem red. (1.2TB to 350GB) & On-par with full FT \\
+QLoRA & 4-bit NF4; Low-rank $BA$ & Weights + opt. states & LLaMA-65B (48GB GPU) & $>780$GB to $<48$GB ($-0.37$ b/p DQ) & 99.3\% Vicuna score \\
+DoRA & 16-bit FP; $m, BA$ & Magnitude/\allowbreak direction & LLaMA-7B / VL-BART & $-24.4\%$ / $-12.4\%$ train mem & 67.6\% LLaVA-1.5 avg \\
+AdaLoRA & 16-bit FP; SVD $P \Lambda Q$ & Dynamic rank alloc. & DeBERTaV3 (GLUE) & Dynamic singular pruning & 87.36\% RTE (0.3M) \\
+LoftQ & 2/4-bit; Initialized $BA$ & Init. discrepancy & LLaMA-2-7b (GSM8K) & Joint low-rank quant. init. & 20.9\% acc. at 2-bit \\
+GaLore & 16-bit FP; Full weights & Gradient projection & LLaMA-7B / C4 & $\le 65.5\%$ opt. mem red. & 85.89 GLUE (RoBERTa) \\
+\bottomrule
+\end{tabularx}
+\end{table*}
+
+Tradeoffs span three dimensions:
+\begin{itemize}
+    \item \textbf{Memory Footprint vs.\ Step Overhead:} QLoRA and LoftQ compress static weights, but require dynamic dequantization during training steps.
+    \item \textbf{Structural Simplicity vs.\ Expressivity:} LoRA minimizes overhead, while DoRA normalizes directional updates to narrow the gap with full fine-tuning.
+    \item \textbf{Subspace Restriction vs.\ Full Learning:} Parameter adapters restrict updates to fixed subspaces, whereas GaLore updates full parameters via rotating projections.
+\end{itemize}
+
+\section{Concrete Experimental Proposal: 8B Adaptation on 24\,GB VRAM}
+
+To evaluate these methods on consumer hardware, we specify a controlled empirical benchmark.
+
+\textbf{Experimental Setup and Baseline Controls.} We evaluate LLaMA-3-8B on an NVIDIA RTX 4090 (24\,GB VRAM) on Alpaca-cleaned instruction tuning (52,002 pairs). Zero-shot unadapted performance provides the baseline, and 16-bit LoRA serves as reference control.
+
+\textbf{Strict Hyperparameter Parity.} All adapter configurations enforce identical parameters:
+\begin{itemize}
+    \item \textit{Target Modules}: Identical adapter placement on all linear projection matrices ($W_q$, $W_k$, $W_v$, $W_o$, $W_{\text{gate}}$, $W_{\text{up}}$, $W_{\text{down}}$).
+    \item \textit{Rank and Scaling}: Fixed rank $r=16$, $\alpha=32$ ($\alpha/r=2$), and adapter dropout 0.05. For AdaLoRA, initial budget is calibrated to produce a final average rank of 16.
+    \item \textit{Batching and Sequence}: Sequence length fixed at 2,048 tokens with right-padding, micro-batch size 2, gradient accumulation 8 (effective batch size 16), with FlashAttention-2 and activation checkpointing.
+    \item \textit{Optimization and Determinism}: AdamW optimizer ($\beta_1=0.9, \beta_2=0.999$, weight decay 0.0), cosine schedule peaking at $2 \times 10^{-4}$ with 100 warmup steps, and identical random seed (seed 42).
+\end{itemize}
+
+\textbf{Compared Configurations.} We compare: (1) 16-bit LoRA; (2) QLoRA (4-bit NF4, Double Quantization); (3) DoRA (16-bit); (4) QDoRA (4-bit NF4 with DoRA); and (5) LoftQ (4-bit alternating initialization, $T=5$).
+
+\textbf{Critical Appraisal of Lab Claim.} An internal colleague suggested: ``Our pilot halves training memory compared with LoRA.'' This statement is unverified hearsay without documented measurement, hardware specification, sequence length bounds, or activation tracking. Consequently, this claim must not be treated as a verified result, nor can it serve as an experimental premise.
+
+\textbf{Isolating Warm-Up Overhead in Measurement.} To isolate steady-state metrics from allocator and CUDA context warm-up artifacts:
+\begin{enumerate}
+    \item \textit{Warm-Up Discard}: Discard the first 50 iterations prior to recording metrics.
+    \item \textit{Memory Isolation}: Synchronize CUDA and reset peak statistics via PyTorch before recording. Peak allocated memory is tracked via \texttt{max\_memory\_allocated()}, isolating active tensor allocations from reserved cache memory.
+    \item \textit{Throughput Isolation}: Track steady-state throughput (tokens per second) across 500 steps using synchronized CUDA event timers around model execution, excluding data loading and disk I/O.
+    \item \textit{Task Generalization}: Zero-shot accuracy evaluated on ARC Challenge, GSM8K, and MMLU after 3 training epochs.
+\end{enumerate}
+
+\section{Limitations and Unchecked Aspects}
+
+Several operational factors remain unaddressed. Exact peak activation memory profiles across variable batch sizes and sequence lengths are not reported uniformly across these papers and could not be checked. While static weight footprints are predictable, activation caching, sequence packing, and gradient checkpointing memory spikes frequently dictate feasibility on 24\,GB GPUs. Furthermore, Hardware-level memory breakdown and throughput for DoRA applied to 4-bit quantized backbones on consumer GPUs remain unavailable in published literature. Finally, CUDA kernel variations (such as bitsandbytes NF4 kernels versus custom cutlass implementations) introduce hardware-specific latency discrepancies that cannot be inferred from theoretical FLOP counts.
+
+\bibliographystyle{plain}
+\bibliography{../refs/references}
+
+\end{document}

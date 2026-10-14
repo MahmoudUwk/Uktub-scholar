@@ -1,38 +1,40 @@
 /**
- * Deliverable evaluator (scripts/live/deliverable-checks.ts): behavior-first
- * coverage for the researcher-deliverable unit. Each case pins a required
- * behavior from the unit brief; all fail on the verbatim-extraction baseline.
+ * Tier 1 deliverable evaluator (scripts/live/deliverable-checks.ts):
+ * behavior-first coverage. Each case pins a required behavior; Tier 1 reads
+ * the provenance JSON, the registry and file mtimes on small synthetic
+ * projects. The archived-run differential lives in
+ * live-tier1-differential.spec.ts.
  */
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, symlinkSync, utimesSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { basename, join } from "node:path";
+import { join } from "node:path";
+import { DatabaseSync } from "node:sqlite";
 
 import {
   checkBibliography,
   checkCitationsInRegistry,
-  checkCompiledCurrent,
-  collectCompileInputs,
-  checkEvidenceTable,
   checkEvidenceToolsUsed,
-  checkPointerProvenance,
-  collectDeliverablePointers,
+  checkTierBibliography,
+  checkTierCitations,
+  checkTierFigures,
+  checkTierPdfCurrent,
+  checkTierPointers,
+  collectCompileInputs,
   countSources,
   defaultResolveEntry,
   extractVerifyHits,
   mergeRegistryPages,
-  normalizeEvidenceClaim,
-  normalizeManuscriptText,
   parseCitedKeys,
-  parseEvidenceTable,
   parseScenarioSections,
-  readEvidenceTableFile,
-  recordCompileSnapshot,
+  provenanceCitedKeys,
+  readTierPaperTexts,
   resolveExpectedEntry,
-  snapshotCompileAssets,
-  type EvidenceRow,
+  tierReport,
   type RegistryRecord,
+  type TierProvenanceDoc,
+  type TierProvenanceUnit,
   type ToolEnd,
 } from "../scripts/live/deliverable-checks.ts";
 
@@ -50,6 +52,21 @@ function end(over: Partial<ToolEnd> = {}): ToolEnd {
 function verifyEnd(claim: string, pointers: string[], citekeys: string[]): ToolEnd {
   const evidence = pointers.map((pointer, i) => ({ attested: true, doi: pointer.split("@")[0], pointer, citekey: citekeys[i] ?? citekeys[0], revision: REV }));
   return end({ name: "verify", structured: { claim, result: { supportFound: true }, evidence }, text: `ok ${pointers.join(" ")}` });
+}
+
+function unit(over: Partial<TierProvenanceUnit> = {}): TierProvenanceUnit {
+  return { id: "u1", kind: "sentence", file: "manuscript/main.tex", line: 1, section: "", text: "X holds.", cites: ["alpha2024"], status: "cited", pointers: [], ...over };
+}
+
+function doc(over: Partial<TierProvenanceDoc> = {}): TierProvenanceDoc {
+  return {
+    entry: "manuscript/main.tex",
+    summary: { words: 10, audited: 1, verified: 0, cited: 1, uncited: 0, figures: { ok: 0, check: 0, open: 0, info: 0 }, unregistered: [] },
+    items: [],
+    document_digest: "ab".repeat(32),
+    units: [unit()],
+    ...over,
+  };
 }
 
 // ── sources: ready ONLY, pagination, citable ─────────────────────────────────
@@ -131,44 +148,176 @@ describe("checkBibliography", () => {
   });
 });
 
-// ── pointers: deliverable surface, verify-only provenance ────────────────────
+// ── T1.1/T1.2: cites come from the provenance units ──────────────────────────
 
-describe("pointer provenance", () => {
-  const rows: EvidenceRow[] = [{ claim: "X holds", citekeys: ["alpha2024"], pointers: [PTR("10.1000/alpha", 0, 10)], status: "verified" }];
-
-  it("collects manuscript and evidence-table pointers, not chat finals", () => {
-    const got = collectDeliverablePointers(`text ${PTR("10.1000/alpha", 0, 10)}`, rows);
-    assert.deepEqual(got, [PTR("10.1000/alpha", 0, 10)]);
-    assert.deepEqual(collectDeliverablePointers("no pointers here", []), []);
+describe("provenanceCitedKeys", () => {
+  it("dedupes and sorts unit cites", () => {
+    const d = doc({ units: [unit({ cites: ["beta2025", "alpha2024"] }), unit({ id: "u2", cites: ["alpha2024"] })] });
+    assert.deepEqual(provenanceCitedKeys(d), ["alpha2024", "beta2025"]);
   });
 
-  it("extracts hits only from successful verify results, never search", () => {
-    const hits = extractVerifyHits([
-      verifyEnd("X holds", [PTR("10.1000/alpha", 0, 10)], ["alpha2024"]),
-      end({ toolCallId: "c2", name: "passages", structured: null, text: `retrieved ${PTR("10.1000/alpha", 5, 15)}` }),
-      end({ toolCallId: "c3", name: "verify", isError: true, structured: null, text: "Refused: VERIFY_X" }),
-    ]);
-    assert.equal(hits.length, 1);
-    assert.deepEqual(hits[0]!.pointers, [PTR("10.1000/alpha", 0, 10)]);
-  });
-
-  it("a search-only pointer is not verification provenance", () => {
-    const c = checkPointerProvenance([PTR("10.1000/alpha", 5, 15)], extractVerifyHits([
-      end({ toolCallId: "c2", name: "passages", structured: null, text: `hit ${PTR("10.1000/alpha", 5, 15)}` }),
-    ]));
-    assert.equal(c.ok, false);
-  });
-
-  it("a deliverable pointer with exact successful-verify provenance passes", () => {
-    const c = checkPointerProvenance(
-      [PTR("10.1000/alpha", 0, 10)],
-      extractVerifyHits([verifyEnd("X holds", [PTR("10.1000/alpha", 0, 10)], ["alpha2024"])]),
-    );
-    assert.equal(c.ok, true);
+  it("is empty when no unit cites a paper", () => {
+    assert.deepEqual(provenanceCitedKeys(doc({ units: [unit({ cites: [] })] })), []);
   });
 });
 
-// ── evidence tools: successful verify required ───────────────────────────────
+describe("checkTierCitations", () => {
+  it("passes when every unit cite resolves to a citable entry", () => {
+    assert.equal(checkTierCitations(doc(), [rec()]).ok, true);
+  });
+
+  it("fails an unregistered unit cite", () => {
+    const c = checkTierCitations(doc({ units: [unit({ cites: ["ghost2024"] })] }), [rec()]);
+    assert.equal(c.ok, false);
+    assert.match(c.detail, /ghost2024/);
+  });
+
+  it("fails with no citations at all", () => {
+    assert.equal(checkTierCitations(doc({ units: [unit({ cites: [] })] }), [rec()]).ok, false);
+  });
+});
+
+describe("checkTierBibliography", () => {
+  it("covers every unit cite with only registered keys", () => {
+    const c = checkTierBibliography(doc(), "@article{alpha2024,\n author={A},\n}\n", [rec()]);
+    assert.equal(c.ok, true);
+  });
+
+  it("fails a missing unit cite and a missing .bib alike", () => {
+    assert.equal(checkTierBibliography(doc(), "@article{alpha2024,\n}\n", [rec(), rec({ doi: "10.1000/b", citekey: "beta2025" })]).ok, true);
+    const d = doc({ units: [unit({ cites: ["alpha2024", "beta2025"] })] });
+    assert.equal(checkTierBibliography(d, "@article{alpha2024,\n}\n", [rec(), rec({ doi: "10.1000/b", citekey: "beta2025" })]).ok, false);
+    assert.equal(checkTierBibliography(doc(), null, [rec()]).ok, false);
+  });
+});
+
+// ── T1.3: PDF newer than the last .tex edit ──────────────────────────────────
+
+function pdfProject(): string {
+  const root = mkdtempSync(join(tmpdir(), "tier1-"));
+  mkdirSync(join(root, "manuscript"), { recursive: true });
+  mkdirSync(join(root, "build"), { recursive: true });
+  writeFileSync(join(root, "manuscript/main.tex"), "\\documentclass{article}\n\\begin{document}\nHi \\cite{alpha2024}.\n\\end{document}\n");
+  writeFileSync(join(root, "build/main.pdf"), "%PDF-1.4 bytes\n");
+  writeFileSync(join(root, "notes.tex"), "unrelated draft\n");
+  return root;
+}
+
+const at = (root: string, rel: string, ms: number): void => {
+  utimesSync(join(root, rel), new Date(ms), new Date(ms));
+};
+
+describe("checkTierPdfCurrent", () => {
+  it("passes when the PDF is newer than the last entry .tex edit", () => {
+    const root = pdfProject();
+    at(root, "manuscript/main.tex", 1_000_000);
+    at(root, "build/main.pdf", 2_000_000);
+    const c = checkTierPdfCurrent(root, "manuscript/main.tex");
+    assert.equal(c.ok, true);
+    assert.match(c.detail, /build\/main\.pdf is newer/);
+  });
+
+  it("fails when a .tex edit is newer than the PDF", () => {
+    const root = pdfProject();
+    at(root, "manuscript/main.tex", 3_000_000);
+    at(root, "build/main.pdf", 2_000_000);
+    assert.equal(checkTierPdfCurrent(root, "manuscript/main.tex").ok, false);
+  });
+
+  it("fails closed with no PDF", () => {
+    const root = pdfProject();
+    at(root, "manuscript/main.tex", 1_000_000);
+    assert.equal(checkTierPdfCurrent(join(root, "manuscript"), "main.tex").ok, false);
+  });
+
+  it("ignores .tex outside the entry but counts every .tex without one", () => {
+    const root = pdfProject();
+    at(root, "manuscript/main.tex", 1_000_000);
+    at(root, "build/main.pdf", 2_000_000);
+    at(root, "notes.tex", 9_000_000);
+    assert.equal(checkTierPdfCurrent(root, "manuscript/main.tex").ok, true, "unrelated .tex outside the entry is ignored");
+    assert.equal(checkTierPdfCurrent(root, null).ok, false, "without an entry every .tex counts");
+  });
+});
+
+// ── T1.4: pointers resolve in the current revision text ──────────────────────
+
+describe("checkTierPointers", () => {
+  const papers = [{ doi: "10.1000/alpha", revision: REV, text: "0123456789abcdef" }];
+
+  it("passes a pointer inside the current revision text", () => {
+    const d = doc({ units: [unit({ pointers: [PTR("10.1000/alpha", 0, 10)] })] });
+    assert.equal(checkTierPointers(d, papers).ok, true);
+  });
+
+  it("passes with no pointers", () => {
+    assert.equal(checkTierPointers(doc(), papers).ok, true);
+  });
+
+  it("fails a stale revision, an unknown DOI, an outside span and a malformed pointer", () => {
+    const stale = doc({ units: [unit({ pointers: [`10.1000/alpha@ffffffffffffffff#0-10`] })] });
+    assert.equal(checkTierPointers(stale, papers).ok, false);
+    const unknown = doc({ units: [unit({ pointers: [PTR("10.1000/ghost", 0, 10)] })] });
+    const cUnknown = checkTierPointers(unknown, papers);
+    assert.equal(cUnknown.ok, false);
+    assert.match(cUnknown.detail, /not registered/);
+    const outside = doc({ units: [unit({ pointers: [PTR("10.1000/alpha", 0, 17)] })] });
+    assert.equal(checkTierPointers(outside, papers).ok, false);
+    const malformed = doc({ units: [unit({ pointers: ["not-a-pointer"] })] });
+    assert.equal(checkTierPointers(malformed, papers).ok, false);
+  });
+
+  it("fails when the paper text is missing", () => {
+    const d = doc({ units: [unit({ pointers: [PTR("10.1000/alpha", 0, 10)] })] });
+    assert.equal(checkTierPointers(d, [{ doi: "10.1000/alpha", revision: REV, text: null }]).ok, false);
+  });
+});
+
+describe("readTierPaperTexts", () => {
+  function registryDb(): string {
+    const root = mkdtempSync(join(tmpdir(), "tier1-reg-"));
+    mkdirSync(join(root, ".registry"), { recursive: true });
+    const db = new DatabaseSync(join(root, ".registry", "registry.db"));
+    db.exec("CREATE TABLE paper_sources (doi TEXT, status TEXT, revision TEXT, text TEXT)");
+    db.prepare("INSERT INTO paper_sources (doi, status, revision, text) VALUES (?, ?, ?, ?)").run("10.1000/alpha", "ready", REV, "sometext");
+    db.prepare("INSERT INTO paper_sources (doi, status, revision, text) VALUES (?, ?, ?, ?)").run("10.1000/old", "unavailable", null, null);
+    db.close();
+    return root;
+  }
+
+  it("reads ready papers with revision and text, skipping other states", () => {
+    assert.deepEqual(readTierPaperTexts(registryDb()), [{ doi: "10.1000/alpha", revision: REV, text: "sometext" }]);
+  });
+
+  it("is null without a registry", () => {
+    assert.equal(readTierPaperTexts(mkdtempSync(join(tmpdir(), "tier1-empty-"))), null);
+  });
+});
+
+// ── T1.5: no open or unsourced figure ────────────────────────────────────────
+
+describe("checkTierFigures", () => {
+  const item = (status: string, token = "24 GB") => ({ status, token, file: "manuscript/main.tex", line: 5, section: "", kind: "row", papers: ["alpha2024"], why: `${token} ${status}` });
+
+  it("passes with no flagged items", () => {
+    assert.equal(checkTierFigures(doc()).ok, true);
+  });
+
+  it("passes uncited, check and unavailable figures (reported, not gated)", () => {
+    const d = doc({ items: [item("uncited"), item("check"), item("unavailable")] });
+    assert.equal(checkTierFigures(d).ok, true);
+    assert.deepEqual(tierReport(d), { words: 10, verified: 0, cited: 1, uncited: 0, figuresUncited: 1, figuresCheck: 1, figuresUnavailable: 1 });
+  });
+
+  it("fails open and unsourced figures", () => {
+    assert.equal(checkTierFigures(doc({ items: [item("open", "A100")] })).ok, false);
+    const c = checkTierFigures(doc({ items: [item("unsourced", "48 GB")] }));
+    assert.equal(c.ok, false);
+    assert.match(c.detail, /48 GB/);
+  });
+});
+
+// ── evidence tools: successful verify required (reported) ────────────────────
 
 describe("checkEvidenceToolsUsed", () => {
   it("retrieval alone does not establish factual verification", () => {
@@ -186,253 +335,6 @@ describe("checkEvidenceToolsUsed", () => {
     );
     assert.equal(c.ok, true);
   });
-});
-
-// ── evidence table ───────────────────────────────────────────────────────────
-
-describe("checkEvidenceTable", () => {
-  const records = [rec()];
-  const hits = [{ claim: "X holds", pointers: [PTR("10.1000/alpha", 0, 10)], citekeys: ["alpha2024"], supportFound: true }];
-
-  it("accepts a row whose exact claim, pointer and revision map to a successful verify", () => {
-    const rows = parseEvidenceTable(
-      JSON.stringify([{ claim: "X holds", citekeys: ["alpha2024"], pointers: [PTR("10.1000/alpha", 0, 10)], status: "verified" }]),
-    );
-    assert.equal(checkEvidenceTable(rows, hits, records).ok, true);
-  });
-
-  it("fails a stale-revision pointer", () => {
-    const rows: EvidenceRow[] = [
-      { claim: "X holds", citekeys: ["alpha2024"], pointers: ["10.1000/alpha@ffffffffffffffff#0-10"], status: "verified" },
-    ];
-    assert.equal(checkEvidenceTable(rows, hits, records).ok, false);
-  });
-
-  it("fails a verified-status row with no matching successful verify", () => {
-    const rows: EvidenceRow[] = [{ claim: "Unseen claim", citekeys: ["alpha2024"], pointers: [PTR("10.1000/alpha", 0, 10)], status: "verified" }];
-    assert.equal(checkEvidenceTable(rows, [], records).ok, false);
-  });
-
-  it("allows explicit unverified rows as disclosed limitations, not verified status", () => {
-    const rows: EvidenceRow[] = [{ claim: "Open question", citekeys: [], pointers: [], status: "unverified" }];
-    const c = checkEvidenceTable(rows, [], records);
-    assert.equal(c.ok, true);
-  });
-
-  it("fails an unverified row that still carries pointers (fabricated verified status)", () => {
-    const rows: EvidenceRow[] = [
-      { claim: "Open question", citekeys: ["alpha2024"], pointers: [PTR("10.1000/alpha", 0, 10)], status: "no-support" },
-    ];
-    assert.equal(checkEvidenceTable(rows, hits, records).ok, false);
-  });
-});
-
-// ── compilation: entry-bound digest provenance ───────────────────────────────
-
-function projectWithManuscript(): string {
-  const root = mkdtempSync(join(tmpdir(), "deliverable-"));
-  mkdirSync(join(root, "manuscript"), { recursive: true });
-  mkdirSync(join(root, "refs"), { recursive: true });
-  mkdirSync(join(root, "build"), { recursive: true });
-  writeFileSync(join(root, "manuscript/main.tex"), "\\documentclass{article}\n\\input{section1}\n\\bibliography{../refs/references}\n");
-  writeFileSync(join(root, "manuscript/section1.tex"), "hello \\cite{alpha2024}\n");
-  writeFileSync(join(root, "refs/references.bib"), "@article{alpha2024,\n author={A},\n}\n");
-  writeFileSync(join(root, "build/main.pdf"), "%PDF-1.4 compiled-bytes\n");
-  writeFileSync(join(root, "notes.tex"), "unrelated draft\n");
-  return root;
-}
-
-describe("compile provenance", () => {
-  it("default resolver picks the manuscript convention, not an arbitrary .tex", () => {
-    assert.equal(defaultResolveEntry(["manuscript/main.tex", "notes.tex"]), "manuscript/main.tex");
-    assert.equal(resolveExpectedEntry(null, ["manuscript/main.tex", "notes.tex"]), "manuscript/main.tex");
-    assert.equal(resolveExpectedEntry("manuscript/main.tex", ["manuscript/main.tex", "notes.tex"]), "manuscript/main.tex");
-  });
-
-  it("snapshot covers the entry, its inputs and the bibliography; current passes untouched", () => {
-    const root = projectWithManuscript();
-    const snap = recordCompileSnapshot(root, { status: "compiled", entry: "manuscript/main.tex", pdfPath: "build/main.pdf" });
-    assert.ok(snap);
-    assert.ok(Object.keys(snap!.files).includes("manuscript/main.tex"));
-    assert.ok(Object.keys(snap!.files).includes("refs/references.bib"));
-    assert.equal(checkCompiledCurrent(root, [snap!], "manuscript/main.tex").ok, true);
-  });
-
-  it("a bibliography change after compile fails the check", () => {
-    const root = projectWithManuscript();
-    const snap = recordCompileSnapshot(root, { status: "compiled", entry: "manuscript/main.tex", pdfPath: "build/main.pdf" });
-    writeFileSync(join(root, "refs/references.bib"), "@article{alpha2024,\n author={CHANGED},\n}\n");
-    assert.equal(checkCompiledCurrent(root, [snap!], "manuscript/main.tex").ok, false);
-  });
-
-  it("a hand-touched PDF fails the provenance check", () => {
-    const root = projectWithManuscript();
-    const snap = recordCompileSnapshot(root, { status: "compiled", entry: "manuscript/main.tex", pdfPath: "build/main.pdf" });
-    writeFileSync(join(root, "build/main.pdf"), "%PDF-1.4 hand-edited-by-human\n");
-    assert.equal(checkCompiledCurrent(root, [snap!], "manuscript/main.tex").ok, false);
-  });
-
-  it("a compile naming a missing PDF yields no trusted snapshot, and a later-created PDF still fails", () => {
-    const root = projectWithManuscript();
-    rmSync(join(root, "build/main.pdf")); // the compile result names a PDF that does not exist
-    const snap = recordCompileSnapshot(root, { status: "compiled", entry: "manuscript/main.tex", pdfPath: "build/main.pdf" });
-    assert.equal(snap, null, "a missing PDF must not produce a trusted snapshot");
-    writeFileSync(join(root, "build/main.pdf"), "%PDF-1.4 planted-after-compile\n");
-    assert.equal(checkCompiledCurrent(root, snap === null ? [] : [snap], "manuscript/main.tex").ok, false);
-  });
-
-  it("a compile naming an unconfined PDF yields no trusted snapshot", () => {
-    const root = projectWithManuscript();
-    assert.equal(recordCompileSnapshot(root, { status: "compiled", entry: "manuscript/main.tex", pdfPath: "../outside.pdf" }), null);
-    assert.equal(recordCompileSnapshot(root, { status: "compiled", entry: "manuscript/main.tex", pdfPath: "/tmp/outside.pdf" }), null);
-  });
-
-  it("a snapshot without a PDF digest is not trusted", () => {
-    const root = projectWithManuscript();
-    const snap = recordCompileSnapshot(root, { status: "compiled", entry: "manuscript/main.tex", pdfPath: "build/main.pdf" });
-    assert.equal(checkCompiledCurrent(root, [{ ...snap!, pdfDigest: null }], "manuscript/main.tex").ok, false);
-  });
-
-  it("an unrelated .tex outside the entry does not fail the check", () => {
-    const root = projectWithManuscript();
-    const snap = recordCompileSnapshot(root, { status: "compiled", entry: "manuscript/main.tex", pdfPath: "build/main.pdf" });
-    writeFileSync(join(root, "notes.tex"), "more unrelated draft\n");
-    assert.equal(checkCompiledCurrent(root, [snap!], "manuscript/main.tex").ok, true);
-  });
-
-  it("snapshotCompileAssets is deterministic for unchanged trees", () => {
-    const root = projectWithManuscript();
-    assert.deepEqual(snapshotCompileAssets(root, "manuscript/main.tex"), snapshotCompileAssets(root, "manuscript/main.tex"));
-  });
-});
-
-// ── manuscript association normalization ─────────────────────────────────────
-
-describe("manuscript association", () => {
-  const assoc = (claim: string, manuscript: string): boolean =>
-    normalizeManuscriptText(manuscript).includes(normalizeEvidenceClaim(claim));
-
-  it("a removed cite leaves no space before closing punctuation", () => {
-    assert.equal(assoc("X reduces memory.", "X reduces memory \\cite{k}."), true);
-    assert.equal(assoc("X reduces memory.", "X reduces memory\\cite{k}."), true);
-    assert.equal(assoc("A, B, and C hold.", "A, B, and C hold \\cite[p.~3]{k}."), true);
-    assert.equal(assoc("X reduces memory.", "X \\cite{k} reduces memory."), true);
-  });
-
-  it("a TeX tie (~) is whitespace: `text~\\cite{k}.` and `Table~2` match the plain claim (iteration 6: all 12 rows failed on this)", () => {
-    assert.equal(assoc("X reduces memory.", "X reduces memory~\\cite{k}."), true);
-    assert.equal(assoc("X reduces memory.", "X reduces memory~\\citep[p.~3]{k}."), true);
-    assert.equal(assoc("See Table 2 for details.", "See Table~2 for details."), true);
-    assert.equal(assoc("by 3 times.", "by~4 times~\\cite{k}."), false);
-    assert.equal(assoc("see Table 2.", "see Table~3."), false);
-  });
-
-  it("any word, number, negation, ordering or sign change still fails", () => {
-    assert.equal(assoc("by 3 times.", "by 4 times \\cite{k}."), false);
-    assert.equal(assoc("is competitive", "is not competitive \\cite{k}"), false);
-    assert.equal(assoc("reduces memory", "increases memory \\cite{k}"), false);
-    assert.equal(assoc("memory reduces X", "X reduces memory \\cite{k}."), false);
-    assert.equal(assoc("0.09%", "0.90\\%"), false);
-  });
-
-  it("a claim tail past % is compared, never cut (no vacuous pass)", () => {
-    assert.equal(assoc("The rate is 0.09% and the gap is wide.", "The rate is 0.09\\% and the gap is narrow \\cite{k}."), false);
-    assert.equal(assoc("The rate is 0.09% and the gap is narrow.", "The rate is 0.09\\% and the gap is narrow \\cite{k}."), true);
-  });
-
-  it("a real manuscript % comment is still ignored, and \\% never starts one", () => {
-    assert.equal(assoc("text more", "text % a comment\n more"), true);
-    assert.equal(assoc("0.09% of x", "0.09\\% of x"), true);
-  });
-
-  it("the check itself fails a row whose full claim text is not in the manuscript", () => {
-    const records = [rec()];
-    const claim = "The rate is 0.09% and the gap is wide.";
-    const hits = [{ claim, pointers: [PTR("10.1000/alpha", 0, 10)], citekeys: ["alpha2024"], supportFound: true }];
-    const rows: EvidenceRow[] = [{ claim, citekeys: ["alpha2024"], pointers: [PTR("10.1000/alpha", 0, 10)], status: "verified" }];
-    const manuscript = { citedKeys: ["alpha2024"], pointers: [PTR("10.1000/alpha", 0, 10)], entryText: "The rate is 0.09\\% and the gap is narrow \\cite{alpha2024}." };
-    const c = checkEvidenceTable(rows, hits, records, manuscript);
-    assert.equal(c.ok, false);
-    assert.match(c.detail, /association/);
-  });
-});
-
-// ── evidence-table failure detail states the total ───────────────────────────
-
-describe("evidence-table failure detail", () => {
-  const records = [rec()];
-  const failing = (n: number): EvidenceRow[] =>
-    Array.from({ length: n }, (_, i) => ({ claim: `Unseen ${i}`, citekeys: ["alpha2024"], pointers: [PTR("10.1000/alpha", 0, 10)], status: "verified" }));
-
-  it("states the exact total for 1, 5 and 8 problems, showing the first five", () => {
-    assert.equal(
-      checkEvidenceTable(failing(1), [], records).detail,
-      "1 problem(s): row 0: exact claim has no successful verify (Unseen 0)",
-    );
-    assert.equal(
-      checkEvidenceTable(failing(5), [], records).detail,
-      "5 problem(s): " + [0, 1, 2, 3, 4].map((i) => `row ${i}: exact claim has no successful verify (Unseen ${i})`).join("; "),
-    );
-    assert.equal(
-      checkEvidenceTable(failing(8), [], records).detail,
-      "8 problem(s): " + [0, 1, 2, 3, 4].map((i) => `row ${i}: exact claim has no successful verify (Unseen ${i})`).join("; ") + " (+3 more)",
-    );
-  });
-});
-
-// ── scenario sections for the new multi-section host ─────────────────────────
-describe("parseScenarioSections", () => {
-  it("reads Prompt, Success, the evidence-table path and the expected entry", () => {
-    const spec = parseScenarioSections(
-      ["## Prompt", "do research", "## Success", "a manuscript", "## Evidence table", "path evidence/claims.json", "## Entry", "manuscript/main.tex", ""].join("\n"),
-    );
-    assert.equal(spec.prompt, "do research");
-    assert.equal(spec.success, "a manuscript");
-    assert.equal(spec.evidenceTablePath, "evidence/claims.json");
-    assert.equal(spec.expectedEntry, "manuscript/main.tex");
-  });
-
-  it("leaves the table path null when the scenario declares no requirement", () => {
-    const spec = parseScenarioSections("## Prompt\np\n## Success\ns\n");
-    assert.equal(spec.evidenceTablePath, null);
-  });
-});
-
-// ── repair: false passes (review 2026-10-13) ────────────────────────────────
-
-describe("repair: paper-attested hits only", () => {
-  const records = [rec()];
-  const goodHits = [{ claim: "X holds", pointers: [PTR("10.1000/alpha", 0, 10)], citekeys: ["alpha2024"], supportFound: true }];
-
-  it("caller-supplied text with supportFound is not a hit (no paper provenance)", () => {
-    const hits = extractVerifyHits([
-      end({ name: "verify", structured: { claim: "X holds", result: { supportFound: true }, evidence: [{ attested: false, provenance: "caller_supplied_text", index: 0, excerpt: "X holds", judgment: { score: 0.99 } }] }, text: "SUPPORT FOUND" }),
-    ]);
-    assert.equal(hits.length, 0);
-  });
-
-  it("unattested items carrying a pointer are dropped", () => {
-    const hits = extractVerifyHits([
-      end({ name: "verify", structured: { claim: "X holds", result: { supportFound: true }, evidence: [{ attested: false, pointer: PTR("10.1000/alpha", 0, 10), citekey: "alpha2024" }] }, text: "x" }),
-    ]);
-    assert.equal(hits[0]?.pointers.length ?? 0, 0);
-  });
-
-  it("a verified row needs nonempty citekeys and pointers", () => {
-    const rows: EvidenceRow[] = [{ claim: "X holds", citekeys: [], pointers: [], status: "verified" }];
-    assert.equal(checkEvidenceTable(rows, goodHits, records).ok, false);
-  });
-
-  it("pointer revision must equal a ready non-null source revision", () => {
-    const row: EvidenceRow[] = [{ claim: "X holds", citekeys: ["alpha2024"], pointers: [PTR("10.1000/alpha", 0, 10)], status: "verified" }];
-    assert.equal(checkEvidenceTable(row, goodHits, [rec({ source: { status: "ready", revision: null } })]).ok, false);
-    assert.equal(checkEvidenceTable(row, goodHits, [rec({ source: { status: "unavailable", revision: REV } })]).ok, false);
-  });
-
-  it("citekeys need citable:true from the read, not mere presence", () => {
-    const rows: EvidenceRow[] = [{ claim: "X holds", citekeys: ["alpha2024"], pointers: [PTR("10.1000/alpha", 0, 10)], status: "verified" }];
-    assert.equal(checkEvidenceTable(rows, goodHits, [{ doi: "10.1000/alpha", citekey: "alpha2024" }]).ok, false);
-  });
 
   it("direct-text-only verify does not count as evidence-tool use", () => {
     const c = checkEvidenceToolsUsed({ verify: 1 }, [
@@ -440,32 +342,38 @@ describe("repair: paper-attested hits only", () => {
     ]);
     assert.equal(c.ok, false);
   });
+});
 
-  it("hit evidence combines across continuation pages with the same exact claim", () => {
-    const split = [
-      { claim: "X holds", pointers: [PTR("10.1000/alpha", 0, 10)], citekeys: ["alpha2024"], supportFound: true },
-      { claim: "X holds", pointers: [PTR("10.1000/alpha", 10, 20)], citekeys: ["alpha2024"], supportFound: true },
-    ];
-    const rows: EvidenceRow[] = [{ claim: "X holds", citekeys: ["alpha2024"], pointers: [PTR("10.1000/alpha", 0, 10)], status: "verified" }];
-    assert.equal(checkEvidenceTable(rows, split, records).ok, true);
+describe("extractVerifyHits", () => {
+  it("extracts hits only from successful verify results, never search", () => {
+    const hits = extractVerifyHits([
+      verifyEnd("X holds", [PTR("10.1000/alpha", 0, 10)], ["alpha2024"]),
+      end({ toolCallId: "c2", name: "passages", structured: null, text: `retrieved ${PTR("10.1000/alpha", 5, 15)}` }),
+      end({ toolCallId: "c3", name: "verify", isError: true, structured: null, text: "Refused: VERIFY_X" }),
+    ]);
+    assert.equal(hits.length, 1);
+    assert.deepEqual(hits[0]!.pointers, [PTR("10.1000/alpha", 0, 10)]);
   });
 
-  it("a verified claim must appear in the entry manuscript (exact association)", () => {
-    const rows: EvidenceRow[] = [{ claim: "X holds", citekeys: ["alpha2024"], pointers: [PTR("10.1000/alpha", 0, 10)], status: "verified" }];
-    const c = (checkEvidenceTable as any)(rows, goodHits, records, { citedKeys: ["alpha2024"], pointers: [PTR("10.1000/alpha", 0, 10)], entryText: "unrelated manuscript about frogs" });
-    assert.equal(c.ok, false);
-  });
-
-  it("manuscript citekeys outside the table fail coverage", () => {
-    const rows: EvidenceRow[] = [{ claim: "X holds", citekeys: ["alpha2024"], pointers: [PTR("10.1000/alpha", 0, 10)], status: "verified" }];
-    const c = (checkEvidenceTable as any)(rows, goodHits, records, { citedKeys: ["alpha2024", "beta2025"], pointers: [], entryText: "X holds \\cite{alpha2024} \\cite{beta2025}" });
-    assert.equal(c.ok, false);
+  it("caller-supplied text with supportFound is not a hit (no paper provenance)", () => {
+    const hits = extractVerifyHits([
+      end({ name: "verify", structured: { claim: "X holds", result: { supportFound: true }, evidence: [{ attested: false, provenance: "caller_supplied_text", index: 0, excerpt: "X holds", judgment: { score: 0.99 } }] }, text: "SUPPORT FOUND" }),
+    ]);
+    assert.equal(hits.length, 0);
   });
 });
 
-describe("repair: compile deps and confinement", () => {
+// ── compilation inputs: entry-bound, confined ─────────────────────────────────
+
+describe("compile inputs", () => {
+  it("default resolver picks the manuscript convention, not an arbitrary .tex", () => {
+    assert.equal(defaultResolveEntry(["manuscript/main.tex", "notes.tex"]), "manuscript/main.tex");
+    assert.equal(resolveExpectedEntry(null, ["manuscript/main.tex", "notes.tex"]), "manuscript/main.tex");
+    assert.equal(resolveExpectedEntry("manuscript/main.tex", ["manuscript/main.tex", "notes.tex"]), "manuscript/main.tex");
+  });
+
   function nestedProject(): string {
-    const root = mkdtempSync(join(tmpdir(), "deliverable-"));
+    const root = mkdtempSync(join(tmpdir(), "tier1-"));
     mkdirSync(join(root, "manuscript/sections"), { recursive: true });
     mkdirSync(join(root, "manuscript/figs"), { recursive: true });
     mkdirSync(join(root, "build"), { recursive: true });
@@ -484,39 +392,38 @@ describe("repair: compile deps and confinement", () => {
   });
 
   it("covers extensionless graphics via graphicspath and ignores comments", () => {
-    const root = nestedProject();
-    const inputs = collectCompileInputs(root, "manuscript/main.tex");
+    const inputs = collectCompileInputs(nestedProject(), "manuscript/main.tex");
     assert.ok(!inputs.some((f) => f.includes("hidden")), JSON.stringify(inputs));
-    const snap = recordCompileSnapshot(root, { status: "compiled", entry: "manuscript/main.tex", pdfPath: "build/main.pdf" });
-    assert.ok(Object.keys(snap!.files).includes("manuscript/figs/plot.png"), JSON.stringify(Object.keys(snap!.files)));
+    assert.ok(inputs.includes("manuscript/figs/plot.png"), JSON.stringify(inputs));
   });
 
   it("confines symlink escapes to the project", () => {
-    const root = mkdtempSync(join(tmpdir(), "deliverable-"));
+    const root = mkdtempSync(join(tmpdir(), "tier1-"));
     const outside = mkdtempSync(join(tmpdir(), "outside-"));
     writeFileSync(join(outside, "evil.tex"), "evil\n");
     mkdirSync(join(root, "manuscript"), { recursive: true });
     symlinkSync(join(outside, "evil.tex"), join(root, "manuscript/evil.tex"));
     writeFileSync(join(root, "manuscript/main.tex"), "\\documentclass{article}\n\\input{evil}\n");
-    const snap = recordCompileSnapshot(root, { status: "compiled", entry: "manuscript/main.tex", pdfPath: "manuscript/main.tex" });
-    assert.ok(snap === null || !Object.keys(snap.files).includes("manuscript/evil.tex"), JSON.stringify(snap?.files));
+    const inputs = collectCompileInputs(root, "manuscript/main.tex");
+    assert.ok(!inputs.includes("manuscript/evil.tex"), JSON.stringify(inputs));
+  });
+});
+
+// ── scenario sections ─────────────────────────────────────────────────────────
+
+describe("parseScenarioSections", () => {
+  it("reads Prompt, Success, the evidence-table path and the expected entry", () => {
+    const spec = parseScenarioSections(
+      ["## Prompt", "do research", "## Success", "a manuscript", "## Evidence table", "path evidence/claims.json", "## Entry", "manuscript/main.tex", ""].join("\n"),
+    );
+    assert.equal(spec.prompt, "do research");
+    assert.equal(spec.success, "a manuscript");
+    assert.equal(spec.evidenceTablePath, "evidence/claims.json");
+    assert.equal(spec.expectedEntry, "manuscript/main.tex");
   });
 
-  it("a new dependency after the snapshot fails the check", () => {
-    const root = mkdtempSync(join(tmpdir(), "deliverable-"));
-    mkdirSync(join(root, "manuscript"), { recursive: true });
-    mkdirSync(join(root, "build"), { recursive: true });
-    writeFileSync(join(root, "manuscript/main.tex"), "\\documentclass{article}\n\\input{maybe}\n");
-    writeFileSync(join(root, "build/main.pdf"), "%PDF-1.4 bytes\n");
-    const snap = recordCompileSnapshot(root, { status: "compiled", entry: "manuscript/main.tex", pdfPath: "build/main.pdf" });
-    writeFileSync(join(root, "manuscript/maybe.tex"), "late content\n");
-    assert.equal(checkCompiledCurrent(root, [snap!], "manuscript/main.tex").ok, false);
-  });
-
-  it("a table path escaping the project is not read", () => {
-    const root = mkdtempSync(join(tmpdir(), "deliverable-"));
-    const outside = mkdtempSync(join(tmpdir(), "outside-"));
-    writeFileSync(join(outside, "claims.json"), "[]");
-    assert.equal(readEvidenceTableFile(root, `../${basename(outside)}/claims.json`), null);
+  it("leaves the table path null when the scenario declares no requirement", () => {
+    const spec = parseScenarioSections("## Prompt\np\n## Success\ns\n");
+    assert.equal(spec.evidenceTablePath, null);
   });
 });

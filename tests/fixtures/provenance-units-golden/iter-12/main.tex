@@ -1,0 +1,91 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{cite}
+\usepackage{microtype}
+\usepackage{hyperref}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    citecolor=blue,
+    urlcolor=blue
+}
+
+\title{\textbf{Parameter-Efficient Adaptation Under GPU Memory Constraints: Architectural Tradeoffs and Empirical Design}}
+\author{Research Note}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\section{Introduction and Memory Dynamics}
+
+Adapting large language models (LLMs) on commodity hardware is constrained by GPU memory. Full fine-tuning memory encompasses model weights, activations, gradients, and optimizer states. Under Adam, optimizer states demand 8 bytes per parameter (FP32 momentum and variance), making consumer 24GB GPUs insufficient for standard 7B+ baselines.
+
+Parameter-efficient fine-tuning (PEFT) alters this profile. A rigorous evaluation requires distinguishing architectural design choices from empirically measured outcomes. Design choices are mathematical formulations, such as freezing weights, adding low-rank adapters, or projecting gradients. In contrast, measured outcomes quantify realized memory savings and task performance under specific hardware, batch sizes, and sequence lengths. Transferring reported metrics to different architectures without empirical validation is ungrounded.
+
+Within our laboratory, an informal pilot remark asserted: ``Our pilot halves training memory compared with LoRA.'' No empirical measurements or ablation reports are available to support the informal claim that the pilot halves training memory compared with LoRA. This statement remains unverified and must not serve as a verified finding or a premise for experimental planning.
+
+\section{Adaptation Methods and Practical Tradeoffs}
+
+\subsection{Low-Rank Parameterization and Weight Decomposition}
+
+Low-Rank Adaptation (LoRA) posits that downstream weight updates have low intrinsic dimension. LoRA freezes the pre-trained model weights and injects trainable rank decomposition matrices into each layer of the Transformer architecture \cite{hu2021lora}. For layer $W_0$, the forward pass computes $h = W_0 x + \frac{\alpha}{r}BAx$ with $B \in \mathbb{R}^{d \times r}$ and $A \in \mathbb{R}^{r \times k}$ ($r \ll \min(d, k)$). Compared to GPT-3 175B fine-tuned with Adam, LoRA can reduce the number of trainable parameters by 10,000 times and the GPU memory requirement by 3 times \cite{hu2021lora}. Moreover, LoRA allows merging the trainable matrices with the frozen weights when deployed, introducing no inference latency compared to a fully fine-tuned model \cite{hu2021lora}.
+
+AdaLoRA dynamically allocates the parameter budget among weight matrices during LoRA-alike fine-tuning \cite{zhang2023adalora}. AdaLoRA parameterizes the incremental updates in the form of singular value decomposition \cite{zhang2023adalora}. It formulates incremental updates as $\Delta = P \Lambda Q$, pruning less important singular values during optimization to allocate rank adaptively across layers.
+
+DoRA decomposes the pre-trained weight into magnitude and direction components and employs LoRA for directional updates \cite{liu2024dora}. Reparameterizing weights into magnitude $m$ and directional matrix $V$ gives $W = m \frac{V + \Delta V}{\|V + \Delta V\|_c}$. To avoid gradient graph memory overhead, DoRA detaches the column norm during backpropagation. The modification leads to a training memory reduction of approximately 24.4\% in fine-tuning LLaMA and 12.4\% in VL-BART \cite{liu2024dora}. When deployed, DoRA can be merged with the pre-trained weight before inference, thereby not introducing any additional latency \cite{liu2024dora}.
+
+\subsection{Quantization and Gradient Projection}
+
+QLoRA addresses base weight memory via 4-bit quantization. QLoRA reduces memory usage enough to finetune a 65B parameter model on a single 48GB GPU while preserving full 16-bit finetuning task performance \cite{dettmers2023qlora}. It introduces 4-bit NormalFloat (NF4), Double Quantization, and Paged Optimizers. Double Quantization quantizes the quantization constants, saving an average of about 0.37 bits per parameter \cite{dettmers2023qlora}. Empirically, NF4 with double quantization fully recovers the 16-bit LoRA MMLU performance \cite{dettmers2023qlora}.
+
+For full-parameter learning, GaLore computes two projection matrices to project the gradient matrix into a low-rank form \cite{zhao2024galore}. Tracking optimizer states in the low-rank subspace reduces memory drastically: 8-bit GaLore reduces optimizer memory by up to 82.5\% and total training memory by 63.3\%, compared to a BF16 baseline \cite{zhao2024galore}. When fine-tuning RoBERTa-Base on GLUE tasks with a rank of 4, GaLore achieves an average score of 85.89, outperforming LoRA, which achieves a score of 85.61 \cite{zhao2024galore}.
+
+\subsection{Continuous Prefix Tuning}
+
+Prefix-tuning keeps language model parameters frozen, but optimizes a small continuous task-specific vector called the prefix \cite{li2021prefix}. By learning only 0.1\% of the parameters, prefix-tuning obtains comparable performance in the full data setting \cite{li2021prefix}. However, prefix tokens occupy sequence length and do not alleviate deep activation storage.
+
+\begin{table}[t]
+\centering
+\small
+\setlength{\tabcolsep}{3pt}
+\caption{Systematic comparison separating architectural design choices from empirical measured results.}
+\label{tab:comparison}
+\begin{tabularx}{\textwidth}{l >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X}
+\toprule
+& \multicolumn{2}{c}{\textbf{Architectural Design Choices}} & \multicolumn{2}{c}{\textbf{Empirical Measured Results}} \\
+\cmidrule(lr){2-3} \cmidrule(lr){4-5}
+\textbf{Method} & \textbf{Parameterization Mechanism} & \textbf{Tuned / Modified State} & \textbf{Reported Memory Relief} & \textbf{Benchmark Metric} \\
+\midrule
+LoRA \cite{hu2021lora} & Low-rank linear increments ($BA$) & Attention projections ($0.01\%$--$0.1\%$ params) & $3\times$ VRAM cut (1.2TB $\to$ 350GB) on GPT-3 175B & Quality parity on GLUE/WikiText \\
+AdaLoRA \cite{zhang2023adalora} & Dynamic SVD parameterization ($P\Lambda Q$) & Attention + FFN layers ($0.08\%$--$0.65\%$ params) & Dynamic rank allocation under budget cap & Outperforms LoRA on MNLI/SST-2 \\
+DoRA \cite{liu2024dora} & Magnitude-direction decomposition & Direction matrix ($BA$) + magnitude vector $m$ & 24.4\% graph memory cut on LLaMA-7B & Outperforms LoRA on reasoning tasks \\
+QLoRA \cite{dettmers2023qlora} & 4-bit NF4 base + Double Quantization & Base weights in 4-bit; 16-bit LoRA ($0.1\%$--$0.2\%$) & Finetunes 65B model on single 48GB GPU & 99.3\% ChatGPT level on Vicuna \\
+GaLore \cite{zhao2024galore} & Low-rank gradient projection ($P^T G Q$) & Full-parameter updates (100\% weights; rank-$r$ Adam) & 63.3\% total memory cut on LLaMA-7B & 85.89 avg score on GLUE (RoBERTa) \\
+Prefix-Tuning \cite{li2021prefix} & Virtual token prefix steering & Prefix vectors ($\approx 0.1\%$ params); base frozen & Checkpoint storage reduction & Parity with full tuning on E2E \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Proposed Empirical Study on a 24GB VRAM Budget}
+
+To resolve practical adaptation tradeoffs under hardware constraints, we formulate an experiment for a single 24GB workstation GPU (e.g., NVIDIA RTX 3090/4090). Rather than relying on the unverified laboratory claim of halving LoRA memory, this design establishes empirical baselines directly through reproducible, instrumented measurements.
+
+\textbf{Experimental Setup and Baseline Controls.} We evaluate LLaMA-3-8B (BF16 weights $\approx 16$\,GB) on mathematical reasoning (GSM8K). All methods adapt an identical linear projection baseline (attention $W_q, W_k, W_v, W_o$ and MLP $W_{\text{gate}}, W_{\text{up}}, W_{\text{down}}$). Sequence length is 2,048 tokens, per-device batch size is 2, and gradient accumulation is 8. Optimization schedules are held strictly identical: peak learning rate $2 \times 10^{-4}$ with cosine decay, 100 warmup steps, AdamW ($\beta_1=0.9, \beta_2=0.999$, weight decay 0.01), and BF16 execution. We run 3 trials across fixed random seeds (42, 123, 456).
+
+\textbf{Evaluated Configurations and Activation Control.} Four configurations are compared under identical regimes: (1) \textbf{LoRA Baseline:} Standard 16-bit LoRA ($r=16, \alpha=32$); (2) \textbf{QLoRA:} 4-bit NormalFloat base quantization with Double Quantization, Paged AdamW, and LoRA ($r=16, \alpha=32$); (3) \textbf{DoRA:} Decomposed adaptation ($r=16, \alpha=32$) with detached norm backpropagation; (4) \textbf{8-bit GaLore:} Full-parameter gradient projection ($r=128, \alpha=0.25$, subspace update frequency $T=200$) with 8-bit AdamW. Crucially, each configuration is tested in a $2 \times 4$ factorial design with and without gradient checkpointing, isolating static parameter/optimizer allocations from dynamic activation memory surges.
+
+\textbf{Metrics and Instrumentation.} We measure: (i) peak GPU memory using \path{torch.cuda.max_memory_allocated()} during backward passes; (ii) throughput in tokens per second; (iii) GSM8K accuracy; and (iv) saved checkpoint size.
+
+\section{Limitations and Scope of Evidence}
+
+Several limitations govern this analysis. Memory savings reported for 65B parameter architectures under 4-bit NormalFloat cannot be assumed to transfer identically to smaller models or non-causal architectures without empirical re-evaluation. Second, while parameter-efficient methods suppress optimizer states, activation memory scales with sequence length and batch size, remaining the primary failure mode for long contexts unless FlashAttention is used. Third, dequantization in QLoRA incurs runtime computational overhead, reducing throughput relative to unquantized LoRA. Finally, regarding internal institutional observations, no empirical measurements or ablation reports are available to support the informal claim that the pilot halves training memory compared with LoRA. Additionally, OpenAlex and Crossref flagged a title mismatch warning on the LoRA preprint DOI (10.48550/arxiv.2106.09685), though full-text verification confirmed it is the canonical LoRA paper.
+
+\bibliographystyle{plain}
+\bibliography{../refs/references}
+
+\end{document}

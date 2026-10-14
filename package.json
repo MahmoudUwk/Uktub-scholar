@@ -51,7 +51,8 @@
     "live:skills": "node scripts/live/run.ts --suite skills",
     "experiment": "node scripts/live/experiment.ts",
     "evolve": "node scripts/live/evolve.ts",
-    "sandbox": "node scripts/live/shell.ts"
+    "sandbox": "node scripts/live/shell.ts",
+    "grade": "node scripts/live/grade.ts"
   },
   "devDependencies": {
     "@earendil-works/pi-coding-agent": "^1.1.0",

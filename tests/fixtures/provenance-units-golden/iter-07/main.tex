@@ -1,0 +1,113 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{microtype}
+\usepackage{xcolor}
+\usepackage{cite}
+\usepackage{hyperref}
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue!60!black,
+    citecolor=blue!60!black,
+    urlcolor=blue!60!black
+}
+
+\title{\textbf{Adapting Language Models Under Strict GPU Memory Constraints:\\Architectural Tradeoffs, Empirical Controls, and Practical Limits}}
+\author{\textbf{Research Note}}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\section{Introduction and Anatomy of Training Memory}
+Fine-tuning large language models (LLMs) requires substantial graphics processing unit (GPU) memory. To design effective parameter-efficient fine-tuning (PEFT) workflows under tight hardware constraints, one must separate static parameter counts from dynamic memory allocations during backpropagation. In standard 16-bit fine-tuning with 32-bit Adam, total video random-access memory (VRAM) is divided across four main components: (1) static model parameters (2 bytes per parameter in FP16/BF16); (2) optimizer states, master weights, and gradients (16 bytes per trainable parameter in standard Adam); (3) forward activations retained for gradient computation; and (4) temporary workspace buffers for CUDA kernels and checkpointing.
+
+Early PEFT methods targeted parameter storage and optimizer state overhead by freezing the model backbone. Prefix-tuning keeps language model parameters frozen and optimizes a sequence of continuous task-specific vectors \cite{li2021prefix}. By modifying only 0.1\% of the parameters, prefix-tuning obtains comparable performance in the full data setting \cite{li2021prefix}. Nevertheless, prefix-tuning maintains all pre-trained weights in uncompressed 16-bit precision and prepends continuous virtual tokens to every sequence, reducing effective input capacity and expanding attention activation memory.
+
+In contrast, BitFit freezes most of the transformer parameters and trains only the bias terms and the task-specific classification layer \cite{zaken2022bitfit}. BitFit modifies less than 0.1\% of the total number of parameters \cite{zaken2022bitfit}. While eliminating projection optimizer states, its representational capacity is bounded since core linear projections remain fixed. Crucially, neither prefix-tuning nor BitFit compresses base weights.
+
+\section{Reparameterization, Decomposition, and Quantized Adaptation}
+Low-Rank Adaptation (LoRA) provides greater adaptation capacity while curbing optimizer memory by parameterizing weight updates as low-rank decompositions $\Delta W = B A$, where $B \in \mathbb{R}^{d \times r}$, $A \in \mathbb{R}^{r \times k}$, and rank $r \ll \min(d, k)$ \cite{hu2021lora}. Because the base pre-trained weight $W_0$ remains frozen, optimizer states and gradients are tracked solely for $A$ and $B$. Compared to GPT-3 175B fine-tuned with Adam, LoRA can reduce the number of trainable parameters by 10,000 times and the GPU memory requirement by 3 times \cite{hu2021lora}. Importantly, this 3-fold memory reduction was measured specifically on GPT-3 175B under Adam optimizer partitioning; it does not transfer directly to smaller 7B models or long-context adaptation, where activation memory and base weights dominate total VRAM.
+
+AdaLoRA parameterizes incremental updates in the form of singular value decomposition and prunes redundant singular values based on an importance metric \cite{zhang2023adalora}. Under a parameterized budget schedule, AdaLoRA always prefers allocating more budget to FFNs and top layers \cite{zhang2023adalora}. Dynamic pruning improves parameter efficiency but introduces scoring overhead during training.
+
+Weight-Decomposed Low-Rank Adaptation decomposes the pre-trained weight into magnitude and directional components and uses LoRA for directional updates \cite{liu2024dora}. DoRA reparameterizes weights as $W = m \frac{V + \Delta V}{\|V + \Delta V\|_c}$, with trainable magnitude $m$ and low-rank $\Delta V$. Detaching the normalization denominator from the backward graph prevents graph memory explosion. The proposed gradient graph modification in DoRA leads to a training memory reduction of approximately 24.4\% in fine-tuning LLaMA \cite{liu2024dora}.
+
+While LoRA and DoRA dramatically compress optimizer footprints, base parameters remain stored in 16-bit precision ($\sim$16\,GB for an 8B model). QLoRA overcomes this threshold by introducing 4-bit NormalFloat (NF4) quantization for frozen base weights \cite{dettmers2023qlora}. QLoRA reduces memory usage enough to finetune a 65B parameter model on a single 48GB GPU while preserving full 16-bit finetuning task performance \cite{dettmers2023qlora}. To minimize quantization constants, Double Quantization saves an average of about 0.37 bits per parameter by quantizing the quantization constants \cite{dettmers2023qlora}. QLoRA also introduces Paged Optimizers to manage memory spikes during checkpointing by paging states between GPU and CPU. However, weights must be dynamically dequantized to BF16 during each forward and backward pass, increasing compute latency.
+
+\section{Methodological Comparison and Tradeoffs}
+To avoid conflating architectural mechanisms with context-specific empirical outcomes, we separate structural properties from published experimental findings. Table~\ref{tab:architectural} presents architectural designs, while Table~\ref{tab:empirical} documents published empirical benchmarks.
+
+\begin{table}[ht]
+\centering
+\footnotesize
+\caption{Architectural and operational characteristics of adaptation methods.}
+\label{tab:architectural}
+\begin{tabularx}{\textwidth}{l >{\raggedright\arraybackslash}p{2.0cm} >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}p{2.2cm} c >{\raggedright\arraybackslash}X}
+\toprule
+\textbf{Method} & \textbf{Base Weights} & \textbf{Trainable Set} & \textbf{Optimizer VRAM} & \textbf{Mergeable} & \textbf{Theoretical Overhead} \\
+\midrule
+Prefix-Tuning \cite{li2021prefix} & 16-bit Float & Virtual prefix vectors & Prefix vectors only & No & Reduced context window \\
+BitFit \cite{zaken2022bitfit} & 16-bit Float & Bias terms & Bias vectors only & Yes & Zero runtime overhead \\
+LoRA \cite{hu2021lora} & 16-bit Float & $A, B$ matrices & Low-rank matrices & Yes & Zero runtime overhead \\
+AdaLoRA \cite{zhang2023adalora} & 16-bit Float & SVD matrices ($P, \Lambda, Q$) & Dynamic SVD parameters & Yes & Dynamic pruning overhead \\
+DoRA \cite{liu2024dora} & 16-bit Float & Magnitude $m$ \& LoRA & $m$ and LoRA matrices & Yes & Column norm calculation \\
+QLoRA \cite{dettmers2023qlora} & 4-bit NF4 & $A, B$ matrices & Low-rank matrices & In 16-bit & Runtime NF4 dequantization \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{table}[ht]
+\centering
+\footnotesize
+\caption{Empirical measurements reported in the original publications.}
+\label{tab:empirical}
+\begin{tabularx}{\textwidth}{l >{\raggedright\arraybackslash}p{2.1cm} >{\raggedright\arraybackslash}p{2.3cm} >{\raggedright\arraybackslash}p{2.2cm} >{\raggedright\arraybackslash}X}
+\toprule
+\textbf{Method} & \textbf{Reported Model} & \textbf{Benchmark Task} & \textbf{Hardware Setting} & \textbf{Measured Empirical Result} \\
+\midrule
+Prefix-Tuning \cite{li2021prefix} & GPT-2, BART & Table-to-text, Summary & TITAN Xp / V100 & Modifies 0.1\% params; achieves parity with 100\% fine-tuning. \\
+BitFit \cite{zaken2022bitfit} & BERT, RoBERTa & GLUE benchmark & Single GPU & Modifies $<$0.1\% params; matches $\sim$95\%+ of full fine-tuning. \\
+LoRA \cite{hu2021lora} & GPT-3 175B & Multi-task NLU & V100 cluster & Cuts VRAM from 1.2TB to 350GB (3$\times$ drop); 10,000$\times$ param drop. \\
+AdaLoRA \cite{zhang2023adalora} & DeBERTaV3-base & GLUE benchmark & V100 (32GB) & Outperforms static LoRA at 0.16\%--0.32\% parameter budget. \\
+DoRA \cite{liu2024dora} & LLaMA-7B & Commonsense & A100 (80GB) & Detaching norm graph cuts VRAM by 24.4\% (37.3GB $\to$ 28.2GB). \\
+QLoRA \cite{dettmers2023qlora} & LLaMA 65B & Alpaca / Guanaco & Single 48GB GPU & Runs 65B on 48GB GPU (vs $>$780GB baseline); saves 0.37 bpp. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Methods with 16-bit base weights preserve maximum throughput and exact weight merging ($W = W_0 + \Delta W$), but exceed 24\,GB budgets beyond 8B models. QLoRA eliminates this static ceiling but incurs runtime dequantization overhead.
+
+\section{Proposed Experimental Protocol}
+We propose a controlled empirical benchmark on a single 24\,GB GPU (RTX 3090 or RTX 4090).
+
+\paragraph{Fixed Variables Across All Conditions:}
+\begin{itemize}
+    \item \textbf{Base Architecture:} LLaMA-3-8B. In 16-bit conditions (LoRA, DoRA), weights are loaded in native \texttt{bfloat16} ($\sim$16\,GB base VRAM). In 4-bit conditions (QLoRA, QDoRA), weights are loaded in NF4 with Double Quantization via \texttt{bitsandbytes} ($\sim$5.5\,GB base storage). Compute precision is fixed to \texttt{bfloat16} across all runs.
+    \item \textbf{Adapter Configuration:} Rank $r = 16$, $\alpha = 32$, adapter dropout 0.05, adapting all projection layers: query, key, value, output, gate, up, and down projections.
+    \item \textbf{Batching and Sequence Grid:} Micro-batch size $B = 2$ and gradient accumulation steps $G = 8$ (effective batch size 16), swept across sequence lengths $L \in \{512, 1024, 2048, 4096\}$.
+    \item \textbf{Optimizer and Schedule:} AdamW ($\beta_1=0.9, \beta_2=0.999$), weight decay 0.0, 100-step warmup with cosine decay, learning rate $2 \times 10^{-4}$. Gradient checkpointing, FlashAttention-2, and seed 42 are fixed across all runs.
+\end{itemize}
+
+\paragraph{Measurement Protocol and Timing Intervals:}
+\begin{enumerate}
+    \item \textbf{Warm-Up Iterations:} The initial 10 steps of each run are discarded from measurement to eliminate CUDA context creation and autotuning transients.
+    \item \textbf{Cache Clearing:} Before each logged run, GPU memory is cleared using \texttt{empty\_cache()} and \texttt{reset\_peak\_memory\_stats()} in \texttt{torch.cuda}.
+    \item \textbf{Peak Memory Profiling:} Peak memory is monitored using \texttt{torch.cuda} peak allocation statistics, recorded separately at model loading, forward activation peak, and backward optimizer update.
+    \item \textbf{Throughput Calculation:} Throughput is timed over 100 steady-state steps with synchronized CUDA events (\texttt{torch.cuda.Event}), calculated as total processed tokens divided by elapsed time $\Delta t$.
+    \item \textbf{Task Performance:} 5-shot GSM8K test accuracy and validation loss.
+\end{enumerate}
+
+\paragraph{Status of Internal Pilot Claim:}
+An informal assertion was circulated within our research team: ``Our pilot halves training memory compared with LoRA.'' We explicitly emphasize that the statement ``Our pilot halves training memory compared with LoRA'' remains completely unverified. No experimental code, hardware profiles, batch specifications, or measurement logs exist to substantiate this claim. Therefore, it must not be treated as an empirical result or utilized as an assumption for the proposed study.
+
+\section{Scope and Limitations of the Literature}
+Existing literature exhibits several critical limitations. Reported memory savings often assume enterprise clusters or high-end accelerators (e.g., A100-80GB), leaving consumer GPU memory bus bottlenecks underexplored. Furthermore, consider the statement: QLoRA evaluates peak memory usage on 8192 sequence lengths on an RTX 3090 GPU. No support is found for this proposition in published evaluations, as the original paper restricted empirical memory measurements to standard sequence lengths and enterprise hardware. In addition, consider whether DoRA reports wall-clock training throughput in tokens per second across varying sequence lengths. This is a missing detail in the primary paper, which focused on training memory reductions rather than wall-clock speed benchmarks. Rigorous evaluation under standardized single-GPU setups remains essential.
+
+\bibliographystyle{plain}
+\bibliography{../refs/references}
+
+\end{document}

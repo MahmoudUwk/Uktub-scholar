@@ -1,0 +1,93 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[margin=1in]{geometry}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{amsmath}
+\usepackage{cite}
+\usepackage{microtype}
+\usepackage{url}
+\usepackage{hyperref}
+
+\title{\textbf{Adapting Language Models under GPU Memory Constraints:\\Architectures, Tradeoffs, and Experimental Design}}
+\author{\textbf{Research Note}}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+Adapting large language models under GPU memory limits requires balancing weights, optimizer states, gradients, and activations. This note evaluates LoRA, QLoRA, DoRA, AdaLoRA, LongLoRA, and QA-LoRA. We separate architectural designs from measured benchmarks, evaluate an unverified laboratory claim, and specify a controlled experimental protocol.
+\end{abstract}
+
+\section{Low-Rank Decomposition and Weight Reparameterization}
+
+Full fine-tuning stores 16 bytes per parameter under Adam. Parameter-efficient fine-tuning (PEFT) freezes base weights, eliminating optimizer memory for the backbone.
+
+Low-Rank Adaptation establishes factorized tuning: LoRA freezes the pre-trained model weights and injects trainable rank decomposition matrices into each layer of the Transformer architecture, greatly reducing the number of trainable parameters for downstream tasks.~\cite{hu2021lora} In benchmarked evaluations: Compared to GPT-3 175B fine-tuned with Adam, LoRA can reduce the number of trainable parameters by 10,000 times and the GPU memory requirement by 3 times.~\cite{hu2021lora} This reduction is specific to 175B parameters; it cannot be transferred to 7B models where activations dominate peak VRAM.
+
+Adaptive Low-Rank Adaptation dynamically allocates rank across layers: AdaLoRA parameterizes the incremental updates in the form of singular value decomposition.~\cite{zhang2023adalora} Pruning minor singular values yields high efficiency: For example, AdaLoRA achieves 88.7\% F1 on SQuADv2.0 with the smallest budget 0.08\%.~\cite{zhang2023adalora}
+
+Weight-Decomposed Low-Rank Adaptation isolates magnitude and direction: DoRA decomposes the pre-trained weight into two components, magnitude and direction, for fine-tuning, specifically employing LoRA for directional updates to efficiently minimize the number of trainable parameters.~\cite{liu2024dora} Detaching the directional norm eliminates backpropagation overhead: The results indicate that the modification leads to a training memory reduction of approximately 24.4\% in fine-tuning LLaMA and 12.4\% in VL-BART.~\cite{liu2024dora}
+
+\section{Base Model Quantization and Activation Scaling}
+
+Quantized adaptation targets 16-bit base weights. QLoRA backpropagates gradients through a frozen, 4-bit quantized pretrained language model into Low Rank Adapters.~\cite{dettmers2023qlora} Utilizing 4-bit NormalFloat (NF4), double quantization, and paged optimizers: QLoRA reduces the average memory requirements of finetuning a 65B parameter model from >780GB of GPU memory to <48GB without degrading the runtime or predictive performance compared to a 16-bit fully finetuned baseline.~\cite{dettmers2023qlora}
+
+To avoid quantization error during low-bit deployment: QA-LoRA addresses the issue by introducing group-wise operators which increase the degree of freedom of low-bit quantization and decrease that of LoRA.~\cite{xu2023qa} This enables direct INT4 matrix fusion: Additionally, during the inference stage, QA-LoRA is also more than 50\% faster than QLoRA because the fine-tuned model (after weight integration) is still in INT4, unlike QLoRA that converts it back to FP16.~\cite{xu2023qa}
+
+When context windows expand, activations dominate VRAM. In addition to training LoRA weights in linear layers, LongLoRA further makes embedding and normalization layers trainable.~\cite{chen2023longlora} Utilizing Shifted Sparse Attention ($S^2$-Attn): LongLoRA closes the accuracy gap that between conventional LoRA and full fine-tuning, while still maintaining up to 1.8× lower memory cost than full fine-tuning.~\cite{chen2023longlora}
+
+\section{Practical Tradeoffs and Critical Analysis}
+
+Selecting an adaptation strategy requires balancing parameter savings, activations, and deployment latency. Table~\ref{tab:methods} contrasts architectural choices against reported empirical outcomes.
+
+\begin{table}[htbp]
+\centering
+\scriptsize
+\caption{Parameter-efficient adaptation methods distinguishing architectural design choices from measured empirical results.}
+\label{tab:methods}
+\vspace{2mm}
+\setlength{\tabcolsep}{3pt}
+\begin{tabularx}{\linewidth}{l>{\raggedright\arraybackslash}p{0.19\linewidth}>{\raggedright\arraybackslash}p{0.18\linewidth}>{\raggedright\arraybackslash}p{0.18\linewidth}>{\raggedright\arraybackslash}X}
+\toprule
+\textbf{Method} & \multicolumn{2}{c}{\textbf{Architectural Design Choices}} & \multicolumn{2}{c}{\textbf{Measured Empirical Results}} \\
+\cmidrule(lr){2-3} \cmidrule(lr){4-5}
+& \textbf{Base \& Target Layers} & \textbf{Deployment Merge} & \textbf{Evaluation Baseline} & \textbf{Key Measured Outcome} \\
+\midrule
+LoRA \cite{hu2021lora} & 16-bit; attention ($W_q, W_v$) & Exact 16-bit matrix fusion & GPT-3 175B, Adam & $3\times$ VRAM reduction; 10,000$\times$ param cut \\
+AdaLoRA \cite{zhang2023adalora} & 16-bit; dynamic SVD on att./MLP & Matrix fusion after prune & DeBERTaV3, SQuADv2.0 & 88.7\% F1 at 0.08\% budget \\
+DoRA \cite{liu2024dora} & 16-bit; magnitude/direction split & Exact 16-bit matrix fusion & LLaMA-7B fine-tuning & 24.4\% train memory cut via detached norm \\
+QLoRA \cite{dettmers2023qlora} & 4-bit NF4; all linear layers & Unmerged mixed precision & 65B LLaMA on 1$\times$48GB & <48GB VRAM vs >780GB full FT baseline \\
+QA-LoRA \cite{xu2023qa} & 4-bit INT4; grouped projections & Direct INT4 matrix fusion & LLaMA-7B inference & >50\% faster inference vs QLoRA \\
+LongLoRA \cite{chen2023longlora} & 16-bit; $S^2$-Attn, norm/emb & Full dense attention & LLaMA-2 7B, 8k--32k & Up to 1.8$\times$ lower memory vs full FT \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Evaluation of an Unverified Laboratory Claim}
+
+An informal laboratory assertion claims: ``Our pilot halves training memory compared with LoRA.'' This statement is entirely unverified: Our pilot halves training memory compared with LoRA. No technical specification, log, batch size, or sequence length was provided to substantiate it.
+
+On a 7B model with 16-bit LoRA, base weights consume $\approx$14\,GB, while adapter states take $<150$\,MB. With gradient checkpointing, base weights dominate over 80\% of allocated VRAM. Halving total training memory cannot occur through adapter reparameterization alone; it strictly requires 4-bit base quantization, offloading, or sequence truncation. Hence, this claim is rejected as an empirical finding and excluded from experimental planning.
+
+\section{Proposed Experimental Protocol}
+
+To establish rigorous memory and throughput boundaries, we specify a controlled benchmark on a 24\,GB GPU (NVIDIA RTX 4090).
+
+\paragraph{Baselines and Hyperparameters.} We evaluate LLaMA-3-8B across four conditions: 16-bit LoRA, 4-bit QLoRA (NF4), 16-bit DoRA, and 4-bit QA-LoRA (INT4) ($r=16, \alpha=32$ across attention and MLP projections). All runs enforce identical AdamW settings ($\beta_1=0.9, \beta_2=0.999, \epsilon=10^{-8}$, weight decay 0.0), a cosine schedule ($2 \times 10^{-4}$ to $2 \times 10^{-5}$ with 3\% warmup), and fixed seed 42 for shuffling, initialization, and dropout.
+
+\paragraph{Batch and Context Controls.} We fix effective batch size strictly at 16 across all runs via per-device batch size 2 and 8 accumulation steps ($2 \times 8 = 16$). Training uses 10,000 Alpaca examples under sequence lengths $L \in \{512, 2048, 4096\}$, evaluated with and without gradient checkpointing.
+
+\paragraph{Telemetry and Metrics.} Telemetry distinguishes peak allocated VRAM (active tensors via \nolinkurl{torch.cuda.max_memory_allocated}) from peak reserved VRAM (caching allocator overhead and fragmentation via \nolinkurl{torch.cuda.max_memory_reserved}). Step throughput is logged in tokens per second. Downstream accuracy is evaluated on 5-shot MMLU and ARC-Challenge; inference latency is profiled across batch sizes 1 to 8.
+
+\section{Limitations}
+
+Several methodological boundaries govern this note. Reported memory savings and training speedups from published benchmarks cannot be assumed to generalize across differing model architectures, sequence lengths, batch sizes, or GPU hardware without direct empirical measurement. Specifically, 4-bit dequantization latency depends heavily on Tensor Core support and GPU memory bandwidth. Shifted Sparse Attention requires rotary position embeddings and does not transfer to absolute position encodings without adaptation. Finally, published metrics cited here were verified against archival sources, whereas informal laboratory assertions remain strictly unverified.
+
+\bibliographystyle{plain}
+\bibliography{../refs/references}
+
+\end{document}

@@ -30,6 +30,17 @@ import { cpuVariant, engineSpecs } from "./bench-claims-v2-engines.ts";
 import { decision2Worker } from "./decision2-client.ts";
 import { httpEngine, startServer, waitForServer } from "./bench-claims-v2-http.ts";
 
+/** The auth header of a hosted System One endpoint, built at request time from a key that is never stored. */
+const remoteHeaders = (key: string): Record<string, string> => ({ authorization: "Bearer " + key });
+
+/** One `NAME=value` (or `export NAME=value`) line of a dotenv file; the name keeps its case (provider keys are not all uppercase). */
+const dotenvValue = (text: string, name: string): string | null => {
+  const m = new RegExp(`^(?:export\\s+)?${name}\\s*=\\s*(.*)$`, "m").exec(text);
+  if (m === null) return null;
+  const value = m[1]!.trim().replace(/^(['"])(.*)\1$/, "$2");
+  return value === "" ? null : value;
+};
+
 const arg = (name: string, fallback: string): string => {
   const i = process.argv.indexOf(`--${name}`);
   return i !== -1 ? (process.argv[i + 1] as string) : fallback;
@@ -118,7 +129,7 @@ async function main(): Promise<void> {
   const cfgPath = join(root, "bench.yaml");
   const v = DEFAULTS.verification;
   writeFileSync(cfgPath, `chunking:\n  chunk_tokens: ${cfg.chunk_tokens}\n  overlap_tokens: ${cfg.overlap_tokens}\n  chars_per_token: ${cfg.chars_per_token}\n  boundary: ${cfg.boundary}\nverification:\n  engine: ${engine}\n  min_confidence: ${v.min_confidence}\n  workers: ${v.workers}\n  max_judgments: 100000\n`);
-  const env = { ...process.env, UKTUB_CHUNK_CONFIG: cfgPath, ...(device === "cpu" ? { UKTUB_DECISION2_DEVICE: "cpu" } : {}), ...(spec?.env ?? {}), ...(spec?.adapter ? { UKTUB_VERIFY_MODEL_ID: spec.adapter.declaredId } : {}), ...(spec?.server ? { UKTUB_VERIFY_MODEL_ID: spec.server.declaredId } : {}) } as Record<string, string>;
+  const env = { ...process.env, UKTUB_CHUNK_CONFIG: cfgPath, ...(device === "cpu" ? { UKTUB_DECISION2_DEVICE: "cpu" } : {}), ...(spec?.env ?? {}), ...(spec?.adapter ? { UKTUB_VERIFY_MODEL_ID: spec.adapter.declaredId } : {}), ...(spec?.server ? { UKTUB_VERIFY_MODEL_ID: spec.server.declaredId } : {}), ...(spec?.remote ? { UKTUB_VERIFY_MODEL_ID: spec.remote.declaredId } : {}) } as Record<string, string>;
   const ctx = { root, fetch: ((...a: Parameters<typeof fetch>) => fetch(...a)) as never, env, now: () => new Date(), queue: new WriteQueue() };
   // The idle baseline of the GPU, taken BEFORE any model is loaded, so the memory figure includes the model and not only its activations.
   const gpu = device === "gpu" ? gpuProbe() : null;
@@ -131,7 +142,12 @@ async function main(): Promise<void> {
     await waitForServer(spec!.server!.url, { timeoutMs: 600_000, intervalMs: 2_000 });
   }
   const serverInfo = server === null ? null : await fetch(`${spec!.server!.url}/v1/models`).then((r) => r.json()).catch(() => null);
-  const hooks = worker !== null ? { createEngine: () => worker.asEngine() } : server !== null ? { createEngine: () => httpEngine(spec!.server!.url, spec!.server!.wording) } : {};
+  // A hosted endpoint needs its key at request time: the shell wins over the repository's `.env`, and the key lives only in the
+  // request closure below (never in the spec, the logs, the partial file or the results).
+  const remoteKey = spec?.remote === undefined ? null : (process.env["VLLM_decision_API"] || (existsSync(".env") ? dotenvValue(readFileSync(".env", "utf8"), "VLLM_decision_API") : null) || null);
+  if (spec?.remote !== undefined && remoteKey === null) throw new Error(`${specId}: VLLM_decision_API is not set (neither the shell nor .env has it)`);
+  const latencies: number[] = [];
+  const hooks = worker !== null ? { createEngine: () => worker.asEngine() } : server !== null ? { createEngine: () => httpEngine(spec!.server!.url, spec!.server!.wording) } : spec?.remote !== undefined ? { createEngine: () => httpEngine(spec!.remote!.url, spec!.remote!.wording, fetch, { model: spec!.remote!.model, concurrency: spec!.remote!.concurrency, onLatency: (ms) => { latencies.push(ms); }, headers: remoteHeaders(remoteKey as string) }) } : {};
   const workerReady = worker === null ? null : await worker.ready;
 
   const reg = openRegistry(root);
@@ -170,6 +186,11 @@ async function main(): Promise<void> {
   await server?.stop();
 
   const records = claims.map((c) => done.get(c.id)!);
+  const pctOf = (xs: number[], q: number): number | null => {
+    if (xs.length === 0) return null;
+    const v = [...xs].sort((a, b) => a - b);
+    return v[Math.min(v.length - 1, Math.floor(q * v.length))] as number;
+  };
   const file = join(outDir, `claims-v2-${label}-${date}.results.json`);
   writeFileSync(file, JSON.stringify({
     schema: "bench-claims-v2/1",
@@ -189,6 +210,7 @@ async function main(): Promise<void> {
     machine: { cpu: cpus()[0]?.model ?? "unknown", cores: cpus().length, memoryGb: Math.round(totalmem() / 2 ** 30), node: process.version },
     run: { startedAt: start.at, loadavgStart: start.loadavg, loadavgEnd: loadavg(), seconds: Math.round((Date.now() - t0) / 1000) },
     records,
+    remote: spec?.remote === undefined ? null : { url: spec.remote.url, model: spec.remote.model, wording: spec.remote.wording, requests: latencies.length, latencyMs: { p50: pctOf(latencies, 0.5), p95: pctOf(latencies, 0.95) } },
   }, null, 1));
   console.log(`wrote ${file} (${records.length} claims)`);
 }

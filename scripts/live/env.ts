@@ -11,7 +11,7 @@ import { join, resolve } from "node:path";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import type { CallResult, Session } from "./cases.ts";
-import { providerKeys } from "./keys.ts";
+import { GRADER_KEY_NAMES, providerKeys } from "./keys.ts";
 import { captureStagedProvenance, type StagedProvenance } from "./provenance.ts";
 import { appendRedacted, redact, registerSecrets } from "./redact.ts";
 import { dockerAvailable, INSIDE_PACKAGE, runSandboxed, sandboxCommand, stagePackage, writePiSettings, type SandboxSpec } from "./sandbox.ts";
@@ -24,6 +24,31 @@ export const POLICY = {
   retries: 0,
 };
 
+/** Assistant-sandbox env for `--verify-engine` (default `eos` sets nothing: the product default stands). */
+export function verifyEngineEnv(name: string): Record<string, string> {
+  if (name === "eos") return {};
+  // The product's own `hosted` engine (d3-mini, src/core/verify/engines.ts): no URL or model duplicated here.
+  if (name === "hosted") return { UKTUB_VERIFY_ENGINE: "hosted" };
+  throw new Error(`--verify-engine must be eos|hosted, got ${JSON.stringify(name)}`);
+}
+
+/**
+ * Secrets an assistant sandbox needs beyond the provider keys: `OPENCODE_API_KEY`
+ * when the assistant runs on opencode-go (otherwise the assistant gets nothing extra).
+ * A missing key is a clear error, never a silent keyless run or a model substitution.
+ */
+export function assistantSecretsForProvider(provider: string, lookup: (name: string) => string | undefined): Record<string, string> {
+  if (provider !== "opencode-go") return {};
+  const key = lookup("OPENCODE_API_KEY");
+  if (!key) throw new Error("BLOCKED: no OPENCODE_API_KEY for an opencode-go assistant (shell or .env); not substituting a model");
+  return { OPENCODE_API_KEY: key };
+}
+
+/** Per-run assistant secrets ride with the forwarded provider secrets; an explicit value wins. */
+export function mergeAssistantSecrets(base: Record<string, string>, extra: Record<string, string>): Record<string, string> {
+  return { ...base, ...extra };
+}
+
 export interface Env {
   out: string;
   repo: string;
@@ -32,10 +57,14 @@ export interface Env {
   agentDir: string;
   gcpProject: string;
   passEnv: string[];
+  /** Names of the grader-only keys (never forwarded to the assistant's sandbox). */
+  graderPassEnv: string[];
+  /** When the ADC preflight check below ran (ISO timestamp, recorded in the manifest). */
+  adcCheckedAt: string;
   runId: string;
   log(line: string): void;
-  /** A sandbox spec; `over` swaps mounts (e.g. an empty project for the user simulator). */
-  base(label: string, env?: Record<string, string>, over?: Partial<SandboxSpec>): SandboxSpec;
+  /** A sandbox spec; `over` swaps mounts (e.g. an empty project for the user simulator). `opts.grader` adds the grader-only keys: assistant specs never get them. */
+  base(label: string, env?: Record<string, string>, over?: Partial<SandboxSpec>, opts?: { grader?: boolean }): SandboxSpec;
   openSession(label: string, env?: Record<string, string>): Promise<Session>;
   shell(script: string, timeoutMs?: number): { status: number | null; stdout: string; stderr: string };
   /** Provenance for the evidence: commit, working-tree digest, image, policy. */
@@ -46,7 +75,7 @@ export interface Env {
 const sh = (cmd: string, args: string[], cwd: string): string => spawnSync(cmd, args, { cwd, encoding: "utf8" }).stdout.trim();
 const newest = (dir: string): number => readdirSync(dir, { recursive: true, withFileTypes: true }).filter((e) => e.isFile()).reduce((m, e) => Math.max(m, statSync(join(e.parentPath, e.name)).mtimeMs), 0);
 
-export function createEnv(out: string, opts: { corpus?: boolean; maxJudgments?: number; piSettings?: Record<string, unknown>; acquireOnRegister?: boolean } = {}): Env {
+export function createEnv(out: string, opts: { corpus?: boolean; maxJudgments?: number; piSettings?: Record<string, unknown>; acquireOnRegister?: boolean; assistantSecrets?: Record<string, string> } = {}): Env {
   out = resolve(out);
   if (existsSync(out)) throw new Error(`${out} exists; each run writes fresh evidence`);
   const repo = resolve(import.meta.dirname, "../..");
@@ -65,15 +94,26 @@ export function createEnv(out: string, opts: { corpus?: boolean; maxJudgments?: 
   const noImage = dockerAvailable(IMAGE);
   if (noImage !== undefined) throw new Error(`sandbox image missing (docker build -t ${IMAGE} -f docker/test-sandbox.Dockerfile .): ${noImage}`);
   if (spawnSync("gcloud", ["auth", "application-default", "print-access-token"], { encoding: "utf8" }).status !== 0) throw new Error("ADC is not usable (run: gcloud auth application-default login); not bypassing");
+  const adcCheckedAt = new Date().toISOString();
   const gcpProject = process.env.GOOGLE_CLOUD_PROJECT || sh("gcloud", ["config", "get-value", "project"], repo);
   if (!gcpProject) throw new Error("no GCP project for Vertex (GOOGLE_CLOUD_PROJECT or gcloud config)");
   // Provider keys: the shell first, then a gitignored `.env` in this repository (scripts/live/keys.ts); a run with none of them is keyless
   // and says so in its manifest.
   const dotenvFile = resolve(repo, ".env");
-  const secretEnv = providerKeys(process.env, existsSync(dotenvFile) ? readFileSync(dotenvFile, "utf8") : null);
+  const dotenvText = existsSync(dotenvFile) ? readFileSync(dotenvFile, "utf8") : null;
+  const secretEnv = providerKeys(process.env, dotenvText);
   const passEnv = Object.keys(secretEnv);
+  // Grader keys (the owner's OpenCode Go key): read through the same mechanism but kept separate —
+  // never in passEnv/secretEnv, so the assistant's sandbox never receives them. Only specs built
+  // with base(..., { grader: true }) forward them, to grader sessions.
+  const graderSecretEnv = providerKeys(process.env, dotenvText, GRADER_KEY_NAMES);
+  const graderPassEnv = Object.keys(graderSecretEnv);
   // The tested agent can read its own environment, so every write below redacts the forwarded key values (CROSSREF_MAILTO is an address, not a credential).
   registerSecrets(Object.fromEntries(Object.entries(secretEnv).filter(([k]) => /KEY|TOKEN|SECRET/.test(k))));
+  registerSecrets(Object.fromEntries(Object.entries(graderSecretEnv).filter(([k]) => /KEY|TOKEN|SECRET/.test(k))));
+  // Per-run assistant secrets (hosted verify key, opencode-go assistant key): redacted like the provider keys.
+  const assistantSecrets = opts.assistantSecrets ?? {};
+  registerSecrets(Object.fromEntries(Object.entries(assistantSecrets).filter(([k]) => /KEY|TOKEN|SECRET/.test(k))));
 
   const stageDir = join(out, "stage");
   const consumer = stagePackage(repo, stageDir);
@@ -101,7 +141,7 @@ export function createEnv(out: string, opts: { corpus?: boolean; maxJudgments?: 
 
   let n = 0;
   const bench = join(home, ".cache/uktub-bench/decision2");
-  const base: Env["base"] = (label, env = {}, over = {}) => ({
+  const base: Env["base"] = (label, env = {}, over = {}, flags = {}) => ({
     image: IMAGE, name: `uktub-live-${runId}-${label}-${++n}`, stageDir: consumer, projectDir: project, agentDir, runDir,
     adcFile: join(home, ".config/gcloud/application_default_credentials.json"),
     tectonicCache: join(home, ".cache/Tectonic"), uktubCache: join(home, ".cache/uktub-scholar"),
@@ -109,7 +149,12 @@ export function createEnv(out: string, opts: { corpus?: boolean; maxJudgments?: 
     // The registration hook (background acquisition) is off for a session that needs deterministic source states; a case that tests the hook opens its own session with it on.
     env: { GOOGLE_CLOUD_PROJECT: gcpProject, ...(opts.acquireOnRegister === false ? { UKTUB_ACQUIRE_ON_REGISTER: "0" } : {}), ...env },
     // An explicit per-session env value overrides a forwarded secret of the same name (e.g. a deliberately invalid key to force a provider failure).
-    secretEnv: Object.fromEntries(Object.entries(secretEnv).filter(([k]) => !(k in env))),
+    // Grader-only keys ride along only when flags.grader is set (grader sessions); the assistant's specs never carry them.
+    // Per-run assistant secrets (hosted verify key, opencode-go assistant key) ride with every non-grader spec.
+    secretEnv: {
+      ...Object.fromEntries(Object.entries(mergeAssistantSecrets(secretEnv, assistantSecrets)).filter(([k]) => !(k in env))),
+      ...(flags.grader === true ? Object.fromEntries(Object.entries(graderSecretEnv).filter(([k]) => !(k in env))) : {}),
+    },
     ...over,
   });
 
@@ -143,7 +188,7 @@ export function createEnv(out: string, opts: { corpus?: boolean; maxJudgments?: 
 
   const sha = (p: string): string => createHash("sha256").update(readFileSync(p)).digest("hex");
   return {
-    out, repo, project, agentDir, gcpProject, passEnv, runId, log, base, openSession, sha,
+    out, repo, project, agentDir, gcpProject, passEnv, graderPassEnv, adcCheckedAt, runId, log, base, openSession, sha,
     shell: (script, timeoutMs) => {
       const r = runSandboxed(base("sh"), ["sh", "-c", script], timeoutMs ?? 120000);
       return { status: r.status, stdout: r.stdout, stderr: r.stderr };
@@ -163,6 +208,7 @@ export function createEnv(out: string, opts: { corpus?: boolean; maxJudgments?: 
       sandboxSha256: sha(join(import.meta.dirname, "sandbox.ts")),
       engineDevice: "cpu (no NVIDIA container runtime on this host)",
       providerKeysPassed: passEnv, // names only, never values
+      graderKeysPassed: graderPassEnv, // names only, never values; forwarded only to grader sessions
       policy: POLICY,
       startedAt: staged.capturedAt,
       ...extra,

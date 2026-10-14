@@ -28,7 +28,8 @@ export interface ProvenanceSummary {
   figures: { ok: number; check: number; open: number; info: number };
   unregistered: string[];
 }
-export interface ProvenanceAudit { summary: ProvenanceSummary; units: UnitAudit[]; items: OpenItem[] }
+/** `units` are the audited statements (they cite a paper or state a figure); `extracted` is every unit, for readers that must see all of them. */
+export interface ProvenanceAudit { summary: ProvenanceSummary; units: UnitAudit[]; items: OpenItem[]; extracted: Unit[] }
 
 /** Client policy: candidate wordings tried against the ledger for one statement (its clauses, with and without the final period). */
 const MAX_VARIANTS = 24;
@@ -84,7 +85,8 @@ export function auditProvenance(input: { paper: Paper; tex: string; papers: Pape
   for (const p of input.papers) if (p.text !== null && p.text !== "") texts.set(p.citekey, normalizePaperText(p.text));
   const units: UnitAudit[] = [];
   const unregisteredAll = new Set<string>();
-  for (const unit of extractUnits(input.paper)) {
+  const extracted = extractUnits(input.paper);
+  for (const unit of extracted) {
     const figures = figuresOf(unit.plain);
     if (unit.cites.length === 0 && figures.length === 0) continue;
     const registered = unit.cites.flatMap((k) => (byKey.has(k) ? [byKey.get(k)!] : []));
@@ -118,5 +120,5 @@ export function auditProvenance(input: { paper: Paper; tex: string; papers: Pape
   }
   const order = { open: 0, check: 1, info: 2 } as const;
   items.sort((a, b) => order[a.severity] - order[b.severity] || a.line - b.line);
-  return { summary, units, items };
+  return { summary, units, items, extracted };
 }

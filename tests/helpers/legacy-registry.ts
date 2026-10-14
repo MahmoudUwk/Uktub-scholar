@@ -132,3 +132,40 @@ export function buildV4Registry(root: string): string {
   db.close();
   return file;
 }
+
+/** One paper with a ready source in a v5 registry, for the v5→v6 migration test. */
+export const V5_PAPER = { doi: "10.1234/v5paper", citekey: "v52024", revision: "r".repeat(16) };
+
+/**
+ * `<root>/.registry/registry.db` at schema version 5, from the shipped DDL
+ * (tests/fixtures/schema-v5.sql, a copy of src/core/schema.sql at HEAD), with
+ * one paper, one ready source, one run and two evidence rows — one released to
+ * the agent, one not. v5 has no claim_ledger: the migration must create it
+ * empty while keeping the evidence rows untouched.
+ */
+export function buildV5Registry(root: string): string {
+  const file = join(root, ".registry", "registry.db");
+  mkdirSync(dirname(file), { recursive: true });
+  const db = new DatabaseSync(file);
+  db.exec(readFileSync(join(import.meta.dirname, "..", "fixtures", "schema-v5.sql"), "utf8"));
+  db.prepare(
+    "INSERT INTO papers (doi, citekey, title, authors_json, year, venue, provider_bibtex, bibtex_source, citable, ingested_at) VALUES (?,?,?,?,?,?,?,?,?,?)",
+  ).run(V5_PAPER.doi, V5_PAPER.citekey, "A V5 Paper", '["Ada Lovelace"]', 2024, null, "@article{v5,\n  title={A V5 Paper},\n  year={2024}\n}", "crossref", 1, "2026-10-01T00:00:00Z");
+  db.prepare(
+    "INSERT INTO paper_sources (doi, status, kind, ref, digest, extraction, revision, chunk_policy, text, page_starts_json, prepared_at) VALUES (?, 'ready', 'local-file', 'p.pdf', 'd', 't@1', ?, 'policy', ?, '[0]', ?)",
+  ).run(V5_PAPER.doi, V5_PAPER.revision, "Some captured text that is long enough to keep.", "2026-10-02T00:00:00Z");
+  db.prepare("INSERT INTO verify_runs (run_id, claim_hash, snapshot_json, next_work, carry_json, created_at) VALUES (?, ?, ?, NULL, ?, ?)").run(
+    "v5run",
+    "h",
+    "{}",
+    "{}",
+    "2026-10-03T00:00:00Z",
+  );
+  const ins = db.prepare(
+    "INSERT INTO claim_evidence (run_id, doi, revision, char_start, char_end, page, chunk_id, model_id, protocol, min_confidence, p_true, released_chars, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+  );
+  ins.run("v5run", V5_PAPER.doi, V5_PAPER.revision, 0, 10, null, "c0", "m", "p", 0.99, 0.995, 8, "2026-10-03T00:00:00Z");
+  ins.run("v5run", V5_PAPER.doi, V5_PAPER.revision, 11, 20, null, "c0", "m", "p", 0.99, 0.995, null, "2026-10-03T00:00:00Z");
+  db.close();
+  return file;
+}

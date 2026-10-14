@@ -1,0 +1,670 @@
+[
+  {
+    "id": "u1",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 20,
+    "section": "",
+    "text": "Adapting large language models under strict hardware limits requires balancing model parameters, optimizer states, gradient graphs, and activations.",
+    "cites": []
+  },
+  {
+    "id": "u2",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 21,
+    "section": "",
+    "text": "This research note evaluates six parameter-efficient methods: LoRA, DoRA, AdaLoRA, QLoRA, LoftQ, and QA-LoRA.",
+    "cites": []
+  },
+  {
+    "id": "u3",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 21,
+    "section": "",
+    "text": "We separate measured results from design choices, analyze memory trade-offs across scales, provide a structured comparison table, specify a controlled single-GPU experimental protocol, and examine critical methodological boundaries, including an unverified laboratory claim.",
+    "cites": []
+  },
+  {
+    "id": "u4",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 26,
+    "section": "Architectural Foundations: Decomposition and Dynamic Allocation",
+    "text": "Full fine-tuning of large models is computationally prohibitive under tight memory constraints, as optimizers like Adam require 16 bytes per parameter for gradient and momentum tracking.",
+    "cites": []
+  },
+  {
+    "id": "u5",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 28,
+    "section": "Architectural Foundations: Decomposition and Dynamic Allocation",
+    "text": "Low-Rank Adaptation (LoRA) mitigates this overhead by freezing pre-trained weights W0 and parameterizing updates as W = r B A, where B Rd × r and A Rr × k with r (d, k).",
+    "cites": [
+      "hu2021lora"
+    ]
+  },
+  {
+    "id": "u6",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 28,
+    "section": "Architectural Foundations: Decomposition and Dynamic Allocation",
+    "text": "LoRA reduces GPU memory consumption during training by freezing the pre-trained weights and optimizing injected low-rank matrices without storing optimizer states or gradients for the frozen parameters.",
+    "cites": [
+      "hu2021lora"
+    ]
+  },
+  {
+    "id": "u7",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 28,
+    "section": "Architectural Foundations: Decomposition and Dynamic Allocation",
+    "text": "Compared to full fine-tuning of GPT-3 175B, LoRA reduces the number of trainable parameters by 10,000 times.",
+    "cites": [
+      "hu2021lora"
+    ]
+  },
+  {
+    "id": "u8",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 28,
+    "section": "Architectural Foundations: Decomposition and Dynamic Allocation",
+    "text": "On GPT-3 175B, LoRA reduces training VRAM consumption from 1.2TB to 350GB when adapting query and value projection matrices with rank r=4.",
+    "cites": [
+      "hu2021lora"
+    ]
+  },
+  {
+    "id": "u9",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 30,
+    "section": "Architectural Foundations: Decomposition and Dynamic Allocation",
+    "text": "While LoRA couples directional and magnitude updates within its low-rank product, Weight-Decomposed Low-Rank Adaptation (DoRA) analyzes their distinct learning dynamics.",
+    "cites": [
+      "liu2024dora"
+    ]
+  },
+  {
+    "id": "u10",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 30,
+    "section": "Architectural Foundations: Decomposition and Dynamic Allocation",
+    "text": "DoRA decomposes pre-trained weights into magnitude and directional components and applies LoRA to update the directional component.",
+    "cites": [
+      "liu2024dora"
+    ]
+  },
+  {
+    "id": "u11",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 30,
+    "section": "Architectural Foundations: Decomposition and Dynamic Allocation",
+    "text": "DoRA enhances both the learning capacity and training stability of LoRA while avoiding additional inference overhead.",
+    "cites": [
+      "liu2024dora"
+    ]
+  },
+  {
+    "id": "u12",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 30,
+    "section": "Architectural Foundations: Decomposition and Dynamic Allocation",
+    "text": "Backpropagation through column-normalized directions introduces intermediate activations.",
+    "cites": []
+  },
+  {
+    "id": "u13",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 30,
+    "section": "Architectural Foundations: Decomposition and Dynamic Allocation",
+    "text": "The proposed modification to DoRA leads to a training memory reduction of approximately 24.4% in fine-tuning LLaMA.",
+    "cites": [
+      "liu2024dora"
+    ]
+  },
+  {
+    "id": "u14",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 32,
+    "section": "Architectural Foundations: Decomposition and Dynamic Allocation",
+    "text": "Rather than enforcing a static rank across all layers, Adaptive Budget Allocation (AdaLoRA) dynamically shifts parameter capacity toward modules that most influence task loss.",
+    "cites": [
+      "zhang2023adalora"
+    ]
+  },
+  {
+    "id": "u15",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 32,
+    "section": "Architectural Foundations: Decomposition and Dynamic Allocation",
+    "text": "AdaLoRA parameterizes incremental updates in the form of singular value decomposition and prunes redundant singular values based on importance scoring.",
+    "cites": [
+      "zhang2023adalora"
+    ]
+  },
+  {
+    "id": "u16",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 32,
+    "section": "Architectural Foundations: Decomposition and Dynamic Allocation",
+    "text": "To avoid expensive numerical SVD during training, AdaLoRA parameterizes incremental updates to mimic singular value decomposition and adds an orthogonality penalty to regularize singular vectors.",
+    "cites": [
+      "zhang2023adalora"
+    ]
+  },
+  {
+    "id": "u17",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 32,
+    "section": "Architectural Foundations: Decomposition and Dynamic Allocation",
+    "text": "Singular values are pruned along a cubic schedule, concentrating capacity in critical layers.",
+    "cites": []
+  },
+  {
+    "id": "u18",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 36,
+    "section": "Quantization Frontiers: Precision, Initialization, and Serving",
+    "text": "Although adapters eliminate optimizer overhead, storing 16-bit base weights remains memory-intensive (~130 GB for 65B models).",
+    "cites": []
+  },
+  {
+    "id": "u19",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 38,
+    "section": "Quantization Frontiers: Precision, Initialization, and Serving",
+    "text": "QLoRA breaks this barrier by compressing the static backbone into 4-bit representation.",
+    "cites": [
+      "dettmers2023qlora"
+    ]
+  },
+  {
+    "id": "u20",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 38,
+    "section": "Quantization Frontiers: Precision, Initialization, and Serving",
+    "text": "QLoRA reduces memory usage to enable fine-tuning a 65B parameter model on a single 48GB GPU by combining 4-bit NormalFloat quantization, Double Quantization, and Paged Optimizers.",
+    "cites": [
+      "dettmers2023qlora"
+    ]
+  },
+  {
+    "id": "u21",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 38,
+    "section": "Quantization Frontiers: Precision, Initialization, and Serving",
+    "text": "QLoRA has one low-precision storage data type in 4-bit and one computation data type in 16-bit BrainFloat.",
+    "cites": [
+      "dettmers2023qlora"
+    ]
+  },
+  {
+    "id": "u22",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 38,
+    "section": "Quantization Frontiers: Precision, Initialization, and Serving",
+    "text": "Weights are dequantized on the fly during computation, while gradients accumulate for 16-bit adapters.",
+    "cites": []
+  },
+  {
+    "id": "u23",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 38,
+    "section": "Quantization Frontiers: Precision, Initialization, and Serving",
+    "text": "Double Quantization compresses the first-stage quantization constants to save an average of approximately 0.37 bits per parameter.",
+    "cites": [
+      "dettmers2023qlora"
+    ]
+  },
+  {
+    "id": "u24",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 38,
+    "section": "Quantization Frontiers: Precision, Initialization, and Serving",
+    "text": "Paged Optimizers leverage unified memory to mitigate gradient checkpointing memory spikes.",
+    "cites": []
+  },
+  {
+    "id": "u25",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 40,
+    "section": "Quantization Frontiers: Precision, Initialization, and Serving",
+    "text": "Standard QLoRA quantizes base weights independently while initializing adapters near zero, inducing severe discrepancy in low-bit regimes.",
+    "cites": []
+  },
+  {
+    "id": "u26",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 40,
+    "section": "Quantization Frontiers: Precision, Initialization, and Serving",
+    "text": "LoftQ mitigates this issue by treating low-rank adaptation and quantization as a joint objective.",
+    "cites": [
+      "li2023loftq"
+    ]
+  },
+  {
+    "id": "u27",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 40,
+    "section": "Quantization Frontiers: Precision, Initialization, and Serving",
+    "text": "LoftQ alternatively applies quantization and low-rank approximation to approximate pre-trained weights, providing an initialization that alleviates quantization discrepancy in LoRA fine-tuning.",
+    "cites": [
+      "li2023loftq"
+    ]
+  },
+  {
+    "id": "u28",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 40,
+    "section": "Quantization Frontiers: Precision, Initialization, and Serving",
+    "text": "LoftQ initializes the network by jointly optimizing the initial values of the quantized backbone and low-rank adapters.",
+    "cites": [
+      "li2023loftq"
+    ]
+  },
+  {
+    "id": "u29",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 40,
+    "section": "Quantization Frontiers: Precision, Initialization, and Serving",
+    "text": "Alternating minimization avoids representation collapse.",
+    "cites": []
+  },
+  {
+    "id": "u30",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 40,
+    "section": "Quantization Frontiers: Precision, Initialization, and Serving",
+    "text": "LoftQ achieves 88.0% accuracy on the MNLI-m dataset using 5 alternating steps.",
+    "cites": [
+      "li2023loftq"
+    ]
+  },
+  {
+    "id": "u31",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 42,
+    "section": "Quantization Frontiers: Precision, Initialization, and Serving",
+    "text": "In QLoRA and LoftQ, 16-bit adapters cannot merge directly into 4-bit weights without dequantizing or suffering post-training quantization loss.",
+    "cites": []
+  },
+  {
+    "id": "u32",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 42,
+    "section": "Quantization Frontiers: Precision, Initialization, and Serving",
+    "text": "Quantization-Aware Low-Rank Adaptation (QA-LoRA) resolves this tension by aligning degrees of freedom between quantization and adaptation.",
+    "cites": [
+      "xu2023qa"
+    ]
+  },
+  {
+    "id": "u33",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 42,
+    "section": "Quantization Frontiers: Precision, Initialization, and Serving",
+    "text": "QA-LoRA uses group-wise operators to balance the degrees of freedom of quantization and adaptation, enabling low-rank adapters to be integrated into quantized weights.",
+    "cites": [
+      "xu2023qa"
+    ]
+  },
+  {
+    "id": "u34",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 42,
+    "section": "Quantization Frontiers: Precision, Initialization, and Serving",
+    "text": "QA-LoRA enables the quantized base model and auxiliary low-rank weights to be integrated into an integer-quantized model without loss of accuracy.",
+    "cites": [
+      "xu2023qa"
+    ]
+  },
+  {
+    "id": "u35",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 42,
+    "section": "Quantization Frontiers: Precision, Initialization, and Serving",
+    "text": "This design eliminates runtime dequantization overhead during edge deployment.",
+    "cites": []
+  },
+  {
+    "id": "u36",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 46,
+    "section": "Practical Tradeoffs and Comparative Analysis",
+    "text": "Training VRAM decomposes into:",
+    "cites": []
+  },
+  {
+    "id": "u37",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 50,
+    "section": "Practical Tradeoffs and Comparative Analysis",
+    "text": "LoRA eliminates base optimizer states, leaving M weights as the fixed bound.",
+    "cites": []
+  },
+  {
+    "id": "u38",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 50,
+    "section": "Practical Tradeoffs and Comparative Analysis",
+    "text": "QLoRA and LoftQ compress M weights fourfold, making activation memory M activations (scaling with batch size B and sequence length L) the primary bottleneck.",
+    "cites": []
+  },
+  {
+    "id": "u39",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 50,
+    "section": "Practical Tradeoffs and Comparative Analysis",
+    "text": "While gradient checkpointing curbs activation growth, it incurs ≈30% recomputation overhead.",
+    "cites": []
+  },
+  {
+    "id": "u40",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 50,
+    "section": "Practical Tradeoffs and Comparative Analysis",
+    "text": "Moreover, on-the-fly dequantization in QLoRA lowers token throughput compared to 16-bit LoRA when memory headroom suffices.",
+    "cites": []
+  },
+  {
+    "id": "u41",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 52,
+    "section": "Practical Tradeoffs and Comparative Analysis",
+    "text": "Table explicitly separates architectural design choices from empirically reported measurements, contextualizing each outcome within its specific experimental setting.",
+    "cites": []
+  },
+  {
+    "id": "u42",
+    "kind": "caption",
+    "file": "main.tex",
+    "line": 57,
+    "section": "Practical Tradeoffs and Comparative Analysis",
+    "text": "Systematic comparison: Architectural characteristics versus measured empirical literature results.",
+    "cites": []
+  },
+  {
+    "id": "u43",
+    "kind": "row",
+    "file": "main.tex",
+    "line": 61,
+    "section": "Practical Tradeoffs and Comparative Analysis",
+    "text": " | 2cArchitectural Design Choices | 2cMeasured Empirical Results",
+    "cites": []
+  },
+  {
+    "id": "u44",
+    "kind": "row",
+    "file": "main.tex",
+    "line": 63,
+    "section": "Practical Tradeoffs and Comparative Analysis",
+    "text": "Method | Precision & Merge | Adapter Formulation | Reported Setting | Measured Literature Outcome",
+    "cites": []
+  },
+  {
+    "id": "u45",
+    "kind": "row",
+    "file": "main.tex",
+    "line": 65,
+    "section": "Practical Tradeoffs and Comparative Analysis",
+    "text": "LoRA | 16-bit base and adapter; lossless FP16 merge | Static rank W = rBA across linear projections | GPT-3 175B, Adam optimizer, r=4 (Q, V adapted) | VRAM reduced from 1.2TB to 350GB; 10,000× fewer trainable params.",
+    "cites": [
+      "hu2021lora"
+    ]
+  },
+  {
+    "id": "u46",
+    "kind": "row",
+    "file": "main.tex",
+    "line": 66,
+    "section": "Practical Tradeoffs and Comparative Analysis",
+    "text": "DoRA | 16-bit base and adapter; lossless FP16 merge | Directional LoRA update decomposed from magnitude m | LLaMA-7B commonsense reasoning (B=16, accum=4) | Detached norm yields 24.4% VRAM reduction (37.3 GB → 28.2 GB).",
+    "cites": [
+      "liu2024dora"
+    ]
+  },
+  {
+    "id": "u47",
+    "kind": "row",
+    "file": "main.tex",
+    "line": 67,
+    "section": "Practical Tradeoffs and Comparative Analysis",
+    "text": "AdaLoRA | 16-bit base and adapter; lossless FP16 merge | Dynamic SVD updates W = P Q with pruning | DeBERTaV3-base on GLUE and natural language generation | Matches full fine-tuning with substantially reduced parameter budget.",
+    "cites": [
+      "zhang2023adalora"
+    ]
+  },
+  {
+    "id": "u48",
+    "kind": "row",
+    "file": "main.tex",
+    "line": 68,
+    "section": "Practical Tradeoffs and Comparative Analysis",
+    "text": "QLoRA | 4-bit NF4 base, 16-bit adapter; dequant. to merge | Static rank LoRA with Double Quantization & Paged Opt. | LLaMA-65B fine-tuning on single 48GB GPU | Replicates 16-bit full fine-tuning performance; saves ≈0.37 bits/param.",
+    "cites": [
+      "dettmers2023qlora"
+    ]
+  },
+  {
+    "id": "u49",
+    "kind": "row",
+    "file": "main.tex",
+    "line": 69,
+    "section": "Practical Tradeoffs and Comparative Analysis",
+    "text": "LoftQ | 2-bit or 4-bit base, 16-bit adapter; dequant. to merge | Alternating Frobenius optimization for joint initialization | LLaMA-2 on WikiText-2 and GSM8K; DeBERTa on MNLI | Achieves 88.0% on MNLI-m with 5 steps; recovers accuracy in <3-bit regime.",
+    "cites": [
+      "li2023loftq"
+    ]
+  },
+  {
+    "id": "u50",
+    "kind": "row",
+    "file": "main.tex",
+    "line": 70,
+    "section": "Practical Tradeoffs and Comparative Analysis",
+    "text": "QA-LoRA | INT4 base, INT4/FP16 adapter; lossless INT4 merge | Group-wise operators balancing quantization/adaptation degrees | LLaMA-7B/13B and LLaMA-2 on Alpaca & MMLU benchmarks | Lossless merge into INT4 without PTQ degradation; matches 16-bit LoRA accuracy.",
+    "cites": [
+      "xu2023qa"
+    ]
+  },
+  {
+    "id": "u51",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 77,
+    "section": "Proposed Single-GPU Empirical Protocol",
+    "text": "To evaluate these methods without conflating activations with adapter overhead, we specify a controlled benchmark on a 24 GB GPU (NVIDIA RTX 4090 or A10G) adapting LLaMA-3-8B on Alpaca (52k samples).",
+    "cites": []
+  },
+  {
+    "id": "u52",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 77,
+    "section": "Proposed Single-GPU Empirical Protocol",
+    "text": "The primary baseline is 16-bit LoRA (r=16, =32 across all linear projections), evaluated alongside DoRA (detached norm), QLoRA (NF4 base), LoftQ (4-bit initialized), QA-LoRA (INT4 group-wise), and an out-of-memory full fine-tuning reference.",
+    "cites": []
+  },
+  {
+    "id": "u53",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 79,
+    "section": "Proposed Single-GPU Empirical Protocol",
+    "text": "Controls: Random seeds are fixed to 42 across Python, NumPy, and PyTorch CUDA (torch.backends.cudnn.deterministic = True).",
+    "cites": []
+  },
+  {
+    "id": "u54",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 79,
+    "section": "Proposed Single-GPU Empirical Protocol",
+    "text": "We fix micro-batch size to B = 2, gradient accumulation to 8 (effective batch 16), gradient checkpointing enabled, AdamW (lr = 2 × 10-4), and contexts L \\1024, 2048\\.",
+    "cites": []
+  },
+  {
+    "id": "u55",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 81,
+    "section": "Proposed Single-GPU Empirical Protocol",
+    "text": "VRAM Profiling: Memory components are isolated via staged PyTorch tracking: (1) static weights M weights via memory_allocated() post-loading; (2) static optimizer buffers M opt after AdamW initialization, giving M static = M weights + M opt; (3) dynamic activation memory M act = M peak - M static via reset_peak_memory_stats() before the forward pass.",
+    "cites": []
+  },
+  {
+    "id": "u56",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 81,
+    "section": "Proposed Single-GPU Empirical Protocol",
+    "text": "The scaling delta M act / L extracts the marginal activation cost per token.",
+    "cites": []
+  },
+  {
+    "id": "u57",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 81,
+    "section": "Proposed Single-GPU Empirical Protocol",
+    "text": "Throughput (tokens/s) and MMLU (5-shot) and ARC-Challenge accuracy complete the protocol.",
+    "cites": []
+  },
+  {
+    "id": "u58",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 85,
+    "section": "Limitations, Unverified Claims, and Literature Scope",
+    "text": "Rigorous empirical analysis requires acknowledging unverified claims and methodological limits.",
+    "cites": []
+  },
+  {
+    "id": "u59",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 85,
+    "section": "Limitations, Unverified Claims, and Literature Scope",
+    "text": "A pilot method developed in our laboratory reportedly halves training memory compared with LoRA.",
+    "cites": []
+  },
+  {
+    "id": "u60",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 85,
+    "section": "Limitations, Unverified Claims, and Literature Scope",
+    "text": "We designate this statement as strictly unverified: no empirical measurements, hardware details, batching schedules, or activation checkpointing specifications were supplied.",
+    "cites": []
+  },
+  {
+    "id": "u61",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 85,
+    "section": "Limitations, Unverified Claims, and Literature Scope",
+    "text": "Consequently, this claim must not be cited as an established result or adopted as a baseline for experimental planning.",
+    "cites": []
+  },
+  {
+    "id": "u62",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 87,
+    "section": "Limitations, Unverified Claims, and Literature Scope",
+    "text": "Furthermore, reported empirical gains do not generalize unconditionally.",
+    "cites": []
+  },
+  {
+    "id": "u63",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 87,
+    "section": "Limitations, Unverified Claims, and Literature Scope",
+    "text": "Memory reductions measured during 175B model training with Adam cannot be transferred directly to consumer 7B or 8B model fine-tuning with activation caching under different batch configurations without empirical verification.",
+    "cites": []
+  },
+  {
+    "id": "u64",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 87,
+    "section": "Limitations, Unverified Claims, and Literature Scope",
+    "text": "On smaller models, base weights represent a smaller fraction of peak memory, dampening overall VRAM percentage savings when activation tensors dominate.",
+    "cites": []
+  },
+  {
+    "id": "u65",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 87,
+    "section": "Limitations, Unverified Claims, and Literature Scope",
+    "text": "Additionally, QLoRA's throughput penalty during training dequantization and QA-LoRA's reliance on custom quantized kernels represent practical trade-offs rarely captured by parameter counts alone.",
+    "cites": []
+  },
+  {
+    "id": "u66",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 89,
+    "section": "Limitations, Unverified Claims, and Literature Scope",
+    "text": "Regarding source accessibility, all six primary papers were registered and verified.",
+    "cites": []
+  },
+  {
+    "id": "u67",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 89,
+    "section": "Limitations, Unverified Claims, and Literature Scope",
+    "text": "We note that automated provider metadata returned a title mismatch warning between OpenAlex and Crossref for the LoRA arXiv entry (arXiv:2106.09685), though full-text verification confirmed identity with the original Low-Rank Adaptation paper.",
+    "cites": []
+  },
+  {
+    "id": "u68",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 91,
+    "section": "Limitations, Unverified Claims, and Literature Scope",
+    "text": "plain",
+    "cites": []
+  }
+]

@@ -37,6 +37,7 @@ import { BIN_PATH } from "../core/launch.ts";
 import { LEGACY_SERVER_KEY, MCP_SERVER_NAME } from "../core/tool-names.ts";
 import { RuntimeError, installRuntime, installedPaths, platformKey, readLock, type RuntimeLock } from "../core/embed/runtime.ts";
 import { createMcpServer, validateTargetDir } from "../mcp/server.ts";
+import { minConfidenceFromEnv } from "../core/verify/claim.ts";
 import { handshakeTraceEnabled, traceHandshake } from "../mcp/trace.ts";
 
 /** Injected I/O: the bin passes console writers; tests capture arrays. */
@@ -735,9 +736,33 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
           else if (entry === undefined && !String(a).startsWith("--")) entry = a;
           else { err(`error: unexpected argument ${a}\n${USAGE}`); return 1; }
         }
-        const outcome = runProvenance({ root, entry, now: io.now ?? (() => new Date()) });
+        const outcome = runProvenance({ root, entry, now: io.now ?? (() => new Date()), minConfidence: minConfidenceFromEnv(io.env ?? {}) });
         if (!outcome.ok) { err(`error: ${outcome.message}`); return 1; }
-        out(asJson ? JSON.stringify({ entry: outcome.entry, summary: outcome.audit.summary, items: outcome.audit.items }, null, 2) : renderFull(outcome.audit));
+        if (asJson) {
+          out(JSON.stringify({
+            entry: outcome.entry,
+            summary: outcome.audit.summary,
+            items: outcome.audit.items,
+            document_digest: outcome.digest,
+            // Every extracted unit: one the audit skipped (no citation, no figure) is uncited and has no pointers.
+            units: outcome.audit.extracted.map((unit) => {
+              const audited = outcome.audit.units.find((u) => u.unit.id === unit.id);
+              return {
+                id: unit.id,
+                kind: unit.kind,
+                file: unit.file,
+                line: unit.line,
+                section: unit.section,
+                text: unit.plain,
+                cites: unit.cites,
+                status: audited?.status ?? "uncited",
+                pointers: audited?.ledger?.pointers ?? [],
+              };
+            }),
+          }, null, 2));
+        } else {
+          out(renderFull(outcome.audit));
+        }
         return 0;
       }
       case "compile": {

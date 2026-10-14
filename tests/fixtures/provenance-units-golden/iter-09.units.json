@@ -1,0 +1,614 @@
+[
+  {
+    "id": "u1",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 20,
+    "section": "",
+    "text": "Adapting large language models (LLMs) to downstream tasks is frequently constrained by GPU memory.",
+    "cites": []
+  },
+  {
+    "id": "u2",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 20,
+    "section": "",
+    "text": "During full fine-tuning with Adam, memory is dominated by optimizer states, gradients, and activations, far exceeding static weight storage.",
+    "cites": []
+  },
+  {
+    "id": "u3",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 20,
+    "section": "",
+    "text": "Parameter-efficient fine-tuning (PEFT) and low-memory algorithms exploit structural redundancies to alleviate these bottlenecks.",
+    "cites": []
+  },
+  {
+    "id": "u4",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 20,
+    "section": "",
+    "text": "This note examines architectural decomposition, quantization, and gradient projection paradigms, evaluates memory-throughput trade-offs, and outlines a controlled single-GPU experiment.",
+    "cites": []
+  },
+  {
+    "id": "u5",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 24,
+    "section": "Decomposition Architectures and Parameter Efficiency",
+    "text": "Restricting updates to low-rank or sparse subspaces while freezing base weights eliminates optimizer states and gradient buffers for frozen parameters.",
+    "cites": []
+  },
+  {
+    "id": "u6",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 26,
+    "section": "Decomposition Architectures and Parameter Efficiency",
+    "text": "Low-Rank Adaptation (LoRA) assumes weight updates during adaptation possess a low intrinsic rank.",
+    "cites": []
+  },
+  {
+    "id": "u7",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 26,
+    "section": "Decomposition Architectures and Parameter Efficiency",
+    "text": "Rather than updating full matrices directly, LoRA freezes the pre-trained model weights and injects trainable rank decomposition matrices into each layer of the Transformer architecture.",
+    "cites": [
+      "hu2021lora"
+    ]
+  },
+  {
+    "id": "u8",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 26,
+    "section": "Decomposition Architectures and Parameter Efficiency",
+    "text": "For weight dimensions d × k, updates factor into two low-rank matrices of rank r (d, k).",
+    "cites": []
+  },
+  {
+    "id": "u9",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 26,
+    "section": "Decomposition Architectures and Parameter Efficiency",
+    "text": "Compared to GPT-3 175B fine-tuned with Adam, LoRA can reduce the number of trainable parameters by 10,000 times and the GPU memory requirement by 3 times.",
+    "cites": [
+      "hu2021lora"
+    ]
+  },
+  {
+    "id": "u10",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 26,
+    "section": "Decomposition Architectures and Parameter Efficiency",
+    "text": "Crucially, this measured saving was recorded specifically on GPT-3 175B using 16-bit Adam; it cannot be transferred naively to smaller models where intermediate activation tensors dominate total VRAM.",
+    "cites": []
+  },
+  {
+    "id": "u11",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 28,
+    "section": "Decomposition Architectures and Parameter Efficiency",
+    "text": "Weight-Decomposed Low-Rank Adaptation (DoRA) investigates the learning dynamics gap between full fine-tuning and LoRA.",
+    "cites": []
+  },
+  {
+    "id": "u12",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 28,
+    "section": "Decomposition Architectures and Parameter Efficiency",
+    "text": "Full fine-tuning exhibits negative correlations between magnitude and directional updates, whereas LoRA exhibits a positive correlation.",
+    "cites": []
+  },
+  {
+    "id": "u13",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 28,
+    "section": "Decomposition Architectures and Parameter Efficiency",
+    "text": "To bridge this gap, DoRA decomposes the pre-trained weight into its magnitude and directional components and finetunes both of them, decomposing the directional component with LoRA.",
+    "cites": [
+      "liu2024dora"
+    ]
+  },
+  {
+    "id": "u14",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 28,
+    "section": "Decomposition Architectures and Parameter Efficiency",
+    "text": "Low-rank directional updates maintain parameter efficiency while magnitude vectors scale column norms independently.",
+    "cites": []
+  },
+  {
+    "id": "u15",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 28,
+    "section": "Decomposition Architectures and Parameter Efficiency",
+    "text": "Furthermore, DoRA can be merged with the pre-trained weight before inference, thereby not introducing any additional latency.",
+    "cites": [
+      "liu2024dora"
+    ]
+  },
+  {
+    "id": "u16",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 28,
+    "section": "Decomposition Architectures and Parameter Efficiency",
+    "text": "However, column norm tracking induces slight runtime and activation overhead compared to standard LoRA.",
+    "cites": []
+  },
+  {
+    "id": "u17",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 30,
+    "section": "Decomposition Architectures and Parameter Efficiency",
+    "text": "Ben-Zaken et al. demonstrated that BitFit is a sparse fine-tuning method where only the bias terms of the model are modified.",
+    "cites": [
+      "benzaken2021bitfit"
+    ]
+  },
+  {
+    "id": "u18",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 30,
+    "section": "Decomposition Architectures and Parameter Efficiency",
+    "text": "In BERTBASE and BERTLARGE, bias parameters make up 0.09% and 0.08% of the total number of parameters in each model, respectively.",
+    "cites": [
+      "benzaken2021bitfit"
+    ]
+  },
+  {
+    "id": "u19",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 30,
+    "section": "Decomposition Architectures and Parameter Efficiency",
+    "text": "Modifying under 0.1% of parameters minimizes optimizer overhead.",
+    "cites": []
+  },
+  {
+    "id": "u20",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 30,
+    "section": "Decomposition Architectures and Parameter Efficiency",
+    "text": "However, modern generative architectures routinely omit bias terms in linear layers.",
+    "cites": []
+  },
+  {
+    "id": "u21",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 30,
+    "section": "Decomposition Architectures and Parameter Efficiency",
+    "text": "Consequently, BitFit cannot be transferred directly to modern autoregressive backbones without structural modifications.",
+    "cites": []
+  },
+  {
+    "id": "u22",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 34,
+    "section": "Quantization, Gradient Projection, and System Trade-offs",
+    "text": "Freezing parameters eliminates optimizer buffers, yet base weights still consume substantial memory.",
+    "cites": []
+  },
+  {
+    "id": "u23",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 34,
+    "section": "Quantization, Gradient Projection, and System Trade-offs",
+    "text": "Quantized Low-Rank Adaptation (QLoRA) addresses this footprint.",
+    "cites": []
+  },
+  {
+    "id": "u24",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 34,
+    "section": "Quantization, Gradient Projection, and System Trade-offs",
+    "text": "Specifically, QLoRA backpropagates gradients through a frozen, 4-bit quantized pretrained language model into Low Rank Adapters.",
+    "cites": [
+      "dettmers2023qlora"
+    ]
+  },
+  {
+    "id": "u25",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 34,
+    "section": "Quantization, Gradient Projection, and System Trade-offs",
+    "text": "QLoRA introduces 4-bit NormalFloat (NF4), alongside Double Quantization.",
+    "cites": []
+  },
+  {
+    "id": "u26",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 34,
+    "section": "Quantization, Gradient Projection, and System Trade-offs",
+    "text": "Double Quantization quantizes the quantization constants, saving an average of about 0.37 bits per parameter.",
+    "cites": [
+      "dettmers2023qlora"
+    ]
+  },
+  {
+    "id": "u27",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 34,
+    "section": "Quantization, Gradient Projection, and System Trade-offs",
+    "text": "Furthermore, Paged Optimizers manage gradient checkpointing memory spikes via memory paging.",
+    "cites": []
+  },
+  {
+    "id": "u28",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 34,
+    "section": "Quantization, Gradient Projection, and System Trade-offs",
+    "text": "Empirically, QLoRA reduces the average memory requirements of finetuning a 65B parameter model from >780GB of GPU memory to <48GB without degrading the runtime or predictive performance compared to a 16-bit fully finetuned baseline.",
+    "cites": [
+      "dettmers2023qlora"
+    ]
+  },
+  {
+    "id": "u29",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 34,
+    "section": "Quantization, Gradient Projection, and System Trade-offs",
+    "text": "The trade-off is throughput: dequantizing 4-bit weights into 16-bit buffers increases kernel latency relative to unquantized training.",
+    "cites": []
+  },
+  {
+    "id": "u30",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 36,
+    "section": "Quantization, Gradient Projection, and System Trade-offs",
+    "text": "AdaLoRA recognizes that different transformer layers contribute unequally to adaptation.",
+    "cites": []
+  },
+  {
+    "id": "u31",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 36,
+    "section": "Quantization, Gradient Projection, and System Trade-offs",
+    "text": "AdaLoRA parameterizes incremental updates in the form of singular value decomposition and prunes redundant singular values based on an importance metric.",
+    "cites": [
+      "zhang2023adalora"
+    ]
+  },
+  {
+    "id": "u32",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 36,
+    "section": "Quantization, Gradient Projection, and System Trade-offs",
+    "text": "Allocating rank dynamically toward higher layers and feed-forward networks enhances parameter efficiency, though importance tracking introduces training bookkeeping.",
+    "cites": []
+  },
+  {
+    "id": "u33",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 38,
+    "section": "Quantization, Gradient Projection, and System Trade-offs",
+    "text": "Addressing adapter subspace limits, Gradient Low-Rank Projection (GaLore) exploits the low-rank structure of gradients.",
+    "cites": []
+  },
+  {
+    "id": "u34",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 38,
+    "section": "Quantization, Gradient Projection, and System Trade-offs",
+    "text": "GaLore allows full-parameter learning while reducing memory usage by up to 65.5% in optimizer states.",
+    "cites": [
+      "zhao2024galore"
+    ]
+  },
+  {
+    "id": "u35",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 38,
+    "section": "Quantization, Gradient Projection, and System Trade-offs",
+    "text": "Rather than freezing base weights, GaLore projects gradients into a low-rank subspace and maintains optimizer statistics within it.",
+    "cites": []
+  },
+  {
+    "id": "u36",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 38,
+    "section": "Quantization, Gradient Projection, and System Trade-offs",
+    "text": "Periodically updating projection bases allows the optimizer to optimize full-rank parameters.",
+    "cites": []
+  },
+  {
+    "id": "u37",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 38,
+    "section": "Quantization, Gradient Projection, and System Trade-offs",
+    "text": "GaLore demonstrates the feasibility of pre-training a 7B model on consumer GPUs with 24GB memory without model parallel, checkpointing, or offloading strategies.",
+    "cites": [
+      "zhao2024galore"
+    ]
+  },
+  {
+    "id": "u38",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 38,
+    "section": "Quantization, Gradient Projection, and System Trade-offs",
+    "text": "The primary trade-off is periodic SVD projection overhead.",
+    "cites": []
+  },
+  {
+    "id": "u39",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 40,
+    "section": "Quantization, Gradient Projection, and System Trade-offs",
+    "text": "An informal laboratory claim suggests that a local pilot halves training memory compared with LoRA.",
+    "cites": []
+  },
+  {
+    "id": "u40",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 40,
+    "section": "Quantization, Gradient Projection, and System Trade-offs",
+    "text": "Because no hardware configurations, batch sizes, sequence lengths, or measurement logs support this statement, it remains strictly unverified.",
+    "cites": []
+  },
+  {
+    "id": "u41",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 40,
+    "section": "Quantization, Gradient Projection, and System Trade-offs",
+    "text": "It cannot be treated as an empirical result, nor can it serve as a premise for experimental design.",
+    "cites": []
+  },
+  {
+    "id": "u42",
+    "kind": "caption",
+    "file": "main.tex",
+    "line": 45,
+    "section": "Quantization, Gradient Projection, and System Trade-offs",
+    "text": "Low-memory adaptation: architectural designs vs. empirical benchmarks.",
+    "cites": []
+  },
+  {
+    "id": "u43",
+    "kind": "row",
+    "file": "main.tex",
+    "line": 49,
+    "section": "Quantization, Gradient Projection, and System Trade-offs",
+    "text": "Method | Architectural Mechanism & Target | Theoretical Latency | Measured Benchmark & Context",
+    "cites": []
+  },
+  {
+    "id": "u44",
+    "kind": "row",
+    "file": "main.tex",
+    "line": 51,
+    "section": "Quantization, Gradient Projection, and System Trade-offs",
+    "text": "LoRA | Low-rank matrices on projections (Wq, Wv) | Zero (when merged) | 3× VRAM cut, 10,000× parameter cut on GPT-3 175B with Adam",
+    "cites": [
+      "hu2021lora"
+    ]
+  },
+  {
+    "id": "u45",
+    "kind": "row",
+    "file": "main.tex",
+    "line": 52,
+    "section": "Quantization, Gradient Projection, and System Trade-offs",
+    "text": "DoRA | Magnitude vector & LoRA directional matrix split | Zero (when merged) | Outperforms LoRA on LLaMA-7B/13B; slight activation overhead",
+    "cites": [
+      "liu2024dora"
+    ]
+  },
+  {
+    "id": "u46",
+    "kind": "row",
+    "file": "main.tex",
+    "line": 54,
+    "section": "Quantization, Gradient Projection, and System Trade-offs",
+    "text": "BitFit | Sparse bias tuning across transformer linear layers | Zero (native) | 0.09% (BERTBASE), 0.08% (BERTLARGE) params on GLUE",
+    "cites": [
+      "benzaken2021bitfit"
+    ]
+  },
+  {
+    "id": "u47",
+    "kind": "row",
+    "file": "main.tex",
+    "line": 56,
+    "section": "Quantization, Gradient Projection, and System Trade-offs",
+    "text": "QLoRA | 4-bit NF4 base + Double Quantization + LoRA | Zero (dequantized) | 65B tuned on 48GB GPU (>780 GB → <48 GB); 0.37 b/p saved",
+    "cites": [
+      "dettmers2023qlora"
+    ]
+  },
+  {
+    "id": "u48",
+    "kind": "row",
+    "file": "main.tex",
+    "line": 58,
+    "section": "Quantization, Gradient Projection, and System Trade-offs",
+    "text": "AdaLoRA | Dynamic SVD rank allocation and importance pruning | Zero (when merged) | Outperforms uniform LoRA on DeBERTaV3-base at equal budget",
+    "cites": [
+      "zhang2023adalora"
+    ]
+  },
+  {
+    "id": "u49",
+    "kind": "row",
+    "file": "main.tex",
+    "line": 60,
+    "section": "Quantization, Gradient Projection, and System Trade-offs",
+    "text": "GaLore | Low-rank gradient projection with subspace switching | Zero (full weights) | Up to 65.5% optimizer cut; 7B pre-trained on 24GB RTX 4090",
+    "cites": [
+      "zhao2024galore"
+    ]
+  },
+  {
+    "id": "u50",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 68,
+    "section": "Proposed Empirical Study: Consumer-GPU Adaptation",
+    "text": "To evaluate these methods under controlled consumer limits, we specify an experiment on a single 24GB GPU (RTX 4090, locked clocks).",
+    "cites": []
+  },
+  {
+    "id": "u51",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 70,
+    "section": "Proposed Empirical Study: Consumer-GPU Adaptation",
+    "text": "The backbone is Mistral-7B-v0.1, adapted on Alpaca and evaluated on GSM8K and CommonsenseQA.",
+    "cites": []
+  },
+  {
+    "id": "u52",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 70,
+    "section": "Proposed Empirical Study: Consumer-GPU Adaptation",
+    "text": "Configurations share a harness: PyTorch 2.x, Flash\\-Attention-2, bfloat16 precision, sequence length 2,048 tokens, and effective batch size 16 (micro-batch 1, 16 accumulation steps).",
+    "cites": []
+  },
+  {
+    "id": "u53",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 70,
+    "section": "Proposed Empirical Study: Consumer-GPU Adaptation",
+    "text": "Full activation checkpointing is enabled across all decoder layers to recompute activations during backward passes, isolating parameter and optimizer footprints.",
+    "cites": []
+  },
+  {
+    "id": "u54",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 70,
+    "section": "Proposed Empirical Study: Consumer-GPU Adaptation",
+    "text": "Optimizers are fixed: AdamW with 32-bit master states for LoRA, DoRA, and AdaLoRA; 8-bit blockwise AdamW for GaLore; and Paged 32-bit AdamW for QLoRA (1=0.9, 2=0.999, weight decay 0.01).",
+    "cites": []
+  },
+  {
+    "id": "u55",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 72,
+    "section": "Proposed Empirical Study: Consumer-GPU Adaptation",
+    "text": "We compare four setups: (1) LoRA (r=16, =32 on all linear projections); (2) DoRA (matching r=16, =32); (3) QLoRA (4-bit NF4 base, double quantization, r=16); and (4) GaLore (rank 128, subspace updates every 200 steps).",
+    "cites": []
+  },
+  {
+    "id": "u56",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 74,
+    "section": "Proposed Empirical Study: Consumer-GPU Adaptation",
+    "text": "Protocol: (i) Post-warmup peak VRAM, tracking torch.cuda.max_memory_allocated() and torch.cuda.max_memory_reserved() between steps 50 and 250 across identical 2,048-token inputs; (ii) Steady-state throughput (tokens per second, excluding evaluation and checkpoint I/O); and (iii) Accuracy on held-out benchmarks.",
+    "cites": []
+  },
+  {
+    "id": "u57",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 74,
+    "section": "Proposed Empirical Study: Consumer-GPU Adaptation",
+    "text": "This ensures memory comparisons reflect empirical measurement rather than inferred parameter counts.",
+    "cites": []
+  },
+  {
+    "id": "u58",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 78,
+    "section": "Limitations and Source Integrity",
+    "text": "Several boundaries restrict the transfer of published findings.",
+    "cites": []
+  },
+  {
+    "id": "u59",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 78,
+    "section": "Limitations and Source Integrity",
+    "text": "Reported memory reductions measured on very large models do not transfer proportionally to smaller architectures where activation memory dominates over parameter and optimizer states.",
+    "cites": []
+  },
+  {
+    "id": "u60",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 78,
+    "section": "Limitations and Source Integrity",
+    "text": "Architectural differences such as the complete omission of bias terms in modern transformer families prevent direct application of bias-only tuning without structural modifications.",
+    "cites": []
+  },
+  {
+    "id": "u61",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 78,
+    "section": "Limitations and Source Integrity",
+    "text": "Furthermore, memory savings achieved through weight quantization incur runtime latency penalties depending on hardware bandwidth and kernel implementation.",
+    "cites": []
+  },
+  {
+    "id": "u62",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 78,
+    "section": "Limitations and Source Integrity",
+    "text": "Regarding sources, all six cited papers are registered with full-text records and verified against original passages.",
+    "cites": []
+  },
+  {
+    "id": "u63",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 78,
+    "section": "Limitations and Source Integrity",
+    "text": "A title metadata discrepancy between OpenAlex and Crossref was observed for arXiv:2106.09685, which was confirmed as the foundational LoRA manuscript.",
+    "cites": []
+  },
+  {
+    "id": "u64",
+    "kind": "sentence",
+    "file": "main.tex",
+    "line": 80,
+    "section": "Limitations and Source Integrity",
+    "text": "plain",
+    "cites": []
+  }
+]

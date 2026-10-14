@@ -1,0 +1,116 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{url}
+\usepackage{hyperref}
+\usepackage{microtype}
+
+\title{\textbf{Parameter-Efficient Adaptation Under Tight GPU Memory Limits:\\Methodological Trade-offs and Experimental Protocol}}
+\author{\textbf{Research Note}}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Adapting large language models under GPU memory limits requires balancing weights, optimizer states, and activations. This research note reviews six parameter-efficient strategies: LoRA, QLoRA, DoRA, LoftQ, AdaLoRA, and BitFit. We separate architectural designs from empirical findings, compare practical trade-offs, and detail a reproducible single-GPU protocol while isolating unverified lab claims.
+\end{abstract}
+
+\section{Memory Anatomy and Unverified Optimization Claims}
+
+Fine-tuning foundation models under constrained VRAM requires dissecting memory during backward optimization:
+\begin{enumerate}
+    \item \textbf{Static Weights:} Storing base weights in 16-bit precision requires $\sim$2 bytes per parameter ($\approx$14\,GB for 7B models).
+    \item \textbf{Optimizer States:} AdamW maintains FP32 momentum and variance states alongside master weights (12--16 bytes per parameter).
+    \item \textbf{Gradients and Activations:} Gradients require 2--4 bytes per parameter, while activations scale with batch size and context length.
+\end{enumerate}
+
+Full fine-tuning triggers out-of-memory errors because optimizer states scale with total parameters $N$. Parameter-efficient adaptation freezes base weights, restricting optimizer states to small parameter subsets.
+
+\paragraph{Treatment of Unverified Laboratory Pilot Claim.}
+An informal statement from our laboratory claims that an internal pilot halves training memory compared with LoRA. Lacking instrumentation logs, profiler traces, codebase artifacts, or batch controls, it remains strictly unverified. In rigorous scientific analysis, this statement cannot be treated as a finding, nor may it serve as a premise for experimental proposals.
+
+\section{Methodological Taxonomy: Adapters, Quantization, Sparsity}
+
+\subsection{Low-Rank Formulations: LoRA and AdaLoRA}
+Low-Rank Adaptation (LoRA) assumes weight updates reside in a low intrinsic dimension. LoRA freezes the pre-trained model weights and injects trainable rank decomposition matrices into each layer of the Transformer architecture \cite{hu2021lora}. For $W_0 \in \mathbb{R}^{d \times k}$, the forward pass computes $h = W_0 x + \frac{\alpha}{r} B A x$, with $B \in \mathbb{R}^{d \times r}, A \in \mathbb{R}^{r \times k}$, and $r \ll \min(d, k)$. Distinguishing design from empirical result, Hu et al.\ evaluated GPT-3. Compared to GPT-3 175B fine-tuned with Adam, LoRA can reduce the number of trainable parameters by 10,000 times and the GPU memory requirement by 3 times \cite{hu2021lora}. Merging $BA$ into $W_0$ at deployment adds zero inference latency.
+
+Whereas LoRA fixes rank uniformly, AdaLoRA introduces dynamic budgeting. AdaLoRA parameterizes the incremental updates in the form of singular value decomposition \cite{zhang2023adalora}. Updates follow $\Delta W = P \Lambda Q$, regularizing singular vectors $P$ and $Q$ to preserve orthogonality. AdaLoRA dynamically allocates the parameter budget among incremental matrices by manipulating the singular values based on an importance metric \cite{zhang2023adalora}. This prunes redundant directions during optimization.
+
+\subsection{Directional Decomposition: DoRA}
+Analyzing weight trajectories, Liu et al.\ observed that full fine-tuning exhibits negative correlation between magnitude and directional updates, whereas LoRA couples them positively. DoRA decomposes the pre-trained weight into two components, magnitude and direction, for fine-tuning, specifically employing LoRA for directional updates to efficiently minimize the number of trainable parameters \cite{liu2024dora}. With magnitude $m$ and direction $V = W_0 / \|W_0\|_c$, the update is $W = m (V + \Delta V) / \|V + \Delta V\|_c$. Computing gradients through the normalization denominator increases graph overhead; detaching the denominator during backpropagation mitigates this cost. The modification leads to a training memory reduction of approximately 24.4\% in fine-tuning LLaMA and 12.4\% in VL-BART \cite{liu2024dora}.
+
+\subsection{Quantized Backbones: QLoRA and LoftQ}
+Base weights in 16-bit remain a major VRAM bottleneck. QLoRA backpropagates gradients through a frozen, 4-bit quantized pretrained language model into Low Rank Adapters \cite{dettmers2023qlora}. It combines 4-bit NormalFloat (NF4), double quantization, and paged optimizers. Double Quantization quantizes the quantization constants, saving an average of about 0.37 bits per parameter \cite{dettmers2023qlora}. Paged Optimizers use NVIDIA unified memory to avoid the gradient checkpointing memory spikes that occur when processing a mini-batch with a long sequence length \cite{dettmers2023qlora}. QLoRA reduces memory usage enough to finetune a 65B parameter model on a single 48GB GPU while preserving full 16-bit finetuning task performance \cite{dettmers2023qlora}.
+
+Post-training quantization in QLoRA causes discrepancy relative to full precision. LoftQ simultaneously quantizes an LLM and finds a proper low-rank initialization for LoRA fine-tuning \cite{li2023loftq}. Alternating SVD and quantization minimizes $\|W_0 - Q - AB^T\|_F$. The compression ratios and trainable parameter ratios for all models are detailed in the Appendix A \cite{li2023loftq}. These document trainable ratios between 1.2\% and 6.3\% (e.g., 2.4\% on LLaMA-2-7B at $r=64$). LoftQ outperforms existing quantization methods, especially in the challenging 2-bit and 2/4-bit mixed precision regimes \cite{li2023loftq}.
+
+\subsection{Bias-Only Tuning: BitFit}
+BitFit modifies only additive bias vectors while freezing matrix weights. Freezing most of the network and fine-tuning only the bias-terms is surprisingly effective \cite{benzaken2021bitfit}. In BERTBASE and BERTLARGE bias parameters make up 0.09\% and 0.08\% of the total number of parameters in each model, respectively \cite{benzaken2021bitfit}. While BitFit avoids rank tuning, retaining 16-bit weights leaves static memory uncompressed.
+
+\section{Practical Trade-offs and Limitations}
+
+Table~\ref{tab:comparison} synthesizes the architectural designs and empirically reported measurements across all six methods.
+
+\begin{table}[t]
+\centering
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+\caption{Systematic comparison of adaptation methods, explicitly distinguishing architectural design choices from empirically reported measurements.}
+\label{tab:comparison}
+\begin{tabularx}{\linewidth}{l >{\raggedright\arraybackslash}X c c >{\raggedright\arraybackslash}p{2.1cm} >{\raggedright\arraybackslash}X}
+\toprule
+ & \multicolumn{3}{c}{\textbf{Architectural Design Choices}} & \multicolumn{2}{c}{\textbf{Empirical Measurements (Reported)}} \\
+\cmidrule(lr){2-4} \cmidrule(lr){5-6}
+\textbf{Method} & \textbf{Adapter Mechanism} & \textbf{Base} & \textbf{Latency} & \textbf{Trainable Ratio} & \textbf{Key Measured Result / Overhead} \\
+\midrule
+LoRA \cite{hu2021lora} & Low-rank matrices $BA$ & 16-bit & None (merged) & 0.01\%--0.8\% & 3$\times$ VRAM cut, 10,000$\times$ param cut on GPT-3 175B \\
+AdaLoRA \cite{zhang2023adalora} & Dynamic SVD pruning & 16-bit & None (merged) & 0.1\%--0.3\% (budgeted) & Outperforms fixed LoRA at equal budget on GLUE \\
+DoRA \cite{liu2024dora} & Magnitude/direction split & 16-bit & None (merged) & 0.84\% (LLaMA-7B) & 24.4\% VRAM reduction via detached graph on LLaMA \\
+QLoRA \cite{dettmers2023qlora} & NF4 quant.\ + LoRA & 4-bit & None (dequant.) & $\sim$0.2\% (linear layers) & Fits 65B on 48GB GPU; Double Quant.\ saves 0.37 bits/param \\
+LoftQ \cite{li2023loftq} & Quant-aware alternating init & 2/4-bit & None (dequant.) & 1.2\%--6.3\% (2.4\% 7B) & 15\,GB VRAM on LLaMA-2-7B; mitigates 2-bit collapse \\
+BitFit \cite{benzaken2021bitfit} & Bias vector tuning only & 16-bit & None (native) & 0.08\%--0.09\% & Matches full FT on small data with bias-only tuning \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Key trade-offs include:
+\begin{itemize}
+    \item \textbf{Throughput vs.\ Memory:} 4-bit methods cut static VRAM by $\sim$75\%, but dequantization adds a 20--35\% throughput penalty versus 16-bit LoRA.
+    \item \textbf{Optimization Overhead:} DoRA and AdaLoRA improve capacity over LoRA, but add graph and tracking overhead.
+    \item \textbf{Activation Scaling:} At long contexts ($L \ge 2048$), activations dominate memory, requiring activation checkpointing.
+\end{itemize}
+
+\paragraph{Limitations Paragraph.}
+Memory savings measured on specific architectures and batch sizes cannot be assumed to transfer identically to different sequence lengths, model families, or hardware configurations without empirical benchmarking. Memory bandwidth and tensor cores alter throughput and memory across GPU tiers. Regarding sources, all six papers were verified; however, a metadata title mismatch occurred between OpenAlex and Crossref for LoRA (\texttt{arxiv:2106.09685}). Primary text passages were verified directly to ensure citation fidelity.
+
+\section{Proposed Experimental Protocol: Single-GPU Benchmark}
+
+To evaluate trade-offs without relying on ungrounded claims, we propose a benchmark on a single 24\,GB GPU (e.g., RTX 3090, 4090, or A10G).
+
+\subsection{Experimental Configuration and Controls}
+\begin{itemize}
+    \item \textbf{Model and Tasks:} LLaMA-3-8B on GSM8K and ARC Challenge, tracking perplexity and exact-match accuracy.
+    \item \textbf{Adaptation Regimes:} Full tuning (expected OOM), BitFit, LoRA ($r \in \{8, 16, 32\}$), AdaLoRA (budget $r=16$), DoRA ($r=16$, detached denominator), QLoRA (4-bit NF4, double quantization, paged optimizer), and LoftQ (4-bit init, $r=16$).
+    \item \textbf{Learning Rates and Weight Decay:} Peak rates are $2 \times 10^{-4}$ for adapters, $1 \times 10^{-3}$ for BitFit, and $2 \times 10^{-5}$ for full tuning. AdamW ($\beta_1=0.9, \beta_2=0.999$, $\epsilon=10^{-8}$) applies weight decay 0.01 to 2D matrices, with 5\% warmup and cosine decay.
+    \item \textbf{Batching and Sequence Controls:} Batch size $B=2$, gradient accumulation 8 (effective 16), with activation checkpointing. Context lengths are $L \in \{512, 1024, 2048\}$ with hard truncation, right-padding, and pad loss masking ($-100$).
+    \item \textbf{Seed Standardization:} Standardized across seeds $\{42, 1337, 2024\}$ on PyTorch, CUDA, Python, and NumPy, with deterministic cuDNN.
+\end{itemize}
+
+\subsection{Measurement Instrumentation}
+\begin{enumerate}
+    \item \textbf{Peak Memory:} Measured via PyTorch CUDA utilities recorded synchronously around backward steps.
+    \item \textbf{Throughput:} Measured in tokens per second and wall-clock time per epoch over 1,000 steps.
+    \item \textbf{Fidelity:} Downstream accuracy evaluated via greedy decoding.
+\end{enumerate}
+
+This protocol establishes empirical baselines across memory and throughput, ensuring future research builds on verified evidence rather than ungrounded pilot claims.
+
+\bibliographystyle{plain}
+\bibliography{../refs/references}
+
+\end{document}

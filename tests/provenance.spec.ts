@@ -11,7 +11,6 @@ import { linesFromString, parsePaper } from "../src/core/review/latex.ts";
 import { countBodyWords, extractUnits } from "../src/core/provenance/units.ts";
 import { figuresOf, matchFigure, normalizePaperText } from "../src/core/provenance/figures.ts";
 import { auditProvenance, claimVariants, type Ledger, type PaperInput } from "../src/core/provenance/audit.ts";
-import { countManuscriptBodyWords } from "../scripts/live/deliverable-checks.ts";
 
 const TEX = String.raw`\documentclass{article}
 \begin{document}
@@ -156,10 +155,8 @@ describe("the verify ledger", () => {
 });
 
 describe("countBodyWords", () => {
-  it("is the evaluator's reader-visible count: tables and captions in, math and citations out", () => {
-    for (const tex of [TEX, String.raw`\begin{document}Alpha beta $x^2$ gamma~\cite{a}.\[ y = 3 \] Delta \textbf{epsilon}.\begin{tabular}{ll}One & two \\ three & four\end{tabular}\bibliography{r}\end{document}`]) {
-      assert.equal(countBodyWords(tex), countManuscriptBodyWords(tex));
-    }
+  it("is the only word counter: tables and captions in, math and citations out", () => {
+    assert.equal(countBodyWords(TEX), 83);
     assert.ok(countBodyWords(TEX) > 40);
   });
 });

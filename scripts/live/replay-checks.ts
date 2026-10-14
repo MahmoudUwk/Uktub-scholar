@@ -1,30 +1,40 @@
 /**
- * Read-only replay of the two conditional checks (`length-within-request`,
- * `sourced-numerics`) for a recorded iteration.
+ * Read-only Tier 1 replay for a recorded iteration.
  *
  *   node scripts/live/replay-checks.ts <run-dir>
  *
- * It reads the same files the experiment reads — the entry manuscript, the
- * iteration's Uktub transcript (tool results plus user messages), and the
- * scenario prompt — recomputes ONLY these two checks, and prints the
- * verdicts as JSON. It never writes: no filesystem writes, no tools, no
- * network. A missing transcript or manuscript fails closed (a verdict of
- * `ok: false`), never a silent pass.
+ * It reads the same files the experiment reads — the recorded project copy
+ * (`evidence/project`), the deliverable registry and bibliography — reruns
+ * the five Tier 1 checks plus the reported provenance counts, and prints the
+ * verdicts as JSON. It never writes to the run dir: the provenance audit
+ * runs on a copy under the OS temp dir (opening a registry migrates and
+ * sweeps it), and the run dir itself is only read (mtimes included). No
+ * tools, no network. A missing project or registry fails closed (a verdict
+ * of `ok: false`), never a silent pass.
  */
-import { readFileSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { chmodSync, cpSync, existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { runProvenance } from "../../src/core/provenance/run.ts";
 import {
-  checkLengthWithinRequest,
-  checkSourcedNumerics,
-  parseScenarioSections,
+  checkTierBibliography,
+  checkTierCitations,
+  checkTierFigures,
+  checkTierPdfCurrent,
+  checkTierPointers,
+  readTierPaperTexts,
+  resolveExpectedEntry,
+  tierReport,
+  type RegistryRecord,
+  type TierProvenanceDoc,
 } from "./deliverable-checks.ts";
+import { walkFiles } from "./files.ts";
 
 const runDir = process.argv[2];
 if (runDir === undefined || runDir === "") {
   console.error("usage: replay-checks.ts <run-dir>");
   process.exit(2);
 }
-const repo = resolve(import.meta.dirname, "../..");
 
 const read = (path: string): string | null => {
   try {
@@ -34,77 +44,95 @@ const read = (path: string): string | null => {
   }
 };
 
-const safeJson = (value: unknown): string => {
-  try {
-    return JSON.stringify(value) ?? "";
-  } catch {
-    return "";
-  }
-};
-
-/** Text the agent actually saw in one recorded turn: user prompt, tool ends, and any toolResult messages. */
-function seenTextOfTurn(turn: unknown): string[] {
-  if (typeof turn !== "object" || turn === null) return [];
-  const t = turn as Record<string, unknown>;
-  const parts: string[] = [];
-  if (typeof t.prompt === "string") parts.push(t.prompt);
-  if (Array.isArray(t.ends)) {
-    for (const e of t.ends as Array<Record<string, unknown>>) {
-      if (typeof e?.text === "string") parts.push(e.text);
-      if (e?.structured !== undefined && e?.structured !== null) parts.push(safeJson(e.structured));
-    }
-  }
-  if (Array.isArray(t.messages)) {
-    for (const m of t.messages as Array<Record<string, unknown>>) {
-      const content = m?.content;
-      if (m?.role === "toolResult" || m?.role === "tool") {
-        parts.push(typeof content === "string" ? content : safeJson(content));
-      } else if (Array.isArray(content)) {
-        for (const b of content as Array<Record<string, unknown>>) {
-          if (b?.type === "toolResult" || b?.type === "tool_result") parts.push(safeJson(b));
-        }
+/** Archive copies are read-only; the audit copy must be writable. */
+const makeWritable = (dir: string): void => {
+  for (const e of readdirSync(dir, { withFileTypes: true })) {
+    const p = join(dir, e.name);
+    if (e.isDirectory()) {
+      chmodSync(p, 0o755);
+      makeWritable(p);
+    } else {
+      try {
+        if (!e.isSymbolicLink()) chmodSync(p, 0o644);
+      } catch {
+        // a chmod failure surfaces as a failed check below, never a crash
       }
     }
   }
-  return parts;
-}
+};
 
-const metricsRaw = read(join(runDir, "metrics.json"));
-if (metricsRaw === null) {
-  console.error(`no metrics.json in ${runDir}`);
+const projectDir = join(runDir, "evidence", "project");
+const deliverDir = join(runDir, "deliverables");
+if (!existsSync(projectDir)) {
+  console.error(`no evidence/project in ${runDir}`);
   process.exit(2);
 }
-const metrics = JSON.parse(metricsRaw) as { scenario?: string; deliverable?: { texFiles?: string[] } };
-const scenarioName = typeof metrics.scenario === "string" ? metrics.scenario : "";
-const scenarioText = scenarioName === "" ? null : read(join(repo, "experiments/scenarios", `${scenarioName}.md`));
-if (scenarioText === null) {
-  console.error(`no scenario file for ${JSON.stringify(scenarioName)}`);
+
+// The provenance audit opens the registry writable (migration + expiry
+// sweep), so it runs on a temp copy; T1.3 mtimes are read from the run dir.
+const scratch = mkdtempSync(join(tmpdir(), "uktub-replay-"));
+const projCopy = join(scratch, "project");
+try {
+  cpSync(projectDir, projCopy, { recursive: true });
+  void statSync(projCopy);
+  makeWritable(projCopy);
+} catch (err) {
+  console.error(`cannot copy ${projectDir}: ${(err as Error).message}`);
   process.exit(2);
 }
-const spec = parseScenarioSections(scenarioText);
 
-const texFiles = metrics.deliverable?.texFiles;
-const entryRel = Array.isArray(texFiles) && typeof texFiles[0] === "string" && texFiles[0] !== ""
-  ? (texFiles[0] as string)
-  : "manuscript/main.tex";
-const entryTex = read(join(runDir, "deliverables", entryRel));
+const outcome = runProvenance({ root: projCopy, now: () => new Date() });
+const doc: TierProvenanceDoc | null = outcome.ok
+  ? {
+    entry: outcome.entry,
+    summary: outcome.audit.summary,
+    items: outcome.audit.items,
+    document_digest: outcome.digest,
+    units: outcome.audit.units.map((u) => ({
+      id: u.unit.id,
+      kind: u.unit.kind,
+      file: u.unit.file,
+      line: u.unit.line,
+      section: u.unit.section,
+      text: u.unit.plain,
+      cites: u.unit.cites,
+      status: u.status,
+      pointers: u.ledger?.pointers ?? [],
+    })),
+  }
+  : null;
 
-const turnsRaw = read(join(runDir, "evidence/uktub-turns.jsonl"));
-const evidenceText = turnsRaw === null
-  ? null
-  : turnsRaw.split("\n").filter((l) => l.trim() !== "").flatMap((line) => {
-    try {
-      return seenTextOfTurn(JSON.parse(line));
-    } catch {
-      return [];
-    }
-  }).join("\n");
+const registryRaw = read(join(deliverDir, "registry.json"));
+const records: RegistryRecord[] = registryRaw === null ? [] : (JSON.parse(registryRaw) as RegistryRecord[]);
+const bibText = read(join(projectDir, "refs", "references.bib"));
+let projectFiles: string[] = [];
+try {
+  projectFiles = walkFiles(projectDir);
+} catch {
+  projectFiles = [];
+}
+const papers = readTierPaperTexts(projectDir) ?? [];
 
-const length = checkLengthWithinRequest(entryTex, spec.prompt);
+const failClosed = (detail: string): { id: string; ok: boolean; detail: string }[] =>
+  (["citations-in-registry", "bibliography-matches-registry", "compiled-after-last-edit", "pointers-resolve", "figures-supported"] as const)
+    .map((id) => ({ id, ok: false, detail }));
+
+const tierChecks = doc === null
+  ? failClosed(outcome.ok ? "unexpected" : `no provenance audit: ${(outcome as { ok: false; message: string }).message}`)
+  : [
+    checkTierCitations(doc, records),
+    checkTierBibliography(doc, bibText, records),
+    checkTierPdfCurrent(projectDir, resolveExpectedEntry(null, projectFiles)),
+    checkTierPointers(doc, papers),
+    checkTierFigures(doc),
+  ];
+
 console.log(JSON.stringify({
   runDir,
-  scenario: scenarioName,
-  entry: entryRel,
-  lengthWithinRequest: length ?? { id: "length-within-request", emitted: false, detail: "no word range in the scenario prompt" },
-  sourcedNumerics: checkSourcedNumerics(entryTex, evidenceText, spec.prompt),
+  entry: doc?.entry ?? null,
+  documentDigest: doc?.document_digest ?? null,
+  tier1: tierChecks,
+  report: doc === null ? null : tierReport(doc),
 }, null, 2));
+
+rmSync(scratch, { recursive: true, force: true });

@@ -1,0 +1,455 @@
+{
+  "generated": "pre-Tier1-rewrite baseline",
+  "iters": {
+    "iter-04": {
+      "citedKeys": [
+        "chen2023longlora",
+        "dettmers2023qlora",
+        "hu2021lora",
+        "liu2024dora",
+        "xu2023qa",
+        "zhang2023adalora"
+      ],
+      "citationsInRegistry": {
+        "ok": true,
+        "detail": "6 cited, 0 not usable in the registry",
+        "method": "recomputed-old-function"
+      },
+      "bibliographyMatchesRegistry": {
+        "ok": true,
+        "detail": "bibliography covers all 6 cited key(s); every bibliography key is a registered citekey",
+        "method": "recomputed-old-function"
+      },
+      "compiledAfterLastEdit": {
+        "ok": true,
+        "detail": "manuscript/main.tex → build/main.pdf is current: 2 source(s) unchanged since the successful compile",
+        "method": "metrics.json-recorded (old check needed live snapshots)"
+      },
+      "sourcedNumerics": {
+        "ok": true,
+        "detail": "all 42 numeric/hardware token(s) in table rows and cited sentences occur in the tool or user evidence",
+        "method": "metrics.json-recorded (transcript absent from archive)"
+      }
+    },
+    "iter-06": {
+      "citedKeys": [
+        "benzaken2021bitfit",
+        "dettmers2023qlora",
+        "hu2021lora",
+        "liu2024dora",
+        "xu2023qa",
+        "zhang2023adalora"
+      ],
+      "citationsInRegistry": {
+        "ok": true,
+        "detail": "6 cited, 0 not usable in the registry",
+        "method": "recomputed-old-function"
+      },
+      "bibliographyMatchesRegistry": {
+        "ok": true,
+        "detail": "bibliography covers all 6 cited key(s); every bibliography key is a registered citekey",
+        "method": "recomputed-old-function"
+      },
+      "compiledAfterLastEdit": {
+        "ok": true,
+        "detail": "manuscript/main.tex → build/main.pdf is current: 2 source(s) unchanged since the successful compile",
+        "method": "metrics.json-recorded (old check needed live snapshots)"
+      },
+      "sourcedNumerics": {
+        "ok": false,
+        "detail": "1 of 31 numeric/hardware token(s) lack tool or user evidence: 24\\,GB (table row 2)",
+        "method": "metrics.json-recorded (transcript absent from archive)"
+      }
+    },
+    "iter-07": {
+      "citedKeys": [
+        "dettmers2023qlora",
+        "hu2021lora",
+        "li2021prefix",
+        "liu2024dora",
+        "zaken2022bitfit",
+        "zhang2023adalora"
+      ],
+      "citationsInRegistry": {
+        "ok": true,
+        "detail": "6 cited, 0 not usable in the registry",
+        "method": "recomputed-old-function"
+      },
+      "bibliographyMatchesRegistry": {
+        "ok": true,
+        "detail": "bibliography covers all 6 cited key(s); every bibliography key is a registered citekey",
+        "method": "recomputed-old-function"
+      },
+      "compiledAfterLastEdit": {
+        "ok": true,
+        "detail": "manuscript/main.tex → build/main.pdf is current: 2 source(s) unchanged since the successful compile",
+        "method": "metrics.json-recorded (old check needed live snapshots)"
+      },
+      "sourcedNumerics": {
+        "ok": false,
+        "detail": "6 of 43 numeric/hardware token(s) lack tool or user evidence: 95\\% (table row 10); 32GB (table row 12); A100 (table row 13); 80GB (table row 13); 37.3GB (table row 13); 28.2GB (table row 13)",
+        "method": "metrics.json-recorded (transcript absent from archive)"
+      }
+    },
+    "iter-08": {
+      "citedKeys": [
+        "chen2023longlora",
+        "dettmers2023qlora",
+        "hu2021lora",
+        "liu2024dora",
+        "xu2023qa",
+        "zhang2023adalora"
+      ],
+      "citationsInRegistry": {
+        "ok": true,
+        "detail": "6 cited, 0 not usable in the registry",
+        "method": "recomputed-old-function"
+      },
+      "bibliographyMatchesRegistry": {
+        "ok": true,
+        "detail": "bibliography covers all 6 cited key(s); every bibliography key is a registered citekey",
+        "method": "recomputed-old-function"
+      },
+      "compiledAfterLastEdit": {
+        "ok": true,
+        "detail": "manuscript/main.tex → build/main.pdf is current: 2 source(s) unchanged since the successful compile",
+        "method": "metrics.json-recorded (old check needed live snapshots)"
+      },
+      "sourcedNumerics": {
+        "ok": true,
+        "detail": "all 31 numeric/hardware token(s) in table rows and cited sentences occur in the tool or user evidence",
+        "method": "metrics.json-recorded (transcript absent from archive)"
+      }
+    },
+    "iter-09": {
+      "citedKeys": [
+        "benzaken2021bitfit",
+        "dettmers2023qlora",
+        "hu2021lora",
+        "liu2024dora",
+        "zhang2023adalora",
+        "zhao2024galore"
+      ],
+      "citationsInRegistry": {
+        "ok": true,
+        "detail": "6 cited, 0 not usable in the registry",
+        "method": "recomputed-old-function"
+      },
+      "bibliographyMatchesRegistry": {
+        "ok": true,
+        "detail": "bibliography covers all 6 cited key(s); every bibliography key is a registered citekey",
+        "method": "recomputed-old-function"
+      },
+      "compiledAfterLastEdit": {
+        "ok": true,
+        "detail": "manuscript/main.tex → build/main.pdf is current: 2 source(s) unchanged since the successful compile",
+        "method": "metrics.json-recorded (old check needed live snapshots)"
+      },
+      "sourcedNumerics": {
+        "ok": true,
+        "detail": "all 29 numeric/hardware token(s) in table rows and cited sentences occur in the tool or user evidence",
+        "method": "metrics.json-recorded (transcript absent from archive)"
+      }
+    },
+    "iter-10": {
+      "citedKeys": [
+        "dettmers2023qlora",
+        "houlsby2019parameter",
+        "hu2021lora",
+        "liu2024dora",
+        "zhang2023adalora",
+        "zhao2024galore"
+      ],
+      "citationsInRegistry": {
+        "ok": true,
+        "detail": "6 cited, 0 not usable in the registry",
+        "method": "recomputed-old-function"
+      },
+      "bibliographyMatchesRegistry": {
+        "ok": true,
+        "detail": "bibliography covers all 6 cited key(s); every bibliography key is a registered citekey",
+        "method": "recomputed-old-function"
+      },
+      "compiledAfterLastEdit": {
+        "ok": true,
+        "detail": "manuscript/main.tex → build/main.pdf is current: 2 source(s) unchanged since the successful compile",
+        "method": "metrics.json-recorded (old check needed live snapshots)"
+      },
+      "sourcedNumerics": {
+        "ok": false,
+        "detail": "1 of 37 numeric/hardware token(s) lack tool or user evidence: 8k (table row 6)",
+        "method": "metrics.json-recorded (transcript absent from archive)"
+      }
+    },
+    "iter-11": {
+      "citedKeys": [
+        "dettmers2023qlora",
+        "hu2021lora",
+        "liu2024dora",
+        "zaken2022bitfit",
+        "zhang2023adalora",
+        "zhao2024galore"
+      ],
+      "citationsInRegistry": {
+        "ok": true,
+        "detail": "6 cited, 0 not usable in the registry",
+        "method": "recomputed-old-function"
+      },
+      "bibliographyMatchesRegistry": {
+        "ok": true,
+        "detail": "bibliography covers all 6 cited key(s); every bibliography key is a registered citekey",
+        "method": "recomputed-old-function"
+      },
+      "compiledAfterLastEdit": {
+        "ok": true,
+        "detail": "manuscript/main.tex → build/main.pdf is current: 2 source(s) unchanged since the successful compile",
+        "method": "metrics.json-recorded (old check needed live snapshots)"
+      },
+      "sourcedNumerics": {
+        "ok": true,
+        "detail": "all 25 numeric/hardware token(s) in table rows and cited sentences occur in the tool or user evidence",
+        "method": "metrics.json-recorded (transcript absent from archive)"
+      }
+    },
+    "iter-12": {
+      "citedKeys": [
+        "dettmers2023qlora",
+        "hu2021lora",
+        "li2021prefix",
+        "liu2024dora",
+        "zhang2023adalora",
+        "zhao2024galore"
+      ],
+      "citationsInRegistry": {
+        "ok": true,
+        "detail": "6 cited, 0 not usable in the registry",
+        "method": "recomputed-old-function"
+      },
+      "bibliographyMatchesRegistry": {
+        "ok": true,
+        "detail": "bibliography covers all 6 cited key(s); every bibliography key is a registered citekey",
+        "method": "recomputed-old-function"
+      },
+      "compiledAfterLastEdit": {
+        "ok": true,
+        "detail": "manuscript/main.tex → build/main.pdf is current: 2 source(s) unchanged since the successful compile",
+        "method": "metrics.json-recorded (old check needed live snapshots)"
+      },
+      "sourcedNumerics": {
+        "ok": false,
+        "detail": "2 of 39 numeric/hardware token(s) lack tool or user evidence: 0.01\\% (table row 2); 0.2\\% (table row 5)",
+        "method": "metrics.json-recorded (transcript absent from archive)"
+      }
+    },
+    "iter-13": {
+      "citedKeys": [
+        "dettmers2023qlora",
+        "hu2021lora",
+        "li2023loftq",
+        "liu2024dora",
+        "zhang2023adalora",
+        "zhao2024galore"
+      ],
+      "citationsInRegistry": {
+        "ok": true,
+        "detail": "6 cited, 0 not usable in the registry",
+        "method": "recomputed-old-function"
+      },
+      "bibliographyMatchesRegistry": {
+        "ok": true,
+        "detail": "bibliography covers all 6 cited key(s); every bibliography key is a registered citekey",
+        "method": "recomputed-old-function"
+      },
+      "compiledAfterLastEdit": {
+        "ok": true,
+        "detail": "manuscript/main.tex → build/main.pdf is current: 2 source(s) unchanged since the successful compile",
+        "method": "metrics.json-recorded (old check needed live snapshots)"
+      },
+      "sourcedNumerics": {
+        "ok": true,
+        "detail": "all 30 numeric/hardware token(s) in table rows and cited sentences occur in the tool or user evidence",
+        "method": "metrics.json-recorded (transcript absent from archive)"
+      }
+    },
+    "iter-14": {
+      "citedKeys": [
+        "benzaken2021bitfit",
+        "dettmers2023qlora",
+        "hu2021lora",
+        "li2023loftq",
+        "liu2024dora",
+        "zhang2023adalora"
+      ],
+      "citationsInRegistry": {
+        "ok": true,
+        "detail": "6 cited, 0 not usable in the registry",
+        "method": "recomputed-old-function"
+      },
+      "bibliographyMatchesRegistry": {
+        "ok": true,
+        "detail": "bibliography covers all 6 cited key(s); every bibliography key is a registered citekey",
+        "method": "recomputed-old-function"
+      },
+      "compiledAfterLastEdit": {
+        "ok": true,
+        "detail": "manuscript/main.tex → build/main.pdf is current: 2 source(s) unchanged since the successful compile",
+        "method": "metrics.json-recorded (old check needed live snapshots)"
+      },
+      "sourcedNumerics": {
+        "ok": false,
+        "detail": "8 of 41 numeric/hardware token(s) lack tool or user evidence: 0.01\\% (table row 2); 0.8\\% (table row 2); 0.3\\% (table row 3); 0.84\\% (table row 4); 0.2\\% (table row 5); 1.2\\% (table row 6); 6.3\\% (table row 6); 2.4\\% (table row 6)",
+        "method": "metrics.json-recorded (transcript absent from archive)"
+      }
+    },
+    "iter-15": {
+      "citedKeys": [
+        "dettmers20218",
+        "dettmers2023qlora",
+        "he2021unified",
+        "hu2021lora",
+        "liu2024dora",
+        "zhang2023adalora"
+      ],
+      "citationsInRegistry": {
+        "ok": true,
+        "detail": "6 cited, 0 not usable in the registry",
+        "method": "recomputed-old-function"
+      },
+      "bibliographyMatchesRegistry": {
+        "ok": true,
+        "detail": "bibliography covers all 6 cited key(s); every bibliography key is a registered citekey",
+        "method": "recomputed-old-function"
+      },
+      "compiledAfterLastEdit": {
+        "ok": true,
+        "detail": "manuscript/main.tex → build/main.pdf is current: 2 source(s) unchanged since the successful compile",
+        "method": "metrics.json-recorded (old check needed live snapshots)"
+      },
+      "sourcedNumerics": {
+        "ok": true,
+        "detail": "all 24 numeric/hardware token(s) in table rows and cited sentences occur in the tool or user evidence",
+        "method": "metrics.json-recorded (transcript absent from archive)"
+      }
+    },
+    "iter-17": {
+      "citedKeys": [
+        "dettmers2023qlora",
+        "hu2021lora",
+        "li2023loftq",
+        "liu2024dora",
+        "xu2023qa",
+        "zhang2023adalora"
+      ],
+      "citationsInRegistry": {
+        "ok": true,
+        "detail": "6 cited, 0 not usable in the registry",
+        "method": "recomputed-old-function"
+      },
+      "bibliographyMatchesRegistry": {
+        "ok": true,
+        "detail": "bibliography covers all 6 cited key(s); every bibliography key is a registered citekey",
+        "method": "recomputed-old-function"
+      },
+      "compiledAfterLastEdit": {
+        "ok": true,
+        "detail": "manuscript/main.tex → build/main.pdf is current: 2 source(s) unchanged since the successful compile",
+        "method": "metrics.json-recorded (old check needed live snapshots)"
+      },
+      "sourcedNumerics": {
+        "ok": false,
+        "detail": "2 of 33 numeric/hardware token(s) lack tool or user evidence: A100 (table row 3); 2 bits (table row 4)",
+        "method": "metrics.json-recorded (transcript absent from archive)"
+      }
+    },
+    "iter-18": {
+      "citedKeys": [
+        "dettmers2023qlora",
+        "hu2021lora",
+        "li2021prefix",
+        "li2023loftq",
+        "liu2024dora",
+        "zhang2023adalora"
+      ],
+      "citationsInRegistry": {
+        "ok": true,
+        "detail": "6 cited, 0 not usable in the registry",
+        "method": "recomputed-old-function"
+      },
+      "bibliographyMatchesRegistry": {
+        "ok": true,
+        "detail": "bibliography covers all 6 cited key(s); every bibliography key is a registered citekey",
+        "method": "recomputed-old-function"
+      },
+      "compiledAfterLastEdit": {
+        "ok": true,
+        "detail": "manuscript/main.tex → build/main.pdf is current: 2 source(s) unchanged since the successful compile",
+        "method": "metrics.json-recorded (old check needed live snapshots)"
+      },
+      "sourcedNumerics": {
+        "ok": true,
+        "detail": "all 31 numeric/hardware token(s) in table rows and cited sentences occur in the tool or user evidence",
+        "method": "metrics.json-recorded (transcript absent from archive)"
+      }
+    },
+    "iter-19": {
+      "citedKeys": [
+        "dettmers2023qlora",
+        "he2021unified",
+        "hu2021lora",
+        "li2023loftq",
+        "liu2024dora",
+        "zhang2023adalora"
+      ],
+      "citationsInRegistry": {
+        "ok": true,
+        "detail": "6 cited, 0 not usable in the registry",
+        "method": "recomputed-old-function"
+      },
+      "bibliographyMatchesRegistry": {
+        "ok": true,
+        "detail": "bibliography covers all 6 cited key(s); every bibliography key is a registered citekey",
+        "method": "recomputed-old-function"
+      },
+      "compiledAfterLastEdit": {
+        "ok": true,
+        "detail": "manuscript/main.tex → build/main.pdf is current: 2 source(s) unchanged since the successful compile",
+        "method": "metrics.json-recorded (old check needed live snapshots)"
+      },
+      "sourcedNumerics": {
+        "ok": true,
+        "detail": "all 48 numeric/hardware token(s) in table rows and cited sentences occur in the tool or user evidence",
+        "method": "metrics.json-recorded (transcript absent from archive)"
+      }
+    },
+    "iter-20": {
+      "citedKeys": [
+        "dettmers2023qlora",
+        "hu2021lora",
+        "li2023loftq",
+        "liu2024dora",
+        "xu2023qa",
+        "zhang2023adalora"
+      ],
+      "citationsInRegistry": {
+        "ok": true,
+        "detail": "6 cited, 0 not usable in the registry",
+        "method": "recomputed-old-function"
+      },
+      "bibliographyMatchesRegistry": {
+        "ok": true,
+        "detail": "bibliography covers all 6 cited key(s); every bibliography key is a registered citekey",
+        "method": "recomputed-old-function"
+      },
+      "compiledAfterLastEdit": {
+        "ok": true,
+        "detail": "manuscript/main.tex → build/main.pdf is current: 1 source(s) unchanged since the successful compile",
+        "method": "metrics.json-recorded (old check needed live snapshots)"
+      },
+      "sourcedNumerics": {
+        "ok": false,
+        "detail": "2 of 37 numeric/hardware token(s) lack tool or user evidence: 37.3\\,GB (table row 3); 28.2\\,GB (table row 3)",
+        "method": "metrics.json-recorded (transcript absent from archive)"
+      }
+    }
+  }
+}
