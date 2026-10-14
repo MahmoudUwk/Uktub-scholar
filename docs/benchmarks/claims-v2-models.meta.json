@@ -1,0 +1,151 @@
+{
+  "schema": "claims-v2-models/1",
+  "source": "Hugging Face model cards and API (licence, parameter counts), fetched 2026-10-11; revisions are the pins of the runs; v1 figures are from docs/DECISIONS.md and the dated v1 reports",
+  "engines": [
+    {
+      "id": "eos",
+      "name": "Eos 0.8B (Decision 2.0)",
+      "repo": "vllm-sr/Decision-2.0-Eos-0.8B",
+      "revision": "3594047d69f4",
+      "params": "0.8B",
+      "licence": "Apache-2.0",
+      "note": "CPU figure is the 8-bit ONNX export, the product's CPU path; the other models ran on the CPU in float32 with PyTorch (or their own server)."
+    },
+    {
+      "id": "eos-q8",
+      "name": "Eos 0.8B, 8-bit ONNX (the portable artifact)",
+      "repo": "onnx-community/Decision-2.0-Eos-0.8B-ONNX",
+      "revision": "6369be38417e",
+      "params": "0.8B",
+      "licence": "Apache-2.0",
+      "note": "Eos run from its 8-bit ONNX export (what a browser or any ONNX runtime loads) on ONNX Runtime with CUDA; the CPU figure is Eos's."
+    },
+    {
+      "id": "kai",
+      "name": "Kai 0.6B (Decision 2.0)",
+      "repo": "vllm-sr/Decision-2.0-Kai-0.6B",
+      "revision": "cd49ea3813fd",
+      "params": "0.6B",
+      "licence": "Apache-2.0",
+      "note": "Scores never reach 0.99 (max 0.931, no calibration shipped), so 0 / 0 at the bar says nothing about its ranking; use the fitted-bar columns."
+    },
+    {
+      "id": "vela-0.8b",
+      "name": "Vela 2.0 0.8B",
+      "repo": "vllm-sr/Vela-2.0-0.8B",
+      "revision": "326b01d81f61",
+      "params": "0.8B",
+      "licence": "Apache-2.0",
+      "note": "Built on Qwen3.5-0.8B; tokenizer carries the Gemma Terms of Use; asked its own trained hallucination question, not the Decision 2.0 wording."
+    },
+    {
+      "id": "vela-0.3b",
+      "name": "Vela 2.0 0.3B",
+      "repo": "vllm-sr/Vela-2.0-0.3B",
+      "revision": "d6f03aa9baca",
+      "params": "0.3B",
+      "licence": "Apache-2.0",
+      "note": "Tokenizer carries the Gemma Terms of Use; asked its own trained hallucination question, not the Decision 2.0 wording."
+    },
+    {
+      "id": "d3-lite",
+      "name": "d3-lite 0.85B (Decision 3.0)",
+      "repo": "vllm-sr/d3-lite",
+      "revision": "a8d25a91ef75",
+      "params": "0.85B",
+      "licence": "Apache-2.0",
+      "note": "The runtime loads the backbone in bfloat16 on every device, slow on this CPU (no bf16 matrix instructions): 5.70 s per chunk as shipped, 1.77 with the backbone cast to float32 after loading (scores agree within 0.007 on 14 pairs); the table shows float32. Newer hub revisions have byte-identical weights and score the same."
+    },
+    {
+      "id": "d3-edge",
+      "name": "d3-edge 0.6B (Decision 3.0)",
+      "repo": "vllm-sr/d3-edge",
+      "revision": "18d61df78684",
+      "params": "0.6B",
+      "licence": "Apache-2.0",
+      "note": "The runtime loads the backbone in bfloat16 on every device, slow on this CPU (no bf16 matrix instructions): 2.47 s per chunk as shipped, 0.80 with the backbone cast to float32 after loading (scores agree within 0.007 on 14 pairs); the table shows float32. Newer hub revisions have byte-identical weights and score the same."
+    },
+    {
+      "id": "d1-omni",
+      "name": "d1-omni 0.6B (LiquidAI)",
+      "repo": "LiquidAI/d1-omni-600M",
+      "revision": "02b55d7076f1",
+      "params": "0.6B",
+      "licence": "LFM Open License 1.0 (free for commercial use only under USD 10M revenue)"
+    },
+    {
+      "id": "intern-0.8b",
+      "name": "Intern-Decision 0.8B (InternLM)",
+      "repo": "internlm/Intern-Decision-0.8B",
+      "revision": "85a0cc5a99d6",
+      "params": "0.8B",
+      "licence": "Apache-2.0",
+      "note": "Built on Qwen3.5-0.8B; its own temperature calibration (T = 2.75) compresses scores toward 0.5."
+    },
+    {
+      "id": "kev-0.8b",
+      "name": "Kev 0.8B",
+      "repo": "jaredpalmer/kev-0.8b",
+      "revision": "bf75a6a8848e",
+      "params": "0.8B",
+      "licence": "Apache-2.0",
+      "note": "LoRA adapter and pointer head on Qwen3.5-0.8B-Base, run through the author's own server (kev-1.0, reviewed); the server's default CUDA graphs and prefix cache take GPU memory to 7.6 GB."
+    },
+    {
+      "id": "kev-0.8b-native",
+      "name": "Kev 0.8B (native wording)",
+      "repo": "jaredpalmer/kev-0.8b",
+      "revision": "bf75a6a8848e",
+      "params": "0.8B",
+      "licence": "Apache-2.0",
+      "note": "Same model and server as Kev, asked the claim alone as the question (what the product's System One engine sends). Near chance, probably because a yes/no decision model is given a bare statement."
+    }
+  ],
+  "notRun": [
+    {
+      "name": "Mercury Decide (OpenRouter, hosted)",
+      "reason": "hosted and no OpenRouter key here; one run is about 36,600 judgments, about 30 hours at the free tier's 20 requests a minute",
+      "v1": "AUC 0.998; 108 of 109 decided correct, 0 false supports at 0.99"
+    },
+    {
+      "name": "jev-latest (OpenRouter, hosted)",
+      "reason": "hosted and no OpenRouter key here",
+      "v1": "AUC 0.998; 14 decided, all correct"
+    },
+    {
+      "name": "span-01 (hosted)",
+      "reason": "hosted and no OpenRouter key here",
+      "v1": "AUC 0.689; a refuter that supports nothing"
+    },
+    {
+      "name": "K2-Type-0.9B (IFM)",
+      "reason": "no local snapshot, and its System One server is not in this repository",
+      "v1": "AUC 0.814"
+    },
+    {
+      "name": "bev-decider-0.4B",
+      "reason": "weights only, no serving code in this repository; CC-BY-NC-4.0, benchmark only",
+      "v1": "AUC 0.671"
+    },
+    {
+      "name": "Lumma-fev-0.6b",
+      "reason": "no serving code in this repository",
+      "v1": "AUC 0.456, below chance"
+    },
+    {
+      "name": "Julia-1 (144M)",
+      "reason": "its worker is hard-wired to the CPU and needs its own package; the v1 audit found it is not a verifier",
+      "v1": "AUC 0.461"
+    },
+    {
+      "name": "Laya-multilingual",
+      "reason": "needs the `laya` package, not installed",
+      "v1": "AUC 0.528"
+    },
+    {
+      "name": "GLiNER2.5-Decide (340M)",
+      "reason": "no adapter is left in this repository",
+      "v1": "accuracy 0.541, at or below the majority baseline (0.548)"
+    }
+  ]
+}

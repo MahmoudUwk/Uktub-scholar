@@ -1,0 +1,14 @@
+import { chromium } from 'playwright-core';
+import { serve } from './serve.mjs';
+const flags = process.argv.slice(2);
+const srv = await serve(0); const port = srv.address().port;
+const args = ['--enable-unsafe-webgpu', '--enable-webgpu-developer-features', '--enable-features=Vulkan', '--ignore-gpu-blocklist', ...flags];
+const browser = await chromium.launch({ executablePath: '/usr/bin/google-chrome', headless: !process.env.HEADED, args });
+const page = await browser.newPage();
+page.on('console', (m) => { const t = m.text(); if (/^(adapter|session|row|ERROR)/.test(t)) console.log('[page]', t.slice(0, 200)); });
+page.on('pageerror', (e) => console.log('[pageerror]', String(e).slice(0, 300)));
+await page.goto(`http://127.0.0.1:${port}/?n=${process.env.ROWS || 6}&ep=${process.env.EP || 'webgpu'}`);
+await page.waitForFunction(() => window.__done === true, null, { timeout: 15 * 60 * 1000, polling: 1000 });
+const r = await page.evaluate(() => window.__result);
+console.log(JSON.stringify({ ok: r.ok, error: r.error, ort: r.ort, adapter: r.adapter, limits: r.limits, loadSeconds: r.loadSeconds, rows: (r.rows ?? []).map((x) => ({ i: x.i, label: x.label, tokens: x.tokens, ms: x.ms, p_webgpu: +x.p_webgpu.toFixed(4), p_cpu: +x.p_cpu.toFixed(4), absDiff: +x.absDiff.toFixed(4), nan: x.nan })) }, null, 1));
+await browser.close(); srv.close();

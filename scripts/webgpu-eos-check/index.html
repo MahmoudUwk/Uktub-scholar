@@ -1,0 +1,45 @@
+<!doctype html><meta charset="utf-8"><title>eos q8 webgpu</title><pre id="log"></pre>
+<script type="module">
+import * as ort from './node_modules/onnxruntime-web/dist/ort.webgpu.min.mjs';
+const log = (m) => { document.getElementById('log').textContent += m + '\n'; console.log(m); };
+const result = { ort: ort.env.versions?.web ?? null, steps: [] };
+window.__result = result;
+try {
+  ort.env.wasm.wasmPaths = location.origin + '/node_modules/onnxruntime-web/dist/';
+  const adapter = await navigator.gpu?.requestAdapter();
+  if (!adapter) throw new Error('no WebGPU adapter (navigator.gpu=' + (!!navigator.gpu) + ')');
+  const info = adapter.info ?? (await adapter.requestAdapterInfo?.());
+  result.adapter = { vendor: info?.vendor, architecture: info?.architecture, device: info?.device, description: info?.description };
+  result.f16 = adapter.features.has('shader-f16'); result.limits = { maxBufferSize: adapter.limits.maxBufferSize, maxStorageBufferBindingSize: adapter.limits.maxStorageBufferBindingSize, maxStorageBuffersPerShaderStage: adapter.limits.maxStorageBuffersPerShaderStage };
+  log('adapter ' + JSON.stringify(result.adapter));
+  const allRows = await (await fetch('rows.json')).json(); const rows = allRows.slice(0, Number(new URLSearchParams(location.search).get('n') || allRows.length));
+  const base = '/model/onnx/';
+  const t0 = performance.now();
+  const session = await ort.InferenceSession.create(base + 'model_quantized.onnx', {
+    executionProviders: [new URLSearchParams(location.search).get('ep') || 'webgpu'], graphOptimizationLevel: 'all',
+    externalData: [{ path: 'model_quantized.onnx_data', data: base + 'model_quantized.onnx_data' }],
+  });
+  result.loadSeconds = (performance.now() - t0) / 1000;
+  log('session created in ' + result.loadSeconds.toFixed(1) + ' s; inputs ' + session.inputNames + ' outputs ' + session.outputNames);
+  const big = (a) => BigInt64Array.from(a.map((x) => BigInt(x)));
+  result.rows = [];
+  for (const [i, r] of rows.entries()) {
+    const L = r.ids.length;
+    const feeds = {
+      input_ids: new ort.Tensor('int64', big(r.ids), [1, L]),
+      attention_mask: new ort.Tensor('int64', big(new Array(L).fill(1)), [1, L]),
+      answer_pos: new ort.Tensor('int64', big([r.answer_pos]), [1]),
+      option_pos: new ort.Tensor('int64', big(r.option_pos), [1, r.option_pos.length]),
+    };
+    const t1 = performance.now();
+    const out = await session.run(feeds);
+    const ms = performance.now() - t1;
+    const z = Array.from(out.logits.data, Number);
+    const m = Math.max(...z); const e = z.map((x) => Math.exp(x - m)); const s = e.reduce((a, b) => a + b, 0); const p = e[0] / s;
+    result.rows.push({ i, label: r.label, tokens: L, ms: Math.round(ms), p_webgpu: p, p_cpu: r.p_true, absDiff: Math.abs(p - r.p_true), logits: z, logits_cpu: r.logits, nan: z.some((x) => !Number.isFinite(x)) });
+    log(`row ${i} ${r.label} ${L} tokens ${Math.round(ms)} ms p_webgpu=${p.toFixed(4)} p_cpu=${r.p_true.toFixed(4)}`);
+  }
+  result.ok = true;
+} catch (e) { result.ok = false; result.error = String(e && e.stack || e).slice(0, 1500); log('ERROR ' + result.error); }
+window.__done = true;
+</script>

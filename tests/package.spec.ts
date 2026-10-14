@@ -76,7 +76,7 @@ describe("an installed copy (compiled, under node_modules)", () => {
     await c.connect(t);
     try {
       const names = (await c.listTools()).tools.map((x) => x.name).sort();
-      assert.deepEqual(names, ["compile_document", "paper_registry", "search_papers", "search_passages", "verify_claim"]);
+      assert.deepEqual(names, ["compile", "papers", "passages", "registry", "verify"]);
       const pkgVersion = (JSON.parse((await import("node:fs")).readFileSync(join(pkg, "package.json"), "utf8")) as { version: string }).version;
       assert.equal(c.getServerVersion()?.version, pkgVersion);
       assert.match(c.getInstructions() ?? "", /verbatim/);

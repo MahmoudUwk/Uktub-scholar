@@ -1,0 +1,86 @@
+{
+ "schema": "claims-v2-cpu-gate/1",
+ "rule": "refuse any model that takes more than 2 seconds to run a chunk on CPU (owner, 2026-10-11)",
+ "engines": {
+  "d1-omni": {
+   "secondsPerChunk": 0.5664767441860465,
+   "claims": 2,
+   "chunksPerPaper": 86,
+   "device": "cpu",
+   "machine": "Intel(R) Core(TM) i7-14650HX, 24 threads",
+   "note": "llama-cpp (d1-omni), median over 2 claims, load average 14.4/7.9/3.9 at start"
+  },
+  "d3-edge": {
+   "secondsPerChunk": 0.7980523255813953,
+   "claims": 2,
+   "chunksPerPaper": 86,
+   "device": "cpu",
+   "machine": "Intel(R) Core(TM) i7-14650HX, 24 threads",
+   "note": "llama-cpp (d3-edge), median over 2 claims, load average 8.4/10.0/8.6 at start"
+  },
+  "d3-lite": {
+   "secondsPerChunk": 1.7653488372093025,
+   "claims": 2,
+   "chunksPerPaper": 86,
+   "device": "cpu",
+   "machine": "Intel(R) Core(TM) i7-14650HX, 24 threads",
+   "note": "llama-cpp (d3-lite), median over 2 claims, load average 15.0/12.3/9.6 at start"
+  },
+  "eos": {
+   "secondsPerChunk": 1.0590290697674418,
+   "claims": 2,
+   "chunksPerPaper": 86,
+   "device": "cpu",
+   "machine": "Intel(R) Core(TM) i7-14650HX, 24 threads",
+   "note": "eos-onnx (eos-onnx), median over 2 claims, load average 1.1/1.2/1.3 at start"
+  },
+  "eos-q8": {
+   "secondsPerChunk": 1.0590290697674418,
+   "claims": 2,
+   "chunksPerPaper": 86,
+   "device": "cpu",
+   "machine": "Intel(R) Core(TM) i7-14650HX, 24 threads",
+   "note": "eos-onnx (eos-onnx), median over 2 claims, load average 1.1/1.2/1.3 at start"
+  },
+  "intern-0.8b": {
+   "secondsPerChunk": 1.9348546511627909,
+   "claims": 2,
+   "chunksPerPaper": 86,
+   "device": "cpu",
+   "machine": "Intel(R) Core(TM) i7-14650HX, 24 threads",
+   "note": "llama-cpp (intern-0.8b), median over 2 claims, load average 11.2/12.3/10.2 at start"
+  },
+  "kai": {
+   "secondsPerChunk": 1.0270058139534883,
+   "claims": 2,
+   "chunksPerPaper": 86,
+   "device": "cpu",
+   "machine": "Intel(R) Core(TM) i7-14650HX, 24 threads",
+   "note": "eos (kai), median over 2 claims, load average 15.5/14.4/9.0 at start"
+  },
+  "kev-0.8b": {
+   "secondsPerChunk": 1.4654883720930232,
+   "claims": 2,
+   "chunksPerPaper": 86,
+   "device": "cpu",
+   "machine": "Intel(R) Core(TM) i7-14650HX, 24 threads",
+   "note": "llama-cpp (kev-0.8b), median over 2 claims, load average 15.5/15.2/10.3 at start"
+  },
+  "vela-0.3b": {
+   "secondsPerChunk": 0.24644767441860466,
+   "claims": 2,
+   "chunksPerPaper": 86,
+   "device": "cpu",
+   "machine": "Intel(R) Core(TM) i7-14650HX, 24 threads",
+   "note": "vela (vela-0.3b), median over 2 claims, load average 17.3/16.5/15.0 at start"
+  },
+  "vela-0.8b": {
+   "secondsPerChunk": 1.8663197674418606,
+   "claims": 2,
+   "chunksPerPaper": 86,
+   "device": "cpu",
+   "machine": "Intel(R) Core(TM) i7-14650HX, 24 threads",
+   "note": "vela (vela-0.8b), median over 2 claims, load average 16.4/16.4/15.0 at start"
+  }
+ }
+}

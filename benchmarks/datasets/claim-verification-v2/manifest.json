@@ -1,0 +1,430 @@
+{
+ "dataset": "claim-verification-v2",
+ "created": "2026-10-11",
+ "size": 547,
+ "labels": {
+  "TRUE": 269,
+  "FALSE": 278
+ },
+ "types": {
+  "reworded": 180,
+  "numeric": 89,
+  "perturbed": 94,
+  "fabricated": 90,
+  "contradiction": 46,
+  "general": 48
+ },
+ "kinds": {
+  "method": 129,
+  "dataset": 57,
+  "finding": 176,
+  "numeric": 136,
+  "general": 48,
+  "limitation": 1
+ },
+ "papers": 48,
+ "corpus": "corpus.json (ids, versions, sha256, extraction command, rule, seed)",
+ "authors": {
+  "description": "independent of the annotators, one author per paper, protocol AUTHORING.md",
+  "protocolSha256": "d1f728f885ad40f54f553989ba02757befaf9901496202d510c46f2d77fc378a",
+  "claimsByModel": {
+   "claude-haiku-5-5": 395,
+   "claude-sonnet-5-5": 152
+  }
+ },
+ "annotators": {
+  "description": "independent of the authors, blind to a claim's type and label, protocol ANNOTATION.md",
+  "protocolSha256": "e92c02d5414e2e0931a4e8a2d2c2fa837f893fb9eb67fa5b3288a378e778c551",
+  "claimsByModel": {
+   "claude-haiku-5-5": 512,
+   "claude-opus-5-5": 35
+  }
+ },
+ "licenses": {
+  "http://creativecommons.org/licenses/by/4.0/": 547
+ },
+ "keptRule": "a claim is kept only if it passes the programmatic checks (scripts/bench-v2-check.ts) AND the annotator's label matches the author's type; every drop is in dropped.json with its reason",
+ "agreementByType": {
+  "reworded": {
+   "agreed": 180,
+   "labelled": 181
+  },
+  "numeric": {
+   "agreed": 89,
+   "labelled": 89
+  },
+  "perturbed": {
+   "agreed": 94,
+   "labelled": 94
+  },
+  "fabricated": {
+   "agreed": 90,
+   "labelled": 90
+  },
+  "contradiction": {
+   "agreed": 46,
+   "labelled": 46
+  },
+  "general": {
+   "agreed": 48,
+   "labelled": 48
+  }
+ },
+ "perPaper": [
+  {
+   "paper": "2610.00717v1",
+   "category": "cs.CL",
+   "fold": 0,
+   "authored": 12,
+   "kept": 11
+  },
+  {
+   "paper": "2609.40121v1",
+   "category": "cs.CL",
+   "fold": 1,
+   "authored": 12,
+   "kept": 12
+  },
+  {
+   "paper": "2609.39972v1",
+   "category": "cs.CL",
+   "fold": 2,
+   "authored": 12,
+   "kept": 12
+  },
+  {
+   "paper": "2610.00582v1",
+   "category": "cs.CV",
+   "fold": 1,
+   "authored": 12,
+   "kept": 11
+  },
+  {
+   "paper": "2609.40129v1",
+   "category": "cs.CV",
+   "fold": 2,
+   "authored": 12,
+   "kept": 12
+  },
+  {
+   "paper": "2609.40222v1",
+   "category": "cs.CV",
+   "fold": 3,
+   "authored": 12,
+   "kept": 11
+  },
+  {
+   "paper": "2610.00814v1",
+   "category": "cs.LG",
+   "fold": 2,
+   "authored": 12,
+   "kept": 12
+  },
+  {
+   "paper": "2610.00683v2",
+   "category": "cs.LG",
+   "fold": 3,
+   "authored": 12,
+   "kept": 12
+  },
+  {
+   "paper": "2609.40359v1",
+   "category": "cs.LG",
+   "fold": 0,
+   "authored": 12,
+   "kept": 11
+  },
+  {
+   "paper": "2610.00524v1",
+   "category": "cs.RO",
+   "fold": 3,
+   "authored": 12,
+   "kept": 11
+  },
+  {
+   "paper": "2610.00438v1",
+   "category": "cs.RO",
+   "fold": 0,
+   "authored": 12,
+   "kept": 11
+  },
+  {
+   "paper": "2609.40158v1",
+   "category": "cs.RO",
+   "fold": 1,
+   "authored": 12,
+   "kept": 12
+  },
+  {
+   "paper": "2609.36635v1",
+   "category": "cs.SE",
+   "fold": 0,
+   "authored": 12,
+   "kept": 12
+  },
+  {
+   "paper": "2609.35357v1",
+   "category": "cs.SE",
+   "fold": 1,
+   "authored": 12,
+   "kept": 12
+  },
+  {
+   "paper": "2609.36170v1",
+   "category": "cs.SE",
+   "fold": 2,
+   "authored": 12,
+   "kept": 11
+  },
+  {
+   "paper": "2610.00787v1",
+   "category": "cs.CR",
+   "fold": 1,
+   "authored": 12,
+   "kept": 12
+  },
+  {
+   "paper": "2609.38381v1",
+   "category": "cs.CR",
+   "fold": 2,
+   "authored": 12,
+   "kept": 11
+  },
+  {
+   "paper": "2609.39774v2",
+   "category": "cs.CR",
+   "fold": 3,
+   "authored": 12,
+   "kept": 10
+  },
+  {
+   "paper": "2609.39808v1",
+   "category": "cs.HC",
+   "fold": 2,
+   "authored": 12,
+   "kept": 11
+  },
+  {
+   "paper": "2610.00374v1",
+   "category": "cs.HC",
+   "fold": 3,
+   "authored": 12,
+   "kept": 12
+  },
+  {
+   "paper": "2609.40126v1",
+   "category": "cs.HC",
+   "fold": 0,
+   "authored": 12,
+   "kept": 12
+  },
+  {
+   "paper": "2609.39519v1",
+   "category": "stat.ME",
+   "fold": 3,
+   "authored": 12,
+   "kept": 12
+  },
+  {
+   "paper": "2609.37347v1",
+   "category": "stat.ME",
+   "fold": 0,
+   "authored": 12,
+   "kept": 12
+  },
+  {
+   "paper": "2609.36268v1",
+   "category": "stat.ME",
+   "fold": 1,
+   "authored": 12,
+   "kept": 12
+  },
+  {
+   "paper": "2609.37866v1",
+   "category": "stat.AP",
+   "fold": 0,
+   "authored": 12,
+   "kept": 11
+  },
+  {
+   "paper": "2609.31775v1",
+   "category": "stat.AP",
+   "fold": 1,
+   "authored": 12,
+   "kept": 11
+  },
+  {
+   "paper": "2609.33293v1",
+   "category": "stat.AP",
+   "fold": 2,
+   "authored": 12,
+   "kept": 11
+  },
+  {
+   "paper": "2609.10053v1",
+   "category": "econ.GN",
+   "fold": 1,
+   "authored": 12,
+   "kept": 11
+  },
+  {
+   "paper": "2609.31236v1",
+   "category": "econ.GN",
+   "fold": 2,
+   "authored": 12,
+   "kept": 10
+  },
+  {
+   "paper": "2609.20405v2",
+   "category": "econ.GN",
+   "fold": 3,
+   "authored": 12,
+   "kept": 11
+  },
+  {
+   "paper": "2610.00578v2",
+   "category": "astro-ph.GA",
+   "fold": 2,
+   "authored": 12,
+   "kept": 12
+  },
+  {
+   "paper": "2609.36124v1",
+   "category": "astro-ph.GA",
+   "fold": 3,
+   "authored": 12,
+   "kept": 11
+  },
+  {
+   "paper": "2609.35343v1",
+   "category": "astro-ph.GA",
+   "fold": 0,
+   "authored": 12,
+   "kept": 12
+  },
+  {
+   "paper": "2609.36291v1",
+   "category": "astro-ph.EP",
+   "fold": 3,
+   "authored": 12,
+   "kept": 12
+  },
+  {
+   "paper": "2609.39501v2",
+   "category": "astro-ph.EP",
+   "fold": 0,
+   "authored": 12,
+   "kept": 12
+  },
+  {
+   "paper": "2609.30111v1",
+   "category": "astro-ph.EP",
+   "fold": 1,
+   "authored": 12,
+   "kept": 12
+  },
+  {
+   "paper": "2609.37733v1",
+   "category": "physics.chem-ph",
+   "fold": 0,
+   "authored": 12,
+   "kept": 10
+  },
+  {
+   "paper": "2609.36947v1",
+   "category": "physics.chem-ph",
+   "fold": 1,
+   "authored": 12,
+   "kept": 12
+  },
+  {
+   "paper": "2609.40135v1",
+   "category": "physics.chem-ph",
+   "fold": 2,
+   "authored": 12,
+   "kept": 11
+  },
+  {
+   "paper": "2610.03758v1",
+   "category": "physics.ao-ph",
+   "fold": 1,
+   "authored": 12,
+   "kept": 12
+  },
+  {
+   "paper": "2609.10378v1",
+   "category": "physics.ao-ph",
+   "fold": 2,
+   "authored": 12,
+   "kept": 10
+  },
+  {
+   "paper": "2609.35675v1",
+   "category": "physics.ao-ph",
+   "fold": 3,
+   "authored": 12,
+   "kept": 12
+  },
+  {
+   "paper": "2609.38529v1",
+   "category": "cond-mat.mtrl-sci",
+   "fold": 2,
+   "authored": 12,
+   "kept": 12
+  },
+  {
+   "paper": "2609.38843v1",
+   "category": "cond-mat.mtrl-sci",
+   "fold": 3,
+   "authored": 12,
+   "kept": 12
+  },
+  {
+   "paper": "2609.37927v1",
+   "category": "cond-mat.mtrl-sci",
+   "fold": 0,
+   "authored": 12,
+   "kept": 11
+  },
+  {
+   "paper": "2609.18631v1",
+   "category": "q-bio.QM",
+   "fold": 3,
+   "authored": 12,
+   "kept": 12
+  },
+  {
+   "paper": "2609.22369v1",
+   "category": "q-bio.QM",
+   "fold": 0,
+   "authored": 12,
+   "kept": 8
+  },
+  {
+   "paper": "2609.10121v2",
+   "category": "q-bio.QM",
+   "fold": 1,
+   "authored": 12,
+   "kept": 12
+  }
+ ],
+ "schema": {
+  "id": "v2-<paper>-<nn>",
+  "paper": "arXiv id with version (corpus.json)",
+  "arxiv_id": "without the version",
+  "arxiv_version": "the version the PDF was taken from",
+  "license": "the paper's licence URI",
+  "pdf_sha256": "of the PDF the claim was written from",
+  "claim": "one sentence",
+  "label": "TRUE = the paper supports it; FALSE = it does not",
+  "type": "reworded | numeric (TRUE); perturbed | fabricated | contradiction | general (FALSE)",
+  "kind": "method | dataset | finding | limitation | numeric | general",
+  "evidence_quote": "verbatim quote that supports (TRUE) or is contradicted (contradiction), else null",
+  "altered_from_quote": "verbatim quote of the true fact a perturbed claim was altered from, else null",
+  "author_model": "model that wrote the claim",
+  "annotator_model": "model that labelled it blind",
+  "authoring_protocol_sha256": "of AUTHORING.md",
+  "annotation_protocol_sha256": "of ANNOTATION.md",
+  "verification": "what the claim passed"
+ }
+}

@@ -61,8 +61,8 @@ describe("loadChunkConfig", () => {
   });
 
   it("UKTUB_CHUNK_CONFIG points at another file; a named-but-missing file is refused, not defaulted", () => {
-    const other = writeYaml(FULL("k2"), join(root, "other.yaml"));
-    assert.equal(loadChunkConfig(root, { env: { UKTUB_CHUNK_CONFIG: other } }).verification.engine, "k2");
+    const other = writeYaml(FULL("openrouter"), join(root, "other.yaml"));
+    assert.equal(loadChunkConfig(root, { env: { UKTUB_CHUNK_CONFIG: other } }).verification.engine, "openrouter");
     assert.throws(() => loadChunkConfig(root, { env: { UKTUB_CHUNK_CONFIG: join(root, "nope.yaml") } }), (e) => e instanceof ConfigError);
   });
 
@@ -99,8 +99,8 @@ describe("loadChunkConfig", () => {
   });
 
   it("a relative UKTUB_CHUNK_CONFIG is resolved against the project root, not the process directory", () => {
-    writeYaml(FULL("k2"), join(root, "conf", "mine.yaml"));
-    assert.equal(loadChunkConfig(root, { env: { UKTUB_CHUNK_CONFIG: "conf/mine.yaml" } }).verification.engine, "k2");
+    writeYaml(FULL("openrouter"), join(root, "conf", "mine.yaml"));
+    assert.equal(loadChunkConfig(root, { env: { UKTUB_CHUNK_CONFIG: "conf/mine.yaml" } }).verification.engine, "openrouter");
   });
 
   it("an engine override naming an unknown engine is refused even without a YAML file", () => {

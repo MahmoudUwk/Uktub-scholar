@@ -1,0 +1,29 @@
+[
+  {
+    "url": "https://api.openalex.org/works/https%3A%2F%2Fdoi.org%2F10.7717%2Fpeerj.4375",
+    "method": "GET",
+    "headers": {}
+  },
+  {
+    "url": "https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=DOI%3A%2210.7717%2Fpeerj.4375%22&resultType=core&format=json&pageSize=1",
+    "method": "GET",
+    "headers": {}
+  },
+  {
+    "url": "https://pmc-oa-opendata.s3.amazonaws.com/?list-type=2&prefix=PMC5815332.&delimiter=/",
+    "method": "GET",
+    "headers": {}
+  },
+  {
+    "url": "https://pmc-oa-opendata.s3.amazonaws.com/PMC5815332.1/PMC5815332.1.json",
+    "method": "GET",
+    "headers": {}
+  },
+  {
+    "url": "https://api.semanticscholar.org/graph/v1/paper/DOI:10.7717/peerj.4375?fields=openAccessPdf,externalIds",
+    "method": "GET",
+    "headers": {
+      "x-api-key": "K"
+    }
+  }
+]

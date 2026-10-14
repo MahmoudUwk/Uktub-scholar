@@ -20,7 +20,8 @@ title. The slides say only what the paper says.
 4. **Length by the clock.** About one slide a minute: ten minutes is eight to ten content slides. Typical shape: the problem and the gap,
    the idea in one sentence, how it works (one or two slides), the setup, the results (three or four), what it does not do, the take-away.
 5. **Reuse the paper's own figures** by their files; do not redraw. A figure in a format the engine cannot include (EPS) is used through its PDF
-   or PNG version. Put a small source line under every borrowed figure or table ("Fig. 4 of the paper").
+   or PNG version, converted into `manuscript/slides/` — the deck's folder, the only part of the manuscript a deck writes. Put a small source
+   line under every borrowed figure or table ("Fig. 4 of the paper").
 6. **Cite from the paper's bibliography file** with `\cite`, and end with a references slide holding only the works cited on slides.
 7. No claims of novelty, speed or significance beyond what the paper's numbers support, and no invented speaker anecdotes.
 

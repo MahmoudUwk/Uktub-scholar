@@ -1,7 +1,7 @@
 /**
  * JSONL client for scripts/decision2_decide.py (Decision 2.0 Kai/Eos).
  *
- * The worker speaks the same protocol as julia_decide.py (rows in,
+ * The worker speaks the same JSONL protocol as the engine workers (rows in,
  * {"p_true"} out, "ready" line first). The package adapter (workerEngine in
  * src/core/verify/claim.ts) fails a whole batch on one {"error"} row, which
  * would turn a context refusal into a dead run. This client keeps row-level
@@ -20,7 +20,7 @@ export interface WorkerReady {
   model_ref?: string;
   revision: string;
   model_sha256: string;
-  max_input_tokens: number;
+  max_input_tokens: number | null;
   device: string;
   load_s: number;
   vram_after_load_mib?: number | null;

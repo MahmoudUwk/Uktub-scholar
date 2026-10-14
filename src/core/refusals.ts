@@ -50,10 +50,10 @@ export const REFUSALS: Record<RefusalCode, RefusalEntry> = {
     next: "check the identifier — DOIs look like 10.xxxx/suffix; write arXiv papers as arxiv:YYMM.NNNNN or their 10.48550/arxiv.YYMM.NNNNN form",
   },
   DOI_NOT_FOUND: {
-    next: "verify the DOI resolves (doi.org), or re-run search_papers and register that result with paper_registry",
+    next: "verify the DOI resolves (doi.org), or re-run papers and register that result with registry",
   },
   QUERY_REQUIRED: {
-    next: "provide a search query — search_papers requires non-empty query text",
+    next: "provide a search query — papers requires non-empty query text",
   },
   PATH_REFUSED: {
     next: "use a file inside the project directory; .registry and .git are protected system segments, and traversal, symlink escapes and non-files are refused",
@@ -74,7 +74,7 @@ export const REFUSALS: Record<RefusalCode, RefusalEntry> = {
     next: "simplify the document or raise the budget via UKTUB_COMPILE_TIMEOUT_S (seconds), then retry",
   },
   VERIFY_ENGINE_MISSING: {
-    next: "tell the user the verification engine is not available and how to enable it: the default eos engine needs a Python environment with torch, transformers>=5.17 and safetensors (point UKTUB_EOS_PYTHON at its interpreter; README \"Engines\"). Without PyTorch: run `uktub-scholar eos install --yes` (a pinned ONNX export plus a small environment) and select verification.engine: eos-onnx in config/chunking.yaml. Other alternatives are OpenRouter (OPENROUTER_API_KEY) or a local System One server (UKTUB_VERIFY_URL). Do not improvise a verdict; search_passages still works",
+    next: "tell the user the verification engine is not available and how to enable it: the default eos engine needs a Python environment with torch, transformers>=5.17 and safetensors (point UKTUB_EOS_PYTHON at its interpreter; README \"Engines\"). Without PyTorch: run `uktub-scholar eos install --yes` (a pinned ONNX export plus a small environment) and select verification.engine: eos-onnx in config/chunking.yaml. Other alternatives are OpenRouter (OPENROUTER_API_KEY) or a local System One server (UKTUB_VERIFY_URL). Do not improvise a verdict; passages still works",
   },
   CONFIG_INVALID: {
     next: "fix the reported key in config/chunking.yaml (or the file named by UKTUB_CHUNK_CONFIG), then retry",

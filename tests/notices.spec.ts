@@ -13,80 +13,80 @@ const COMPILE = `Compiled manuscript/main.tex with tectonic 0.15.0 → build/mai
 
 describe("extractNotices", () => {
   it("a refusal becomes one notice keyed by its code", () => {
-    const n = extractNotices("verify_claim", REFUSED, true);
+    const n = extractNotices("verify", REFUSED, true);
     assert.equal(n.length, 1);
     assert.equal(n[0]?.key, "VERIFY_ENGINE_MISSING");
-    assert.match(n[0]?.line ?? "", /verify_claim was refused \(VERIFY_ENGINE_MISSING\)/);
+    assert.match(n[0]?.line ?? "", /verify was refused \(VERIFY_ENGINE_MISSING\)/);
     assert.ok((n[0]?.line.length ?? 0) < 400, "short enough for a footer");
   });
 
   it("a search warning is keyed by the provider that failed", () => {
-    const n = extractNotices("search_papers", SEARCH, false);
+    const n = extractNotices("papers", SEARCH, false);
     assert.deepEqual(n.map((x) => x.key), ["semantic-scholar"]);
     assert.match(n[0]?.line ?? "", /semantic-scholar.*HTTP 429/);
   });
 
   it("each compile warning is a notice", () => {
-    const n = extractNotices("compile_document", COMPILE, false);
+    const n = extractNotices("compile", COMPILE, false);
     assert.equal(n.length, 2);
     assert.match(n[0]?.line ?? "", /main\.bbl/);
   });
 
   it("a clean result has none", () => {
-    assert.deepEqual(extractNotices("paper_registry", "4 papers selected (whole registry); showing 4", false), []);
-    assert.deepEqual(extractNotices("compile_document", "Compiled manuscript/main.tex with tectonic 0.17.0 → build/main.pdf (1 bytes). 0 error(s), 0 warning(s).", false), []);
+    assert.deepEqual(extractNotices("registry", "4 papers selected (whole registry); showing 4", false), []);
+    assert.deepEqual(extractNotices("compile", "Compiled manuscript/main.tex with tectonic 0.17.0 → build/main.pdf (1 bytes). 0 error(s), 0 warning(s).", false), []);
   });
 });
 
 describe("interrupted verification", () => {
   it("is a notice carrying how much was NOT checked, keyed to the claim", () => {
-    const n = extractNotices("verify_claim", INTERRUPTED(120), false);
+    const n = extractNotices("verify", INTERRUPTED(120), false);
     assert.equal(n.length, 1);
     assert.match(n[0]?.line ?? "", /578 of 698/);
     assert.match(n[0]?.line ?? "", /not checked/i);
     assert.match(n[0]?.line ?? "", /Federated tuning/);
-    assert.equal(n[0]?.id, extractNotices("verify_claim", INTERRUPTED(240), false)[0]?.id, "later pages replace the earlier notice for the same claim");
-    assert.notEqual(n[0]?.id, extractNotices("verify_claim", INTERRUPTED(120, "Another claim"), false)[0]?.id);
+    assert.equal(n[0]?.id, extractNotices("verify", INTERRUPTED(240), false)[0]?.id, "later pages replace the earlier notice for the same claim");
+    assert.notEqual(n[0]?.id, extractNotices("verify", INTERRUPTED(120, "Another claim"), false)[0]?.id);
   });
 
   it("a complete result for the same claim clears it; a different claim's does not", () => {
-    const id = extractNotices("verify_claim", INTERRUPTED(120), false)[0]?.id;
-    assert.deepEqual(clearedIds("verify_claim", COMPLETE()), [id]);
-    assert.deepEqual(clearedIds("verify_claim", COMPLETE("Another claim")).includes(id as string), false);
+    const id = extractNotices("verify", INTERRUPTED(120), false)[0]?.id;
+    assert.deepEqual(clearedIds("verify", COMPLETE()), [id]);
+    assert.deepEqual(clearedIds("verify", COMPLETE("Another claim")).includes(id as string), false);
   });
 
   it("a legacy standalone query-limited result never clears the exhaustive interruption of the same claim", () => {
     const claim = "RF fingerprinting is a downstream task";
-    const id = extractNotices("verify_claim", INTERRUPTED(120, claim), false)[0]?.id as string;
-    assert.deepEqual(clearedIds("verify_claim", QUERY_LIMITED), []);
-    assert.deepEqual(clearedIds("verify_claim", COMPLETE(claim)), [id]);
+    const id = extractNotices("verify", INTERRUPTED(120, claim), false)[0]?.id as string;
+    assert.deepEqual(clearedIds("verify", QUERY_LIMITED), []);
+    assert.deepEqual(clearedIds("verify", COMPLETE(claim)), [id]);
   });
 
   it("explicit run ids keep same-claim interruptions distinct, and a completion clears only its own run", () => {
-    const a = extractNotices("verify_claim", INTERRUPTED(120), false, "call-A")[0]?.id;
-    const b = extractNotices("verify_claim", INTERRUPTED(120), false, "call-B")[0]?.id;
+    const a = extractNotices("verify", INTERRUPTED(120), false, "call-A")[0]?.id;
+    const b = extractNotices("verify", INTERRUPTED(120), false, "call-B")[0]?.id;
     assert.notEqual(a, b);
-    assert.deepEqual(clearedIds("verify_claim", COMPLETE(), "call-A"), [a]);
-    assert.deepEqual(clearedIds("verify_claim", QUERY_LIMITED, "call-A").includes(b as string), false);
+    assert.deepEqual(clearedIds("verify", COMPLETE(), "call-A"), [a]);
+    assert.deepEqual(clearedIds("verify", QUERY_LIMITED, "call-A").includes(b as string), false);
   });
 
   it("a query-limited completion within an explicit continuation chain clears that run", () => {
-    const id = extractNotices("verify_claim", INTERRUPTED(1, "RF fingerprinting is a downstream task"), false, "call-A")[0]?.id;
-    assert.deepEqual(clearedIds("verify_claim", QUERY_LIMITED, "call-A"), [id]);
+    const id = extractNotices("verify", INTERRUPTED(1, "RF fingerprinting is a downstream task"), false, "call-A")[0]?.id;
+    assert.deepEqual(clearedIds("verify", QUERY_LIMITED, "call-A"), [id]);
   });
 
   it("only a verification result can clear a notice", () => {
-    assert.deepEqual(clearedIds("paper_registry", COMPLETE()), []);
-    assert.deepEqual(clearedIds("search_papers", COMPLETE(), "call-A"), []);
+    assert.deepEqual(clearedIds("registry", COMPLETE()), []);
+    assert.deepEqual(clearedIds("papers", COMPLETE(), "call-A"), []);
   });
 
   it("a query-limited result is not a notice (that is how the search was asked), and neither is a complete one", () => {
-    assert.deepEqual(extractNotices("verify_claim", QUERY_LIMITED, false), []);
-    assert.deepEqual(extractNotices("verify_claim", COMPLETE(), false), []);
+    assert.deepEqual(extractNotices("verify", QUERY_LIMITED, false), []);
+    assert.deepEqual(extractNotices("verify", COMPLETE(), false), []);
   });
 
   it("an answer that calls the check exhaustive without saying it stopped early gets the footer; an honest one does not", () => {
-    const n = extractNotices("verify_claim", INTERRUPTED(360), false);
+    const n = extractNotices("verify", INTERRUPTED(360), false);
     assert.match(footerFor("An exhaustive check across all passages found no support.", n) ?? "", /not checked/i);
     assert.equal(footerFor("I checked 360 of 698 passages; checking was interrupted, so the rest are unchecked.", n), null);
     assert.equal(footerFor("Only part of the papers were checked (a budget stop).", n), null);
@@ -100,21 +100,21 @@ describe("registry changes are an audit trail", () => {
 
   it("registered, updated, removed and attached outcomes are notices; duplicates, absences and reads are not", () => {
     const keys = (tool: string, text: string) => extractNotices(tool, text, false).map((n) => n.key);
-    assert.deepEqual(keys("paper_registry", REGISTER), ["chen2024role", "wang2025federated"]);
-    assert.deepEqual(keys("paper_registry", REMOVE), ["love2014moderated"]);
-    assert.deepEqual(keys("paper_registry", ATTACH), ["aboulfotouh2025multimodal"]);
-    assert.deepEqual(keys("paper_registry", "4 papers selected (whole registry); showing 4\nchen2024role | 10.1/x | A (2024)"), []);
-    assert.deepEqual(keys("paper_registry", "[0] absent foo — no registered paper has this DOI or citekey"), []);
+    assert.deepEqual(keys("registry", REGISTER), ["chen2024role", "wang2025federated"]);
+    assert.deepEqual(keys("registry", REMOVE), ["love2014moderated"]);
+    assert.deepEqual(keys("registry", ATTACH), ["aboulfotouh2025multimodal"]);
+    assert.deepEqual(keys("registry", "4 papers selected (whole registry); showing 4\nchen2024role | 10.1/x | A (2024)"), []);
+    assert.deepEqual(keys("registry", "[0] absent foo — no registered paper has this DOI or citekey"), []);
   });
 
   it("the line says what changed", () => {
-    const n = extractNotices("paper_registry", REGISTER, false);
+    const n = extractNotices("registry", REGISTER, false);
     assert.match(n[0]?.line ?? "", /registered chen2024role/);
     assert.match(n[1]?.line ?? "", /updated wang2025federated/);
   });
 
   it("an answer naming the citekey or the DOI covers it; one that says nothing about it gets listed", () => {
-    const n = extractNotices("paper_registry", REGISTER, false);
+    const n = extractNotices("registry", REGISTER, false);
     assert.equal(footerFor("I added chen2024role and updated wang2025federated.", n), null);
     assert.equal(footerFor("Added 10.1109/mwc.005.2300481, refreshed 10.1109/twc.2025.3531128.", n), null);
     const f = footerFor("Done, the paragraph is written.", n) ?? "";
@@ -124,7 +124,7 @@ describe("registry changes are an audit trail", () => {
 
   it("a per-item refusal is a notice naming its index and code, even though the batch is not an error", () => {
     const text = 'register: 1 input(s) — 1 refused\n[0] refused INVALID_DOI — not a DOI or arXiv identifier: "not-a-doi". Next: check the identifier';
-    const n = extractNotices("paper_registry", text, false);
+    const n = extractNotices("registry", text, false);
     assert.equal(n.length, 1);
     assert.equal(n[0]?.key, "INVALID_DOI");
     assert.match(n[0]?.line ?? "", /\[0\].*INVALID_DOI/);
@@ -134,49 +134,62 @@ describe("registry changes are an audit trail", () => {
 
   it("mixed batches keep both the change audit and the refusal; an attachment path refusal is a notice", () => {
     const mixed = "register: 2 input(s) — 1 registered, 1 refused\n[0] registered chen2024role 10.1109/mwc.005.2300481\n[1] refused INVALID_DOI — not a DOI or arXiv identifier: \"x\". Next: check the identifier";
-    assert.deepEqual(extractNotices("paper_registry", mixed, false).map((n) => n.key), ["chen2024role", "INVALID_DOI"]);
+    assert.deepEqual(extractNotices("registry", mixed, false).map((n) => n.key), ["chen2024role", "INVALID_DOI"]);
     const attach = "attach_source: 1 input(s) — 1 refused\n[0] refused PATH_REFUSED — the file is outside the project. Next: copy it inside";
-    assert.deepEqual(extractNotices("paper_registry", attach, false).map((n) => n.key), ["PATH_REFUSED"]);
+    assert.deepEqual(extractNotices("registry", attach, false).map((n) => n.key), ["PATH_REFUSED"]);
   });
 
   it("a registry warning line is a bounded notice keyed by its code", () => {
     const text = "register: 1 input(s) — 1 registered\n[0] registered chen2024role 10.1109/mwc.005.2300481\nwarning BIBTEX_UNAVAILABLE: no provider BibTeX was available. Next: add the entry by hand";
-    const n = extractNotices("paper_registry", text, false);
+    const n = extractNotices("registry", text, false);
     assert.deepEqual(n.map((x) => x.key), ["chen2024role", "BIBTEX_UNAVAILABLE"]);
     assert.ok((n[1]?.line.length ?? 0) < 400);
     assert.match(footerFor("Done.", n) ?? "", /BIBTEX_UNAVAILABLE/);
   });
 
   it("other tools never produce registry item notices", () => {
-    assert.deepEqual(extractNotices("search_papers", "[0] refused INVALID_DOI — x. Next: y", false), []);
+    assert.deepEqual(extractNotices("papers", "[0] refused INVALID_DOI — x. Next: y", false), []);
   });
 
   it("other tools never produce registry-change notices", () => {
-    assert.deepEqual(extractNotices("search_papers", REGISTER, false), []);
+    assert.deepEqual(extractNotices("papers", REGISTER, false), []);
+  });
+
+  it("legacy long tool names resolve to the same notices (hidden alias map)", () => {
+    assert.deepEqual(
+      extractNotices("verify_claim", REFUSED, true),
+      extractNotices("verify", REFUSED, true),
+    );
+    assert.deepEqual(
+      extractNotices("paper_registry", REGISTER, false).map((n) => n.key),
+      extractNotices("registry", REGISTER, false).map((n) => n.key),
+    );
+    const id = extractNotices("verify_claim", INTERRUPTED(120), false)[0]?.id;
+    assert.deepEqual(clearedIds("verify_claim", COMPLETE()), [id]);
   });
 });
 
 describe("any failed result is a notice, not only a typed refusal", () => {
   it("a host timeout or an execution error is reported with its text", () => {
-    const t = extractNotices("verify_claim", "MCP request timed out after 60000ms", true);
+    const t = extractNotices("verify", "MCP request timed out after 60000ms", true);
     assert.equal(t.length, 1);
-    assert.match(t[0]?.line ?? "", /verify_claim failed: MCP request timed out/);
-    assert.equal(extractNotices("compile_document", "Error executing tool compile_document: boom", true).length, 1);
+    assert.match(t[0]?.line ?? "", /verify failed: MCP request timed out/);
+    assert.equal(extractNotices("compile", "Error executing tool compile: boom", true).length, 1);
   });
 
   it("is covered by an answer that says it failed or timed out, and not by one that says nothing", () => {
-    const n = extractNotices("verify_claim", "MCP request timed out after 60000ms", true);
+    const n = extractNotices("verify", "MCP request timed out after 60000ms", true);
     assert.equal(footerFor("The verification timed out, so nothing was checked.", n), null);
     assert.equal(footerFor("The call failed.", n), null);
-    assert.match(footerFor("An exhaustive check of all 14 papers was performed.", n) ?? "", /verify_claim failed/);
+    assert.match(footerFor("An exhaustive check of all 14 papers was performed.", n) ?? "", /verify failed/);
   });
 
   it("a typed refusal is still one notice, not two", () => {
-    assert.equal(extractNotices("verify_claim", REFUSED, true).length, 1);
+    assert.equal(extractNotices("verify", REFUSED, true).length, 1);
   });
 
   it("a successful result with no warnings has none", () => {
-    assert.deepEqual(extractNotices("paper_registry", "4 papers selected", false), []);
+    assert.deepEqual(extractNotices("registry", "4 papers selected", false), []);
   });
 });
 
@@ -209,10 +222,10 @@ describe("a guard block is a notice", () => {
 });
 
 describe("footerFor", () => {
-  const notices = extractNotices("verify_claim", REFUSED, true).concat(extractNotices("search_papers", SEARCH, false));
+  const notices = extractNotices("verify", REFUSED, true).concat(extractNotices("papers", SEARCH, false));
 
   it("lists only what the answer does not already mention", () => {
-    const f = footerFor("verify_claim failed with VERIFY_ENGINE_MISSING, so the claim is unverified.", notices);
+    const f = footerFor("verify failed with VERIFY_ENGINE_MISSING, so the claim is unverified.", notices);
     assert.ok(f !== null);
     assert.doesNotMatch(f, /VERIFY_ENGINE_MISSING/);
     assert.match(f, /semantic-scholar/);
@@ -223,7 +236,7 @@ describe("footerFor", () => {
   });
 
   it("matches case-insensitively and is null for no notices", () => {
-    assert.equal(footerFor("the Semantic-Scholar provider answered 429; verify_claim_engine_missing", extractNotices("search_papers", SEARCH, false)), null);
+    assert.equal(footerFor("the Semantic-Scholar provider answered 429; verify_engine_missing", extractNotices("papers", SEARCH, false)), null);
     assert.equal(footerFor("anything", []), null);
   });
 
@@ -245,7 +258,7 @@ describe("the Pi extension appends unmentioned notices to the final answer only"
   it("a refusal the model left out is appended to its final message", () => {
     const h = wire();
     h.agent_start?.({ type: "agent_start" } as never);
-    h.tool_result?.(toolResult("mcp__uktub_scholar__verify_claim", REFUSED, true) as never);
+    h.tool_result?.(toolResult("mcp__uktub__verify", REFUSED, true) as never);
     assert.equal(h.message_end?.({ message: assistant("working", true) } as never), undefined, "not appended to a message that still calls tools");
     const out = h.message_end?.({ message: assistant("The claim is supported.") } as never) as { message: { content: { type: string; text?: string }[] } };
     const texts = out.message.content.map((c) => c.text ?? "").join("\n");
@@ -256,8 +269,8 @@ describe("the Pi extension appends unmentioned notices to the final answer only"
   it("nothing is appended when the answer already mentions it, or after a clean run", () => {
     const h = wire();
     h.agent_start?.({ type: "agent_start" } as never);
-    h.tool_result?.(toolResult("mcp__uktub_scholar__verify_claim", REFUSED, true) as never);
-    assert.equal(h.message_end?.({ message: assistant("verify_claim was refused: VERIFY_ENGINE_MISSING.") } as never), undefined);
+    h.tool_result?.(toolResult("mcp__uktub__verify", REFUSED, true) as never);
+    assert.equal(h.message_end?.({ message: assistant("verify was refused: VERIFY_ENGINE_MISSING.") } as never), undefined);
     h.agent_start?.({ type: "agent_start" } as never);
     assert.equal(h.message_end?.({ message: assistant("all good") } as never), undefined);
   });
@@ -265,12 +278,12 @@ describe("the Pi extension appends unmentioned notices to the final answer only"
   it("an interruption the agent finished by following the continuation leaves no footer; an unfinished one does", () => {
     const h = wire();
     h.agent_start?.({ type: "agent_start" } as never);
-    h.tool_result?.(toolResult("mcp__uktub_scholar__verify_claim", INTERRUPTED(120)) as never);
-    h.tool_result?.(toolResult("mcp__uktub_scholar__verify_claim", COMPLETE()) as never);
+    h.tool_result?.(toolResult("mcp__uktub__verify", INTERRUPTED(120)) as never);
+    h.tool_result?.(toolResult("mcp__uktub__verify", COMPLETE()) as never);
     assert.equal(h.message_end?.({ message: assistant("Checked everything: no support.") } as never), undefined);
     h.agent_start?.({ type: "agent_start" } as never);
-    h.tool_result?.(toolResult("mcp__uktub_scholar__verify_claim", INTERRUPTED(120)) as never);
-    h.tool_result?.(toolResult("mcp__uktub_scholar__verify_claim", INTERRUPTED(240)) as never);
+    h.tool_result?.(toolResult("mcp__uktub__verify", INTERRUPTED(120)) as never);
+    h.tool_result?.(toolResult("mcp__uktub__verify", INTERRUPTED(240)) as never);
     const out = h.message_end?.({ message: assistant("An exhaustive check found no support.") } as never) as { message: { content: { text?: string }[] } };
     const texts = out.message.content.map((c) => c.text ?? "").join("\n");
     assert.match(texts, /458 of 698/, "the latest page's counts, once");
@@ -278,7 +291,7 @@ describe("the Pi extension appends unmentioned notices to the final answer only"
   });
 
   describe("registry notices from separate calls keep their own identity", () => {
-    const R = "mcp__uktub_scholar__paper_registry";
+    const R = "mcp__uktub__registry";
     const refused = (what: string) => `register: 1 input(s) — 1 refused\n[0] refused INVALID_DOI — not a DOI or arXiv identifier: "${what}". Next: check the identifier`;
     const footerOf = (h: Record<string, H>) => {
       const out = h.message_end?.({ message: assistant("Done.") } as never) as { message: { content: { text?: string }[] } } | undefined;
@@ -310,7 +323,7 @@ describe("the Pi extension appends unmentioned notices to the final answer only"
   });
 
   describe("verification runs are told apart by their originating call", () => {
-    const V = "mcp__uktub_scholar__verify_claim";
+    const V = "mcp__uktub__verify";
     const withToken = (text: string, tok: string) => text.replace(/^continuation: "[^"]*"/m, `continuation: "${tok}"`);
     const call = (id: string, text: string, input: Record<string, unknown> = {}) => ({ ...toolResult(V, text), toolCallId: id, input });
     const footer = (h: Record<string, H>) => {
@@ -386,7 +399,9 @@ describe("the Pi extension appends unmentioned notices to the final answer only"
     h.agent_start?.({ type: "agent_start" } as never);
     h.tool_result?.(toolResult("bash", "Refused: NOT_OURS — x. Next: y", true) as never);
     assert.equal(h.message_end?.({ message: assistant("done") } as never), undefined);
-    h.tool_result?.(toolResult("mcp__uktub_scholar__search_papers", SEARCH) as never);
+    h.tool_result?.(toolResult("compile", COMPILE) as never);
+    assert.equal(h.message_end?.({ message: assistant("done") } as never), undefined, "a different extension's bare compile tool is not ours");
+    h.tool_result?.(toolResult("mcp__uktub__papers", SEARCH) as never);
     h.agent_start?.({ type: "agent_start" } as never);
     assert.equal(h.message_end?.({ message: assistant("done") } as never), undefined);
   });

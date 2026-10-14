@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Provider access probe (OpenRouter first)</title>
+<meta http-equiv="Content-Security-Policy" id="csp-meta"
+  content="connect-src 'self' https://openrouter.ai; script-src 'self'; style-src 'self' 'unsafe-inline'; object-src 'none'">
+<style>
+body { font-family: system-ui, sans-serif; max-width: 60rem; margin: 2rem auto; padding: 0 1rem; }
+.row { border: 1px solid #ccc; padding: 0.6rem; margin: 0.6rem 0; }
+.status { font-weight: bold; }
+.detail { white-space: pre-wrap; font-size: 0.9rem; }
+label { display: block; margin: 0.4rem 0; }
+</style>
+</head>
+<body>
+<h1>Provider access probe</h1>
+<p>Static page. No proxy, no fallback, no model switching. A mock proves client logic only.</p>
+
+<h2>Provider</h2>
+<label>Provider
+<select id="provider"></select>
+</label>
+<label>Base URL
+<input id="base-url" size="60" spellcheck="false">
+</label>
+
+<h2>Credentials (kept in your browser only)</h2>
+<button id="btn-pkce" type="button">Sign in with OpenRouter</button>
+<label>Paste an API key
+<input id="api-key" type="password" autocomplete="off" spellcheck="false" size="40">
+</label>
+<label><input id="remember" type="checkbox"> Remember on this device. Stored in
+<code>localStorage</code> of this origin, readable by any script on it, not encrypted.</label>
+<button id="btn-forget" type="button">Forget key</button>
+<p id="auth-status">No key stored.</p>
+
+<h2>Model</h2>
+<label>Model
+<select id="model"><option value="">(run the models row first)</option></select>
+</label>
+<label><input id="confirm-paid" type="checkbox"> Sending to a paid model is OK: this may spend my credits.</label>
+
+<h2>Probe rows</h2>
+<button id="run-all" type="button">Run all rows</button>
+<div class="row" id="row-key"><h3>a. Key / limits <button id="run-key" type="button">Run</button></h3><p class="status">unrun</p><p class="detail"></p></div>
+<div class="row" id="row-models"><h3>b. Models <button id="run-models" type="button">Run</button></h3><p class="status">unrun</p><p class="detail"></p></div>
+<div class="row" id="row-stream"><h3>c. Streaming chat <button id="run-stream" type="button">Run</button></h3><p class="status">unrun</p><p class="detail"></p></div>
+<div class="row" id="row-tools"><h3>d. Tool call round trip <button id="run-tools" type="button">Run</button></h3><p class="status">unrun</p><p class="detail"></p></div>
+<div class="row" id="row-cancel"><h3>e. Cancellation <button id="run-cancel" type="button">Run</button></h3><p class="status">unrun</p><p class="detail"></p></div>
+<div class="row" id="row-errors"><h3>f. Errors / exhaustion <button id="run-errors" type="button">Run</button>
+<button id="retry-errors" type="button">Retry once</button></h3><p class="status">unrun</p><p class="detail"></p></div>
+<p id="no-switch-line">No request was moved to another model.</p>
+
+<h2>Results</h2>
+<button id="btn-download" type="button">Download results</button>
+
+<script type="module" src="./probe.mjs"></script>
+</body>
+</html>

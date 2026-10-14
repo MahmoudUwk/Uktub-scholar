@@ -1,0 +1,112 @@
+{
+ "schema": "bench-claims-v2/1",
+ "date": "2026-10-12",
+ "spec": "intern-0.8b",
+ "engine": "llama-cpp",
+ "worker": {
+  "ready": true,
+  "model": "Intern-Decision-0.8B",
+  "model_ref": "/home/mahmoud/.cache/uktub-bench/intern/Intern-Decision-0.8B",
+  "revision": "85a0cc5a99d67ea8d56dfe98115689212867171d",
+  "prompt": "criteria",
+  "model_sha256": "index:f71a08fca77f74382c1b358bbf958bdbc9f82008c1bd7e9a842fc412eeec3ba9",
+  "max_input_tokens": 8192,
+  "device": "cpu",
+  "load_s": 1.535,
+  "vram_after_load_mib": null,
+  "versions": {
+   "torch": "2.9.1+cu128",
+   "cuda": "12.8",
+   "transformers": "5.14.1",
+   "python": "3.12.13"
+  },
+  "gpu": null,
+  "stats": {
+   "rows_scored": 172,
+   "tokens_scored": 102188,
+   "infer_s": 332.724,
+   "peak_vram_mib": null,
+   "peak_vram_reserved_mib": null
+  }
+ },
+ "device": "cpu",
+ "label": "gate-intern-0.8b-cpu",
+ "identity": {
+  "model": "declared:intern-0.8b@85a0cc5a99d6:criteria",
+  "protocol": "systemone-noul-v1",
+  "minConfidence": 0.99
+ },
+ "commit": "2f0a15846e6427797fdc7085677f1cc01f58e665",
+ "dirty": true,
+ "dataset": {
+  "claimsSha256": "396330e267ca6c03ec42df9fbbb94ca70f7c6e19ec7ff25fbe9806a81f0c40b2",
+  "corpusSha256": "b620b96cb3bb286401a052e9e23841022ba2ffca3c9c7b789bfbb5cefd06a8be",
+  "papers": 1,
+  "claims": 2,
+  "stride": 6,
+  "offset": 0,
+  "selection": null
+ },
+ "chunking": {
+  "chunk_tokens": 512,
+  "overlap_tokens": 0,
+  "chars_per_token": 2.8,
+  "boundary": "section"
+ },
+ "maxJudgmentsRaisedFrom": 120,
+ "gpu": null,
+ "machine": {
+  "cpu": "Intel(R) Core(TM) i7-14650HX",
+  "cores": 24,
+  "memoryGb": 62,
+  "node": "v26.3.1"
+ },
+ "run": {
+  "startedAt": "2026-10-12T10:29:21.065Z",
+  "loadavgStart": [
+   11.15,
+   12.27,
+   10.19
+  ],
+  "loadavgEnd": [
+   16.81,
+   15.35,
+   12.21
+  ],
+  "seconds": 334
+ },
+ "records": [
+  {
+   "id": "v2-2609.10053v1-01",
+   "paper": "2609.10053v1",
+   "label": "TRUE",
+   "type": "reworded",
+   "fold": 1,
+   "score": 0.5794844938524477,
+   "unjudged": 0,
+   "chunks": 86,
+   "supportFound": false,
+   "fresh": 86,
+   "cached": 0,
+   "localizationFresh": 0,
+   "wallMs": 169729,
+   "refused": null
+  },
+  {
+   "id": "v2-2609.10053v1-08",
+   "paper": "2609.10053v1",
+   "label": "FALSE",
+   "type": "perturbed",
+   "fold": 1,
+   "score": 0.5509911255112818,
+   "unjudged": 0,
+   "chunks": 86,
+   "supportFound": false,
+   "fresh": 86,
+   "cached": 0,
+   "localizationFresh": 0,
+   "wallMs": 163066,
+   "refused": null
+  }
+ ]
+}

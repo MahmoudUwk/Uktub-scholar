@@ -19,6 +19,8 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 
 import { RegistryError, createRegistry, deregisterPapers, findEnclosingProject, listPapers, openRegistry, syncBibliography } from "../core/registry.ts";
 import { reviewManuscript } from "../core/review/run.ts";
+import { renderFull } from "../core/provenance/render.ts";
+import { runProvenance } from "../core/provenance/run.ts";
 import { compileDocument, describeOutcome, prodSpawn } from "../core/compile/run.ts";
 import { installTectonic, managedTectonicPath, readTectonicLock } from "../core/compile/managed.ts";
 import { installedEosOnnx, readEosOnnxLock } from "../core/verify/eos-onnx.ts";
@@ -32,6 +34,7 @@ import { verifyClaimTool, type VerifyClaimArgs, type VerifyHooks } from "../core
 import { searchPassagesTool, type SearchPassagesArgs } from "../core/tools/passages.ts";
 import { managedCacheDir } from "../core/embed/config.ts";
 import { BIN_PATH } from "../core/launch.ts";
+import { LEGACY_SERVER_KEY, MCP_SERVER_NAME } from "../core/tool-names.ts";
 import { RuntimeError, installRuntime, installedPaths, platformKey, readLock, type RuntimeLock } from "../core/embed/runtime.ts";
 import { createMcpServer, validateTargetDir } from "../mcp/server.ts";
 import { handshakeTraceEnabled, traceHandshake } from "../mcp/trace.ts";
@@ -69,6 +72,9 @@ commands:
   review [entry.tex] [--out <report.md>]
                                 deterministic manuscript review (four structural measures, no model):
                                 full report with file:line evidence in reviews/<date>-slop.md
+  provenance [entry.tex] [--json]
+                                the manuscript's provenance view (no model): which statements verify supported word for
+                                word, which cite a paper, which figures no cited paper contains, the word count
   register <id>...              register papers by DOI or arxiv:ID (same tool the agent uses)
   attach <doi|citekey> <file>   prepare a local PDF/TEI inside the project as a paper's source
   verify <claim> [--papers all|<doi|citekey>,...] [--query <words>] [--continuation <token>]
@@ -312,7 +318,7 @@ async function tectonicCommand(args: string[], io: CliIo): Promise<number> {
       },
     });
     io.out(r.downloaded ? `Installed tectonic ${lock.tool.version} (downloaded, verified and self-checked) at ${r.path}.` : `Already installed at ${r.path}; nothing to download.`);
-    io.out(`compile_document now finds it automatically when no tectonic is on PATH.`);
+    io.out(`compile now finds it automatically when no tectonic is on PATH.`);
     return 0;
   } catch (caught) {
     if (caught instanceof RuntimeError) {
@@ -321,6 +327,44 @@ async function tectonicCommand(args: string[], io: CliIo): Promise<number> {
     }
     throw caught;
   }
+}
+
+/**
+ * Install (or migrate) this package's server entry in a host's server table.
+ * A legacy `uktub-scholar` entry is renamed to `uktub` without duplicating
+ * the server: its env, timeouts and custom fields survive, only the launch is
+ * refreshed. Both keys present is a conflict — refuse rather than overwrite
+ * unrelated settings — and so is a non-object entry.
+ */
+function installServerEntry(
+  table: Record<string, unknown>,
+  filePath: string,
+  makeFresh: () => Record<string, unknown>,
+): { ok: true } | { ok: false; error: string } {
+  const hasNew = MCP_SERVER_NAME in table;
+  const hasOld = LEGACY_SERVER_KEY in table;
+  if (hasNew && hasOld) {
+    return { ok: false, error: `${filePath} has both "${MCP_SERVER_NAME}" and "${LEGACY_SERVER_KEY}" server entries; remove or merge one, then retry (both were left untouched)` };
+  }
+  if (hasOld) {
+    const old = table[LEGACY_SERVER_KEY];
+    if (typeof old !== "object" || old === null || Array.isArray(old)) {
+      return { ok: false, error: `${filePath}: "${LEGACY_SERVER_KEY}" is not an object; fix or remove it, then retry (it was left untouched)` };
+    }
+    table[MCP_SERVER_NAME] = { ...(old as Record<string, unknown>), ...makeFresh() };
+    delete table[LEGACY_SERVER_KEY];
+    return { ok: true };
+  }
+  if (hasNew) {
+    const current = table[MCP_SERVER_NAME];
+    if (typeof current !== "object" || current === null || Array.isArray(current)) {
+      return { ok: false, error: `${filePath}: "${MCP_SERVER_NAME}" is not an object; fix or remove it, then retry (it was left untouched)` };
+    }
+    table[MCP_SERVER_NAME] = { ...(current as Record<string, unknown>), ...makeFresh() };
+    return { ok: true };
+  }
+  table[MCP_SERVER_NAME] = makeFresh();
+  return { ok: true };
 }
 
 /**
@@ -401,7 +445,11 @@ async function mcpInstallCommand(args: string[], io: CliIo): Promise<number> {
         return 1;
       }
       const mcpServers = table.table;
-      mcpServers["uktub-scholar"] = { command: SERVER_LAUNCH.command, args: [...SERVER_LAUNCH.args] };
+      const installed = installServerEntry(mcpServers, target, () => ({ command: SERVER_LAUNCH.command, args: [...SERVER_LAUNCH.args] }));
+      if (!installed.ok) {
+        io.err(`error: ${installed.error}`);
+        return 1;
+      }
       data.mcpServers = mcpServers;
       mkdirSync(dirname(target), { recursive: true });
       writeFileSync(target, JSON.stringify(data, null, 2) + "\n", "utf8");
@@ -422,7 +470,11 @@ async function mcpInstallCommand(args: string[], io: CliIo): Promise<number> {
         return 1;
       }
       const mcpServers = table.table;
-      mcpServers["uktub-scholar"] = { command: SERVER_LAUNCH.command, args: [...SERVER_LAUNCH.args] };
+      const installed = installServerEntry(mcpServers, target, () => ({ command: SERVER_LAUNCH.command, args: [...SERVER_LAUNCH.args] }));
+      if (!installed.ok) {
+        io.err(`error: ${installed.error}`);
+        return 1;
+      }
       data.mcpServers = mcpServers;
       mkdirSync(dirname(target), { recursive: true });
       writeFileSync(target, JSON.stringify(data, null, 2) + "\n", "utf8");
@@ -443,7 +495,11 @@ async function mcpInstallCommand(args: string[], io: CliIo): Promise<number> {
         return 1;
       }
       const mcpServers = table.table;
-      mcpServers["uktub-scholar"] = { command: SERVER_LAUNCH.command, args: [...SERVER_LAUNCH.args] };
+      const installed = installServerEntry(mcpServers, target, () => ({ command: SERVER_LAUNCH.command, args: [...SERVER_LAUNCH.args] }));
+      if (!installed.ok) {
+        io.err(`error: ${installed.error}`);
+        return 1;
+      }
       data.mcpServers = mcpServers;
       mkdirSync(dirname(target), { recursive: true });
       writeFileSync(target, JSON.stringify(data, null, 2) + "\n", "utf8");
@@ -464,7 +520,11 @@ async function mcpInstallCommand(args: string[], io: CliIo): Promise<number> {
         return 1;
       }
       const mcp = table.table;
-      mcp["uktub-scholar"] = { type: "local", command: [SERVER_LAUNCH.command, ...SERVER_LAUNCH.args] };
+      const installed = installServerEntry(mcp, target, () => ({ type: "local", command: [SERVER_LAUNCH.command, ...SERVER_LAUNCH.args] }));
+      if (!installed.ok) {
+        io.err(`error: ${installed.error}`);
+        return 1;
+      }
       data.mcp = mcp;
       mkdirSync(dirname(target), { recursive: true });
       writeFileSync(target, JSON.stringify(data, null, 2) + "\n", "utf8");
@@ -473,12 +533,26 @@ async function mcpInstallCommand(args: string[], io: CliIo): Promise<number> {
     }
     case "codex": {
       const target = join(root, ".codex", "config.toml");
-      const snippet = `[mcp_servers.uktub-scholar]\ncommand = ${JSON.stringify(SERVER_LAUNCH.command)}\nargs = [${SERVER_LAUNCH.args.map((a) => JSON.stringify(a)).join(", ")}]\n`;
+      const snippet = `[mcp_servers.uktub]\ncommand = ${JSON.stringify(SERVER_LAUNCH.command)}\nargs = [${SERVER_LAUNCH.args.map((a) => JSON.stringify(a)).join(", ")}]\n`;
       let existing = "";
       if (existsSync(target)) {
         existing = readFileSync(target, "utf8");
       }
-      if (/^\s*\[mcp_servers\.(?:uktub-scholar|"uktub-scholar")\]/m.test(existing)) {
+      // Simple named tables only (no TOML parser): the header line is renamed, the body is kept byte-identical.
+      const hasNew = /^\s*\[mcp_servers\.(?:uktub|"uktub")\]/m.test(existing);
+      const hasOld = /^\s*\[mcp_servers\.(?:uktub-scholar|"uktub-scholar")\]/m.test(existing);
+      if (hasNew && hasOld) {
+        io.err(`error: ${target} has both "[mcp_servers.uktub]" and a legacy "[mcp_servers.uktub-scholar]" table; remove or merge one, then retry (it was left untouched)`);
+        return 1;
+      }
+      if (hasOld) {
+        const renamed = existing.replace(/^\s*\[mcp_servers\.(?:uktub-scholar|"uktub-scholar")\]/m, "[mcp_servers.uktub]");
+        mkdirSync(dirname(target), { recursive: true });
+        writeFileSync(target, renamed, "utf8");
+        io.out(`Renamed MCP server configuration for codex in .codex/config.toml: [mcp_servers.uktub-scholar] is now [mcp_servers.uktub] (entry body kept).`);
+        return 0;
+      }
+      if (hasNew) {
         io.out(`MCP server configuration for codex is already in .codex/config.toml; left unchanged.`);
         return 0;
       }
@@ -619,7 +693,7 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
         try {
           const rows = listPapers(db);
           if (rows.length === 0) {
-            out("No papers in the registry. Register with `uktub-scholar register <id>` or an agent's paper_registry tool.");
+            out("No papers in the registry. Register with `uktub-scholar register <id>` or an agent's registry tool.");
             return 0;
           }
           out(["citekey", "year", "title", "venue", "citable", "via"].join("\t"));
@@ -651,6 +725,19 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
         const outcome = reviewManuscript({ root, entry, out: outPath, now: io.now ?? (() => new Date()) });
         if (!outcome.ok) { err(`error: ${outcome.message}`); return 1; }
         for (const l of outcome.summary) out(l);
+        return 0;
+      }
+      case "provenance": {
+        let entry: string | undefined;
+        let asJson = false;
+        for (const a of args) {
+          if (a === "--json") asJson = true;
+          else if (entry === undefined && !String(a).startsWith("--")) entry = a;
+          else { err(`error: unexpected argument ${a}\n${USAGE}`); return 1; }
+        }
+        const outcome = runProvenance({ root, entry, now: io.now ?? (() => new Date()) });
+        if (!outcome.ok) { err(`error: ${outcome.message}`); return 1; }
+        out(asJson ? JSON.stringify({ entry: outcome.entry, summary: outcome.audit.summary, items: outcome.audit.items }, null, 2) : renderFull(outcome.audit));
         return 0;
       }
       case "compile": {

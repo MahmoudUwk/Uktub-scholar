@@ -1,6 +1,8 @@
+import { normalizeToolName } from "./tool-names.ts";
+
 /**
  * A deterministic honesty layer for host adapters. Models drop tool failures and warnings from their answers (seen in real sessions:
- * a refused verify_claim, a failed search provider, compile warnings, none mentioned). An adapter collects the notices a run's tool
+ * a refused verify, a failed search provider, compile warnings, none mentioned). An adapter collects the notices a run's tool
  * results carried and, if the final answer does not mention one, appends it. Independent of how well the model follows rules.
  */
 /** Every guard block message starts with this, so the notices layer can see blocks of any tool (bash, edit, write). */
@@ -25,13 +27,15 @@ const claimOf = (text: string): string => /^claim: (.*)$/m.exec(text)?.[1]?.trim
 
 /** Ids of earlier notices this result settles: a verification whose work now reads `; complete` clears its run's interruption (by explicit run id, else by claim for an exhaustive result). */
 export function clearedIds(tool: string, text: string, verificationRunId?: string): string[] {
-  if (tool !== "verify_claim" || !/^work: \d+ of \d+ selected passage\(s\) judged .*; complete$/m.test(text)) return [];
+  tool = normalizeToolName(tool);
+  if (tool !== "verify" || !/^work: \d+ of \d+ selected passage\(s\) judged .*; complete$/m.test(text)) return [];
   if (verificationRunId !== undefined) return [`interrupted|${verificationRunId}`];
   return /^candidates: exhaustive/m.test(text) ? [`interrupted|${claimOf(text)}`] : [];
 }
 
 /** The notices in one uktub tool result: a refusal, `warning: <provider> — CODE: …` lines (search), `- warning: …` lines (compile). */
 export function extractNotices(tool: string, text: string, isError: boolean, verificationRunId?: string): Notice[] {
+  tool = normalizeToolName(tool);
   const out: Notice[] = [];
   if (text.startsWith(BLOCK_PREFIX)) {
     const reason = text.slice(BLOCK_PREFIX.length);
@@ -67,16 +71,16 @@ export function extractNotices(tool: string, text: string, isError: boolean, ver
       line: `${tool} failed: ${clip(text, 200)}`,
     });
   }
-  if (tool === "paper_registry") {
+  if (tool === "registry") {
     // an audit trail of what changed the bibliography, so a silent change cannot stay silent
     for (const m of text.matchAll(/^\[\d+\] (registered|updated|removed|attached) (\S+) (\S+)/gm)) {
-      out.push({ id: `changed|${m[1]}|${m[2]}`, key: m[2] ?? "", anyOf: [m[3] ?? ""], line: `paper_registry ${m[1]} ${m[2]} (${m[3]})` });
+      out.push({ id: `changed|${m[1]}|${m[2]}`, key: m[2] ?? "", anyOf: [m[3] ?? ""], line: `registry ${m[1]} ${m[2]} (${m[3]})` });
     }
     for (const m of text.matchAll(/^\[(\d+)\] refused ([A-Z][A-Z0-9_]*) — (.*?)(?:\. Next:|$)/gm)) {
-      out.push({ id: `refused|${m[1]}|${m[2]}|${m[3]}`, key: m[2] ?? "", line: `paper_registry item [${m[1]}] was refused (${m[2]}): ${clip(m[3] ?? "", 200)}` });
+      out.push({ id: `refused|${m[1]}|${m[2]}|${m[3]}`, key: m[2] ?? "", line: `registry item [${m[1]}] was refused (${m[2]}): ${clip(m[3] ?? "", 200)}` });
     }
     for (const m of text.matchAll(/^warning ([A-Z][A-Z0-9_]*): (.*?)(?:\. Next:|$)/gm)) {
-      out.push({ id: `warning|${m[1]}|${m[2]}`, key: m[1] ?? "", line: `paper_registry warning (${m[1]}): ${clip(m[2] ?? "", 200)}` });
+      out.push({ id: `warning|${m[1]}|${m[2]}`, key: m[1] ?? "", line: `registry warning (${m[1]}): ${clip(m[2] ?? "", 200)}` });
     }
   }
   for (const m of text.matchAll(/^warning: (\S+) — ([A-Z_]+): (.*)$/gm)) {

@@ -60,11 +60,11 @@ describe("MCP Server tools/list", () => {
 
     const toolNames = result.tools.map((t) => t.name);
     assert.deepEqual(toolNames, [
-      "search_papers",
-      "paper_registry",
-      "compile_document",
-      "verify_claim",
-      "search_passages",
+      "papers",
+      "registry",
+      "compile",
+      "verify",
+      "passages",
     ]);
 
     for (const tool of result.tools) {
@@ -83,16 +83,16 @@ describe("MCP Server tool annotations and titles", () => {
   // what each tool writes, deletes and contacts (side-effect audit, 2026-10-08), so a host's prompt is never softer than the truth.
   const EXPECTED = {
     // fixed provider APIs only; writes nothing
-    search_papers: { title: "Search papers", readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+    papers: { title: "Search papers", readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true },
     // union of its actions: `remove` deletes rows (cascading to sources and chunks), `sync_bibliography` and `attach_source` overwrite,
     // `register` refreshes records, `register` and `acquire` contact providers
-    paper_registry: { title: "Paper registry", readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true },
+    registry: { title: "Paper registry", readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true },
     // writes only regenerable build/ output and fetches only its own TeX bundle
-    compile_document: { title: "Compile document", readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    compile: { title: "Compile document", readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     // adds a run and evidence rows on each fresh call and acquires sources on demand
-    verify_claim: { title: "Verify claim", readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
+    verify: { title: "Verify claim", readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
     // builds a derived passage index (converges after the first call); no network on the default path
-    search_passages: { title: "Search passages", readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    passages: { title: "Search passages", readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
   } as const;
 
   it("every tool carries a title and all four hints explicitly", async () => {
@@ -122,9 +122,9 @@ describe("MCP Server tool annotations and titles", () => {
 describe("MCP Server tool descriptions seen by the agent", () => {
   // Measured in experiments/runs/rf-llm-literature-review/iter-02: verify_claim took 91% of the agent's tool time because every claim was checked
   // exhaustively over each whole paper; nothing in the schema said that cost grows with the paper or that `query` is the cheaper focused check.
-  it("verify_claim's `query` says what an exhaustive check costs and when a focused check is enough", async () => {
+  it("verify's `query` says what an exhaustive check costs and when a focused check is enough", async () => {
     const { client } = await createClientServer();
-    const verify = (await client.listTools()).tools.find((t) => t.name === "verify_claim");
+    const verify = (await client.listTools()).tools.find((t) => t.name === "verify");
     const query = (verify?.inputSchema.properties as Record<string, { description?: string }> | undefined)?.query?.description ?? "";
     assert.match(query, /exhaustive/i);
     assert.match(query, /every passage/i);
@@ -133,7 +133,7 @@ describe("MCP Server tool descriptions seen by the agent", () => {
   });
 });
 
-describe("MCP Server tools/call search_papers", () => {
+describe("MCP Server tools/call papers", () => {
   it("runs search and maps results to CallToolResult with content and structuredContent", async () => {
     const { fetchFn } = createSearchFetch({
       openalex: [{ doi: "10.1001/a", title: "Paper A", citations: 10 }],
@@ -143,7 +143,7 @@ describe("MCP Server tools/call search_papers", () => {
 
     const { client } = await createClientServer({ fetch: fetchFn });
     const result = await client.callTool({
-      name: "search_papers",
+      name: "papers",
       arguments: { query: "neural networks", limit: 5 },
     });
 
@@ -161,7 +161,7 @@ describe("MCP Server tools/call search_papers", () => {
   it("maps query refusal to isError: true and text in content", async () => {
     const { client } = await createClientServer({ fetch: NO_FETCH });
     const result = await client.callTool({
-      name: "search_papers",
+      name: "papers",
       arguments: { query: "" },
     });
 
@@ -172,11 +172,11 @@ describe("MCP Server tools/call search_papers", () => {
   });
 });
 
-describe("MCP Server tools/call paper_registry", () => {
+describe("MCP Server tools/call registry", () => {
   it("refuses with isError: true when registry is not initialized", async () => {
     const { client } = await createClientServer({ fetch: NO_FETCH });
     const result = await client.callTool({
-      name: "paper_registry",
+      name: "registry",
       arguments: { action: "register", identifiers: ["10.1234/uninit"] },
     });
 
@@ -199,7 +199,7 @@ describe("MCP Server tools/call paper_registry", () => {
 
     // 1. register
     const regResult = await client.callTool({
-      name: "paper_registry",
+      name: "registry",
       arguments: { action: "register", identifiers: ["10.1234/qgrid"] },
     });
 
@@ -212,7 +212,7 @@ describe("MCP Server tools/call paper_registry", () => {
 
     // 2. read
     const readResult = await client.callTool({
-      name: "paper_registry",
+      name: "registry",
       arguments: { action: "read" },
     });
 
@@ -223,7 +223,7 @@ describe("MCP Server tools/call paper_registry", () => {
 
     // 3. sync_bibliography
     const syncResult = await client.callTool({
-      name: "paper_registry",
+      name: "registry",
       arguments: { action: "sync_bibliography" },
     });
     assert.equal(syncResult.isError, undefined);
@@ -231,7 +231,7 @@ describe("MCP Server tools/call paper_registry", () => {
 
     // 4. remove
     const removeResult = await client.callTool({
-      name: "paper_registry",
+      name: "registry",
       arguments: { action: "remove", handles: [citekey] },
     });
     assert.equal(removeResult.isError, undefined);
@@ -240,11 +240,11 @@ describe("MCP Server tools/call paper_registry", () => {
   });
 });
 
-describe("MCP Server tools/call compile_document", () => {
+describe("MCP Server tools/call compile", () => {
   it("returns compilation outcome or missing engine refusal with structured content or error", async () => {
     const { client } = await createClientServer();
     const result = await client.callTool({
-      name: "compile_document",
+      name: "compile",
       arguments: {},
     });
 
@@ -254,13 +254,13 @@ describe("MCP Server tools/call compile_document", () => {
   });
 });
 
-describe("MCP Server tools/call verify_claim", () => {
+describe("MCP Server tools/call verify", () => {
   it("refuses out-of-range claims and empty scopes", async () => {
     const { client } = await createClientServer();
 
     // Short claim (< 8 characters)
     const shortClaim = await client.callTool({
-      name: "verify_claim",
+      name: "verify",
       arguments: { claim: "Short", papers: "all" },
     });
     assert.equal(shortClaim.isError, true);
@@ -268,7 +268,7 @@ describe("MCP Server tools/call verify_claim", () => {
 
     // Empty explicit paper list
     const emptyPapers = await client.callTool({
-      name: "verify_claim",
+      name: "verify",
       arguments: { claim: "Long enough claim sentence for verification.", papers: [] },
     });
     assert.equal(emptyPapers.isError, true);
@@ -282,7 +282,7 @@ describe("MCP Server tools/call verify_claim", () => {
 
     const { client } = await createClientServer();
     const result = await client.callTool({
-      name: "verify_claim",
+      name: "verify",
       arguments: { claim: "High temperatures degrade protein stability.", papers: "all" },
     });
 
@@ -294,14 +294,14 @@ describe("MCP Server tools/call verify_claim", () => {
   });
 });
 
-describe("MCP Server tools/call search_passages", () => {
+describe("MCP Server tools/call passages", () => {
   it("searches passages over empty registry and returns valid output schema", async () => {
     const db = createRegistry(root);
     db.close();
 
     const { client } = await createClientServer();
     const result = await client.callTool({
-      name: "search_passages",
+      name: "passages",
       arguments: { query: "thermodynamic entropy" },
     });
 
@@ -333,7 +333,7 @@ describe("MCP Server context confinement (R16)", () => {
     const { client } = await createClientServer({ targetDir: badDir });
 
     const result = await client.callTool({
-      name: "search_passages",
+      name: "passages",
       arguments: { query: "test" },
     });
 
@@ -367,7 +367,7 @@ describe("MCP Server cancellation signal", () => {
     await assert.rejects(
       client.callTool(
         {
-          name: "verify_claim",
+          name: "verify",
           arguments: { claim: "Cells age faster at high temperature.", papers: "all" },
         },
         undefined,
@@ -379,16 +379,46 @@ describe("MCP Server cancellation signal", () => {
 });
 
 describe("MCP Server namespaced tool invocation", () => {
-  it("normalizes diverse host-namespaced tool prefixes", () => {
-    assert.equal(normalizeToolName("search_papers"), "search_papers");
-    assert.equal(normalizeToolName("mcp__uktub_scholar__search_papers"), "search_papers");
-    assert.equal(normalizeToolName("mcp__uktub-scholar__search_papers"), "search_papers");
-    assert.equal(normalizeToolName("uktub_scholar__search_papers"), "search_papers");
-    assert.equal(normalizeToolName("uktub-scholar__search_papers"), "search_papers");
-    assert.equal(normalizeToolName("uktub-scholar/search_papers"), "search_papers");
-    assert.equal(normalizeToolName("uktub_scholar:search_papers"), "search_papers");
-    assert.equal(normalizeToolName("paper_registry"), "paper_registry");
-    assert.equal(normalizeToolName("mcp__uktub_scholar__paper_registry"), "paper_registry");
+  it("normalizes canonical, namespaced and legacy tool names to the short canonical names", () => {
+    assert.equal(normalizeToolName("papers"), "papers");
+    assert.equal(normalizeToolName("mcp__uktub__papers"), "papers");
+    assert.equal(normalizeToolName("mcp__uktub__registry"), "registry");
+    assert.equal(normalizeToolName("uktub/papers"), "papers");
+    assert.equal(normalizeToolName("uktub:verify"), "verify");
+    assert.equal(normalizeToolName("uktub__passages"), "passages");
+    // Legacy long names stay callable through the hidden alias map (existing callers keep working).
+    assert.equal(normalizeToolName("search_papers"), "papers");
+    assert.equal(normalizeToolName("mcp__uktub__search_papers"), "papers");
+    assert.equal(normalizeToolName("mcp__uktub_scholar__papers"), "papers");
+    assert.equal(normalizeToolName("mcp__uktub-scholar__search_papers"), "papers");
+    assert.equal(normalizeToolName("uktub_scholar__search_papers"), "papers");
+    assert.equal(normalizeToolName("uktub-scholar__search_papers"), "papers");
+    assert.equal(normalizeToolName("uktub-scholar/search_papers"), "papers");
+    assert.equal(normalizeToolName("uktub_scholar:search_papers"), "papers");
+    assert.equal(normalizeToolName("registry"), "registry");
+    assert.equal(normalizeToolName("paper_registry"), "registry");
+    assert.equal(normalizeToolName("mcp__uktub_scholar__paper_registry"), "registry");
+    assert.equal(normalizeToolName("compile_document"), "compile");
+    assert.equal(normalizeToolName("verify_claim"), "verify");
+    assert.equal(normalizeToolName("search_passages"), "passages");
+  });
+
+  it("leaves unrelated prefixes alone instead of stripping something that looks like a namespace", () => {
+    assert.equal(normalizeToolName("mcp__other__papers"), "mcp__other__papers");
+    assert.equal(normalizeToolName("mcp__uktub_scholarx__papers"), "mcp__uktub_scholarx__papers");
+    assert.equal(normalizeToolName("not_a_tool"), "not_a_tool");
+    assert.equal(normalizeToolName("constructor"), "constructor");
+    assert.equal(normalizeToolName("__proto__"), "__proto__");
+  });
+
+  it("lists only the five canonical short names: no duplicate legacy aliases in the model surface", async () => {
+    const { client } = await createClientServer();
+    const names = (await client.listTools()).tools.map((t) => t.name);
+    assert.equal(names.length, 5);
+    assert.deepEqual([...names].sort(), ["compile", "papers", "passages", "registry", "verify"]);
+    for (const old of ["search_papers", "paper_registry", "compile_document", "verify_claim", "search_passages"]) {
+      assert.ok(!names.includes(old), `${old} must not be listed beside its short name`);
+    }
   });
 
   it("successfully invokes tools through namespaced identifiers", async () => {
@@ -400,21 +430,47 @@ describe("MCP Server namespaced tool invocation", () => {
 
     const { client } = await createClientServer({ fetch: fetchFn });
 
-    // Call using Claude Code namespaced format: mcp__uktub_scholar__search_papers
+    // Call using Pi namespaced format: mcp__uktub__papers
     const result1 = await client.callTool({
-      name: "mcp__uktub_scholar__search_papers",
+      name: "mcp__uktub__papers",
       arguments: { query: "graph theory", limit: 3 },
     });
     assert.equal(result1.isError, undefined);
     assert.ok(textContent(result1).includes("Paper B"));
 
-    // Call using slash format: uktub-scholar/search_papers
+    // Call using slash format: uktub/papers
     const result2 = await client.callTool({
-      name: "uktub-scholar/search_papers",
+      name: "uktub/papers",
       arguments: { query: "graph theory", limit: 3 },
     });
     assert.equal(result2.isError, undefined);
     assert.ok(textContent(result2).includes("Paper B"));
+  });
+
+  it("still serves legacy long names through the hidden alias map", async () => {
+    const { fetchFn } = createSearchFetch({
+      openalex: [{ doi: "10.1001/c", title: "Paper C", citations: 5 }],
+      crossref: [],
+      semanticScholar: [],
+    });
+
+    const { client } = await createClientServer({ fetch: fetchFn });
+
+    // Bare legacy name from an existing caller.
+    const result1 = await client.callTool({
+      name: "search_papers",
+      arguments: { query: "graph theory", limit: 3 },
+    });
+    assert.equal(result1.isError, undefined);
+    assert.ok(textContent(result1).includes("Paper C"));
+
+    // Legacy name under the legacy server prefix.
+    const result2 = await client.callTool({
+      name: "mcp__uktub_scholar__search_papers",
+      arguments: { query: "graph theory", limit: 3 },
+    });
+    assert.equal(result2.isError, undefined);
+    assert.ok(textContent(result2).includes("Paper C"));
   });
 });
 
@@ -432,7 +488,7 @@ describe("MCP Server real OS child process stdio pipes", () => {
       assert.equal(tools.tools.length, 5);
 
       const result = await client.callTool({
-        name: "paper_registry",
+        name: "registry",
         arguments: { action: "read" },
       });
       assert.equal(result.isError, true);
@@ -471,10 +527,11 @@ describe("server instructions (read by every host's model, whether or not it ope
     assert.match(text, /only the fields the user (gave|supplied)/i, "the stub holds nothing the user did not say");
   });
 
-  it("report the package version, not a literal", async () => {
+  it("reports the package version under the short server name", async () => {
     const { client } = await createClientServer();
     const pkg = JSON.parse((await import("node:fs")).readFileSync(new URL("../package.json", import.meta.url), "utf8")) as { version: string };
     assert.equal(client.getServerVersion()?.version, pkg.version);
+    assert.equal(client.getServerVersion()?.name, "uktub");
   });
 });
 
@@ -487,7 +544,7 @@ describe("progress heartbeats (hosts time a request out unless the server report
     }) as typeof fetch;
   };
   const call = (client: Client, onprogress?: (p: { progress: number; message?: string }) => void) =>
-    client.callTool({ name: "search_papers", arguments: { query: "slow" } }, undefined, onprogress ? { onprogress } : undefined);
+    client.callTool({ name: "papers", arguments: { query: "slow" } }, undefined, onprogress ? { onprogress } : undefined);
 
   it("sends increasing progress notifications while a slow tool runs, naming the tool", async () => {
     const { client } = await createClientServer({ fetch: slowSearch(180), providerConfig: SEARCH_CFG, heartbeatMs: 20 });
@@ -496,7 +553,7 @@ describe("progress heartbeats (hosts time a request out unless the server report
     assert.ok(!(r as { isError?: boolean }).isError);
     assert.ok(seen.length >= 3, `expected several heartbeats, got ${seen.length}`);
     assert.ok(seen.every((p, i) => i === 0 || p.progress > seen[i - 1]!.progress), "progress strictly increases");
-    assert.match(seen[0]?.message ?? "", /search_papers/);
+    assert.match(seen[0]?.message ?? "", /uktub: papers still working/);
   });
 
   it("sends nothing when the client did not ask for progress, and the call still succeeds", async () => {
@@ -535,14 +592,14 @@ describe("registration hook through the server", () => {
   }
   const download = async (url: string) => ({ finalUrl: url, contentType: null, bytes: makePdf([[TITLE, "Grids age slowly and caches fill with every request."]]) });
   const sourceStatus = async (client: Client): Promise<string> => {
-    const r = await client.callTool({ name: "paper_registry", arguments: { action: "read", fields: ["source"] } });
+    const r = await client.callTool({ name: "registry", arguments: { action: "read", fields: ["source"] } });
     return (r.structuredContent as { records: { source: { status: string } }[] }).records[0].source.status;
   };
 
   it("registering a paper starts its open-access acquisition in the background; the source becomes ready without another call", async () => {
     createRegistry(root).close();
     const { client } = await createClientServer({ fetch: hookFetch(), download, env: hookEnv() });
-    const reg = await client.callTool({ name: "paper_registry", arguments: { action: "register", identifiers: ["10.1001/aaa"] } });
+    const reg = await client.callTool({ name: "registry", arguments: { action: "register", identifiers: ["10.1001/aaa"] } });
     assert.ok(reg.structuredContent, textContent(reg));
     assert.equal((reg.structuredContent as { outcomes: { source: { status: string } }[] }).outcomes[0].source.status, "acquiring");
     let status = "";
@@ -556,11 +613,11 @@ describe("registration hook through the server", () => {
   it("UKTUB_ACQUIRE_ON_REGISTER=0 turns the hook off: the paper stays metadata_only until acquire is asked", async () => {
     createRegistry(root).close();
     const { client } = await createClientServer({ fetch: hookFetch(), download, env: hookEnv({ UKTUB_ACQUIRE_ON_REGISTER: "0" }) });
-    const reg = await client.callTool({ name: "paper_registry", arguments: { action: "register", identifiers: ["10.1001/aaa"] } });
+    const reg = await client.callTool({ name: "registry", arguments: { action: "register", identifiers: ["10.1001/aaa"] } });
     assert.equal((reg.structuredContent as { outcomes: { source: { status: string } }[] }).outcomes[0].source.status, "metadata_only");
     await new Promise((r) => setTimeout(r, 150));
     assert.equal(await sourceStatus(client), "metadata_only");
-    await client.callTool({ name: "paper_registry", arguments: { action: "acquire" } });
+    await client.callTool({ name: "registry", arguments: { action: "acquire" } });
     assert.equal(await sourceStatus(client), "ready");
   });
 });

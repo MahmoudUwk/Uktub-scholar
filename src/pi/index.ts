@@ -2,14 +2,13 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { AGENT_RULES } from "../core/agent-rules.ts";
 import { BIN_PATH } from "../core/launch.ts";
 import { BLOCK_PREFIX, type Notice, clearedIds, extractNotices, footerFor } from "../core/notices.ts";
+import { MCP_SERVER_NAME, MCP_TOOL_PREFIX, normalizeToolName } from "../core/tool-names.ts";
 import { destructiveToolOwnedCommand, toolOwnedViolation } from "../core/tool-owned.ts";
 
-/** Pi names an MCP server's tools `mcp__<server>__<tool>`. */
-const TOOL_PREFIX = "mcp__uktub_scholar__";
 /** The bin shim of THIS package copy: `pi install` does not link bins onto PATH, so a bare `uktub-scholar` is ENOENT. */
 
 export default function uktubScholarExtension(pi: ExtensionAPI): void {
-  pi.registerMcpServer("uktub-scholar", {
+  pi.registerMcpServer(MCP_SERVER_NAME, {
     command: process.execPath,
     args: [BIN_PATH, "mcp"],
     // Five small tools: declared to the model directly (the codemode default hides them from a small model).
@@ -32,11 +31,13 @@ export default function uktubScholarExtension(pi: ExtensionAPI): void {
   pi.on("tool_result", (event) => {
     const name = (event as { toolName?: string }).toolName ?? "";
     const text = event.content.map((c) => (c.type === "text" ? c.text : "")).join("\n");
-    if (!name.startsWith(TOOL_PREFIX) && !text.startsWith(BLOCK_PREFIX)) return undefined;
-    const tool = name.startsWith(TOOL_PREFIX) ? name.slice(TOOL_PREFIX.length) : name;
+    // Canonical short names first; the hidden legacy aliases normalize to the same (existing callers keep their notices).
+    const tool = normalizeToolName(name);
+    const ours = name.startsWith(MCP_TOOL_PREFIX) || name.startsWith("mcp__uktub_scholar__");
+    if (!ours && !text.startsWith(BLOCK_PREFIX)) return undefined;
     let runId: string | undefined;
     const { toolCallId, input } = event as { toolCallId?: string; input?: { continuation?: unknown } };
-    if (tool === "verify_claim" && toolCallId !== undefined) {
+    if (tool === "verify" && toolCallId !== undefined) {
       runId = typeof input?.continuation === "string" ? (continuationRuns.get(input.continuation) ?? toolCallId) : toolCallId;
       const next = /^continuation: "([^"]+)"/m.exec(text)?.[1];
       if (next !== undefined) continuationRuns.set(next, runId);

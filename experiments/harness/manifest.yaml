@@ -1,4 +1,4 @@
-version: 1
+version: 2
 baseline_id: H0
 incumbent_id: H0
 best_reliable_score: 1
@@ -27,6 +27,10 @@ metrics:
   - wall_time
   - cost
   - budget_stops
+  - context_overflow_rate
+  - premature_stop_rate
+  - repeated_action_rate
+  - invalid_tool_call_rate
 policy:
   maxCostIncreaseWithGain: 0.25
   minCostReduction: 0.1
@@ -74,6 +78,7 @@ protected:
 surfaces:
   evolve:
     - rf-llm-literature-review
+    - adapter-literature-workflow-v1
   heldout:
     - heldout-federated-medical-segmentation
   ood:

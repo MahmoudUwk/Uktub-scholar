@@ -1,0 +1,22 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "lib": ["ES2024", "DOM", "WebWorker"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "types": [],
+    "baseUrl": ".",
+    "paths": {
+      "node:sqlite": ["./src/browser/shims/sqlite.ts"],
+      "node:crypto": ["./src/browser/shims/crypto.ts"],
+      "node:zlib": ["./src/browser/shims/zlib.ts"],
+      "node:path": ["./src/browser/shims/path.ts"],
+      "node:path/posix": ["./src/browser/shims/path.ts"],
+      "node:url": ["./src/browser/shims/url.ts"],
+      "node:fs": ["./src/browser/shims/fs.ts"],
+      "node:os": ["./src/browser/shims/os.ts"]
+    }
+  },
+  "include": ["src/browser/**/*.ts", "tests-browser/scenarios/**/*.ts", "tests-browser/lock-page.ts"],
+  "exclude": []
+}

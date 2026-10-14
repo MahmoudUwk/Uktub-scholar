@@ -1,7 +1,10 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
+import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
-import { destructiveToolOwnedCommand } from "../src/core/tool-owned.ts";
+import { destructiveToolOwnedCommand, toolOwnedViolation } from "../src/core/tool-owned.ts";
 
 describe("destructiveToolOwnedCommand (a shell command that would destroy or overwrite .registry/ or refs/references.bib)", () => {
   const destroys = [
@@ -45,5 +48,18 @@ describe("destructiveToolOwnedCommand (a shell command that would destroy or ove
   it("names what would be lost and how it is regenerated", () => {
     assert.match(destructiveToolOwnedCommand("rm -rf .registry") ?? "", /registry/i);
     assert.match(destructiveToolOwnedCommand("rm refs/references.bib") ?? "", /sync/i);
+  });
+
+  it("guard messages name the short public registry tool, never the legacy long name", () => {
+    const root = mkdtempSync(join(tmpdir(), "uktub-tool-owned-names-"));
+    try {
+      mkdirSync(join(root, ".registry"));
+      assert.match(toolOwnedViolation(root, "refs/references.bib") ?? "", /use the registry tool|Register papers with registry/);
+      assert.match(toolOwnedViolation(root, ".registry/registry.db") ?? "", /use the registry tool/);
+      assert.match(destructiveToolOwnedCommand("rm refs/references.bib") ?? "", /registry sync_bibliography/);
+      assert.doesNotMatch(toolOwnedViolation(root, "refs/references.bib") ?? "", /paper_registry|search_papers/);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 });

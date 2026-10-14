@@ -35,7 +35,7 @@ when it invents missing experiments, flatters, or sounds certain about novelty i
 4. **Read the paper** for what counting cannot see: do the abstract and conclusion claim more than the tables show; are datasets, splits,
    hyperparameters, seeds and compute stated well enough to repeat; are baselines tuned like the proposed method; is variance or a
    confidence interval reported where results are close; do figures and tables stand alone; are limitations stated.
-5. Optionally check one or two central claims about registered papers with `verify_claim`; report only what it returns.
+5. Optionally check one or two central claims about registered papers with `verify`; report only what it returns.
 6. **Write the review** (below) in your answer. Offer to save it to a file; do not save it unasked.
 
 ## Shape of the answer

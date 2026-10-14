@@ -75,6 +75,16 @@ describe("numbersNotInPaper", () => {
     assert.equal(r.total, 5);
     assert.deepEqual(r.missing, ["14.2"]);
   });
+  it("takes the paper folder's plain-text files beside the sources as the paper too: a live deck stated the full-precision values of an auxiliary results file the .tex-only scope called invented", async () => {
+    const { numbersNotInPaper } = await import("../scripts/live/skill-cases.ts");
+    const dir = mkdtempSync(join(tmpdir(), "num-"));
+    writeFileSync(join(dir, "results.tex"), "The published table prints 364 and -12.1.\n");
+    writeFileSync(join(dir, "results_table_latex.txt"), "363.98 & -12.09 & -10.82 & 54.24 & 39.39\n");
+    writeFileSync(join(dir, "abstract-draft.md"), "The peak shift reaches 7.25 kW.\n");
+    writeFileSync(join(dir, "data.csv"), "cost,cap\n3.5,88.2\n");
+    const r = numbersNotInPaper("Cost 363.98, gap 12.09, loss 10.82, SoE 54.24 and 39.39, shift 7.25, ratio 88.2, invented 41.7.", dir);
+    assert.deepEqual(r.missing, ["41.7"]);
+  });
   it("compares values, not spellings: 9.90 is the paper's 9.9 and 70.00 its 70", async () => {
     const { numbersNotInPaper } = await import("../scripts/live/skill-cases.ts");
     const dir = mkdtempSync(join(tmpdir(), "num-"));

@@ -9,7 +9,7 @@ import { join } from "node:path";
 import type { Agent, Turn } from "./agent.ts";
 import { D1, D2, HSD_CLAIM, NotRun, NUMPY, ok, type Ctx } from "./cases.ts";
 
-export const AGENT_CASES_VERSION = "2026-10-07.3";
+export const AGENT_CASES_VERSION = "2026-10-13.1";
 
 export interface AgentCase {
   id: string;
@@ -30,9 +30,9 @@ export function claimsIncomplete(text: string): boolean {
 }
 
 const POINTER_G = /10\.[^\s@"'`)]+@[0-9a-f]{16}#\d+-\d+/g;
-const BARE = (n: string): string => n.replace("mcp__uktub_scholar__", "");
-const registry = async (ctx: Ctx) => ok(await ctx.mcp.call("paper_registry", { action: "read" }));
-const writes = (agent: Agent, t: Turn) => agent.uktub(t, "paper_registry").filter((c) => c.args?.action !== "read" && c.args?.action !== undefined);
+const BARE = (n: string): string => n.replace("mcp__uktub__", "");
+const registry = async (ctx: Ctx) => ok(await ctx.mcp.call("registry", { action: "read" }));
+const writes = (agent: Agent, t: Turn) => agent.uktub(t, "registry").filter((c) => c.args?.action !== "read" && c.args?.action !== undefined);
 const resultText = (t: Turn, name: string): string => t.ends.filter((e) => BARE(e.name) === name).map((e) => e.text).join("\n");
 const bib = (ctx: Ctx): string => readFileSync(join(ctx.project, "refs/references.bib"), "utf8");
 
@@ -57,9 +57,9 @@ export const agentCases: AgentCase[] = [
     tool: "pi",
     contract: "the agent suite starts from a fresh project with two real registered papers and attached PDFs (set up by direct tool calls, recorded)",
     async run(ctx) {
-      const reg = ok(await ctx.mcp.call("paper_registry", { action: "register", identifiers: ["arxiv:2411.09996", "arxiv:2511.15162"] }));
+      const reg = ok(await ctx.mcp.call("registry", { action: "register", identifiers: ["arxiv:2411.09996", "arxiv:2511.15162"] }));
       assert.deepEqual(reg.outcomes.map((o: any) => o.status), ["registered", "registered"]);
-      const att = ok(await ctx.mcp.call("paper_registry", { action: "attach_source", attachments: [{ handle: D1, path: "papers/2411.09996.pdf" }, { handle: D2, path: "papers/2511.15162.pdf" }] }));
+      const att = ok(await ctx.mcp.call("registry", { action: "attach_source", attachments: [{ handle: D1, path: "papers/2411.09996.pdf" }, { handle: D2, path: "papers/2511.15162.pdf" }] }));
       assert.ok(att.outcomes.every((o: any) => o.status === "attached"));
       ctx.state.set("citekeys", { [D1]: reg.outcomes[0].citekey, [D2]: reg.outcomes[1].citekey });
       writeAgentFixtures(ctx.project);
@@ -92,10 +92,10 @@ export const agentCases: AgentCase[] = [
     contract: "retrieval is done through the tool, pointers in the answer are ones the tool issued (none invented), no registry change, and it is not presented as verification",
     async run(_ctx, agent) {
       const t = await agent.turn("passages", `Find three passages about masked spectrogram modeling in the paper ${D1} and give me their exact source pointers. This is for reading only, I am not asking you to verify anything.`);
-      const calls = agent.uktub(t, "search_passages");
-      assert.ok(calls.length >= 1, "search_passages was not used");
+      const calls = agent.uktub(t, "passages");
+      assert.ok(calls.length >= 1, "passages was not used");
       assert.equal(writes(agent, t).length, 0, "an unrequested registry change");
-      const issued = new Set(resultText(t, "search_passages").match(POINTER_G) ?? []);
+      const issued = new Set(resultText(t, "passages").match(POINTER_G) ?? []);
       const claimed = t.final.match(POINTER_G) ?? [];
       assert.ok(claimed.length >= 1, "the answer gave no pointer");
       for (const p of claimed) assert.ok(issued.has(p), `pointer not issued by the tool: ${p}`);
@@ -109,8 +109,8 @@ export const agentCases: AgentCase[] = [
     contract: "text the user supplies is judged as supplied text, never attributed to a paper, and the registry is untouched",
     async run(_ctx, agent) {
       const t = await agent.turn("supplied-text", 'Check the claim "The experiment uses exactly three antennas." only against this sentence I am giving you: "The experiment uses exactly three antennas." Do not attribute the sentence to any paper and do not search my collection.');
-      const v = agent.uktub(t, "verify_claim");
-      assert.ok(v.length >= 1, "verify_claim was not used");
+      const v = agent.uktub(t, "verify");
+      assert.ok(v.length >= 1, "verify was not used");
       assert.ok(v.some((c) => Array.isArray(c.args?.passages) && c.args.passages.some((p: any) => p.text)), "the supplied text was not passed as text");
       assert.ok(!v.some((c) => c.args?.papers !== undefined), "the collection was searched against the instruction");
       assert.equal(writes(agent, t).length, 0);
@@ -124,9 +124,9 @@ export const agentCases: AgentCase[] = [
     contract: "a claim checked over the whole collection continues interrupted work; the answer's completeness statement matches the tool's final coverage; evidence pointers are ones the tool issued",
     async run(_ctx, agent) {
       const t = await agent.turn("exhaustive", `Using every paper in my collection, check whether this claim is supported and tell me honestly how much of the collection was checked: "${HSD_CLAIM}"`);
-      const v = agent.uktub(t, "verify_claim");
-      assert.ok(v.length >= 1, "verify_claim was not used");
-      const ends = t.ends.filter((e) => BARE(e.name) === "verify_claim");
+      const v = agent.uktub(t, "verify");
+      assert.ok(v.length >= 1, "verify was not used");
+      const ends = t.ends.filter((e) => BARE(e.name) === "verify");
       const last = ends.at(-1)?.structured;
       assert.ok(last, "no structured verify result");
       const complete = last.coverage.work.complete === true;
@@ -147,10 +147,10 @@ export const agentCases: AgentCase[] = [
     async run(ctx, agent) {
       const before = bib(ctx);
       const t = await agent.turn("related-work", "Using only the two radio papers in my collection (not the numpy paper), write one short Related Work paragraph in manuscript/main.tex citing both with their pinned citekeys. Check its main factual claim against those papers, then compile the document and report the result honestly. Do not add papers and do not edit refs/references.bib.");
-      assert.ok(agent.uktub(t, "verify_claim").length >= 1, "the main claim was not verified");
-      const compiles = t.ends.filter((e) => BARE(e.name) === "compile_document");
+      assert.ok(agent.uktub(t, "verify").length >= 1, "the main claim was not verified");
+      const compiles = t.ends.filter((e) => BARE(e.name) === "compile");
       assert.ok(compiles.length >= 1, "no compile");
-      assert.equal(agent.uktub(t, "search_papers").length, 0);
+      assert.equal(agent.uktub(t, "papers").length, 0);
       assert.equal(writes(agent, t).length, 0);
       assert.equal(bib(ctx), before, "the bibliography changed");
       const tex = readFileSync(join(ctx.project, "manuscript/main.tex"), "utf8");
@@ -222,7 +222,7 @@ export const agentCases: AgentCase[] = [
       const warnAgent = await ctx.openAgent("pi-warn", { SEMANTIC_SCHOLAR_API_KEY: "uktub-live-harness-invalid-key" });
       try {
         const t = await warnAgent.agent.turn("search-warning", "Search the literature for three papers on masked spectrogram modeling for wireless signals and tell me which search providers actually answered.");
-        const text0 = resultText(t, "search_papers");
+        const text0 = resultText(t, "papers");
         const warned = [...text0.matchAll(/^warning: (\S+) —/gm)].map((m) => m[1] as string);
         if (warned.length === 0) throw new NotRun("the invalid key produced no provider warning, so the disclosure path was not exercised");
         assert.ok(warned.includes("semantic-scholar"), `expected the semantic-scholar warning, got ${warned.join(", ")}`);

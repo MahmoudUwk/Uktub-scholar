@@ -5,7 +5,7 @@
  * dated report + raw results JSON into docs/benchmarks/.
  *
  * Self-contained by design: it imports only the chunker, the chunk-config
- * loader and the ClaimEngine adapters. Chunks live in memory and scores in a
+ * loader and the bar. Chunks live in memory and scores in a
  * JSON cache keyed by (engine id, revision, claim hash, chunk hash); there is
  * no SQLite scratch database and no dependency on the production
  * verification pipeline.
@@ -16,24 +16,21 @@
  *     --text-dir /path/to/extracted-paper-text \
  *     --engine decision2-kai [--chunked] [--text-mode normalized|paragraph]
  * Flags: --cap N (prefix chars, default 24000) · --chunk-tokens/--overlap-tokens/
- *   --chars-per-token/--boundary (override config/chunking.yaml) · --workers N ·
+ *   --chars-per-token/--boundary (override config/chunking.yaml) ·
  *   --cache FILE | --no-cache · --out-dir DIR · --tag TEXT (file-name suffix) ·
  *   --limit-claims N (development only; marks the run partial) ·
  *   --audit-tokens (decision2 engines: measure tokenizer density, no scoring).
  * Env: UKTUB_VERIFY_MIN_CONFIDENCE (bar), UKTUB_CHUNK_CONFIG, engine variables
- *   (UKTUB_JULIA_MODEL, UKTUB_DECISION2_MODEL/_REVISION/_PYTHON, ...).
+ *   (UKTUB_DECISION2_MODEL/_REVISION/_PYTHON, ...).
  */
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
-import { basename, dirname, join } from "node:path";
+import { dirname, join } from "node:path";
 
 import { chunkText, targetChars, overlapChars, type ChunkTextConfig, type TextChunk } from "../src/core/chunk.ts";
 import { loadChunkConfig } from "../src/core/config.ts";
-import {
-  bevEngine, DEFAULT_MIN_CONFIDENCE, EngineError, juliaEngine, k2Engine, layaEngine, lummaEngine, velaEngine, VELA_MODEL, VELA_REVISION,
-  minConfidenceFromEnv, openrouterChatEngine, openrouterDecisionsEngine, type ClaimEngine,
-} from "../src/core/verify/claim.ts";
+import { DEFAULT_MIN_CONFIDENCE, minConfidenceFromEnv } from "../src/core/verify/claim.ts";
 import { resolveScores, scoreKey, sha256, type Label } from "./bench-metrics.ts";
 import { BARS, computeDiagnostics, computeMetrics, renderMarkdown, summaryLine, type ClaimResult } from "./bench-report.ts";
 import { decision2Worker, type Decision2Worker, type Row, type RowResult, type WorkerReady, type WorkerStats } from "./decision2-client.ts";
@@ -62,7 +59,7 @@ interface Scorer {
   finish(): Promise<{ ready?: WorkerReady; stats?: WorkerStats }>;
 }
 
-const engineName = arg("engine", "julia")!;
+const engineName = arg("engine", "decision2-eos")!;
 const datasetDir = arg("dataset", "benchmarks/datasets/claim-verification-v1")!;
 const textDir = arg("text-dir");
 const chunked = flag("chunked");
@@ -90,7 +87,7 @@ if (rerender) {
   process.exit(0);
 }
 
-const KNOWN = ["julia", "k2", "laya", "bev", "lumma", "openrouter", "openrouter-chat", "decision2-kai", "decision2-eos", "vela"];
+const KNOWN = ["decision2-kai", "decision2-eos"];
 if (!KNOWN.includes(engineName)) {
   console.error(`engine "${engineName}" has no adapter yet (implemented: ${KNOWN.join(", ")})`);
   process.exit(2);
@@ -123,85 +120,39 @@ const papers = [...new Set(claims.map((c) => c.paper))];
 
 // ---- engine ---------------------------------------------------------------
 
-function legacyScorer(id: string, engine: ClaimEngine, lanes: number): Scorer {
-  const ok = (p: number): RowResult => ({ p, tokens: null, refused: false, error: null });
-  return {
-    id, revision: "unpinned", lanes,
-    async score(rows) {
-      try {
-        return (await engine.run(rows)).map(ok);
-      } catch (e) {
-        if (!(e instanceof EngineError)) throw e;
-        // One bad row must not erase the batch: isolate it and keep it as an unchecked error.
-        const out: RowResult[] = [];
-        for (const r of rows) {
-          try { out.push(ok((await engine.run([r]))[0])); } catch (e2) {
-            if (!(e2 instanceof EngineError)) throw e2;
-            out.push({ p: null, tokens: null, refused: false, error: e2.message });
-          }
-        }
-        return out;
-      }
-    },
-    finish: async () => ({}),
-  };
-}
-
 let worker: Decision2Worker | null = null;
-function makeScorer(workersFlag: number | undefined, configWorkers: number): Scorer {
+function makeScorer(): Scorer {
   const env = process.env;
   const d2 = DECISION2[engineName as keyof typeof DECISION2];
-  if (d2) {
-    worker = decision2Worker({
-      env: {
-        ...env,
-        UKTUB_DECISION2_MODEL: env.UKTUB_DECISION2_MODEL ?? join(DECISION2_HOME, "models", d2.dir),
-        UKTUB_DECISION2_REVISION: env.UKTUB_DECISION2_REVISION ?? d2.revision,
-        UKTUB_DECISION2_STDERR: env.UKTUB_DECISION2_STDERR ?? join(DECISION2_HOME, `worker-${d2.dir}.err`),
-        UKTUB_DECISION2_PYTHON: env.UKTUB_DECISION2_PYTHON ?? join(DECISION2_HOME, "venv", "bin", "python"),
-      },
-    });
-    const w = worker;
-    return {
-      id: `${engineName}:${DECISION2_PROMPT_ID}`,
-      revision: env.UKTUB_DECISION2_REVISION ?? d2.revision,
-      lanes: 1, // one resident process owns the GPU
-      score: (rows) => w.scoreMany(rows),
-      async finish() {
-        const ready = await w.ready;
-        const stats = await w.stats();
-        await w.close();
-        return { ready, stats };
-      },
-    };
-  }
-  const lanes = workersFlag ?? configWorkers;
-  if (engineName === "openrouter" || engineName === "openrouter-chat") {
-    const model = (engineName === "openrouter" ? env.UKTUB_OPENROUTER_MODEL : env.UKTUB_OPENROUTER_CHAT_MODEL) ?? "";
-    if (!model) {
-      console.error(`engine "${engineName}" needs UKTUB_OPENROUTER${engineName === "openrouter" ? "_MODEL" : "_CHAT_MODEL"}`);
-      process.exit(2);
-    }
-    const engine = engineName === "openrouter" ? openrouterDecisionsEngine({ env, model }) : openrouterChatEngine({ env, model });
-    return legacyScorer(`${engineName}:${model}`, engine, lanes);
-  }
-  const resident: Record<string, [string, () => ClaimEngine, number]> = {
-    julia: [`julia:${env.UKTUB_JULIA_MODEL ?? "SupersonicLabs/Julia-1"}`, () => juliaEngine({ env }), lanes],
-    laya: ["laya:convaiinnovations/laya-multilingual", () => layaEngine({ env }), 1], // one resident Router: N workers would multiply checkpoint VRAM
-    k2: ["k2:IFM/K2-Type-0.9B", () => k2Engine({ env }), lanes],
-    bev: ["bev:avbiswas/bev-decider-0.4B", () => bevEngine({ env }), lanes],
-    lumma: ["lumma:FrontiersMind/lumma-fev-0.6b", () => lummaEngine({ env }), lanes],
-    vela: [`vela:${env.UKTUB_VELA_REVISION === undefined ? VELA_MODEL : basename(env.UKTUB_VELA_DIR ?? "unset")}@${(env.UKTUB_VELA_REVISION ?? VELA_REVISION).slice(0, 12)}`, () => velaEngine({ env }), 1], // one resident model session
+  worker = decision2Worker({
+    env: {
+      ...env,
+      UKTUB_DECISION2_MODEL: env.UKTUB_DECISION2_MODEL ?? join(DECISION2_HOME, "models", d2.dir),
+      UKTUB_DECISION2_REVISION: env.UKTUB_DECISION2_REVISION ?? d2.revision,
+      UKTUB_DECISION2_STDERR: env.UKTUB_DECISION2_STDERR ?? join(DECISION2_HOME, `worker-${d2.dir}.err`),
+      UKTUB_DECISION2_PYTHON: env.UKTUB_DECISION2_PYTHON ?? join(DECISION2_HOME, "venv", "bin", "python"),
+    },
+  });
+  const w = worker;
+  return {
+    id: `${engineName}:${DECISION2_PROMPT_ID}`,
+    revision: env.UKTUB_DECISION2_REVISION ?? d2.revision,
+    lanes: 1, // one resident process owns the GPU
+    score: (rows) => w.scoreMany(rows),
+    async finish() {
+      const ready = await w.ready;
+      const stats = await w.stats();
+      await w.close();
+      return { ready, stats };
+    },
   };
-  const [id, make, n] = resident[engineName];
-  return legacyScorer(id, make(), n);
 }
 
 // ---- token audit (decision2 engines only) ----------------------------------
 
 if (flag("audit-tokens")) {
   if (!DECISION2[engineName as keyof typeof DECISION2]) { console.error("--audit-tokens needs a decision2 engine"); process.exit(2); }
-  const scorer = makeScorer(1, 1);
+  const scorer = makeScorer();
   const w = worker!;
   const ready = await w.ready;
   const overheads = [];
@@ -214,7 +165,7 @@ if (flag("audit-tokens")) {
     perPaper.push({ paper: p, chars: text.length, stateTokens: tokens, charsPerToken: +(text.length / tokens).toFixed(3) });
   }
   const audit = {
-    engine: engineName, revision: scorer.revision, maxInputTokens: ready.max_input_tokens,
+    engine: engineName, revision: scorer.revision, maxInputTokens: ready.max_input_tokens, // null for d3: no limit configured, nothing truncated,
     overheadTokens: { min: Math.min(...overheads), max: Math.max(...overheads), note: "serialized prompt with a 1-char state: instructions + options + suffix, per claim" },
     heuristicCharsPerToken: Number(arg("chars-per-token", "2.8")), // the repo convention being checked (config/chunking.yaml)
     minCharsPerToken: Math.min(...perPaper.map((x) => x.charsPerToken as number)),
@@ -240,7 +191,7 @@ const chunking: ChunkTextConfig | null = !chunked ? null : {
   boundary: arg("boundary", cfg?.chunking.boundary) as "paragraph" | "hard",
 };
 const bar = cfg ? Number(process.env.UKTUB_VERIFY_MIN_CONFIDENCE ?? cfg.verification.min_confidence) : minConfidenceFromEnv(process.env);
-const scorer = makeScorer(arg("workers") ? Number(arg("workers")) : undefined, cfg?.verification.workers ?? 1);
+const scorer = makeScorer();
 
 // Chunks (chunked) or one capped prefix per paper (baseline), all in memory.
 interface PaperChunks { chars: number; chunks: { index: number; char_start: number; char_end: number; hash: string; text: string }[] }

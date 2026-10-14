@@ -270,7 +270,12 @@ export async function acquireSource(deps: Deps, paper: { doi: string; title: str
   if (work !== null) {
     const recordDoi = normalizeRegistryDoi(asString(work["doi"]) ?? "");
     if (recordDoi !== null && recordDoi !== paper.doi) {
-      return { ok: false, status: "failed", code: "identity_mismatch", detail: "OpenAlex resolved this DOI to a different work" };
+      const mismatch: AcquireResult = { ok: false, status: "failed", code: "identity_mismatch", detail: "OpenAlex resolved this DOI to a different work" };
+      if (arxivIdFromDoi(paper.doi) === null) return mismatch;
+      // The record is unusable, but the registered arXiv identifier independently names a lawful copy.
+      // Do not trust any URLs from the mismatched record; the downloaded arXiv document still passes the usual identity check.
+      work = null;
+      unusable = mismatch;
     }
   }
 

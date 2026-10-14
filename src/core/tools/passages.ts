@@ -1,11 +1,11 @@
 /**
- * `search_passages`: exploratory retrieval over the registered papers for the writing agent. Hybrid
+ * `passages`: exploratory retrieval over the registered papers for the writing agent. Hybrid
  * FTS5 + vector search (lexical alone when no embedder is configured or it fails) over the SAME chunks
  * claim verification judges, returned as bounded passages with exact `doi@revision#start-end`
  * pointers, section labels and pages. Output containment is the evidence rule: a passage that is half
  * its source or longer than the excerpt cap, and text past a source's per-call release budget, is
  * withheld with its reason — the pointer is always kept. Results are retrieval, not verification:
- * a cited claim still goes through `verify_claim`.
+ * a cited claim still goes through `verify`.
  */
 
 import { Type, type Static } from "typebox";
@@ -171,10 +171,10 @@ export async function searchPassagesTool(ctx: ToolContext, args: SearchPassagesA
 function render(s: SearchPassagesStructured): string {
   const p = s.coverage.papers;
   const lines: string[] = [];
-  if (p.selected === 0) lines.push(p.unresolved.length > 0 ? "NO PASSAGES: none of the named papers is registered." : "NO PASSAGES: there are no registered papers to search. Register papers with paper_registry first.");
-  else if (p.searchable === 0) lines.push("NO PASSAGES: no selected paper has a usable source (no searchable text yet). verify_claim acquires open-access sources on demand (add a narrow `query` so it checks only matching passages and stays short); paper_registry attach_source supplies your own file.");
+  if (p.selected === 0) lines.push(p.unresolved.length > 0 ? "NO PASSAGES: none of the named papers is registered." : "NO PASSAGES: there are no registered papers to search. Register papers with registry first.");
+  else if (p.searchable === 0) lines.push("NO PASSAGES: no selected paper has a usable source (no searchable text yet). Use registry action=acquire for these papers, or attach_source for your own file. Read the source field and retry passage search when it is ready; unavailable or failed sources carry their reason.");
   else if (s.hits.length === 0) lines.push(`NO PASSAGES matched in ${p.searchable} paper(s) (${s.mode} search). Try different words; no match is not evidence that a paper is silent on the topic.`);
-  else lines.push(`${s.hits.length} PASSAGE(S) from ${new Set(s.hits.map((h) => h.doi)).size} paper(s) for "${s.query}" (${s.mode} search, best first). These are retrieval results, not verification: check a claim with verify_claim before citing it.`);
+  else lines.push(`${s.hits.length} PASSAGE(S) from ${new Set(s.hits.map((h) => h.doi)).size} paper(s) for "${s.query}" (${s.mode} search, best first). These are retrieval results, not verification: check a claim with verify before citing it.`);
   for (const l of s.result.limitations) lines.push(`limitation: ${l}`);
   for (const n of p.notSearchable) lines.push(`not searchable: ${n.citekey} (${n.doi}) — ${n.reason === "metadata_only" ? "metadata_only (no source acquired or attached yet)" : n.reason}`);
   for (const u of p.unresolved) lines.push(`not registered: ${u}`);

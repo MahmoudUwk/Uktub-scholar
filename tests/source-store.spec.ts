@@ -46,7 +46,7 @@ afterEach(() => {
 const rowCount = (table: string): number => (db.prepare(`SELECT COUNT(*) n FROM ${table}`).get() as { n: number }).n;
 
 const CARRY = { unavailable: [], unresolved: [], staleDropped: 0 };
-const SNAPSHOT = { mode: "registry" as const, query: null, requested: "all" as const, papers: [{ doi: DOI, revision: "x".repeat(16), policy: "p" }], scopeKey: "all", selected: 1, candidateIds: null, selection: [], engine: "k2", model: "declared:m", protocol: "p", minConfidence: 0.99 };
+const SNAPSHOT = { mode: "registry" as const, query: null, requested: "all" as const, papers: [{ doi: DOI, revision: "x".repeat(16), policy: "p" }], scopeKey: "all", selected: 1, candidateIds: null, selection: [], engine: "llama-cpp", model: "declared:m", protocol: "p", minConfidence: 0.99 };
 const startRun = (id: string): void => createRun(db, id, "c", SNAPSHOT, CARRY, NOW);
 const ev = (o: Partial<{ revision: string; start: number; end: number }>) => ({ doi: DOI, revision: "0".repeat(16), start: 0, end: 30, page: 1, chunkId: "cid", model: ID.model, protocol: ID.protocol, minConfidence: 0.99, pTrue: 0.995, ...o });
 const ID = { model: "openrouter:m1", protocol: "systemone-noul-v1" };

@@ -28,7 +28,6 @@ This package is licensed under AGPL-3.0-only. Third-party provenance is recorded
   (Apache-2.0, commit 44d0334) were cloned shallow into the gitignored `reference_repos/` and read, never executed. Adopted as design
   ideas: the Europe PMC DOI lookup and the PubMed Central open-data bucket route for open-access PDFs (aipoch `src/main/literature/full-text-sources.ts`;
   both are public services documented by their operators), and the arXiv 429/403 cooldown (OpenScience `connectors/literature/arxiv.ts`).
-  Reading list for what was not adopted and why: [docs/plans/2026-10-07-reference-repos-integration-plan.md](docs/plans/2026-10-07-reference-repos-integration-plan.md).
 
 ## OpenScience (Apache-2.0, Synthetic Sciences)
 
@@ -51,7 +50,7 @@ This package is licensed under AGPL-3.0-only. Third-party provenance is recorded
 ## Product skills (ideas adapted; our own text and code, nothing copied)
 
 - `skills/uktub-figures`: the rules and process derive from OpenScience `core/figures` (MIT, itself adapted from alphaXiv
-  OpenResearch `orx-figures`, MIT; pins in [docs/BACKLOG.md](docs/BACKLOG.md) §7) and from the render-then-look review loop of
+  OpenResearch `orx-figures`, MIT; studied at OpenScience `44d0334` and OpenResearch `b9ce4f3`) and from the render-then-look review loop of
   rhiever/evident-charts (MIT). `scripts/figstyle.py` is our own implementation; its palette is the Okabe-Ito colour-blind-safe set
   (Okabe and Ito, 2008).
 - `skills/uktub-review` and `src/core/review/`: the four measures are reimplemented from the definitions in Appendix A of Oh et al., "Science or Slop?"

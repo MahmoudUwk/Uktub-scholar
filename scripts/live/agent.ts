@@ -6,6 +6,7 @@ import { type ChildProcess } from "node:child_process";
 import { once } from "node:events";
 import { appendFileSync } from "node:fs";
 import { join } from "node:path";
+import { compactionsOf } from "./behavior.ts";
 import { Blocked } from "./cases.ts";
 import { redact } from "./redact.ts";
 import { type SandboxSpec, spawnSandboxed } from "./sandbox.ts";
@@ -14,7 +15,7 @@ export const MODEL = { provider: "google-vertex", id: "gemini-3.8-flash" } as co
 /** Owner decision 2026-10-07: when gemini-3.8-flash is quota limited (HTTP 429 / RESOURCE_EXHAUSTED), rerun that turn once on this model. Explicit, per turn, always labelled in the evidence; never an implicit fallback. */
 export const FALLBACK_MODEL = { provider: "google-vertex", id: "gemini-3.5-flash-lite" } as const;
 export const isQuotaFailure = (text: string): boolean => /\b429\b|RESOURCE_EXHAUSTED|Resource exhausted/i.test(text);
-const TOOL_PREFIX = "mcp__uktub_scholar__";
+const TOOL_PREFIX = "mcp__uktub__";
 export const AGENT_POLICY = {
   // Client policy. A turn may legitimately run long (serial CPU verification took ~100 s per call; a literature review ran >15 min), so a
   // turn is only ended when nothing at all happened for turnIdleMs (a real stall) or it exceeds the hard cap. Production timeouts are unchanged.
@@ -41,6 +42,8 @@ export interface Turn {
   /** Set when the turn did not settle normally (deadline, abort, provider error): what the harness saw, never a pass. */
   incomplete?: string;
   messages: any[];
+  /** Reasons of the compactions Pi started during this turn (`threshold`, `overflow`, `manual`). */
+  compactions: string[];
   /** The model that produced this turn: the primary, or the labelled fallback after a quota failure. */
   model: string;
   /** Set when this turn ran on the fallback model: why the primary attempt was abandoned. */
@@ -64,6 +67,8 @@ export interface Agent {
   uktub(t: Turn, name?: string): ToolCall[];
   /** Ids of the turns that ran on the fallback model (after a quota failure on the primary), in order. */
   fallbackTurns: string[];
+  /** The context window Pi reports for the primary model, in tokens (0 when it reports none). */
+  contextWindow: number;
 }
 
 // Pi wraps an MCP result as {content, structuredContent: {…the tool's structured output…}}; the tool output is the inner object.
@@ -79,6 +84,13 @@ export interface StartOptions {
   simulateQuotaOnce?: boolean;
   /** Extra Pi flags (e.g. a tool-less, extension-less user simulator with its own system prompt). */
   piArgs?: string[];
+  /**
+   * Optional hook fired on every `tool_execution_end` event, at tool-result
+   * time (before the model continues the turn). Used by the experiment driver
+   * to snapshot compile inputs at each successful compile; failures inside
+   * the hook never break the turn. Only `tool_execution_end` events fire it.
+   */
+  onToolEnd?: (end: ToolEnd) => void;
 }
 
 export async function startAgent(spec: SandboxSpec, outDir: string, log: (l: string) => void, opts: StartOptions = {}): Promise<{ agent: Agent; stop(): Promise<void> }> {
@@ -119,7 +131,19 @@ export async function startAgent(spec: SandboxSpec, outDir: string, log: (l: str
       if (e.type === "message_start" && e.message?.role === "assistant") { phase = "model response"; log(`PI MODEL START ${who}`); }
       if (e.type === "message_end" && e.message?.role === "assistant") { phase = e.message.stopReason === "toolUse" ? "tool dispatch" : "final response"; log(`PI MODEL END ${who}: ${e.message.stopReason}${e.message.errorMessage ? ` ${redact(e.message.errorMessage).slice(0, 200)}` : ""}`); }
       if (e.type === "tool_execution_start") { phase = `tool ${e.toolName}`; log(`PI TOOL START ${who}: ${e.toolName} ${redact(JSON.stringify(e.args)).slice(0, 260)}`); }
-      if (e.type === "tool_execution_end") { phase = "waiting for model"; log(`PI TOOL END ${who}: ${e.toolName} error=${!!e.isError} ${redact(textOf(e.result)).replace(/\s+/g, " ").slice(0, 160)}`); }
+      if (e.type === "tool_execution_end") {
+        phase = "waiting for model";
+        log(`PI TOOL END ${who}: ${e.toolName} error=${!!e.isError} ${redact(textOf(e.result)).replace(/\s+/g, " ").slice(0, 160)}`);
+        if (opts.onToolEnd !== undefined) {
+          try {
+            opts.onToolEnd({
+              toolCallId: e.toolCallId, name: e.toolName, isError: !!e.isError, text: textOf(e.result),
+              structured: e.result?.structuredContent?.structuredContent ?? e.result?.structuredContent,
+              parent: e.parentToolCallId, t: e._t,
+            });
+          } catch (err) { log(`PI HOOK ERROR ${who}: ${(err as Error).message}`); }
+        }
+      }
       if (e.type === "auto_retry_start") log(`PI RETRY ${who}: attempt ${e.attempt}/${e.maxAttempts} in ${e.delayMs}ms after: ${redact(String(e.errorMessage ?? "")).slice(0, 160)}`);
       if (e.type === "auto_retry_end") log(`PI RETRY END ${who}: success=${e.success} attempt=${e.attempt}${e.finalError ? ` final: ${redact(String(e.finalError)).slice(0, 160)}` : ""}`);
       if (e.type === "agent_settled") { phase = "idle"; log(`PI SETTLED ${who}`); }
@@ -151,6 +175,7 @@ export async function startAgent(spec: SandboxSpec, outDir: string, log: (l: str
 
   const state = (await command("get_state")) as any;
   if (state.model?.provider !== MODEL.provider || state.model?.id !== MODEL.id) throw new Error(`Pi selected ${state.model?.provider}/${state.model?.id}, not ${MODEL.provider}/${MODEL.id}: refusing to fall back`);
+  const contextWindow = Number(state.model?.contextWindow ?? 0);
   await command("set_auto_retry", { enabled: opts.autoRetry ?? AGENT_POLICY.autoRetry });
   log(`PI READY [${label}] ${MODEL.provider}/${MODEL.id} (container ${spec.name})`);
 
@@ -165,6 +190,7 @@ export async function startAgent(spec: SandboxSpec, outDir: string, log: (l: str
   };
   const agent0: Agent = {
     fallbackTurns: [],
+    contextWindow,
     uktub: (t, name) => t.calls.filter((c) => c.name.startsWith(TOOL_PREFIX) && (name === undefined || c.name === `${TOOL_PREFIX}${name}`)),
     async turn(id, prompt, opts) {
       if (opts?.newSession !== false) {
@@ -210,7 +236,7 @@ export async function startAgent(spec: SandboxSpec, outDir: string, log: (l: str
       const slice = events.slice(at);
       const messages = slice.filter((e) => e.type === "message_end" && e.message?.role === "assistant").map((e) => e.message);
       const turn: Turn = {
-        id, prompt, dialogs, messages, model: `${want.provider}/${want.id}`, elapsedMs: Date.now() - started,
+        id, prompt, dialogs, messages, compactions: compactionsOf(slice), model: `${want.provider}/${want.id}`, elapsedMs: Date.now() - started,
         retries: slice.filter((e) => e.type === "auto_retry_start").map((e) => ({ attempt: e.attempt, maxAttempts: e.maxAttempts, delayMs: e.delayMs, errorMessage: redact(String(e.errorMessage ?? "")).slice(0, 300) })),
         usage: {
           input: sum(messages, (m) => m.usage?.input), output: sum(messages, (m) => m.usage?.output), reasoning: sum(messages, (m) => m.usage?.reasoning),
@@ -245,7 +271,7 @@ export async function startAgent(spec: SandboxSpec, outDir: string, log: (l: str
       try {
         if (simulate && fresh) {
           simulate = false;
-          throw new TurnBlocked("turn: provider/model error: simulated HTTP 429 RESOURCE_EXHAUSTED (smoke test of the fallback path)", { id, prompt, calls: [], ends: [], final: "", dialogs: [], elapsedMs: 0, retries: [], messages: [], model: `${MODEL.provider}/${MODEL.id}`, usage: { input: 0, output: 0, reasoning: 0, total: 0, costUsd: 0, responses: 0 } });
+          throw new TurnBlocked("turn: provider/model error: simulated HTTP 429 RESOURCE_EXHAUSTED (smoke test of the fallback path)", { id, prompt, calls: [], ends: [], final: "", dialogs: [], elapsedMs: 0, retries: [], messages: [], compactions: [], model: `${MODEL.provider}/${MODEL.id}`, usage: { input: 0, output: 0, reasoning: 0, total: 0, costUsd: 0, responses: 0 } });
         }
         return await agent0.turn(id, prompt, opts);
       } catch (e) {

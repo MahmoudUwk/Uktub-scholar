@@ -9,5 +9,6 @@
     "sourceMap": false,
     "declaration": false
   },
-  "include": ["src/**/*.ts"]
+  "include": ["src/**/*.ts"],
+  "exclude": ["src/browser/**/*.ts"]
 }

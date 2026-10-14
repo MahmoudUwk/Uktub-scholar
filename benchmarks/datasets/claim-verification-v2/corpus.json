@@ -1,0 +1,1033 @@
+{
+ "schema": "claim-verification-v2-corpus/1",
+ "generated": "2026-10-11",
+ "rule": {
+  "window": {
+   "from": "202607010000",
+   "to": "202609302359"
+  },
+  "perCategory": 3,
+  "pages": {
+   "min": 8,
+   "max": 40
+  },
+  "chars": {
+   "min": 40000,
+   "max": 140000
+  },
+  "seed": 20261011,
+  "listing": "the 100 most recently submitted papers of the category in the window, primary category only",
+  "excludedTitle": "survey|review|tutorial|position paper|perspective|roadmap|overview|vision paper|call for|challenges and opportunities",
+  "licenses": "CC BY (any version), CC0",
+  "categories": [
+   "cs.CL",
+   "cs.CV",
+   "cs.LG",
+   "cs.RO",
+   "cs.SE",
+   "cs.CR",
+   "cs.HC",
+   "stat.ME",
+   "stat.AP",
+   "econ.GN",
+   "astro-ph.GA",
+   "astro-ph.EP",
+   "physics.chem-ph",
+   "physics.ao-ph",
+   "cond-mat.mtrl-sci",
+   "q-bio.QM"
+  ]
+ },
+ "extraction": "pdftotext -q <pdf> <txt> (pdftotext version 26.01.0)",
+ "folds": "4, stratified by category (foldOf); the bar for a fold is fitted on the other three",
+ "papers": [
+  {
+   "id": "2610.00717v1",
+   "category": "cs.CL",
+   "fold": 0,
+   "title": "Sequential Functional Structured Tucker Compression for Large Language Model Attentions",
+   "authors": [
+    "Jiangfeng Chen",
+    "Xinyu Wang",
+    "Tianshuo Yan",
+    "Hanwei Wu",
+    "Xiao-Wen Chang",
+    "Yang Zhang",
+    "Lei Ding"
+   ],
+   "published": "2026-09-30T21:06:29Z",
+   "pdfUrl": "https://arxiv.org/pdf/2610.00717v1",
+   "license": "http://creativecommons.org/licenses/by/4.0/",
+   "sha256": "c5787b69c427be0e8663da8700dad4da51892eb94345f8f2928051e15a5b542b",
+   "bytes": 1021531,
+   "pages": 33,
+   "chars": 108855
+  },
+  {
+   "id": "2609.40121v1",
+   "category": "cs.CL",
+   "fold": 1,
+   "title": "On the (In)effectiveness of AMR Augmentation for Large Language Models",
+   "authors": [
+    "Hoa Quynh Nhung Nguyen",
+    "Jacopo Staiano",
+    "Michael Sullivan"
+   ],
+   "published": "2026-09-30T16:45:14Z",
+   "pdfUrl": "https://arxiv.org/pdf/2609.40121v1",
+   "license": "http://creativecommons.org/licenses/by/4.0/",
+   "sha256": "aa97fbef74075fc7bfb499bd4cd4ad9b1d84df6c7761009f9ad1e9ea947e85f1",
+   "bytes": 1563637,
+   "pages": 23,
+   "chars": 80629
+  },
+  {
+   "id": "2609.39972v1",
+   "category": "cs.CL",
+   "fold": 2,
+   "title": "UBTree: Parallel Tree Drafting via Unigram and Bigram Models for Speculative Decoding",
+   "authors": [
+    "Chumeng Liang",
+    "Linxuan Wang",
+    "Xinyu Peng",
+    "Huabin Liu",
+    "Yuxin Chen",
+    "Ge Liu",
+    "Guang Lin",
+    "Qifan Song",
+    "Jianguo Li"
+   ],
+   "published": "2026-09-30T15:35:50Z",
+   "pdfUrl": "https://arxiv.org/pdf/2609.39972v1",
+   "license": "http://creativecommons.org/licenses/by/4.0/",
+   "sha256": "19cf72d3af50c95e367556f5d2ab1455bf088a86bc25e812da407e7c05322d7e",
+   "bytes": 584061,
+   "pages": 18,
+   "chars": 72977
+  },
+  {
+   "id": "2610.00582v1",
+   "category": "cs.CV",
+   "fold": 1,
+   "title": "Discrete Annotation, Continuous Preference: Rethinking Supervision for Accurate and Generalizable Aesthetic Image Cropping",
+   "authors": [
+    "Ziqing Zhang",
+    "Xiao Liu",
+    "Kai Liu",
+    "Jianze Li",
+    "Weihang Zhang",
+    "Linghe Kong",
+    "Yulun Zhang"
+   ],
+   "published": "2026-09-30T18:48:51Z",
+   "pdfUrl": "https://arxiv.org/pdf/2610.00582v1",
+   "license": "http://creativecommons.org/licenses/by/4.0/",
+   "sha256": "a21714455c9cff1d3b1ff31c3c6228f6b2dc772087630bf9d3580d20b7f4e13c",
+   "bytes": 37945710,
+   "pages": 23,
+   "chars": 61426
+  },
+  {
+   "id": "2609.40129v1",
+   "category": "cs.CV",
+   "fold": 2,
+   "title": "VR-JEPA: Learning Contrastive-State Latent Guidance for Generation-based Video Reasoning",
+   "authors": [
+    "Zehua Ma",
+    "Kun Xiang",
+    "Yunshuang Nie",
+    "Quanlin Chen",
+    "Haoyuan Li",
+    "Xiuwei Chen",
+    "Jiang Ji",
+    "Haijun Wu",
+    "Zhenyu Xie",
+    "Michael Kampffmeyer",
+    "Hanhui Li",
+    "Xiaodan Liang"
+   ],
+   "published": "2026-09-30T16:48:35Z",
+   "pdfUrl": "https://arxiv.org/pdf/2609.40129v1",
+   "license": "http://creativecommons.org/licenses/by/4.0/",
+   "sha256": "c2a42691cf2ff8a65262f3143c1eef7487a5035e31c06a5816ef4373901d8689",
+   "bytes": 24148802,
+   "pages": 24,
+   "chars": 68964
+  },
+  {
+   "id": "2609.40222v1",
+   "category": "cs.CV",
+   "fold": 3,
+   "title": "LOCI: Spatial Linear Memory for Streaming World Models",
+   "authors": [
+    "Ji Xia",
+    "Tingting Liao",
+    "Xuezhi Liang",
+    "Hao Li",
+    "Guangyi Liu"
+   ],
+   "published": "2026-09-30T17:27:06Z",
+   "pdfUrl": "https://arxiv.org/pdf/2609.40222v1",
+   "license": "http://creativecommons.org/licenses/by/4.0/",
+   "sha256": "ffb8e63cbdde5c32a67f6a2649373ce6446577daf3ff4aaaf441b527a76a7ecc",
+   "bytes": 13207007,
+   "pages": 25,
+   "chars": 91789
+  },
+  {
+   "id": "2610.00814v1",
+   "category": "cs.LG",
+   "fold": 2,
+   "title": "Training-Aware Target Coverage for Synthetic Data Selection",
+   "authors": [
+    "Yang Ba",
+    "Michelle V. Mancenido",
+    "Rong Pan"
+   ],
+   "published": "2026-09-30T23:17:32Z",
+   "pdfUrl": "https://arxiv.org/pdf/2610.00814v1",
+   "license": "http://creativecommons.org/licenses/by/4.0/",
+   "sha256": "86f4ac991fdbf11a3a9e340bdaa4f0345d465a9b2e9e5ef61617e573bb823b47",
+   "bytes": 583592,
+   "pages": 24,
+   "chars": 79507
+  },
+  {
+   "id": "2610.00683v2",
+   "category": "cs.LG",
+   "fold": 3,
+   "title": "Grand Canonical Generators",
+   "authors": [
+    "Andreas Burger",
+    "Malte Franke",
+    "Luka Mucko",
+    "Kjell Jorner",
+    "Alan Aspuru-Guzik"
+   ],
+   "published": "2026-09-30T20:25:15Z",
+   "pdfUrl": "https://arxiv.org/pdf/2610.00683v2",
+   "license": "http://creativecommons.org/licenses/by/4.0/",
+   "sha256": "6647b5567510c690ef5873de367afdfe0d71be658abdd7426e51b8123318bf68",
+   "bytes": 6426322,
+   "pages": 19,
+   "chars": 57143
+  },
+  {
+   "id": "2609.40359v1",
+   "category": "cs.LG",
+   "fold": 0,
+   "title": "Removing Timing Shortcuts Improves Non-Invasive Brain-to-Text",
+   "authors": [
+    "Dulhan Jayalath",
+    "Oiwi Parker Jones"
+   ],
+   "published": "2026-09-30T17:59:52Z",
+   "pdfUrl": "https://arxiv.org/pdf/2609.40359v1",
+   "license": "http://creativecommons.org/licenses/by/4.0/",
+   "sha256": "39ead28a4e6c40c6f356e519fa7d68847920d17196670165139ab2c5973ebd64",
+   "bytes": 1351481,
+   "pages": 29,
+   "chars": 90413
+  },
+  {
+   "id": "2610.00524v1",
+   "category": "cs.RO",
+   "fold": 3,
+   "title": "Same Scene, Different Task: Skill Alignment for Compositional Generalization in VLAs",
+   "authors": [
+    "Taegeun Yang",
+    "Youngju Na",
+    "Yoonki Cho",
+    "Sung-Eui Yoon"
+   ],
+   "published": "2026-09-30T18:13:19Z",
+   "pdfUrl": "https://arxiv.org/pdf/2610.00524v1",
+   "license": "http://creativecommons.org/licenses/by/4.0/",
+   "sha256": "75c9d2e3c4114da3eabfcf4745ed96375d8586a16425bdc0f777ea81385be618",
+   "bytes": 13942404,
+   "pages": 26,
+   "chars": 89668
+  },
+  {
+   "id": "2610.00438v1",
+   "category": "cs.RO",
+   "fold": 0,
+   "title": "Towards a General Humanoid Loco-Manipulation Model via Egocentric Whole-Body Human Data Pretraining",
+   "authors": [
+    "Chongyang Xu",
+    "Zhao Wu",
+    "Jin Chen",
+    "Yiming Jiang",
+    "Jinhui Ye",
+    "Yuming Jiang",
+    "Shifeng Zhang",
+    "Ziliang Feng",
+    "Mu Xu",
+    "Yilun Chen",
+    "Li Lu",
+    "Steven C. H. Hoi"
+   ],
+   "published": "2026-09-30T17:25:16Z",
+   "pdfUrl": "https://arxiv.org/pdf/2610.00438v1",
+   "license": "http://creativecommons.org/licenses/by/4.0/",
+   "sha256": "6d2e48b284c9d2d6a21882239cb6dcec5b493744c1bac0bcd2681008849fbc76",
+   "bytes": 39808001,
+   "pages": 15,
+   "chars": 51568
+  },
+  {
+   "id": "2609.40158v1",
+   "category": "cs.RO",
+   "fold": 1,
+   "title": "Rethinking Legibility in Social Robot Hallway Navigation: Impact of Intent Representation and Human Distraction",
+   "authors": [
+    "Pranav Goyal",
+    "Andrew Stratton",
+    "Christoforos Mavrogiannis"
+   ],
+   "published": "2026-09-30T16:56:06Z",
+   "pdfUrl": "https://arxiv.org/pdf/2609.40158v1",
+   "license": "http://creativecommons.org/licenses/by/4.0/",
+   "sha256": "5ccfa48de2b6d781216aac80c1c8ee297aafc2936456c669649694afe3925ca7",
+   "bytes": 3873327,
+   "pages": 24,
+   "chars": 93698
+  },
+  {
+   "id": "2609.36635v1",
+   "category": "cs.SE",
+   "fold": 0,
+   "title": "WitnessGym: Benchmarking Coding Agents on the Construction of Bug Witnesses",
+   "authors": [
+    "Haomin Qi",
+    "Xiangzhe Xu",
+    "Yiming Huang",
+    "Jingbo Shang",
+    "Chengpeng Wang"
+   ],
+   "published": "2026-09-29T03:43:13Z",
+   "pdfUrl": "https://arxiv.org/pdf/2609.36635v1",
+   "license": "http://creativecommons.org/licenses/by/4.0/",
+   "sha256": "e828892c1df3c642064bddab098736e7ebd7eb907eb1c729e59694291f5b3879",
+   "bytes": 18137755,
+   "pages": 30,
+   "chars": 106708
+  },
+  {
+   "id": "2609.35357v1",
+   "category": "cs.SE",
+   "fold": 1,
+   "title": "Do Coding Agents Reuse Existing Code or Reinvent the Wheel?",
+   "authors": [
+    "Dongsheng Ma",
+    "Sizhe Wang",
+    "Xinyi Huang",
+    "Zhengren Wang",
+    "Yuhan Wang",
+    "Luyang Si",
+    "Xincheng Wei",
+    "Wentao Zhang"
+   ],
+   "published": "2026-09-28T15:04:27Z",
+   "pdfUrl": "https://arxiv.org/pdf/2609.35357v1",
+   "license": "http://creativecommons.org/licenses/by/4.0/",
+   "sha256": "8ac4099d67571681d4af3a0319c1feee10163733379b8fca8b62969f52048d83",
+   "bytes": 1402430,
+   "pages": 15,
+   "chars": 61064
+  },
+  {
+   "id": "2609.36170v1",
+   "category": "cs.SE",
+   "fold": 2,
+   "title": "Assay: Claims That Decay With the Code. Content-Addressed Evidence Graphs for Accountable AI-Assisted Software Delivery",
+   "authors": [
+    "Om Shankar Tiwari",
+    "Tangi Vass",
+    "Gagan Deep Singh"
+   ],
+   "published": "2026-09-28T19:40:35Z",
+   "pdfUrl": "https://arxiv.org/pdf/2609.36170v1",
+   "license": "http://creativecommons.org/licenses/by/4.0/",
+   "sha256": "54c85fb957ca2a758dd6849f1a326168db992c69cc435947426652f2905e4bb7",
+   "bytes": 293886,
+   "pages": 8,
+   "chars": 44364
+  },
+  {
+   "id": "2610.00787v1",
+   "category": "cs.CR",
+   "fold": 1,
+   "title": "Identity-Bound Governance Under Execution Uncertainty: An Accountability Proof Block for LLM Agent Persistent Halts, with Cryptographic Implementation and Cross-Model Calibration",
+   "authors": [
+    "Marcelo Fernandez"
+   ],
+   "published": "2026-09-30T22:22:33Z",
+   "pdfUrl": "https://arxiv.org/pdf/2610.00787v1",
+   "license": "http://creativecommons.org/licenses/by/4.0/",
+   "sha256": "4b2c774238ff97f4e49322a988f06536e288c826b390ef341020f6e9960ce1d6",
+   "bytes": 385261,
+   "pages": 24,
+   "chars": 65869
+  },
+  {
+   "id": "2609.38381v1",
+   "category": "cs.CR",
+   "fold": 2,
+   "title": "LogiC-Diff: Embedding Security Properties Into AI-Enabled Cyber-Physical Systems",
+   "authors": [
+    "Ziyan An",
+    "John Stankovic",
+    "Meiyi Ma"
+   ],
+   "published": "2026-09-29T18:38:01Z",
+   "pdfUrl": "https://arxiv.org/pdf/2609.38381v1",
+   "license": "http://creativecommons.org/licenses/by/4.0/",
+   "sha256": "2af883a97faa9e4a34d572745f5b05f3eb3966afa213ddee8f449164c4bb61a7",
+   "bytes": 1317386,
+   "pages": 24,
+   "chars": 108211
+  },
+  {
+   "id": "2609.39774v2",
+   "category": "cs.CR",
+   "fold": 3,
+   "title": "Path-Finding, Orbit State Preparation, and the Security of Invariant Quantum Money",
+   "authors": [
+    "Hans Schmiedel",
+    "Jiangshan Yu"
+   ],
+   "published": "2026-09-30T14:01:07Z",
+   "pdfUrl": "https://arxiv.org/pdf/2609.39774v2",
+   "license": "http://creativecommons.org/licenses/by/4.0/",
+   "sha256": "f49422e2b47b1245ac3c295af9d8e796916831886aeba737eb26d02a848155fe",
+   "bytes": 620312,
+   "pages": 34,
+   "chars": 105113
+  },
+  {
+   "id": "2609.39808v1",
+   "category": "cs.HC",
+   "fold": 2,
+   "title": "Making Sense of Animal-to-Human Drug Development Evidence: Stakeholder Practices, Challenges, and Requirements for AI Tools",
+   "authors": [
+    "Rosni Vasu",
+    "Simona E. Doneva",
+    "Benjamin V. Ineichen"
+   ],
+   "published": "2026-09-30T14:18:13Z",
+   "pdfUrl": "https://arxiv.org/pdf/2609.39808v1",
+   "license": "http://creativecommons.org/licenses/by/4.0/",
+   "sha256": "9e7f4cbfc3bd6809211d85dcfdc6c75c83e9cd7d1581d8aee125bb72128fc453",
+   "bytes": 4623420,
+   "pages": 24,
+   "chars": 106293
+  },
+  {
+   "id": "2610.00374v1",
+   "category": "cs.HC",
+   "fold": 3,
+   "title": "Faithful Chart Generation for Multimodal Deep Research: Frame-Evidence Co-Adaptation",
+   "authors": [
+    "Yuxin Yue",
+    "Yingchen Zhang",
+    "Ruqing Zhang",
+    "Jiafeng Guo",
+    "Maarten de Rijke",
+    "Xueqi Cheng"
+   ],
+   "published": "2026-09-30T07:33:25Z",
+   "pdfUrl": "https://arxiv.org/pdf/2610.00374v1",
+   "license": "http://creativecommons.org/licenses/by/4.0/",
+   "sha256": "04120b9ca4db7b6ceecb852aec61c30b813d1d3ddf161deb20e20e4c43adc813",
+   "bytes": 2445647,
+   "pages": 11,
+   "chars": 66700
+  },
+  {
+   "id": "2609.40126v1",
+   "category": "cs.HC",
+   "fold": 0,
+   "title": "Who Asked for This? Inline Annotations as Authoring Transactions for Provenance in Agentic Authoring",
+   "authors": [
+    "Chang Xiao"
+   ],
+   "published": "2026-09-30T16:47:26Z",
+   "pdfUrl": "https://arxiv.org/pdf/2609.40126v1",
+   "license": "http://creativecommons.org/licenses/by/4.0/",
+   "sha256": "f7e66e9ac64e4a15f6a2959f68cc9e861df4ee7a4bf0ff24cdcee22bc31210d3",
+   "bytes": 5091778,
+   "pages": 10,
+   "chars": 54989
+  },
+  {
+   "id": "2609.39519v1",
+   "category": "stat.ME",
+   "fold": 3,
+   "title": "B-GRASP: A Bayesian Framework for Inferring Graph Weights from SPDE-Inspired Dynamics",
+   "authors": [
+    "Christina Schenk",
+    "Babak Maboudi Afkham"
+   ],
+   "published": "2026-09-30T11:17:49Z",
+   "pdfUrl": "https://arxiv.org/pdf/2609.39519v1",
+   "license": "http://creativecommons.org/licenses/by/4.0/",
+   "sha256": "258d0ac6a685e45f5cf876a615cd8a70db7204129254b0baada59d6a4fe6bd4a",
+   "bytes": 2632719,
+   "pages": 33,
+   "chars": 92980
+  },
+  {
+   "id": "2609.37347v1",
+   "category": "stat.ME",
+   "fold": 0,
+   "title": "The INSIDE assumption under all positive coding: interpretation and partial empirical assessment",
+   "authors": [
+    "Fernando Pires Hartwig",
+    "George Davey Smith",
+    "Frank Dudbridge",
+    "Jack Bowden"
+   ],
+   "published": "2026-09-29T12:14:39Z",
+   "pdfUrl": "https://arxiv.org/pdf/2609.37347v1",
+   "license": "http://creativecommons.org/licenses/by/4.0/",
+   "sha256": "3e1b7357aa845d1082b652f394e755a60ef59662916090f50c3355f8ac3749ce",
+   "bytes": 2429499,
+   "pages": 39,
+   "chars": 87780
+  },
+  {
+   "id": "2609.36268v1",
+   "category": "stat.ME",
+   "fold": 1,
+   "title": "Bayesian Selection of Edge Spectral Modes for Crash Counts on Urban Road Networks with Applications in Barcelona and Bogotá",
+   "authors": [
+    "Danna L. Cruz-Reyes",
+    "Juan Sosa",
+    "Carlos A. Martínez"
+   ],
+   "published": "2026-09-28T21:00:05Z",
+   "pdfUrl": "https://arxiv.org/pdf/2609.36268v1",
+   "license": "http://creativecommons.org/licenses/by/4.0/",
+   "sha256": "a1d8fadf24e51a2b2ef5706c69dfee5fb8ba0d46f365b0ed6d2fcf2906ba9b64",
+   "bytes": 22162107,
+   "pages": 39,
+   "chars": 98737
+  },
+  {
+   "id": "2609.37866v1",
+   "category": "stat.AP",
+   "fold": 0,
+   "title": "Feeling Left Behind? Territorial Disadvantage, Well-Being and Cohesion across European Regions",
+   "authors": [
+    "Stefano Maria Iacus",
+    "Giuseppe Porro",
+    "Haodong Qi",
+    "Devika Jain"
+   ],
+   "published": "2026-09-29T15:46:42Z",
+   "pdfUrl": "https://arxiv.org/pdf/2609.37866v1",
+   "license": "http://creativecommons.org/licenses/by/4.0/",
+   "sha256": "8da5b8253445df854571f0dc8fc79c9c282b291829a473d47006e2142111de0d",
+   "bytes": 5934370,
+   "pages": 35,
+   "chars": 91736
+  },
+  {
+   "id": "2609.31775v1",
+   "category": "stat.AP",
+   "fold": 1,
+   "title": "Suitable Measures for the Potential Operational Utility of AI NWP Rainfall Forecasts Over Africa",
+   "authors": [
+    "Shruti Nath",
+    "Docko Sow",
+    "Koomi Toussaint Amoussouvi",
+    "Fenwick Cooper",
+    "Josiah Kiarie Kimani",
+    "John Bagiliko",
+    "Florian Pappenberger",
+    "Rendani Mbuvha"
+   ],
+   "published": "2026-09-24T18:09:48Z",
+   "pdfUrl": "https://arxiv.org/pdf/2609.31775v1",
+   "license": "http://creativecommons.org/licenses/by/4.0/",
+   "sha256": "281af4c692f45996b61e218da56154eee77359178082ec67d60ff6ecf2e09d7b",
+   "bytes": 8198185,
+   "pages": 29,
+   "chars": 93270
+  },
+  {
+   "id": "2609.33293v1",
+   "category": "stat.AP",
+   "fold": 2,
+   "title": "Timing of First Alzheimer's Neuroimaging: A Multicenter Analysis of Genetic, Cognitive, and Social Factors",
+   "authors": [
+    "J. T. Korley",
+    "E. Adu Bonsu"
+   ],
+   "published": "2026-09-27T06:53:58Z",
+   "pdfUrl": "https://arxiv.org/pdf/2609.33293v1",
+   "license": "http://creativecommons.org/licenses/by/4.0/",
+   "sha256": "4cc5fcbbb43e14c0a64777f482b97c3864a3a1beeb175b64ce842075220fb1f0",
+   "bytes": 2257758,
+   "pages": 27,
+   "chars": 74071
+  },
+  {
+   "id": "2609.10053v1",
+   "category": "econ.GN",
+   "fold": 1,
+   "title": "Do wind and solar curtail at negative electricity prices? Incentives and evidence across two decades of German renewable support schemes",
+   "authors": [
+    "Lion Hirth"
+   ],
+   "published": "2026-09-09T11:28:40Z",
+   "pdfUrl": "https://arxiv.org/pdf/2609.10053v1",
+   "license": "http://creativecommons.org/licenses/by/4.0/",
+   "sha256": "3ee75082f1dee6091bf057d6f036888afeb14ddb60abb464c1d0235fad4d6c31",
+   "bytes": 1492415,
+   "pages": 39,
+   "chars": 101018
+  },
+  {
+   "id": "2609.31236v1",
+   "category": "econ.GN",
+   "fold": 2,
+   "title": "Catch-Up and Come Home: Economic Convergence and Return Migration",
+   "authors": [
+    "Kinga Varga",
+    "Bence Kollányi",
+    "Johannes Wachs"
+   ],
+   "published": "2026-09-25T13:15:46Z",
+   "pdfUrl": "https://arxiv.org/pdf/2609.31236v1",
+   "license": "http://creativecommons.org/licenses/by/4.0/",
+   "sha256": "1405e374104b0c8565d195dcec7eddf1ca67f5f32e707ff16b51d32ba569744c",
+   "bytes": 880806,
+   "pages": 29,
+   "chars": 75449
+  },
+  {
+   "id": "2609.20405v2",
+   "category": "econ.GN",
+   "fold": 3,
+   "title": "An Arbitrarily Precise Global Closed Form Approximation for the Neoclassical Growth Model",
+   "authors": [
+    "Jordan Roulleau-Pasdeloup"
+   ],
+   "published": "2026-09-17T13:53:03Z",
+   "pdfUrl": "https://arxiv.org/pdf/2609.20405v2",
+   "license": "http://creativecommons.org/licenses/by/4.0/",
+   "sha256": "334327432582e5b6709264a4dc7293818844eeb5976860a4ca77491c7dafb6f6",
+   "bytes": 432793,
+   "pages": 34,
+   "chars": 67635
+  },
+  {
+   "id": "2610.00578v2",
+   "category": "astro-ph.GA",
+   "fold": 2,
+   "title": "The Impact of Simulation Resolution on Dwarf Galaxy Stellar Stream Populations in FIRE",
+   "authors": [
+    "Yasmine J. Meziani",
+    "Nondh Panithanpaisal",
+    "Robyn E. Sanderson",
+    "Andrew Wetzel",
+    "Pratik J. Gandhi",
+    "Philip F. Hopkins",
+    "Adriana Dropulic"
+   ],
+   "published": "2026-09-30T18:46:45Z",
+   "pdfUrl": "https://arxiv.org/pdf/2610.00578v2",
+   "license": "http://creativecommons.org/licenses/by/4.0/",
+   "sha256": "7d8adf195c32a0fc8dbe60ac6c36d0584167d43883defcb8e7a02ba288e9340a",
+   "bytes": 1316083,
+   "pages": 21,
+   "chars": 87086
+  },
+  {
+   "id": "2609.36124v1",
+   "category": "astro-ph.GA",
+   "fold": 3,
+   "title": "MEGATRON: The Physical Origins of Steep UV Slopes at High Redshift",
+   "authors": [
+    "Harley Katz",
+    "Nicholas Choustikov",
+    "Aayush Saxena",
+    "Corentin Cadiou",
+    "Martin P. Rey",
+    "Jeremy Blaizot",
+    "Alex J. Cameron",
+    "Fergus Cullen",
+    "Taysun Kimm",
+    "Kosei Matsumoto"
+   ],
+   "published": "2026-09-28T18:59:02Z",
+   "pdfUrl": "https://arxiv.org/pdf/2609.36124v1",
+   "license": "http://creativecommons.org/licenses/by/4.0/",
+   "sha256": "f1a36b8dd9fe812e87f9c6b9149fa8c1de6e40560e1aa48af8d800b35f2485ce",
+   "bytes": 1866431,
+   "pages": 11,
+   "chars": 51919
+  },
+  {
+   "id": "2609.35343v1",
+   "category": "astro-ph.GA",
+   "fold": 0,
+   "title": "Extreme MgII Emission in Recently-Quenched Galaxies: A New Sample of Intermediate-Redshift Post-Starburst Quasars from the DESI Early Data Release",
+   "authors": [
+    "Margaret E. Verrico",
+    "Aayan Verma",
+    "K. Decker French",
+    "David J. Setton",
+    "Omar Almaini",
+    "Jenny E. Greene",
+    "Stephanie LaMassa",
+    "Yuanze Luo",
+    "Pallavi Patil",
+    "Kate Rowlands",
+    "Dharlenny Soto"
+   ],
+   "published": "2026-09-28T15:00:40Z",
+   "pdfUrl": "https://arxiv.org/pdf/2609.35343v1",
+   "license": "http://creativecommons.org/licenses/by/4.0/",
+   "sha256": "a65f7f7b717cd48e57a0dad6c75f0f9070a61cee6672d6108ea31cfa5c2d96b0",
+   "bytes": 1420646,
+   "pages": 27,
+   "chars": 117718
+  },
+  {
+   "id": "2609.36291v1",
+   "category": "astro-ph.EP",
+   "fold": 3,
+   "title": "Whole-disk Photometric and Colorimetric Phase Curves of Earth with the Clementine Lunar Orbiter",
+   "authors": [
+    "Chase Cooper",
+    "Tyler D. Robinson",
+    "L. C. Mayorga",
+    "Jason W. Barnes",
+    "Lily Robinthal"
+   ],
+   "published": "2026-09-28T21:19:42Z",
+   "pdfUrl": "https://arxiv.org/pdf/2609.36291v1",
+   "license": "http://creativecommons.org/licenses/by/4.0/",
+   "sha256": "f6846398528b452feff65da66ecb6b13740f738c4a11a66fa400a2115fdaf03f",
+   "bytes": 2710997,
+   "pages": 16,
+   "chars": 49080
+  },
+  {
+   "id": "2609.39501v2",
+   "category": "astro-ph.EP",
+   "fold": 0,
+   "title": "Early Planet Formation in Embedded Disks (eDisk). XXV. Inclination-Induced Minor-Axis Brightness Asymmetries Reveal Limited Dust Settling in Embedded Protostellar Disks",
+   "authors": [
+    "Sidhant Kumar Suar",
+    "Zhe-Yu Daniel Lin",
+    "Zhi-Yun Li",
+    "Nagayoshi Ohashi",
+    "Shigehisa Takakuwa",
+    "John Tobin",
+    "Leslie Looney",
+    "Mayank Narang",
+    "Youngwoo Choi",
+    "Woojin Kwon",
+    "Patrick Sheehan",
+    "Ilseung Han"
+   ],
+   "published": "2026-09-30T11:03:49Z",
+   "pdfUrl": "https://arxiv.org/pdf/2609.39501v2",
+   "license": "http://creativecommons.org/licenses/by/4.0/",
+   "sha256": "3307a18a1ef051a0752d79528df26e9a17aed6a3ad97d7c8f1b5722437a267e6",
+   "bytes": 23615598,
+   "pages": 27,
+   "chars": 89128
+  },
+  {
+   "id": "2609.30111v1",
+   "category": "astro-ph.EP",
+   "fold": 1,
+   "title": "Deep HST/STIS Coronagraphic Imaging of the $β$ Pictoris Debris Disk: On the Scattered Light Component of the Cat's Tail",
+   "authors": [
+    "Arin M. Avsar",
+    "Kevin Wagner",
+    "Daniel Apai",
+    "Isabel Rebollido",
+    "Antranik A. Sefilian",
+    "Marshall D. Perrin",
+    "Christopher C. Stark",
+    "Gabriel Weible",
+    "Andras Gaspar"
+   ],
+   "published": "2026-09-24T16:51:41Z",
+   "pdfUrl": "https://arxiv.org/pdf/2609.30111v1",
+   "license": "http://creativecommons.org/licenses/by/4.0/",
+   "sha256": "61809064078afa87e59408d669f5d5d16410272bec9f0d17702e0c72bfcdf692",
+   "bytes": 22319778,
+   "pages": 24,
+   "chars": 81788
+  },
+  {
+   "id": "2609.37733v1",
+   "category": "physics.chem-ph",
+   "fold": 0,
+   "title": "Foundation Neural-Network Quantum States for Molecular Potential Energy Surfaces in Second Quantization",
+   "authors": [
+    "Lizhong Fu",
+    "Jianan Wei",
+    "Wenguan Wang",
+    "Honghui Shang"
+   ],
+   "published": "2026-09-29T14:54:07Z",
+   "pdfUrl": "https://arxiv.org/pdf/2609.37733v1",
+   "license": "http://creativecommons.org/licenses/by/4.0/",
+   "sha256": "bf4fbef180b76329d63cbc839f877e88dad1a3a676c25d26c4c4302ae11157a0",
+   "bytes": 782267,
+   "pages": 23,
+   "chars": 60145
+  },
+  {
+   "id": "2609.36947v1",
+   "category": "physics.chem-ph",
+   "fold": 1,
+   "title": "A systematic comparison of hard- and soft-constrained physics-informed molecular machine learning with the Clapeyron equation",
+   "authors": [
+    "Jan Pavšek",
+    "Jan G. Rittig",
+    "Alexander Mitsos"
+   ],
+   "published": "2026-09-29T07:54:23Z",
+   "pdfUrl": "https://arxiv.org/pdf/2609.36947v1",
+   "license": "http://creativecommons.org/licenses/by/4.0/",
+   "sha256": "3b5d6172d53f3f9f047227cfba7cdc0d9099dd538239125dc0ede13304849be4",
+   "bytes": 1154897,
+   "pages": 13,
+   "chars": 48676
+  },
+  {
+   "id": "2609.40135v1",
+   "category": "physics.chem-ph",
+   "fold": 2,
+   "title": "Smite: A quasiclassical trajectory (QCT) program for bimolecular collisions and unimolecular dynamics on ab-initio, and machine-learned potential energy surfaces",
+   "authors": [
+    "Péter Szabó",
+    "Jenne van Veerdeghem",
+    "Jérôme Loreau",
+    "Jean-François Müller",
+    "Jeremy N. Harvey"
+   ],
+   "published": "2026-09-30T16:49:40Z",
+   "pdfUrl": "https://arxiv.org/pdf/2609.40135v1",
+   "license": "http://creativecommons.org/licenses/by/4.0/",
+   "sha256": "bef81cf3038326293e2598195de5103d60a00901211555be43c9af1414819366",
+   "bytes": 551229,
+   "pages": 18,
+   "chars": 96425
+  },
+  {
+   "id": "2610.03758v1",
+   "category": "physics.ao-ph",
+   "fold": 1,
+   "title": "Global Evaluation of AI and NWP Precipitation Forecasts During Atmospheric River Events",
+   "authors": [
+    "Marina Vicens-Miquel",
+    "Taylor Mandelbaum",
+    "Amy McGovern",
+    "Aaron J. Hill",
+    "Daniel Rothenberg"
+   ],
+   "published": "2026-09-26T22:16:27Z",
+   "pdfUrl": "https://arxiv.org/pdf/2610.03758v1",
+   "license": "http://creativecommons.org/licenses/by/4.0/",
+   "sha256": "1668f5635ae34d320b59eb74bf2a91296422764bd277a247d66f0d0085f6a433",
+   "bytes": 22970352,
+   "pages": 28,
+   "chars": 56604
+  },
+  {
+   "id": "2609.10378v1",
+   "category": "physics.ao-ph",
+   "fold": 2,
+   "title": "Predicting tipping points: The many shades of non-equilibrium and catch-22s of early-warning",
+   "authors": [
+    "Johannes Lohmann"
+   ],
+   "published": "2026-09-09T16:05:26Z",
+   "pdfUrl": "https://arxiv.org/pdf/2609.10378v1",
+   "license": "http://creativecommons.org/licenses/by/4.0/",
+   "sha256": "070ea094879b8d4850467b212c20ec936dffeb09e927e9f7bed00677f4fb9334",
+   "bytes": 1986845,
+   "pages": 26,
+   "chars": 59623
+  },
+  {
+   "id": "2609.35675v1",
+   "category": "physics.ao-ph",
+   "fold": 3,
+   "title": "Explainable Deep Learning for Probabilistic Nowcasting of Radar Reflectivity in Tornadic Storms",
+   "authors": [
+    "Nathan Erickson",
+    "Amy McGovern",
+    "Aaron Hill"
+   ],
+   "published": "2026-09-28T17:29:35Z",
+   "pdfUrl": "https://arxiv.org/pdf/2609.35675v1",
+   "license": "http://creativecommons.org/licenses/by/4.0/",
+   "sha256": "fa561414a6a110f33b37a6deb3a7affdf2c7f97c65f1241139d0a5ed96255480",
+   "bytes": 19937103,
+   "pages": 40,
+   "chars": 77252
+  },
+  {
+   "id": "2609.38529v1",
+   "category": "cond-mat.mtrl-sci",
+   "fold": 2,
+   "title": "Single-particle detection of the Néel transition in LaCrO$_3$ microcrystals via widefield nitrogen-vacancy center magnetic imaging",
+   "authors": [
+    "Carson O. Patterson",
+    "Ethan Q. Williams",
+    "Eden Tzanetopoulos",
+    "Benjamin C. Li",
+    "Rachel T. Smith",
+    "Matthew Chang",
+    "Hideyuki Watanabe",
+    "Daniel R. Gamelin",
+    "Kai-Mei C. Fu"
+   ],
+   "published": "2026-09-29T20:48:07Z",
+   "pdfUrl": "https://arxiv.org/pdf/2609.38529v1",
+   "license": "http://creativecommons.org/licenses/by/4.0/",
+   "sha256": "1b5d32df8215f0a42d63e55c8838111439fe3b7bfde809fb3e34b81912b17653",
+   "bytes": 8006131,
+   "pages": 26,
+   "chars": 71974
+  },
+  {
+   "id": "2609.38843v1",
+   "category": "cond-mat.mtrl-sci",
+   "fold": 3,
+   "title": "Defect Dynamics and Isomer Quenching in $^{229}$Th:CaF$_2$ Crystals",
+   "authors": [
+    "Ming Guan",
+    "Michael Bartokos",
+    "Kjeld Beeks",
+    "Takahiro Hiraki",
+    "Shinji Kitao",
+    "Takahiko Masuda",
+    "Nobumoto Nagasawa",
+    "Koichi Okai",
+    "Ryoichiro Ogake",
+    "Martin Pimon",
+    "Noboru Sasao",
+    "Fabian Schaden",
+    "Thorsten Schumm",
+    "Makoto Seto",
+    "Kenji Tamasaku",
+    "Sayuri Takatori",
+    "Yoshitaka Yoda",
+    "Akihiro Yoshimi",
+    "Koji Yoshimura"
+   ],
+   "published": "2026-09-30T03:05:35Z",
+   "pdfUrl": "https://arxiv.org/pdf/2609.38843v1",
+   "license": "http://creativecommons.org/licenses/by/4.0/",
+   "sha256": "ca97151fe3d584a64da2a650debcf5f8fc18877c7a1f7e35cacf4a6eaa057652",
+   "bytes": 5447367,
+   "pages": 13,
+   "chars": 63327
+  },
+  {
+   "id": "2609.37927v1",
+   "category": "cond-mat.mtrl-sci",
+   "fold": 0,
+   "title": "Irreducible Weyl Semimetals",
+   "authors": [
+    "Ke-Xin Pang",
+    "Yan Gao"
+   ],
+   "published": "2026-09-29T16:16:54Z",
+   "pdfUrl": "https://arxiv.org/pdf/2609.37927v1",
+   "license": "http://creativecommons.org/licenses/by/4.0/",
+   "sha256": "0706130715334edd92bfd7b7a670ab96944d7a79574878d2a4caa44646e197e4",
+   "bytes": 2294238,
+   "pages": 23,
+   "chars": 115698
+  },
+  {
+   "id": "2609.18631v1",
+   "category": "q-bio.QM",
+   "fold": 3,
+   "title": "Automatic denoising and differentiation based on Savitzky-Golay filtering and Homogeneous Differentiators for attractor reconstruction via differential embedding",
+   "authors": [
+    "Uros Sutulovic",
+    "Daniele Proverbio",
+    "Rami Katz",
+    "Giulia Giordano"
+   ],
+   "published": "2026-09-16T13:19:11Z",
+   "pdfUrl": "https://arxiv.org/pdf/2609.18631v1",
+   "license": "http://creativecommons.org/licenses/by/4.0/",
+   "sha256": "9eac7ec531cacdced371f859ec252abf857fdb30c20346af8040547febe16be8",
+   "bytes": 13047329,
+   "pages": 27,
+   "chars": 131369
+  },
+  {
+   "id": "2609.22369v1",
+   "category": "q-bio.QM",
+   "fold": 0,
+   "title": "Foundation-model-based multi-label phenotyping of combined hyperkinetic movement disorders",
+   "authors": [
+    "Laura Cif",
+    "Zohra Souei",
+    "Diane Demailly",
+    "Mayte Castro-Jimenez",
+    "Juan Dario Ortigoza-Escobar",
+    "Muhammad Mushhood Ur Rehman",
+    "Morgan Dornadic",
+    "Sophie Huby",
+    "Gun-Marie Hariz",
+    "Cecile Hubsch",
+    "Nathalie Dorison",
+    "Eduardo M. Moraud",
+    "Jocelyne Bloch",
+    "Gabriella Horvath",
+    "Olivier Oullier",
+    "Xavier Vasques"
+   ],
+   "published": "2026-09-17T15:50:35Z",
+   "pdfUrl": "https://arxiv.org/pdf/2609.22369v1",
+   "license": "http://creativecommons.org/licenses/by/4.0/",
+   "sha256": "58f176ca6a4b376ffb9095af1958a4b9f804a78c5bb245fda619bb788ad4b1c7",
+   "bytes": 7197730,
+   "pages": 29,
+   "chars": 93998
+  },
+  {
+   "id": "2609.10121v2",
+   "category": "q-bio.QM",
+   "fold": 1,
+   "title": "ADMET-EvO: a self-evolving scientific agent for sustained research across heterogeneous tasks",
+   "authors": [
+    "Yiling Zhou",
+    "Yilin Wang",
+    "Jianmin Wang",
+    "Heqin Zhu",
+    "Zirui Wang",
+    "Chang-yu Hiesh",
+    "Kejun Ying",
+    "Jiaqi Wang",
+    "Yuzhi Xu",
+    "Tingjun Hou",
+    "Odin Zhang"
+   ],
+   "published": "2026-09-09T13:00:00Z",
+   "pdfUrl": "https://arxiv.org/pdf/2609.10121v2",
+   "license": "http://creativecommons.org/licenses/by/4.0/",
+   "sha256": "28face2ea7d48e3457c79f496bf324d906877529e73ed66d7163ba88fd3b32a1",
+   "bytes": 3515060,
+   "pages": 21,
+   "chars": 68472
+  }
+ ]
+}

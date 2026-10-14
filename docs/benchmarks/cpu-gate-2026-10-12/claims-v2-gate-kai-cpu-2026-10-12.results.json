@@ -1,0 +1,87 @@
+{
+ "schema": "bench-claims-v2/1",
+ "date": "2026-10-12",
+ "spec": "kai",
+ "engine": "eos",
+ "worker": null,
+ "device": "cpu",
+ "label": "gate-kai-cpu",
+ "identity": {
+  "model": "eos:~/.cache/uktub-bench/decision2/models/kai@664be5823ab3@cd49ea3813fd",
+  "protocol": "decision2-noul-v1",
+  "minConfidence": 0.99
+ },
+ "commit": "2f0a15846e6427797fdc7085677f1cc01f58e665",
+ "dirty": true,
+ "dataset": {
+  "claimsSha256": "396330e267ca6c03ec42df9fbbb94ca70f7c6e19ec7ff25fbe9806a81f0c40b2",
+  "corpusSha256": "b620b96cb3bb286401a052e9e23841022ba2ffca3c9c7b789bfbb5cefd06a8be",
+  "papers": 1,
+  "claims": 2,
+  "stride": 6,
+  "offset": 0,
+  "selection": null
+ },
+ "chunking": {
+  "chunk_tokens": 512,
+  "overlap_tokens": 0,
+  "chars_per_token": 2.8,
+  "boundary": "section"
+ },
+ "maxJudgmentsRaisedFrom": 120,
+ "gpu": null,
+ "machine": {
+  "cpu": "Intel(R) Core(TM) i7-14650HX",
+  "cores": 24,
+  "memoryGb": 62,
+  "node": "v26.3.1"
+ },
+ "run": {
+  "startedAt": "2026-10-12T10:22:02.320Z",
+  "loadavgStart": [
+   15.51,
+   14.4,
+   9.02
+  ],
+  "loadavgEnd": [
+   16.76,
+   15.39,
+   10.34
+  ],
+  "seconds": 177
+ },
+ "records": [
+  {
+   "id": "v2-2609.10053v1-01",
+   "paper": "2609.10053v1",
+   "label": "TRUE",
+   "type": "reworded",
+   "fold": 1,
+   "score": 0.8532707798481537,
+   "unjudged": 0,
+   "chunks": 86,
+   "supportFound": false,
+   "fresh": 86,
+   "cached": 0,
+   "localizationFresh": 0,
+   "wallMs": 90601,
+   "refused": null
+  },
+  {
+   "id": "v2-2609.10053v1-08",
+   "paper": "2609.10053v1",
+   "label": "FALSE",
+   "type": "perturbed",
+   "fold": 1,
+   "score": 0.891379196879388,
+   "unjudged": 0,
+   "chunks": 86,
+   "supportFound": false,
+   "fresh": 86,
+   "cached": 0,
+   "localizationFresh": 0,
+   "wallMs": 86044,
+   "refused": null
+  }
+ ]
+}

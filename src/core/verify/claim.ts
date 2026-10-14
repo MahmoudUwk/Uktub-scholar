@@ -27,34 +27,6 @@ export function minConfidenceFromEnv(env: Record<string, string | undefined>): n
   return v;
 }
 
-/**
- * Julia-1 engine adapter: spawns `python3 scripts/julia_decide.py` (resident:
- * the 550 MB checkpoint loads once), pipes rows as JSONL, reads one
- * `{"p_true": …}` per row. Model: `UKTUB_JULIA_MODEL` (path or HF id).
- */
-export function juliaEngine(opts: {
-  env: Record<string, string | undefined>;
-  pythonBin?: string;
-  spawnImpl?: typeof spawn;
-}): ClaimEngine {
-  return workerEngine({ ...opts, script: "julia_decide.py", envName: "UKTUB_JULIA_PYTHON", label: "julia" });
-}
-
-/**
- * Laya engine adapter: resident Router-mode worker (`scripts/laya_decide.py`)
- * — the model card's recommended Router usage, pinned to
- * `model="multilingual"` + `max_len=8192` (the card's long-document
- * prescription; the English checkpoint reads only 512 tokens). Same JSONL
- * protocol as the julia worker. Python: `UKTUB_LAYA_PYTHON`.
- */
-export function layaEngine(opts: {
-  env: Record<string, string | undefined>;
-  pythonBin?: string;
-  spawnImpl?: typeof spawn;
-}): ClaimEngine {
-  return workerEngine({ ...opts, script: "laya_decide.py", envName: "UKTUB_LAYA_PYTHON", label: "laya", respawnEveryRows: 60 });
-}
-
 /** Pinned Decision 2.0 Eos checkpoint (reviewed custom code; see docs/benchmarks status report). */
 export const EOS_MODEL = "vllm-sr/Decision-2.0-Eos-0.8B";
 export const EOS_REVISION = "3594047d69f476f1d01cf84c593e213fc3a4dfe0";
@@ -62,7 +34,7 @@ export const EOS_REVISION = "3594047d69f476f1d01cf84c593e213fc3a4dfe0";
 /**
  * Eos engine (vllm-sr/Decision-2.0-Eos-0.8B, owner-selected default 2026-10-04): the
  * resident worker `scripts/decision2_decide.py` loads the PINNED checkpoint once and
- * answers rows over JSONL (same protocol as the julia worker). Python with torch and
+ * answers rows over JSONL. Python with torch and
  * transformers>=5.17 is the user's: `UKTUB_EOS_PYTHON` (default `python3`);
  * `UKTUB_EOS_MODEL` (local snapshot dir or HF id) and `UKTUB_EOS_REVISION` override the pin.
  * The worker refuses inputs over the model's 16,384-token limit instead of truncating;
@@ -172,10 +144,6 @@ function workerEngine(opts: {
   script: string;
   envName: string;
   label: string;
-  /** Recycle the resident child after N answered rows: long-context GPU
-   * runs accumulate allocator fragmentation that eventually aborts the
-   * process natively; a fresh child resets the CUDA context. */
-  respawnEveryRows?: number;
 }): ClaimEngine {
   const pythonBin = opts.pythonBin ?? opts.env[opts.envName] ?? "python3";
   const script = join(dirname(fileURLToPath(import.meta.url)), "../../../scripts", opts.script);
@@ -186,9 +154,7 @@ function workerEngine(opts: {
   let child: ChildProcessWithoutNullStreams | null = null;
   let buffer = "";
   let ready = false;
-  let answeredSinceSpawn = 0;
   let chain: Promise<unknown> = Promise.resolve();
-  let draining: Promise<void> | null = null; // retired child exiting; its CUDA context must be gone before the next spawn
   let pending: {
     rows: { state: string; instructions: string }[];
     resolve: (pTrues: number[]) => void;
@@ -275,21 +241,11 @@ function workerEngine(opts: {
           pending = null;
           hold(false);
           done.resolve(done.answers);
-          if (opts.respawnEveryRows && ++answeredSinceSpawn >= opts.respawnEveryRows) {
-            // Clean retirement: sentinel lets the worker exit between rows —
-            // killing mid-forward-pass orphans CUDA state and races pipes.
-            answeredSinceSpawn = 0;
-            ready = false;
-            const retiring = child;
-            child = null;
-            draining = new Promise<void>((res) => retiring?.once("close", () => res()));
-            retiring?.stdin!.write(JSON.stringify({ exit: true }) + "\n");
-          }
         }
       }
     });
     current.stderr!.on("data", (d: Buffer) => {
-      /* diagnostics only — laya/torch print benign warnings mentioning CUDA
+      /* diagnostics only — torch prints benign warnings mentioning CUDA
          here; real failures surface as row-level {"error": …} lines, close,
          or timeout */
       void d;
@@ -305,12 +261,7 @@ function workerEngine(opts: {
   return {
     run(rows) {
       if (rows.length === 0) return Promise.resolve([]);
-      const attempt = async (): Promise<number[]> => {
-        if (draining) {
-          const wait = draining;
-          draining = null;
-          await wait; // retiring worker released its CUDA context — safe to spawn now
-        }
+      const attempt = (): Promise<number[]> => {
         return new Promise((resolveRun, rejectRun) => {
           pending = { rows, resolve: resolveRun, reject: rejectRun, answers: [] };
           child ??= spawnWorker();
@@ -323,45 +274,6 @@ function workerEngine(opts: {
       return (chain = chain.then(attempt, attempt));
     },
   };
-}
-
-/**
- * K2-Type engine adapter (jev decision server, resident on one CUDA GPU):
- * POSTs one `noul` question per row to TypeSafe `/v1/systemone` —
- * `{"state": <passage>, "questions": {"c": {"type": "noul", "instructions": <claim>}}}`
- * → `answers.c.noul` = P(true). The server is the owner of the fit limit:
- * inputs over 8192 tokens are refused with HTTP 413 (documented provider
- * limit) — surfaced as an EngineError, never truncated. URL:
- * `UKTUB_K2_URL` (default http://127.0.0.1:8000). Stateless client; a
- * worker-safe factory returns independent instances sharing the one server.
- */
-export function k2Engine(opts: { env: Record<string, string | undefined>; fetchImpl?: typeof fetch }): ClaimEngine {
-  return systemoneEndpointEngine({
-    env: opts.env,
-    fetchImpl: opts.fetchImpl,
-    url: (opts.env.UKTUB_K2_URL ?? "http://127.0.0.1:8000").replace(/\/+$/, "") + "/v1/systemone",
-    label: "k2",
-  });
-}
-
-/** bev-decider (avbiswas/bev-decider-0.4B): System One server, 2,048-token state limit (provider limit — pair with the 2048-token chunk config). URL: `UKTUB_BEV_URL`. */
-export function bevEngine(opts: { env: Record<string, string | undefined>; fetchImpl?: typeof fetch }): ClaimEngine {
-  return systemoneEndpointEngine({
-    env: opts.env,
-    fetchImpl: opts.fetchImpl,
-    url: (opts.env.UKTUB_BEV_URL ?? "http://127.0.0.1:8009").replace(/\/+$/, "") + "/v1/systemone",
-    label: "bev",
-  });
-}
-
-/** Lumma-fev (FrontiersMind/lumma-fev-0.6b): System One server, 8,192-token states. URL: `UKTUB_LUMMA_URL`. */
-export function lummaEngine(opts: { env: Record<string, string | undefined>; fetchImpl?: typeof fetch }): ClaimEngine {
-  return systemoneEndpointEngine({
-    env: opts.env,
-    fetchImpl: opts.fetchImpl,
-    url: (opts.env.UKTUB_LUMMA_URL ?? "http://127.0.0.1:8010").replace(/\/+$/, "") + "/v1/systemone",
-    label: "lumma",
-  });
 }
 
 /** Shared TypeSafe System One HTTP client: one `noul` row per request, `answers.c.noul` = P(true). Stateless, worker-safe. */
@@ -490,66 +402,6 @@ export function openrouterDecisionsEngine(opts: {
         const p = parsed.answers?.c?.noul;
         if (typeof p !== "number") throw new EngineError(`openrouter decisions (${opts.model}): response missing answers.c.noul`);
         pTrues.push(p);
-      }
-      return pTrues;
-    },
-  };
-}
-
-/**
- * OpenRouter chat adapter for text models that answer entailment yes/no
- * (e.g. typesafe/jev-router — the router fronts the jev decision family but
- * exposes no probabilities). Scores are binary: yes → 1, no → 0. AUC and
- * verdicts remain well-defined; treat confidence as a hard label, not a
- * calibrated probability. Key: `OPENROUTER_API_KEY`; model:
- * `UKTUB_OPENROUTER_CHAT_MODEL`.
- */
-export function openrouterChatEngine(opts: {
-  env: Record<string, string | undefined>;
-  fetchImpl?: typeof fetch;
-  model: string;
-}): ClaimEngine {
-  const key = opts.env.OPENROUTER_API_KEY;
-  if (!key) throw new EngineError("openrouter chat engine: OPENROUTER_API_KEY is not set");
-  const doFetch = opts.fetchImpl ?? fetch;
-  const throttleMs = openrouterThrottleMs(opts.env, opts.model);
-  const lastCallAt = { value: 0 };
-  return {
-    async run(rows) {
-      if (rows.length === 0) return [];
-      const pTrues: number[] = [];
-      for (const row of rows) {
-        const res = await openrouterFetchWithRetry(
-          doFetch,
-          "https://openrouter.ai/api/v1/chat/completions",
-          {
-            method: "POST",
-            headers: { authorization: `Bearer ${key}`, "content-type": "application/json" },
-            body: JSON.stringify({
-              model: opts.model,
-              messages: [
-                {
-                  role: "user",
-                  content:
-                    `Passage: ${row.state}\n\nClaim: ${row.instructions}\n\n` +
-                    "Does the passage state or directly entail the claim? Answer with exactly one word: yes or no.",
-                },
-              ],
-              max_tokens: 2000, // the router's reasoning backend emits chain-of-thought before the one-word answer
-              temperature: 0,
-            }),
-            signal: AbortSignal.timeout(120_000),
-          },
-          throttleMs,
-          lastCallAt,
-        ).catch((e: unknown) => {
-          throw new EngineError(`openrouter chat (${opts.model}): ${e instanceof Error ? e.message : String(e)}`);
-        });
-        const parsed = (await res.json()) as { choices?: { message?: { content?: string } }[] };
-        const content = (parsed.choices?.[0]?.message?.content ?? "").trim().toLowerCase();
-        if (content.startsWith("yes")) pTrues.push(1);
-        else if (content.startsWith("no")) pTrues.push(0);
-        else throw new EngineError(`openrouter chat (${opts.model}): unparseable answer ${JSON.stringify(content.slice(0, 60))}`);
       }
       return pTrues;
     },

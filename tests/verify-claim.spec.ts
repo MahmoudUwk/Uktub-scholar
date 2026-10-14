@@ -1,7 +1,6 @@
 /**
  * Engine adapter spec: the confidence-bar override and the resident-engine
- * adapters — offline. The Julia-1 adapter's live smoke is gated by UKTUB_JULIA_PYTHON;
- * historical quality measurements are retained in docs/benchmarks/.
+ * adapters — offline. Quality measurements are in docs/benchmarks/.
  */
 import { describe, it, after } from "node:test";
 import assert from "node:assert/strict";
@@ -12,7 +11,6 @@ import {
   DEFAULT_MIN_CONFIDENCE,
   eosEngine,
   eosOnnxEngine,
-  juliaEngine,
   minConfidenceFromEnv,
   velaEngine,
   VELA_INFERENCE_SHA256,
@@ -75,7 +73,7 @@ describe("eos-onnx engine adapter (the same worker protocol on ONNX Runtime, no 
   after(() => children.forEach((c) => c.kill()));
 
   it("runs scripts/decision2_onnx.py with the pinned export and answers rows through it", async () => {
-    const engine = eosOnnxEngine({ env: { UKTUB_EOS_ONNX_DIR: "/models/eos-onnx" }, spawnImpl: fakeSpawn });
+    const engine = eosOnnxEngine({ env: { UKTUB_EOS_ONNX_DIR: "/models/eos-onnx", UKTUB_CACHE_DIR: "/nonexistent-cache" }, spawnImpl: fakeSpawn }); // no managed install of the user's is picked up
     assert.deepEqual(await engine.run([{ state: "support", instructions: "c" }, { state: "other", instructions: "c" }]), [0.995, 0.05]);
     const call = calls.at(-1)!;
     assert.equal(call.bin, "python3");
@@ -162,18 +160,5 @@ describe("worker engines never keep the process alive", () => {
     const out = spawnSync(process.execPath, ["--input-type=module", "-e", script], { encoding: "utf8", timeout: 15_000 });
     assert.equal(out.status, 0, `${out.signal ?? ""} ${out.stderr}`);
     assert.equal(out.stdout.trim(), "[0.9,0.9]");
-  });
-});
-
-describe("julia engine adapter (real model, env-gated)", () => {
-  const python = process.env.UKTUB_JULIA_PYTHON ?? "";
-  const hasEngine = python !== "";
-  it("answers rows through the resident process", { skip: !hasEngine }, async () => {
-    const engine = juliaEngine({ env: { ...process.env, UKTUB_JULIA_MODEL: process.env.UKTUB_JULIA_MODEL ?? "SupersonicLabs/Julia-1" }, pythonBin: python });
-    const p = await engine.run([
-      { state: "The Eiffel Tower is located in Paris, France.", instructions: "The Eiffel Tower is located in Paris." },
-    ]);
-    assert.equal(p.length, 1);
-    assert.ok(p[0] >= 0 && p[0] <= 1);
   });
 });

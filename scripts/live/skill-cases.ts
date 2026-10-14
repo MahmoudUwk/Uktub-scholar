@@ -59,7 +59,7 @@ const TEST_PAPERS = resolve(import.meta.dirname, "../../test_papers");
 /** The first folder under `test_papers/` that has a `uktub-case.json`; NOT_RUN (with what to add) when there is none. */
 export function loadTestPaper(root: string = TEST_PAPERS): TestPaper {
   const dir = existsSync(root) ? readdirSync(root).map((n) => join(root, n)).find((d) => statSync(d).isDirectory() && existsSync(join(d, "uktub-case.json"))) : undefined;
-  if (dir === undefined) throw new NotRun("no test paper: put a LaTeX paper in test_papers/<name>/ with a uktub-case.json (fields: docs/testing.md); the cases that need a real paper are NOT_RUN without it");
+  if (dir === undefined) throw new NotRun("no test paper: put a LaTeX paper in test_papers/<name>/ with a uktub-case.json (fields: the TestPaper interface in scripts/live/skill-cases.ts); the cases that need a real paper are NOT_RUN without it");
   const file = join(dir, "uktub-case.json");
   const raw = JSON.parse(readFileSync(file, "utf8")) as Record<string, unknown> & { docx?: Record<string, unknown> };
   const need = <T>(value: T | undefined, name: string): T => {
@@ -158,10 +158,15 @@ export function inspectPdf(pdf: string, previewPng: string): { text: string; pag
   return { text, pages, widthPt, touchesEdge: edge.status === 0 ? edge.stdout.trim() === "edge" : undefined };
 }
 
-/** Decimal numbers on a deck (12.5, 0.75) that the paper never states: a talk may not add results. Compared on digits only, so "1\\%" or "12.5~\\textcent" cannot hide a match. */
+/**
+ * Decimal numbers on a deck (12.5, 0.75) that the paper never states: a talk may not add results. The paper is its whole folder's text —
+ * the LaTeX sources and bibliography plus the plain-text files a paper folder keeps beside them (results exports, notes, data: .txt, .md,
+ * .csv; a live deck stated an auxiliary results file's full-precision values, which a .tex-only scope wrongly called invented). Compared on
+ * digits only, so "1\\%" or "12.5~\\textcent" cannot hide a match.
+ */
 export function numbersNotInPaper(deckText: string, manuscriptDir: string): { total: number; missing: string[] } {
   let source = "";
-  const walk = (d: string): void => { for (const n of readdirSync(d)) { const p = join(d, n); if (statSync(p).isDirectory()) walk(p); else if (/\.(?:tex|bib)$/.test(n)) source += `${readFileSync(p, "utf8")}\n`; } };
+  const walk = (d: string): void => { for (const n of readdirSync(d)) { const p = join(d, n); if (statSync(p).isDirectory()) walk(p); else if (/\.(?:tex|bib|txt|md|csv)$/.test(n)) source += `${readFileSync(p, "utf8")}\n`; } };
   walk(manuscriptDir);
   // a pointer into the paper ("Section 5.3", "Table 5.5", "lines 499\u2013506") is not a result
   const stripped = deckText.replace(/\b(?:Sections?|Secs?\.?|Tables?|Figures?|Figs?\.?|Eqs?\.?|Equations?|lines?)\s*~?\d+(?:\.\d+)*(?:\s*(?:,|and|&|to|--|\u2013|-)\s*\d+(?:\.\d+)*)*/gi, " ");

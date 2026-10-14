@@ -71,6 +71,22 @@ const failed = (r: AcquireResult) => {
 const s2Requests = (requests: Array<{ url: string }>) => requests.filter((q) => q.url.includes("semanticscholar"));
 
 describe("arXiv routes (derived from identifiers a provider supplied, never invented)", () => {
+  it("ignores a mismatched OpenAlex record but still fetches the paper's own arXiv identifier", async () => {
+    const { result, calls } = await run(
+      ARXIV_PAPER,
+      [openalex(ARXIV_PAPER, { doi: "https://doi.org/10.9999/other", locations: [{ is_oa: true, pdf_url: "https://repo.example/other.pdf" }] })],
+      { "https://repo.example/other.pdf": otherPdf, "https://arxiv.org/pdf/2511.15162": goodPdf },
+    );
+    assert.equal(ok(result).kind, "arxiv-pdf");
+    assert.deepEqual(calls.map((c) => c.url), ["https://arxiv.org/pdf/2511.15162"], "none of the mismatched record's URLs may be trusted");
+    const wrong = await run(
+      ARXIV_PAPER,
+      [openalex(ARXIV_PAPER, { doi: "https://doi.org/10.9999/other" }), s2Route({}, 404)],
+      { "https://arxiv.org/pdf/2511.15162": otherPdf },
+    );
+    assert.equal(failed(wrong.result).code, "identity_mismatch", "the independent arXiv copy still must pass document identity");
+  });
+
   it("an arXiv DOI whose OpenAlex record has only a DOI landing page is fetched from arxiv.org/pdf/<id>", async () => {
     const { result, calls } = await run(
       ARXIV_PAPER,

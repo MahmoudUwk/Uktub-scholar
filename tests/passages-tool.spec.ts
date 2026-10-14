@@ -1,5 +1,5 @@
 /**
- * search_passages (roadmap step 3): exploratory retrieval over the registered papers for the writing
+ * passages (roadmap step 3): exploratory retrieval over the registered papers for the writing
  * agent. Hybrid FTS5 + vector search over the SAME chunks claim verification judges, returned as bounded
  * passages with exact pointers, section labels and pages, under the same output containment as evidence.
  * Offline: real SQLite, fake embedding server.
@@ -47,7 +47,7 @@ function writeConfig(boundary: "paragraph" | "section" = "section", chunkTokens 
   mkdirSync(join(root, "config"), { recursive: true });
   writeFileSync(
     join(root, "config", "chunking.yaml"),
-    `chunking:\n  chunk_tokens: ${chunkTokens}\n  overlap_tokens: 0\n  chars_per_token: 1\n  boundary: ${boundary}\nverification:\n  engine: k2\n  min_confidence: 0.99\n  workers: 2\n  max_judgments: 120\n`,
+    `chunking:\n  chunk_tokens: ${chunkTokens}\n  overlap_tokens: 0\n  chars_per_token: 1\n  boundary: ${boundary}\nverification:\n  engine: llama-cpp\n  min_confidence: 0.99\n  workers: 2\n  max_judgments: 120\n`,
   );
 }
 
@@ -71,7 +71,7 @@ function sectioned(topic: string, n: number): { text: string; heads: string[] } 
 const run = (args: SearchPassagesArgs, c: ToolContext = ctx(), hooks = {}) => searchPassagesTool(c, args, hooks);
 const hitsOf = (r: Awaited<ReturnType<typeof run>>): Record<string, any>[] => (r.structuredContent as any).hits;
 
-describe("search_passages — refusals", () => {
+describe("passages — refusals", () => {
   it("refuses an empty query, one with no searchable words, an over-long one, a bad scope and a bad limit", async () => {
     addPaper("10.1234/aaa", "A", sectioned("alpha", 3).text);
     const cases: [Partial<SearchPassagesArgs>, RegExp][] = [
@@ -103,7 +103,7 @@ describe("search_passages — refusals", () => {
   });
 });
 
-describe("search_passages — results", () => {
+describe("passages — results", () => {
   it("returns ranked passages with pointer, section, page and verbatim excerpt; no score anywhere", async () => {
     writeConfig();
     const s = sectioned("battery", 4);
@@ -171,19 +171,18 @@ describe("search_passages — results", () => {
     assert.equal((r.structuredContent as any).result.found, false);
   });
 
-  // Seen in a real session (experiments/runs/rf-llm-literature-review/iter-01): the agent was told to "acquire sources" but nothing named
-  // how; it learned by accident that verify_claim acquires open-access sources on demand. The answer must name the actions.
+  // iter-14 used a preliminary verify solely to acquire text after this hint. Source preparation now has its own action.
   it("with no searchable source the answer names the actions that produce one, and each unsearchable paper says why in plain words", async () => {
     addPaper("10.1234/ccc", "Paper C", null);
     const text = (await run({ query: "battery" })).content[0].text;
-    assert.match(text, /verify_claim/, "verify_claim acquires open-access sources on demand");
+    assert.match(text, /registry.*acquire/, "name the source-acquisition action without requiring a claim");
     assert.match(text, /attach_source/, "attach_source supplies a local file");
-    assert.match(text, /narrow `?query`?/i, "a narrow query keeps the on-demand check short (an exhaustive check judges every passage)");
+    assert.match(text, /source.*ready|ready.*source/i, "readiness must be checked before retrying passage search");
     assert.match(text, /not searchable: \S+ \(10\.1234\/ccc\) — metadata_only \(no source acquired or attached yet\)/);
   });
 });
 
-describe("search_passages — review findings", () => {
+describe("passages — review findings", () => {
   it("no section label returned to the agent is longer than the label cap, whatever the source's headings look like", async () => {
     writeConfig("section", 300);
     const long = "Secret finding ".repeat(400);
@@ -198,7 +197,7 @@ describe("search_passages — review findings", () => {
 
   it("hits that overlap a better hit are dropped (overlapping chunks add nothing), not mislabelled as whole-source (review finding)", async () => {
     mkdirSync(join(root, "config"), { recursive: true });
-    writeFileSync(join(root, "config", "chunking.yaml"), "chunking:\n  chunk_tokens: 256\n  overlap_tokens: 100\n  chars_per_token: 1\n  boundary: paragraph\nverification:\n  engine: k2\n  min_confidence: 0.99\n  workers: 2\n  max_judgments: 120\n");
+    writeFileSync(join(root, "config", "chunking.yaml"), "chunking:\n  chunk_tokens: 256\n  overlap_tokens: 100\n  chars_per_token: 1\n  boundary: paragraph\nverification:\n  engine: llama-cpp\n  min_confidence: 0.99\n  workers: 2\n  max_judgments: 120\n");
     const text = Array.from({ length: 14 }, (_, i) => `Paragraph ${i}: battery cells age faster under heavy load. Filler words about nothing.`).join("\n\n"); // ≈ 75 characters each: two per chunk, one carried over
     addPaper("10.1234/aaa", "Overlap", text, [], { chunk_tokens: 256, overlap_tokens: 100, chars_per_token: 1, boundary: "paragraph" });
     const hits = hitsOf(await run({ query: "battery cells age", limit: 8 }));
@@ -212,7 +211,7 @@ describe("search_passages — review findings", () => {
   });
 });
 
-describe("search_passages — output containment (same rules as evidence)", () => {
+describe("passages — output containment (same rules as evidence)", () => {
   it("withholds the text of a passage that is half the source or more, keeps its pointer", async () => {
     writeConfig("section", 800);
     const s = sectioned("solo", 1); // one chunk = the whole source
@@ -255,7 +254,7 @@ describe("search_passages — output containment (same rules as evidence)", () =
   });
 });
 
-describe("search_passages — hybrid and fallback", () => {
+describe("passages — hybrid and fallback", () => {
   const concept = (over: { failQuery?: boolean } = {}): Embedder => {
     const vec = (t: string): Float32Array => {
       const sunny = /solar|sun/i.test(t); // one concept axis for solar and sun

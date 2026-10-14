@@ -22,9 +22,9 @@ describe("resolveEngineIdentity", () => {
 
   it("llama.cpp: asks the server what it serves, so replacing the model behind one URL changes the identity", async () => {
     const env = { UKTUB_VERIFY_URL: "http://127.0.0.1:8080" };
-    const a = await resolveEngineIdentity(env, "llama-cpp", { fetchImpl: models("julia-q4.gguf") });
+    const a = await resolveEngineIdentity(env, "llama-cpp", { fetchImpl: models("model-q4.gguf") });
     const b = await resolveEngineIdentity(env, "llama-cpp", { fetchImpl: models("other-model.gguf") });
-    assert.equal(a!.model, "llama-cpp:julia-q4.gguf");
+    assert.equal(a!.model, "llama-cpp:model-q4.gguf");
     assert.notEqual(a!.model, b!.model);
     assert.ok(!a!.model.includes("8080"), "the URL is not the identity");
   });
@@ -33,22 +33,22 @@ describe("resolveEngineIdentity", () => {
     const env = { UKTUB_VERIFY_URL: "http://127.0.0.1:8080" };
     assert.equal(await resolveEngineIdentity(env, "llama-cpp", { fetchImpl: models(null, 404) }), null);
     assert.equal(await resolveEngineIdentity(env, "llama-cpp", { fetchImpl: (async () => { throw new Error("down"); }) as typeof fetch }), null);
-    assert.equal(await resolveEngineIdentity({}, "k2", { fetchImpl: models(null, 404) }), null);
-    assert.equal((await resolveEngineIdentity({ UKTUB_VERIFY_MODEL_ID: "my-weights-v3" }, "k2", { fetchImpl: models(null, 404) }))!.model, "declared:my-weights-v3");
+    assert.equal(await resolveEngineIdentity({}, "llama-cpp", { fetchImpl: models(null, 404) }), null);
+    assert.equal((await resolveEngineIdentity({ UKTUB_VERIFY_MODEL_ID: "my-weights-v3" }, "llama-cpp", { fetchImpl: models(null, 404) }))!.model, "declared:my-weights-v3");
   });
 
-  it("local Python engines: the configured model reference, fingerprinted when it is a path", async () => {
+  it("eos: the configured model reference, fingerprinted when it is a path", async () => {
     const dir = mkdtempSync(join(tmpdir(), "uktub-weights-"));
     try {
       const weights = join(dir, "model.safetensors");
       writeFileSync(weights, "v1");
       utimesSync(weights, 1_700_000_000, 1_700_000_000);
-      const a = await resolveEngineIdentity({ UKTUB_JULIA_MODEL: weights }, "julia");
+      const a = await resolveEngineIdentity({ UKTUB_EOS_MODEL: weights }, "eos");
       writeFileSync(weights, "version-two");
       utimesSync(weights, 1_800_000_000, 1_800_000_000);
-      const b = await resolveEngineIdentity({ UKTUB_JULIA_MODEL: weights }, "julia");
-      assert.ok(a!.model.startsWith("julia:") && a!.model !== b!.model, "replacing weights at the same path changes the identity");
-      assert.equal((await resolveEngineIdentity({}, "julia"))!.model, "julia:SupersonicLabs/Julia-1");
+      const b = await resolveEngineIdentity({ UKTUB_EOS_MODEL: weights }, "eos");
+      assert.ok(a!.model.startsWith("eos:") && a!.model !== b!.model, "replacing weights at the same path changes the identity");
+      assert.equal((await resolveEngineIdentity({}, "eos"))!.model, "eos:vllm-sr/Decision-2.0-Eos-0.8B@3594047d69f4");
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
@@ -141,6 +141,6 @@ describe("resident engines are shared per process", () => {
     const a = createConfiguredEngine({}, "eos");
     assert.equal(createConfiguredEngine({}, "eos"), a);
     assert.notEqual(createConfiguredEngine({ UKTUB_EOS_REVISION: "other" }, "eos"), a);
-    assert.notEqual(createConfiguredEngine({}, "k2"), createConfiguredEngine({}, "k2"), "stateless HTTP engines are cheap and not cached");
+    assert.notEqual(createConfiguredEngine({}, "llama-cpp"), createConfiguredEngine({}, "llama-cpp"), "stateless HTTP engines are cheap and not cached");
   });
 });

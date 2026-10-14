@@ -1,7 +1,7 @@
 /**
  * Configured verification-engine registry (KTD6): maps `verification.engine` from config/chunking.yaml to a ClaimEngine. The default
  * is `eos` (a local resident worker, owner decision 2026-10-04); every other engine is selectable only (OpenRouter Mercury Decide is
- * the best measured; `vela` was benchmarked and not adopted, docs/DECISIONS.md). Every knob is a named env; the engine itself never
+ * the best measured; `vela` was benchmarked and not adopted, docs/DECISIONS.md; Julia, Laya, K2, bev and Lumma were removed 2026-10-12). Every knob is a named env; the engine itself never
  * reads ambient state.
  */
 
@@ -13,13 +13,8 @@ import { join } from "node:path";
 import {
   EOS_MODEL,
   EOS_REVISION,
-  bevEngine,
   eosEngine,
   eosOnnxEngine,
-  juliaEngine,
-  k2Engine,
-  layaEngine,
-  lummaEngine,
   openrouterDecisionsEngine,
   systemoneEndpointEngine,
   velaEngine,
@@ -39,11 +34,6 @@ export const VERIFICATION_ENGINES = [
   "eos-onnx",
   "openrouter",
   "llama-cpp",
-  "k2",
-  "bev",
-  "lumma",
-  "julia",
-  "laya",
   "vela",
 ] as const;
 
@@ -57,11 +47,6 @@ const PROTOCOLS: Record<(typeof VERIFICATION_ENGINES)[number], string> = {
   "eos-onnx": "decision2-noul-v1",
   openrouter: SYSTEMONE_PROTOCOL,
   "llama-cpp": SYSTEMONE_PROTOCOL,
-  k2: SYSTEMONE_PROTOCOL,
-  bev: SYSTEMONE_PROTOCOL,
-  lumma: SYSTEMONE_PROTOCOL,
-  julia: "julia-v1",
-  laya: "laya-router-v1",
   vela: "vela2-halu-v1",
 };
 
@@ -134,23 +119,10 @@ export async function resolveEngineIdentity(
     }
     case "openrouter":
       return { model: `openrouter:${env.UKTUB_OPENROUTER_MODEL ?? DEFAULT_OPENROUTER_MODEL}`, protocol: SYSTEMONE_PROTOCOL };
-    case "llama-cpp":
-    case "k2":
-    case "bev":
-    case "lumma": {
-      const url = {
-        "llama-cpp": env.UKTUB_VERIFY_URL ?? DEFAULT_LLAMA_CPP_URL,
-        k2: env.UKTUB_K2_URL ?? "http://127.0.0.1:8000",
-        bev: env.UKTUB_BEV_URL ?? "http://127.0.0.1:8009",
-        lumma: env.UKTUB_LUMMA_URL ?? "http://127.0.0.1:8010",
-      }[engine];
-      const served = await probeServedModel(url, fetchImpl);
-      return served === null ? null : { model: `${engine}:${served}`, protocol: SYSTEMONE_PROTOCOL };
+    case "llama-cpp": {
+      const served = await probeServedModel(env.UKTUB_VERIFY_URL ?? DEFAULT_LLAMA_CPP_URL, fetchImpl);
+      return served === null ? null : { model: `llama-cpp:${served}`, protocol: SYSTEMONE_PROTOCOL };
     }
-    case "julia":
-      return { model: `julia:${localModelRef(env.UKTUB_JULIA_MODEL ?? "SupersonicLabs/Julia-1")}`, protocol: "julia-v1" };
-    case "laya":
-      return { model: `laya:${localModelRef("convaiinnovations/laya-multilingual")}`, protocol: "laya-router-v1" };
     case "vela": {
       // Same rule as eos-onnx: under the pinned digests the worker refuses any other weights or inference code, so the pin IS the
       // identity (and moving the snapshot keeps cached judgments). An override of the revision, a digest or the export drops that
@@ -168,7 +140,7 @@ export async function resolveEngineIdentity(
 /** Resident worker engines (a model loaded into GPU memory) are shared per process and
  *  configuration, so a long-lived host does not reload the model for every call. */
 const resident = new Map<string, ClaimEngine>();
-const RESIDENT_ENGINES = new Set(["eos", "eos-onnx", "julia", "laya", "vela"]);
+const RESIDENT_ENGINES = new Set(["eos", "eos-onnx", "vela"]);
 
 function residentKey(env: Record<string, string | undefined>, engine: string): string {
   return `${engine}|${Object.entries(env).filter(([k, v]) => v !== undefined && k.startsWith("UKTUB_")).sort(([a], [b]) => (a < b ? -1 : 1)).map(([k, v]) => `${k}=${v}`).join("&")}`;
@@ -201,16 +173,6 @@ function buildEngine(env: Record<string, string | undefined>, engine: string): C
         url: (env.UKTUB_VERIFY_URL ?? DEFAULT_LLAMA_CPP_URL).replace(/\/+$/, "") + "/v1/systemone",
         label: "llama-cpp",
       });
-    case "k2":
-      return k2Engine({ env });
-    case "bev":
-      return bevEngine({ env });
-    case "lumma":
-      return lummaEngine({ env });
-    case "julia":
-      return juliaEngine({ env });
-    case "laya":
-      return layaEngine({ env });
     case "vela":
       return velaEngine({ env });
     default:

@@ -1,0 +1,71 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<feed xmlns:opensearch="http://a9.com/-/spec/opensearch/1.1/" xmlns:arxiv="http://arxiv.org/schemas/atom" xmlns="http://www.w3.org/2005/Atom">
+  <id>https://arxiv.org/api/zzB7879KIlVQsSmB33RlhjplgI0</id>
+  <title>arXiv Query: search_query=cat:cs.CL AND submittedDate:"202607010000 TO 202609302359"&amp;id_list=&amp;start=0&amp;max_results=3</title>
+  <updated>2026-10-11T10:30:26Z</updated>
+  <link href="https://arxiv.org/api/query?search_query=cat:cs.CL+AND+submittedDate:%22202607010000+TO+202609302359%22&amp;start=0&amp;max_results=3&amp;id_list=" type="application/atom+xml"/>
+  <opensearch:itemsPerPage>3</opensearch:itemsPerPage>
+  <opensearch:totalResults>7173</opensearch:totalResults>
+  <opensearch:startIndex>0</opensearch:startIndex>
+  <entry>
+    <id>http://arxiv.org/abs/2610.00840v1</id>
+    <title>Contextual trajectory and incremental contextual displacement: Towards using LLMs to understand dynamic, utterance-specific meaning construction</title>
+    <updated>2026-09-30T23:56:18Z</updated>
+    <link href="https://arxiv.org/abs/2610.00840v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2610.00840v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Transformer-based large language models (LLMs) such as RoBERTa represent text using contextual word embeddings (CWEs), which alter the embeddings associated with each token based on surrounding context. We construct token-wise incremental trajectories by repeatedly recomputing a token's CWE as successive words are added to a sentence, yielding a representation of how contextualized embeddings evolve as the utterance unfolds. We evaluate this approach using garden-path sentences as a test case with characteristic features. Token-wise trajectories reproduce known features of garden-path processing, including disruption around the critical region, and reliably distinguish garden-path sentences from matched disambiguated controls. We introduce several metrics for quantifying representational displacement across contextual increments and show that trajectory information can be highly predictive of sentence type. We find that ambiguity-related information is recoverable not only from the sentence-level CLS representation but also from ordinary vocabulary tokens, suggesting that utterance-level information is distributed across multiple representational scales. In exploratory analyses, we find qualitatively similar trajectory structures in other ambiguity- and misdirection-related linguistic phenomena. Together, these results establish token-wise incremental trajectories as a promising framework for studying utterance-specific meaning construction using LLMs.</summary>
+    <category term="cs.CL" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-09-30T23:56:18Z</published>
+    <arxiv:primary_category term="cs.CL"/>
+    <author>
+      <name>Grayson Wycliffe Storer</name>
+    </author>
+    <author>
+      <name>Julia Witte Zimmerman</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2610.00833v1</id>
+    <title>VERITYGATE: A Four-Gate Schema-Level Faithfulness Framework and Paired Benchmark for Grounded LLM Narrations over Structured Evidence</title>
+    <updated>2026-09-30T23:44:51Z</updated>
+    <link href="https://arxiv.org/abs/2610.00833v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2610.00833v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Fluent LLM explanations may not follow the evidence from a structured system. We present VERITYGATE, a four-gate checker for declared evidence IDs, entities, numbers, and claim types. It checks a fixed schema; it does not verify every fact in the prose. At r=0 and r=1, we test 900 instances per setting (450 grounded-ungrounded pairs) with GPT-4o-mini, Llama-3.3-70B, and Claude Sonnet 4.6. Under this schema-level contract and before repair, 80.3% of mini claims and 47.9% of Sonnet claims fail. These are verifier rejection rates, not prose-hallucination rates. One repair pass raises claim survival from 19.7% to 28.0% for mini and from 52.1% to 54.3% for Sonnet. Verified claims per example change by +0.14 for mini, -0.71 for Llama, and -0.47 for Sonnet, so survival and output volume must be reported together. A second Sonnet pass gives no clear gain. At r=1, Gate 4 covers 97.0%, 98.7%, and 100% of failing claims for mini, Llama, and Sonnet. Small human studies support the rules but show gaps between schema checks and correct prose. A domain-specific GPT-4o judge test shows an order effect, so it is only a usefulness check. We release the code and data.</summary>
+    <category term="cs.CL" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.LG" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-09-30T23:44:51Z</published>
+    <arxiv:comment>16 pages, 5 figures, 7 tables. Accepted at Grounding Language Models: Learning Faithfully and Efficiently (GroundLM 2026), co-located with EMNLP 2026. Code: https://github.com/sachinkg12/yukti/releases/tag/veritygate-groundlm-2026-v1.0.0 Supplementary artifact: https://doi.org/10.5281/zenodo.22668710</arxiv:comment>
+    <arxiv:primary_category term="cs.CL"/>
+    <author>
+      <name>Sachin Gupta</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2610.00827v1</id>
+    <title>Verbalized and Internal Probabilities Are Coupled in Large Language Models</title>
+    <updated>2026-09-30T23:37:26Z</updated>
+    <link href="https://arxiv.org/abs/2610.00827v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2610.00827v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Large language models carry an internal notion of uncertainty in their sampling distribution, i.e., the probabilities they place on generating one answer rather than another. They can also be asked to state a confidence, in words or as a number: a verbalized uncertainty. Prior work suggests that internal probabilities track relative frequencies in the training data, and that verbalized probabilities track explicit probabilistic assertions in the training data. However, we do not know whether these two readouts are aligned, except when frequencies and probabilistic assertions in the training data happen to align. This limits our understanding of when we can use verbalized uncertainties as a proxy for either training data frequencies, or a model's internal distribution. We resolve this gap by systematically exploring how LLMs probability readouts are impacted by training and in-context data, via intervening on the underlying uncertainty sources in the data. We find that both internal and verbalized probability readouts are impacted by both distributional and asserted uncertainty in the training data. Further, we find that verbalized and internal probabilities are aligned beyond what would be expected by independently tracking the same uncertainty sources, suggesting that verbalized probabilities can be used to probe a model's internal distribution.</summary>
+    <category term="cs.CL" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-09-30T23:37:26Z</published>
+    <arxiv:primary_category term="cs.CL"/>
+    <author>
+      <name>Sinead Williamson</name>
+    </author>
+    <author>
+      <name>Jiaxuan Li</name>
+    </author>
+    <author>
+      <name>Nick Foti</name>
+    </author>
+    <author>
+      <name>Russ Webb</name>
+    </author>
+    <author>
+      <name>Masha Fedzechkina</name>
+    </author>
+  </entry>
+</feed>

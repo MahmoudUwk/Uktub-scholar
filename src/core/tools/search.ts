@@ -1,5 +1,5 @@
 /**
- * `search_papers` tool (R4, R7, R8): search all providers, degrade on
+ * `papers` tool (R4, R7, R8): search all providers, degrade on
  * per-provider failure, refuse only when every provider failed. Ordering is
  * RRF order as `searchPapers` produced it (KTD6); a DOI-shaped query runs the
  * search anyway and surfaces the register hint in `details` (plan U4).
@@ -67,7 +67,7 @@ export async function searchPapersTool(
   args: SearchPapersArgs,
 ): Promise<ToolResult<SearchPapersStructured>> {
   if (typeof args.query !== "string" || args.query.trim().length === 0) {
-    return refusalResult({ code: "QUERY_REQUIRED", message: "search_papers needs a non-empty query" });
+    return refusalResult({ code: "QUERY_REQUIRED", message: "papers needs a non-empty query" });
   }
   try {
     const result = await searchPapers(ctx.fetch, providerConfigOf(ctx), {
@@ -124,7 +124,7 @@ export async function searchPapersTool(
       structuredContent: structured,
       details: {
         // Feynman adoption (KTD3): a DOI-shaped query is not an error and not
-        // re-routed — paper_registry is the precise instrument for it.
+        // re-routed — registry is the precise instrument for it.
         hint: result.hint,
       },
     };

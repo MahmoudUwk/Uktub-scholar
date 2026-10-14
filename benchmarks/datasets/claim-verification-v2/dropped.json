@@ -1,0 +1,237 @@
+{
+ "dropped": [
+  {
+   "paper": "2610.00717v1",
+   "index": 8,
+   "claim": "A custom sparse-core CUDA kernel reaches a 3.1x decoding speedup on A100 GPUs for this method.",
+   "type": "fabricated",
+   "reason": "check",
+   "detail": "number_in_paper: a fabricated claim must not use a number the paper has: 3.1"
+  },
+  {
+   "paper": "2610.00582v1",
+   "index": 5,
+   "claim": "Even when the best candidate is always picked, a 12-by-12 anchor template reaches an oracle IoU of only 0.9099 on the FLMS benchmark.",
+   "type": "numeric",
+   "reason": "check",
+   "detail": "copied: copies 8 consecutive words of the paper: \"12 anchor template reaches an oracle iou of\""
+  },
+  {
+   "paper": "2609.40222v1",
+   "index": 0,
+   "claim": "LOCI keeps a key-value cache of past observations in half of its transformer blocks, while the other half attends only within the current chunk and feeds a recurrent memory.",
+   "type": "reworded",
+   "reason": "check",
+   "detail": "copied: copies 8 consecutive words of the paper: \"keeps a key value cache of past observations\""
+  },
+  {
+   "paper": "2609.40359v1",
+   "index": 3,
+   "claim": "The study does not evaluate decoding when word onsets are unknown, which would be a substantially harder task.",
+   "type": "reworded",
+   "reason": "check",
+   "detail": "standalone: a claim must not point at 'the paper' or 'the authors'"
+  },
+  {
+   "paper": "2610.00524v1",
+   "index": 5,
+   "claim": "On Pick-Place, replacing the skill representation of the π0.5 model with one from a different execution of the same skill changes its predicted action chunk by only 4.0 ± 3.1% on average.",
+   "type": "numeric",
+   "reason": "check",
+   "detail": "copied: copies 8 consecutive words of the paper: \"by only 4 0 3 1 on average\""
+  },
+  {
+   "paper": "2610.00438v1",
+   "index": 8,
+   "claim": "HumanVerse-500 was captured by 120 participants who performed everyday tasks in their own homes and workplaces.",
+   "type": "fabricated",
+   "reason": "check",
+   "detail": "number_in_paper: a fabricated claim must not use a number the paper has: 120"
+  },
+  {
+   "paper": "2609.36170v1",
+   "index": 1,
+   "claim": "The adversarial gate experiment runs on a twelve-file Python project with a real pytest suite, starting each scenario from a clean copy.",
+   "type": "reworded",
+   "reason": "check",
+   "detail": "copied: copies 8 consecutive words of the paper: \"a twelve file python project with a real\""
+  },
+  {
+   "paper": "2609.38381v1",
+   "index": 1,
+   "claim": "The primary dataset of the study is a smart-city corpus built from Caltrans PeMS measurements.",
+   "type": "reworded",
+   "reason": "check",
+   "detail": "standalone: a claim must not point at 'the paper' or 'the authors'"
+  },
+  {
+   "paper": "2609.39774v2",
+   "index": 0,
+   "claim": "For knot orbits, no group acting transitively on the orbit meets the coset parameterization requirements, so the group-based necessity result does not apply to knots.",
+   "type": "reworded",
+   "reason": "annotator",
+   "detail": "the annotator said NOT_SUPPORTED"
+  },
+  {
+   "paper": "2609.39774v2",
+   "index": 10,
+   "claim": "Verification rejects genuine banknotes with non-negligible probability.",
+   "type": "contradiction",
+   "reason": "check",
+   "detail": "shape: a claim is one line of 8 to 60 words (this one has 7)"
+  },
+  {
+   "paper": "2609.39808v1",
+   "index": 8,
+   "claim": "The interview guide was pilot-tested with researchers outside the study team before the main interviews began.",
+   "type": "fabricated",
+   "reason": "check",
+   "detail": "standalone: a claim must not point at 'the paper' or 'the authors'"
+  },
+  {
+   "paper": "2609.37866v1",
+   "index": 3,
+   "claim": "Poverty risk, measured as the at-risk-of-poverty rate, is the strongest of the ten objective components for six subjective outcomes.",
+   "type": "reworded",
+   "reason": "check",
+   "detail": "copied: copies 8 consecutive words of the paper: \"at risk of poverty rate is the strongest\""
+  },
+  {
+   "paper": "2609.31775v1",
+   "index": 6,
+   "claim": "The IMERG Final Run is released with a latency of about 3.25 months after observation.",
+   "type": "perturbed",
+   "reason": "check",
+   "detail": "source: source_quote must be a verbatim quote of the true fact that is in the paper"
+  },
+  {
+   "paper": "2609.33293v1",
+   "index": 1,
+   "claim": "The study population came from the National Alzheimer's Coordinating Center's version 3 Uniform Data Set, matched to MRI records.",
+   "type": "reworded",
+   "reason": "check",
+   "detail": "standalone: a claim must not point at 'the paper' or 'the authors'"
+  },
+  {
+   "paper": "2609.10053v1",
+   "index": 4,
+   "claim": "At an actual day-ahead price of -26 EUR/MWh, calculations put about 49 GW of wind and solar generation potential under an incentive to curtail.",
+   "type": "numeric",
+   "reason": "check",
+   "detail": "copied: copies 8 consecutive words of the paper: \"actual day ahead price of 26 eur mwh\""
+  },
+  {
+   "paper": "2609.31236v1",
+   "index": 2,
+   "claim": "Convergence still predicts return after controlling for cultural and geographic distance between origin and destination countries.",
+   "type": "reworded",
+   "reason": "check",
+   "detail": "copied: copies 8 consecutive words of the paper: \"cultural and geographic distance between origin and destination\""
+  },
+  {
+   "paper": "2609.31236v1",
+   "index": 5,
+   "claim": "The developer panel holds 277,502 movers, meaning developers observed in at least two countries at different times.",
+   "type": "numeric",
+   "reason": "check",
+   "detail": "copied: copies 8 consecutive words of the paper: \"observed in at least two countries at different\""
+  },
+  {
+   "paper": "2609.20405v2",
+   "index": 2,
+   "claim": "For a generic parameterization, the saving-function ODE reduces to an Abel equation of the second kind with no known closed-form solution.",
+   "type": "reworded",
+   "reason": "check",
+   "detail": "copied: copies 8 consecutive words of the paper: \"to an abel equation of the second kind\""
+  },
+  {
+   "paper": "2609.36124v1",
+   "index": 8,
+   "claim": "Star particles were counted in the spectral library only once they exceeded a minimum stellar mass of 10^8 solar masses.",
+   "type": "fabricated",
+   "reason": "check",
+   "detail": "number_in_paper: a fabricated claim must not use a number the paper has: 10"
+  },
+  {
+   "paper": "2609.37733v1",
+   "index": 7,
+   "claim": "The H4 rectangle deformation benchmark is computed in the STO-3G basis.",
+   "type": "perturbed",
+   "reason": "check",
+   "detail": "source: source_quote must be a verbatim quote of the true fact that is in the paper"
+  },
+  {
+   "paper": "2609.37733v1",
+   "index": 9,
+   "claim": "On the N2 scan, the frozen model keeps every query error below 1.6 mHa out to a bond length of 2.4 Å.",
+   "type": "fabricated",
+   "reason": "check",
+   "detail": "number_in_paper: a fabricated claim must not use a number the paper has: 1.6"
+  },
+  {
+   "paper": "2609.40135v1",
+   "index": 4,
+   "claim": "Smite implements four photoionization preparation levels, ranging from unchanged neutral momenta to launches that include photon and electron recoil.",
+   "type": "numeric",
+   "reason": "check",
+   "detail": "number: a numeric claim states a number that is in its own quote, and every number in it is in the paper"
+  },
+  {
+   "paper": "2609.10378v1",
+   "index": 4,
+   "claim": "Some current-generation climate models with CO2 forcing show AMOC collapses within the next two centuries.",
+   "type": "numeric",
+   "reason": "check",
+   "detail": "number: a numeric claim states a number that is in its own quote, and every number in it is in the paper"
+  },
+  {
+   "paper": "2609.10378v1",
+   "index": 5,
+   "claim": "Per-series early-warning indicators in the noisy saddle-node simulations are estimated in a sliding window two time units wide.",
+   "type": "numeric",
+   "reason": "check",
+   "detail": "number: a numeric claim states a number that is in its own quote, and every number in it is in the paper"
+  },
+  {
+   "paper": "2609.37927v1",
+   "index": 3,
+   "claim": "The chiral charge of each node is extracted from the winding of hybrid Wannier charge centers on surfaces enclosing it.",
+   "type": "reworded",
+   "reason": "check",
+   "detail": "copied: copies 8 consecutive words of the paper: \"from the winding of hybrid wannier charge centers\""
+  },
+  {
+   "paper": "2609.22369v1",
+   "index": 2,
+   "claim": "Myoclonus failure lies in the 10-second temporal window rather than in a missing depth dimension, so 3D features are unlikely to fix it.",
+   "type": "reworded",
+   "reason": "check",
+   "detail": "copied: copies 8 consecutive words of the paper: \"temporal window rather than in a missing depth\""
+  },
+  {
+   "paper": "2609.22369v1",
+   "index": 3,
+   "claim": "Only two raters scored the adult dataset, which weakens its consensus labels relative to the five-rater pediatric dataset.",
+   "type": "reworded",
+   "reason": "check",
+   "detail": "copied: copies 8 consecutive words of the paper: \"its consensus labels relative to the five rater\""
+  },
+  {
+   "paper": "2609.22369v1",
+   "index": 9,
+   "claim": "The study also included a spinal cord stimulation cohort scored with the same rater-adaptive labels.",
+   "type": "fabricated",
+   "reason": "check",
+   "detail": "standalone: a claim must not point at 'the paper' or 'the authors'"
+  },
+  {
+   "paper": "2609.22369v1",
+   "index": 10,
+   "claim": "Calibration patients were chosen at random by the study investigators after model predictions had been inspected.",
+   "type": "contradiction",
+   "reason": "check",
+   "detail": "standalone: a claim must not point at 'the paper' or 'the authors'"
+  }
+ ],
+ "setProblems": []
+}

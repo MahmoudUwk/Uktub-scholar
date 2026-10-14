@@ -1,17 +1,17 @@
 ---
 name: uktub-research
-description: Using uktub-scholar's five tools for scholarly search, the paper registry (register, read, remove, attach, sync), citekeys, LaTeX compilation, one-claim evidence retrieval, and exploratory passage search.
+description: Using uktub-scholar's five tools for scholarly search, the paper registry (register, acquire, read, remove, attach, sync), citekeys, LaTeX compilation, one-claim evidence retrieval, and exploratory passage search.
 ---
 
 # Scholarly research with uktub-scholar
 
-Five core capabilities operate beside the user's project: `search_papers`, `paper_registry`,
-`compile_document`, `verify_claim`, and `search_passages`. The SQLite registry is canonical.
+Five core capabilities operate beside the user's project: `papers`, `registry`,
+`compile`, `verify`, and `passages`. The SQLite registry is canonical.
 `refs/references.bib` is rendered from it. The PDF is derived from the user's own LaTeX sources.
 
 Depending on the host agent and MCP configuration, tools may be available under their bare names
-(`search_papers`, `paper_registry`, `compile_document`, `verify_claim`, `search_passages`) or namespaced
-with the server name (e.g. `mcp__uktub_scholar__search_papers`, `mcp__uktub_scholar__paper_registry`, etc.).
+(`papers`, `registry`, `compile`, `verify`, `passages`) or namespaced
+with the server name (e.g. `mcp__uktub__papers`, `mcp__uktub__registry`, etc.).
 The capabilities and arguments are identical in either form.
 
 ## Search versus register
@@ -20,12 +20,12 @@ The capabilities and arguments are identical in either form.
   before you write. A literature review with unregistered sources is incomplete work.
 - If a paper the user named has no search hits, say so ("no indexed records found for X").
   Never drop it or substitute another work.
-- Use `search_papers` for open-ended topics. It returns merged candidates in relevance
+- Use `papers` for open-ended topics. It returns merged candidates in relevance
   order, each with a DOI when one exists. The DOIs are in the result text.
-- Use `paper_registry` with `action: "register"` once you have DOIs or `arxiv:YYMM.NNNNN`
+- Use `registry` with `action: "register"` once you have DOIs or `arxiv:YYMM.NNNNN`
   identifiers. Check that the titles match what the user asked for.
-- A DOI-shaped query to `search_papers` still searches. Register that DOI directly instead.
-- To see what is registered, use `paper_registry` with `action: "read"`. Do not guess.
+- A DOI-shaped query to `papers` still searches. Register that DOI directly instead.
+- To see what is registered, use `registry` with `action: "read"`. Do not guess.
 
 ## The registry tool
 
@@ -37,6 +37,12 @@ The capabilities and arguments are identical in either form.
 - `remove`: name the DOIs or citekeys. There is no remove-all. Remove only when the user asks.
 - `attach_source`: prepare a PDF or GROBID TEI file that is inside the project as a paper's
   source. You never see the file's text.
+- `acquire`: fetch open-access sources for selected handles, or omit handles for papers
+  without sources. Registration starts this in the background in MCP, but metadata alone
+  is not searchable text. Before passage search, read the `source` field: use ready sources,
+  continue deferred batches within the task budget, and disclose unavailable or failed ones.
+  Do not invent a claim or run `verify` just to acquire text. Use `attach_source` for
+  a user-supplied file; repeated calls do not bypass acquisition cooldowns.
 - `sync_bibliography`: re-render `refs/references.bib` if it is damaged or stale.
 
 ## Citekeys
@@ -56,7 +62,7 @@ The capabilities and arguments are identical in either form.
 
 - Agree the mode first: a related-work pass (fast, best-effort coverage) or a systematic
   review (explicit query set, screening, reported counts). Never present the first as the second.
-- Budget the loop: bounded `search_papers` calls, dedupe by DOI, rank by fit to the question.
+- Budget the loop: bounded `papers` calls, dedupe by DOI, rank by fit to the question.
 - Register everything the answer will rely on.
 - For each claim, say supported, partly supported, or not supported by the registered sources.
   The deliverable is a table of claim → citekey, not prose alone. Never attach a source that is not
@@ -64,7 +70,7 @@ The capabilities and arguments are identical in either form.
 
 ## Finding support for a claim
 
-- `verify_claim` takes **one** claim and a scope: `papers: "all"`, or a list of DOIs or citekeys.
+- `verify` takes **one** claim and a scope: `papers: "all"`, or a list of DOIs or citekeys.
   Write the claim as one plain sentence. The package passes it to the verifier unchanged.
 - You do not load papers and you do not prepare passages. The package prepares sources,
   searches, and judges. You receive only supporting passages, each with an excerpt and an exact
@@ -88,11 +94,11 @@ The capabilities and arguments are identical in either form.
   paper provenance. Never cite a paper for it.
 - If a source cannot be prepared, the result names the reason (`no_open_copy`, `no_credential`,
   `identity_mismatch`, `no_text_layer`, and others). Ask the user to attach a file with
-  `paper_registry` `attach_source`, or to set `OPENALEX_API_KEY` for open-access content.
+  `registry` `attach_source`, or to set `OPENALEX_API_KEY` for open-access content.
 
 ## Searching passages in registered papers
 
-- `search_passages` performs exploratory text retrieval over registered papers (`papers: "all"` or an explicit list of DOIs or citekeys).
+- `passages` performs exploratory text retrieval over registered papers (`papers: "all"` or an explicit list of DOIs or citekeys).
 - Give a descriptive natural-language `query`, question, or phrase.
 - Returns the best-matching passages (at most `limit`, default 5, maximum 10), each with:
   - The paper's `citekey`, `title`, and `doi`
@@ -101,12 +107,12 @@ The capabilities and arguments are identical in either form.
   - An exact source pointer `doi@revision#start-end`
   - A verbatim `excerpt` (capped at 1,500 characters and bounded by the 25% per-source containment policy)
 - Search is hybrid when an embedding runtime is present (combining FTS5 BM25 lexical search and dense cosine vector search via Reciprocal Rank Fusion), or lexical BM25 when no embedder is configured.
-- Use `search_passages` to explore what the registered papers say about a topic or question.
-- **Retrieval is not verification**: always use `verify_claim` to rigorously verify a factual proposition before citing it.
+- Use `passages` to explore what the registered papers say about a topic or question.
+- **Retrieval is not verification**: always use `verify` to rigorously verify a factual proposition before citing it.
 
 ## Compiling the document
 
-- `compile_document` runs Tectonic: the user's own (`UKTUB_TECTONIC_BIN`, then PATH), else a
+- `compile` runs Tectonic: the user's own (`UKTUB_TECTONIC_BIN`, then PATH), else a
   managed copy the user installed with `uktub-scholar tectonic install --yes`. Nothing is
   downloaded by a compile — a missing engine refuses; tell the user that command instead of improvising.
 - Entry resolution: `entry` omitted → `manuscript/main.tex`, then `main.tex`,
@@ -127,9 +133,9 @@ The capabilities and arguments are identical in either form.
 ## Registry hygiene
 
 - Never hand-edit `refs/references.bib`. It is rendered by the registry and is
-  overwritten on the next registry write. If it diverges or is damaged, use `paper_registry`
+  overwritten on the next registry write. If it diverges or is damaged, use `registry`
   `action: "sync_bibliography"` to re-render it from the registry.
-- Remove papers with `paper_registry` `action: "remove"`, only when the user asks.
+- Remove papers with `registry` `action: "remove"`, only when the user asks.
 - All tools operate inside the project directory; `.registry` and `.git` are
   protected and path traversal is refused.
 - Failures arrive as `Refused: CODE — <what happened>. Next: <what to do>` —

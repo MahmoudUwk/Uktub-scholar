@@ -20,3 +20,13 @@ test("renderRefusal renders the stable refusal shape", () => {
   assert.match(rendered, /^Refused: DOI_NOT_FOUND — /);
   assert.match(rendered, new RegExp(`Next: ${REFUSALS.DOI_NOT_FOUND.next.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\.$`));
 });
+
+test("refusal hints name the short public tools, never the legacy long names", () => {
+  assert.match(REFUSALS.DOI_NOT_FOUND.next, /papers/);
+  assert.match(REFUSALS.DOI_NOT_FOUND.next, /registry/);
+  assert.match(REFUSALS.QUERY_REQUIRED.next, /papers requires/);
+  assert.match(REFUSALS.VERIFY_ENGINE_MISSING.next, /passages/);
+  for (const [code, entry] of [...Object.entries(REFUSALS), ...Object.entries(WARNINGS)]) {
+    assert.doesNotMatch(entry.next, /search_papers|paper_registry|compile_document|verify_claim|search_passages/, `${code} still names a legacy tool`);
+  }
+});

@@ -1,11 +1,12 @@
 /**
- * Unified Stdio MCP server for uktub-scholar.
+ * Unified Stdio MCP server for uktub-scholar (server id `uktub`).
  * Exposes the 5 canonical scholar tools over Model Context Protocol:
- * search_papers, paper_registry, compile_document, verify_claim, search_passages.
+ * papers, registry, compile, verify, passages.
  */
 
 import { readFileSync } from "node:fs";
 import { AGENT_RULES } from "../core/agent-rules.ts";
+import { MCP_SERVER_NAME, normalizeToolName } from "../core/tool-names.ts";
 import { resolve } from "node:path";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import {
@@ -79,7 +80,7 @@ const REFUSAL_SEMANTICS =
 
 export const TOOL_DEFINITIONS = [
   {
-    name: "search_papers",
+    name: "papers",
     description:
       "Search OpenAlex, Crossref, and Semantic Scholar for papers matching a query. " +
       "Returns merged candidates in a deterministic relevance order with per-provider warnings; " +
@@ -93,7 +94,7 @@ export const TOOL_DEFINITIONS = [
     annotations: { title: "Search papers", readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true },
   },
   {
-    name: "paper_registry",
+    name: "registry",
     description:
       "Manage the project's paper collection in one tool. action=register: add papers by DOI or arxiv:YYMM.NNNNN " +
       "(at most 50); every input gets an outcome in order, aliases of one paper register once, a refresh keeps the pinned citekey. " +
@@ -114,7 +115,7 @@ export const TOOL_DEFINITIONS = [
     annotations: { title: "Paper registry", readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true },
   },
   {
-    name: "compile_document",
+    name: "compile",
     description:
       "Compile the project's LaTeX entry with a local Tectonic engine (the user's binary: PATH or " +
       "UKTUB_TECTONIC_BIN). Entry defaults to manuscript/main.tex, then main.tex, then a lone top-level " +
@@ -129,7 +130,7 @@ export const TOOL_DEFINITIONS = [
     annotations: { title: "Compile document", readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
   },
   {
-    name: "verify_claim",
+    name: "verify",
     description:
       "Find support for ONE claim in the registered papers: papers is \"all\" or an explicit list of DOIs/citekeys. The package prepares " +
       "sources, searches and judges internally; you receive only supporting passages with exact pointers (doi@revision#start-end) and four " +
@@ -146,13 +147,13 @@ export const TOOL_DEFINITIONS = [
     annotations: { title: "Verify claim", readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
   },
   {
-    name: "search_passages",
+    name: "passages",
     description:
       "Exploratory retrieval over the registered papers' full text: describe a topic, question or phrase and get the best-matching passages, " +
       "each with its paper, section, page, an exact pointer (doi@revision#start-end) and a verbatim excerpt (withheld, with its reason, when it " +
       "would export too much of one paper — the pointer still identifies it). papers is \"all\" (default) or an explicit list of DOIs/citekeys; " +
       "limit at most 10. Search is keyword (BM25) and, when an embedding server is configured (UKTUB_EMBED_URL), semantic as well; a failing " +
-      "embedder degrades to keyword results and says so. Results are retrieval, not verification: check a claim with verify_claim before you cite it. " +
+      "embedder degrades to keyword results and says so. Results are retrieval, not verification: check a claim with verify before you cite it. " +
       REFUSAL_SEMANTICS,
     inputSchema: SearchPassagesParams,
     outputSchema: SearchPassagesOutput,
@@ -163,17 +164,14 @@ export const TOOL_DEFINITIONS = [
 ] as const;
 
 /**
- * Normalize host-namespaced tool identifiers (e.g. `mcp__uktub_scholar__search_papers`
- * or `uktub-scholar/search_papers`) to the bare scholar tool name.
+ * Canonical short tool names (and the hidden legacy aliases) live in
+ * `src/core/tool-names.ts`; re-exported here for existing importers.
  */
+export { normalizeToolName } from "../core/tool-names.ts";
 const PACKAGE_VERSION = (JSON.parse(readFileSync(new URL("../../package.json", import.meta.url), "utf8")) as { version: string }).version;
 
 /** The shared rules (`src/core/agent-rules.ts`) as the MCP handshake's instructions. */
-export const SERVER_INSTRUCTIONS = ["uktub-scholar: scholarly tools over the user's project. The registry is the bibliography.", ...AGENT_RULES.map((rule) => `- ${rule}`)].join("\n");
-
-export function normalizeToolName(name: string): string {
-  return name.replace(/^(?:mcp__)?uktub[-_]scholar(?:_{1,2}|[/:])/, "");
-}
+export const SERVER_INSTRUCTIONS = [`uktub: scholarly tools over the user's project. The registry is the bibliography.`, ...AGENT_RULES.map((rule) => `- ${rule}`)].join("\n");
 
 export function validateTargetDir(targetDir?: string): Confinement {
   const root = targetDir ?? process.cwd();
@@ -243,7 +241,7 @@ export function createMcpServer(targetDirOrOptions?: string | McpServerOptions):
     }
     const ctx: ToolContext = { ...rawCtx, root };
     // The registration hook: this process is long-lived, so a newly registered paper's open-access copy is fetched in the background
-    // (bounded, deduplicated with verify_claim and `acquire`). UKTUB_ACQUIRE_ON_REGISTER=0 turns it off.
+    // (bounded, deduplicated with verify and `acquire`). UKTUB_ACQUIRE_ON_REGISTER=0 turns it off.
     if (!/^(0|false|off)$/i.test(env.UKTUB_ACQUIRE_ON_REGISTER ?? "")) {
       ctx.afterRegister = (dois) => {
         void startBackgroundAcquisition({ ...ctx, signal: undefined }, dois);
@@ -254,7 +252,7 @@ export function createMcpServer(targetDirOrOptions?: string | McpServerOptions):
 
   const server = new Server(
     {
-      name: "uktub-scholar",
+      name: MCP_SERVER_NAME,
       version: PACKAGE_VERSION,
     },
     {
@@ -308,21 +306,21 @@ export function createMcpServer(targetDirOrOptions?: string | McpServerOptions):
         : setInterval(() => {
             beat += 1;
             void extra
-              .sendNotification({ method: "notifications/progress", params: { progressToken, progress: beat, message: `uktub-scholar: ${toolName} still working (${Math.round((Date.now() - started) / 1000)} s)` } })
+              .sendNotification({ method: "notifications/progress", params: { progressToken, progress: beat, message: `uktub: ${toolName} still working (${Math.round((Date.now() - started) / 1000)} s)` } })
               .catch(() => {});
           }, options.heartbeatMs ?? HEARTBEAT_MS);
 
     try {
       switch (toolName) {
-        case "search_papers":
+        case "papers":
           return toCallToolResult(await searchPapersTool(toolCtx, safeArgs as SearchPapersArgs));
-        case "paper_registry":
+        case "registry":
           return toCallToolResult(await paperRegistryTool(toolCtx, safeArgs as PaperRegistryArgs));
-        case "compile_document":
+        case "compile":
           return toCallToolResult(await compileDocumentTool(toolCtx, safeArgs as CompileDocumentArgs));
-        case "verify_claim":
+        case "verify":
           return toCallToolResult(await verifyClaimTool(toolCtx, safeArgs as VerifyClaimArgs));
-        case "search_passages":
+        case "passages":
           return toCallToolResult(await searchPassagesTool(toolCtx, safeArgs as SearchPassagesArgs));
         default:
           return {

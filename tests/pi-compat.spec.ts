@@ -26,8 +26,35 @@ function register(): { name: string | undefined; config: { command: string; args
   return { name, config: config as never, onStart, onCall };
 }
 
-test("pi extension registers the uktub-scholar MCP server", () => {
-  assert.equal(register().name, "uktub-scholar");
+test("pi extension registers the uktub MCP server", () => {
+  assert.equal(register().name, "uktub");
+});
+
+test("tool results under the short mcp__uktub__ prefix reach the notices layer (and the legacy prefix still does)", () => {
+  type ResultH = (e: never) => unknown;
+  const h: Record<string, ResultH> = {};
+  uktubScholarExtension({ registerMcpServer: () => {}, on: (ev: string, fn: ResultH) => void (h[ev] = fn) } as never);
+  const refused = "Refused: VERIFY_ENGINE_MISSING — the engine is down. Next: enable it.";
+  const footerOf = (name: string) => {
+    h.agent_start?.({ type: "agent_start" } as never);
+    h.tool_result?.({ toolName: name, content: [{ type: "text", text: refused }], isError: true } as never);
+    const out = h.message_end?.({ message: { role: "assistant", content: [{ type: "text", text: "Done." }], stopReason: "stop" } } as never) as { message: { content: { text?: string }[] } } | undefined;
+    return out === undefined ? "" : out.message.content.map((c) => c.text ?? "").join("\n");
+  };
+  assert.match(footerOf("mcp__uktub__verify"), /VERIFY_ENGINE_MISSING/);
+  assert.match(footerOf("mcp__uktub_scholar__verify_claim"), /VERIFY_ENGINE_MISSING/, "existing callers on the old prefix keep their notices");
+});
+
+test("a verify continuation under the short name still clears the interruption notice", () => {
+  type ResultH = (e: never) => unknown;
+  const h: Record<string, ResultH> = {};
+  uktubScholarExtension({ registerMcpServer: () => {}, on: (ev: string, fn: ResultH) => void (h[ev] = fn) } as never);
+  const interrupted = (tok: string) => `NO SUPPORT FOUND YET: checking was interrupted before all selected passages were judged (see work).\nclaim: Cost claim\nengine: eos (x), support bar 0.99\nsources: 2 selected, 2 with a usable source\ncandidates: exhaustive — every usable passage (10) of 2 paper(s) selected for checking\nwork: 4 of 10 selected passage(s) judged (4 new, 0 reused); INTERRUPTED (budget): the per-call limit was reached; 6 not checked\ncontinuation: "${tok}" — repeat the SAME request with continuation set to this token to get unchecked passages.`;
+  const complete = `NO SUPPORT FOUND across all 10 checked passage(s).\nclaim: Cost claim\ncandidates: exhaustive — every usable passage (10) of 2 paper(s) selected for checking\nwork: 10 of 10 selected passage(s) judged (10 new, 0 reused); complete`;
+  h.agent_start?.({ type: "agent_start" } as never);
+  h.tool_result?.({ toolName: "mcp__uktub__verify", content: [{ type: "text", text: interrupted("tokA") }], toolCallId: "A", input: {} } as never);
+  h.tool_result?.({ toolName: "mcp__uktub__verify", content: [{ type: "text", text: complete }], toolCallId: "C", input: { continuation: "tokA" } } as never);
+  assert.equal(h.message_end?.({ message: { role: "assistant", content: [{ type: "text", text: "Checked everything." }], stopReason: "stop" } } as never), undefined);
 });
 
 test("the registered command is spawnable wherever the package is installed (no PATH, no linked bin)", () => {
@@ -76,7 +103,7 @@ test("the agent cannot edit the two tool-owned paths: refs/references.bib and .r
         const r = await call(tool, path);
         assert.equal(r?.block, true, `${tool} ${path} must be blocked`);
         assert.ok((r?.reason ?? "").startsWith("Blocked by uktub-scholar:"), "a stable prefix, so the notices layer can see every block");
-        assert.match(r?.reason ?? "", /paper_registry/, "the reason points at the legitimate route");
+        assert.match(r?.reason ?? "", /use the registry tool|Register papers with registry/, "the reason points at the legitimate route");
         assert.match(r?.reason ?? "", /user/i, "and at what the user can do");
         assert.match(r?.reason ?? "", /do not (create|write|invent)/i, "and says plainly not to route around the block");
       }

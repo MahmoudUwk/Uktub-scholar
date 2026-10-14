@@ -1,0 +1,152 @@
+{
+ "schema": "bench-claims-v2/1",
+ "date": "2026-10-12",
+ "spec": "kev-0.8b",
+ "engine": "llama-cpp",
+ "worker": {
+  "server": "http://127.0.0.1:8008",
+  "wording": "criteria",
+  "models": {
+   "models": [
+    {
+     "name": "kev-latest",
+     "description": "Kev pointer head on /home/mahmoud/.cache/uktub-bench/kev/Qwen3.5-0.8B-Base, serving /home/mahmoud/.cache/uktub-bench/kev/run at temperature 2.35",
+     "release_date": "2026-10-11",
+     "run": "/home/mahmoud/.cache/uktub-bench/kev/run",
+     "base": "/home/mahmoud/.cache/uktub-bench/kev/Qwen3.5-0.8B-Base",
+     "lora": 16,
+     "device": "cpu",
+     "backend": "torch",
+     "dtype": "float32",
+     "temperature": 2.3510958125672174,
+     "max_state_tokens": 65536,
+     "truncate_states": false,
+     "cuda_graphs": null,
+     "prefix_cache": {
+      "size": 4,
+      "min_state_tokens": 0,
+      "max_tokens": 65536,
+      "hits": 0,
+      "misses": 0,
+      "cached_states": 0,
+      "oom_retries": 0
+     },
+     "batches": {
+      "count": 0,
+      "requests": 0,
+      "queued": 0
+     }
+    },
+    {
+     "name": "jev-latest",
+     "description": "Kev pointer head on /home/mahmoud/.cache/uktub-bench/kev/Qwen3.5-0.8B-Base, serving /home/mahmoud/.cache/uktub-bench/kev/run at temperature 2.35",
+     "release_date": "2026-10-11",
+     "run": "/home/mahmoud/.cache/uktub-bench/kev/run",
+     "base": "/home/mahmoud/.cache/uktub-bench/kev/Qwen3.5-0.8B-Base",
+     "lora": 16,
+     "device": "cpu",
+     "backend": "torch",
+     "dtype": "float32",
+     "temperature": 2.3510958125672174,
+     "max_state_tokens": 65536,
+     "truncate_states": false,
+     "cuda_graphs": null,
+     "prefix_cache": {
+      "size": 4,
+      "min_state_tokens": 0,
+      "max_tokens": 65536,
+      "hits": 0,
+      "misses": 0,
+      "cached_states": 0,
+      "oom_retries": 0
+     },
+     "batches": {
+      "count": 0,
+      "requests": 0,
+      "queued": 0
+     }
+    }
+   ]
+  }
+ },
+ "device": "cpu",
+ "label": "gate-kev-0.8b-cpu",
+ "identity": {
+  "model": "declared:kev-0.8b@bf75a6a8848e:criteria",
+  "protocol": "systemone-noul-v1",
+  "minConfidence": 0.99
+ },
+ "commit": "2f0a15846e6427797fdc7085677f1cc01f58e665",
+ "dirty": true,
+ "dataset": {
+  "claimsSha256": "396330e267ca6c03ec42df9fbbb94ca70f7c6e19ec7ff25fbe9806a81f0c40b2",
+  "corpusSha256": "b620b96cb3bb286401a052e9e23841022ba2ffca3c9c7b789bfbb5cefd06a8be",
+  "papers": 1,
+  "claims": 2,
+  "stride": 6,
+  "offset": 0,
+  "selection": null
+ },
+ "chunking": {
+  "chunk_tokens": 512,
+  "overlap_tokens": 0,
+  "chars_per_token": 2.8,
+  "boundary": "section"
+ },
+ "maxJudgmentsRaisedFrom": 120,
+ "gpu": null,
+ "machine": {
+  "cpu": "Intel(R) Core(TM) i7-14650HX",
+  "cores": 24,
+  "memoryGb": 62,
+  "node": "v26.3.1"
+ },
+ "run": {
+  "startedAt": "2026-10-12T10:25:03.505Z",
+  "loadavgStart": [
+   15.5,
+   15.15,
+   10.29
+  ],
+  "loadavgEnd": [
+   12.04,
+   12.46,
+   10.24
+  ],
+  "seconds": 252
+ },
+ "records": [
+  {
+   "id": "v2-2609.10053v1-01",
+   "paper": "2609.10053v1",
+   "label": "TRUE",
+   "type": "reworded",
+   "fold": 1,
+   "score": 0.8648,
+   "unjudged": 0,
+   "chunks": 86,
+   "supportFound": false,
+   "fresh": 86,
+   "cached": 0,
+   "localizationFresh": 0,
+   "wallMs": 125700,
+   "refused": null
+  },
+  {
+   "id": "v2-2609.10053v1-08",
+   "paper": "2609.10053v1",
+   "label": "FALSE",
+   "type": "perturbed",
+   "fold": 1,
+   "score": 0.4882,
+   "unjudged": 0,
+   "chunks": 86,
+   "supportFound": false,
+   "fresh": 86,
+   "cached": 0,
+   "localizationFresh": 0,
+   "wallMs": 126364,
+   "refused": null
+  }
+ ]
+}

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Resident Decision 2.0 decision engine (vllm-sr/Decision-2.0-Kai-0.6B and
 Eos-0.8B): loads one pinned checkpoint once, then answers JSONL rows on stdin
-until stdin closes. Same protocol as scripts/julia_decide.py.
+until stdin closes. JSONL protocol: rows in, one {"p_true"} out per row.
 
 Row:    {"state": "<passage>", "instructions": "<claim>"}
 Reply:  {"p_true": <float>, "tokens": <int>}   P(true) that the passage supports the claim.
@@ -39,7 +39,7 @@ _trace = os.environ.get("UKTUB_DECISION2_STDERR")
 if _trace:
     sys.stderr = open(_trace, "a", buffering=1)
 
-# Same claim wording and noul criteria as the julia/laya workers (like-for-like).
+# Same claim wording and noul criteria as the earlier workers (like-for-like).
 CRITERIA = {
     "true": "The passage explicitly states or directly entails the claim.",
     "false": "The passage contradicts the claim or says nothing about it.",

@@ -453,7 +453,7 @@ describe("mcp command", () => {
     assert.match(c.lines.out.join("\n"), /\.mcp\.json/);
 
     const content = JSON.parse(readFileSync(join(root, ".mcp.json"), "utf8"));
-    assertSpawnable(content.mcpServers["uktub-scholar"].command, content.mcpServers["uktub-scholar"].args, "mcpServers");
+    assertSpawnable(content.mcpServers["uktub"].command, content.mcpServers["uktub"].args, "mcpServers");
   });
 
   it("mcp install --host pi writes .mcp.json", async () => {
@@ -462,7 +462,7 @@ describe("mcp command", () => {
     assert.match(c.lines.out.join("\n"), /\.mcp\.json/);
 
     const content = JSON.parse(readFileSync(join(root, ".mcp.json"), "utf8"));
-    assertSpawnable(content.mcpServers["uktub-scholar"].command, content.mcpServers["uktub-scholar"].args, "mcpServers");
+    assertSpawnable(content.mcpServers["uktub"].command, content.mcpServers["uktub"].args, "mcpServers");
   });
 
   it("mcp install --host agy writes .agents/mcp_config.json", async () => {
@@ -471,7 +471,7 @@ describe("mcp command", () => {
     assert.match(c.lines.out.join("\n"), /\.agents\/mcp_config\.json/);
 
     const content = JSON.parse(readFileSync(join(root, ".agents", "mcp_config.json"), "utf8"));
-    assertSpawnable(content.mcpServers["uktub-scholar"].command, content.mcpServers["uktub-scholar"].args, "mcpServers");
+    assertSpawnable(content.mcpServers["uktub"].command, content.mcpServers["uktub"].args, "mcpServers");
   });
 
   it("mcp install --host cursor writes .cursor/mcp.json", async () => {
@@ -480,7 +480,7 @@ describe("mcp command", () => {
     assert.match(c.lines.out.join("\n"), /\.cursor\/mcp\.json/);
 
     const content = JSON.parse(readFileSync(join(root, ".cursor", "mcp.json"), "utf8"));
-    assertSpawnable(content.mcpServers["uktub-scholar"].command, content.mcpServers["uktub-scholar"].args, "mcpServers");
+    assertSpawnable(content.mcpServers["uktub"].command, content.mcpServers["uktub"].args, "mcpServers");
   });
 
   it("mcp install --host opencode writes opencode.json", async () => {
@@ -489,8 +489,8 @@ describe("mcp command", () => {
     assert.match(c.lines.out.join("\n"), /opencode\.json/);
 
     const content = JSON.parse(readFileSync(join(root, "opencode.json"), "utf8"));
-    assert.equal(content.mcp["uktub-scholar"].type, "local");
-    const [command, ...args] = content.mcp["uktub-scholar"].command as string[];
+    assert.equal(content.mcp["uktub"].type, "local");
+    const [command, ...args] = content.mcp["uktub"].command as string[];
     assertSpawnable(command, args, "opencode");
   });
 
@@ -498,10 +498,10 @@ describe("mcp command", () => {
     const c = io();
     assert.equal(await runCli(["mcp", "install", "--host", "codex"], c), 0);
     assert.match(c.lines.out.join("\n"), /\.codex\/config\.toml/);
-    assert.match(c.lines.out.join("\n"), /\[mcp_servers\.uktub-scholar\]/);
+    assert.match(c.lines.out.join("\n"), /\[mcp_servers\.uktub\]/);
 
     const toml = readFileSync(join(root, ".codex", "config.toml"), "utf8");
-    assert.match(toml, /\[mcp_servers\.uktub-scholar\]/);
+    assert.match(toml, /\[mcp_servers\.uktub\]/);
     const parsed = /command = "([^"]+)"\nargs = \[([^\]]*)\]/.exec(toml);
     assert.ok(parsed, "codex table has command and args");
     assertSpawnable(parsed[1], JSON.parse(`[${parsed[2]}]`) as string[], "codex");
@@ -605,7 +605,7 @@ describe("mcp command", () => {
       writeFileSync(join(root, ".mcp.json"), blank, "utf8");
       const c = io();
       assert.equal(await runCli(["mcp", "install", "--host", "claude"], c), 0, JSON.stringify(blank));
-      assert.ok(JSON.parse(readFileSync(join(root, ".mcp.json"), "utf8")).mcpServers["uktub-scholar"]);
+      assert.ok(JSON.parse(readFileSync(join(root, ".mcp.json"), "utf8")).mcpServers["uktub"]);
     }
   });
 
@@ -669,6 +669,64 @@ describe("mcp command", () => {
     assert.equal(traced.length, 1);
     assert.match(traced[0] as string, /client=cli-trace-host 2\.0\.0 requested=\S+ negotiated=\S+/);
     assert.deepEqual(await handshakes({}), []);
+  });
+
+  it("mcp install renames an existing uktub-scholar server entry to uktub, preserving env and custom fields", async () => {
+    const before = { mcpServers: { "uktub-scholar": { command: "node", args: ["old-entry"], env: { OPENALEX_API_KEY: "k" }, timeout: 120000 } }, keep: true };
+    writeFileSync(join(root, ".mcp.json"), JSON.stringify(before), "utf8");
+    const c = io();
+    assert.equal(await runCli(["mcp", "install", "--host", "claude"], c), 0);
+    const content = JSON.parse(readFileSync(join(root, ".mcp.json"), "utf8")) as { mcpServers: Record<string, Record<string, unknown>>; keep: boolean };
+    assert.ok(!("uktub-scholar" in content.mcpServers), "no duplicate server");
+    const entry = content.mcpServers["uktub"];
+    assert.deepEqual(entry.env, { OPENALEX_API_KEY: "k" }, "env preserved across the rename");
+    assert.equal(entry.timeout, 120000, "custom fields preserved across the rename");
+    assertSpawnable(entry.command as string, entry.args as string[], "mcpServers");
+    assert.equal(content.keep, true);
+  });
+
+  it("mcp install refuses when both uktub and uktub-scholar entries exist, leaving the file byte-identical", async () => {
+    const before = JSON.stringify({ mcpServers: { uktub: { command: "node", args: ["a"] }, "uktub-scholar": { command: "node", args: ["b"] } } });
+    writeFileSync(join(root, ".mcp.json"), before, "utf8");
+    const c = io();
+    assert.equal(await runCli(["mcp", "install", "--host", "claude"], c), 1);
+    assert.match(c.lines.err.join("\n"), /both|conflict/);
+    assert.equal(readFileSync(join(root, ".mcp.json"), "utf8"), before);
+  });
+
+  it("mcp install --host opencode migrates a legacy uktub-scholar entry without duplicating it", async () => {
+    writeFileSync(join(root, "opencode.json"), JSON.stringify({ mcp: { "uktub-scholar": { type: "local", command: ["node", "old"], env: { FOO: "1" } } } }), "utf8");
+    const c = io();
+    assert.equal(await runCli(["mcp", "install", "--host", "opencode"], c), 0);
+    const content = JSON.parse(readFileSync(join(root, "opencode.json"), "utf8")) as { mcp: Record<string, Record<string, unknown>> };
+    assert.ok(!("uktub-scholar" in content.mcp), "no duplicate server");
+    assert.deepEqual(content.mcp["uktub"]?.env, { FOO: "1" }, "env preserved across the rename");
+    assert.equal(content.mcp["uktub"]?.type, "local");
+    const [command, ...args] = content.mcp["uktub"]?.command as string[];
+    assertSpawnable(command, args, "opencode");
+  });
+
+  it("mcp install --host codex renames an existing named table header, preserving its body", async () => {
+    const target = join(root, ".codex", "config.toml");
+    mkdirSync(dirname(target), { recursive: true });
+    const before = `model = "gpt-5"\n\n[mcp_servers.uktub-scholar]\ncommand = "node"\nargs = ["old"]\n`;
+    writeFileSync(target, before, "utf8");
+    const c = io();
+    assert.equal(await runCli(["mcp", "install", "--host", "codex"], c), 0);
+    const after = readFileSync(target, "utf8");
+    assert.match(after, /\[mcp_servers\.uktub\]/);
+    assert.doesNotMatch(after, /uktub-scholar/);
+    assert.ok(after.includes(`model = "gpt-5"`) && after.includes(`args = ["old"]`), "unrelated content and the entry body are preserved");
+  });
+
+  it("mcp install --host codex refuses when both uktub and uktub-scholar tables exist, leaving the file byte-identical", async () => {
+    const target = join(root, ".codex", "config.toml");
+    mkdirSync(dirname(target), { recursive: true });
+    const before = `[mcp_servers.uktub]\ncommand = "node"\n\n[mcp_servers.uktub-scholar]\ncommand = "node"\n`;
+    writeFileSync(target, before, "utf8");
+    const c = io();
+    assert.equal(await runCli(["mcp", "install", "--host", "codex"], c), 1);
+    assert.equal(readFileSync(target, "utf8"), before);
   });
 });
 

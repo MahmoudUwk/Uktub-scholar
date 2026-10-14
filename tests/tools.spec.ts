@@ -18,6 +18,7 @@ import { WriteQueue } from "../src/core/queue.ts";
 import { BIBLIOGRAPHY_REL_PATH, createRegistry, listPapers } from "../src/core/registry.ts";
 import { paperRegistryTool, type PaperRegistryArgs } from "../src/core/tools/registry.ts";
 import { SearchPapersOutput, searchPapersTool } from "../src/core/tools/search.ts";
+import { verifyClaimTool } from "../src/core/tools/verify.ts";
 import { validateContext, type ToolContext } from "../src/core/tools/context.ts";
 import type { FetchLike } from "../src/core/providers/types.ts";
 import {
@@ -147,10 +148,11 @@ describe("WriteQueue — FIFO non-interleaving (KTD5)", () => {
 
 // ── search ─────────────────────────────────────────────────────────────────
 
-describe("search_papers", () => {
+describe("papers", () => {
   it("refuses an empty or blank query with QUERY_REQUIRED", async () => {
     const result = await searchPapersTool(makeCtx(NO_FETCH), { query: "   " });
     assert.match(result.content[0]?.text ?? "", /Refused: QUERY_REQUIRED/);
+    assert.match(result.content[0]?.text ?? "", /papers needs a non-empty query/);
     assert.equal(result.structuredContent, null);
     const refused: unknown = result.details.refused;
     assert.ok(refused && typeof refused === "object" && "code" in refused);
@@ -202,6 +204,20 @@ describe("search_papers", () => {
     assert.match(result.content[0]?.text ?? "", /Refused: SEARCH_UNAVAILABLE/);
     assert.match(result.content[0]?.text ?? "", /Next: retry later/);
     assert.equal(result.structuredContent, null);
+  });
+});
+
+// ── short public tool names in tool messages ───────────────────────────────
+
+describe("short public tool names in tool messages", () => {
+  it("an empty registry read names the registry action, not a legacy long name", async () => {
+    const result = await paperRegistryTool(makeCtx(NO_FETCH), { action: "read" } as PaperRegistryArgs);
+    assert.match(result.content[0]?.text ?? "", /register papers with registry action register/);
+  });
+
+  it("verify with no registered papers points at the registry tool", async () => {
+    const result = await verifyClaimTool(makeCtx(NO_FETCH), { claim: "Cells age faster at high temperature.", papers: "all" });
+    assert.match(result.content[0]?.text ?? "", /Register papers with registry first/);
   });
 });
 

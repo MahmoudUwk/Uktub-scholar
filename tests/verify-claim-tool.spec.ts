@@ -62,7 +62,7 @@ function writeConfig(opts: { chunkTokens?: number; maxJudgments?: number; worker
   mkdirSync(join(root, "config"), { recursive: true });
   writeFileSync(
     join(root, "config", "chunking.yaml"),
-    `chunking:\n  chunk_tokens: ${opts.chunkTokens ?? 8192}\n  overlap_tokens: 0\n  chars_per_token: 2.8\n  boundary: ${opts.boundary ?? "paragraph"}\nverification:\n  engine: ${opts.engine ?? "k2"}\n  min_confidence: 0.99\n  workers: ${opts.workers ?? 2}\n  max_judgments: ${opts.maxJudgments ?? 120}\n`,
+    `chunking:\n  chunk_tokens: ${opts.chunkTokens ?? 8192}\n  overlap_tokens: 0\n  chars_per_token: 2.8\n  boundary: ${opts.boundary ?? "paragraph"}\nverification:\n  engine: ${opts.engine ?? "llama-cpp"}\n  min_confidence: 0.99\n  workers: ${opts.workers ?? 2}\n  max_judgments: ${opts.maxJudgments ?? 120}\n`,
   );
 }
 
@@ -149,7 +149,7 @@ describe("scope and arguments", () => {
     writeFileSync(join(root, "config", "chunking.yaml"), "chunking: [");
     assert.equal(refused(await run({ papers: "all" }, NO_ENGINE)), "CONFIG_INVALID");
     rmSync(join(root, "config"), { recursive: true });
-    assert.equal(refused(await run({ papers: "all" }, engine().hooks, ctx({ env: { UKTUB_VERIFY_ENGINE: "k2", UKTUB_VERIFY_MODEL_ID: "m" } }))), undefined);
+    assert.equal(refused(await run({ papers: "all" }, engine().hooks, ctx({ env: { UKTUB_VERIFY_ENGINE: "llama-cpp", UKTUB_VERIFY_MODEL_ID: "m" } }))), undefined);
   });
 });
 
@@ -344,7 +344,7 @@ describe("supporting evidence (R8–R11, R13, AE4)", () => {
   });
 
   it("an engine with no establishable identity never reuses judgments (and says so)", async () => {
-    writeConfig({ engine: "k2" }); // an endpoint engine; the injected probe answers 404, so no identity can be established
+    writeConfig({ engine: "llama-cpp" }); // an endpoint engine; the injected probe answers 404, so no identity can be established
     const a = engine();
     await run({ papers: ["10.2222/bbb"] }, a.hooks, ctx({ env: {} }));
     const b = engine();

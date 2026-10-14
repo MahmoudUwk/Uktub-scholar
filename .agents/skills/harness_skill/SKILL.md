@@ -1,208 +1,213 @@
 ---
 name: self-improving-harness
-description: Design and recursively improve an LLM agent harness while resisting benchmark overfitting and context bloat. Uses modular harness components, compact task-specific context, trace-driven diagnosis, sparse attributable edits, leakage screening, noise-aware and cost-aware promotion, structural pruning, rollback, and held-out transfer checks.
+description: Design and recursively improve an LLM agent harness while resisting benchmark overfitting, context bloat, and unnecessary complexity. Uses model/task-aware runtime components, trace-driven diagnosis, sparse attributable edits, leakage screening, noise- and cost-aware promotion, pruning, rollback, and protected transfer audits.
 metadata:
   internal: true
 ---
 
 # Self-Improving Agent Harness
 
-Use this skill when building an agent that should improve its own **harness** over repeated tasks while keeping the backbone model fixed.
+Use this skill when an agent should improve the **harness around a fixed backbone model** over repeated tasks.
 
 ## Goal
 
-Improve real task success on **unseen work** while keeping the harness simpler, cheaper, attributable, and reversible.
+Improve unseen-task success, reliability, and efficiency while keeping every persistent mechanism attributable, removable, and rollbackable.
 
-A harness includes everything around the model weights:
+A harness includes:
 
 `prompt | control_flow | config | output_plumbing | context_mgmt | client_tool | skill | memory | subagent`
 
-The harness may modify these components, but it should not treat its model weights, evaluator, protected held-out data, security boundaries, or permission system as self-editable state.
+Do **not** make model weights, evaluators, protected held-out/OOD data, permissions, or safety boundaries self-editable.
 
-## Core rules
+## Evidence basis
 
-1. **Ship transferable mechanisms, not benchmark-shaped instructions.**
-2. **Every persistent component must earn its context, latency, or token cost.**
-3. **Change few things at a time so gains are attributable.**
-4. **Use full history: failed edits are evidence too.**
-5. **Do not promote a candidate because of one noisy win.**
-6. **Do not tune on held-out or OOD evaluation.**
-7. **If guidance does not change an action, check, tool choice, or completion criterion, do not load it.**
-8. **Every accepted change must be logged and rollbackable.**
+This skill combines three complementary findings:
 
-# Part I — Build a strong base harness
+- **RRSI:** self-improvement generalizes better when proposal and selection are regularized: sparse edits, evidence-aware history, structured exploration, leakage screening, noise-aware selection, cost-aware acceptance, and structural pruning.
+- **Empirical harness design:** planning, action space, and context management have conditional effects that depend on model capability, task type, and context budget; no component should be assumed universally beneficial.
+- **Scientific context budgeting:** broad always-on instruction profiles can consume budget without improving task accuracy; load only guidance that changes an action, check, tool choice, or completion criterion.
 
-## 1. Keep the harness modular
+Treat coding-specific findings as strong design priors for coding agents, not universal laws for every agent domain.
 
-Do not bury all behavior in a giant system prompt. Keep independently editable modules for:
+# I. Build a strong, measurable base harness
 
-- prompt / policy guidance
-- planning and control flow
-- tool schemas and tool-selection rules
+## 1. Keep components modular
+
+Keep independently editable modules for:
+
+- prompts / policies
+- planning and stop logic
+- action/tool interfaces
 - retries and recovery
-- context loading / compaction / retrieval
-- reusable skills
-- memory
+- context management
+- skills and memory
 - subagents
 - output validation / plumbing
-- stopping logic
 
-A failure should be traceable to a layer, and an edit should name the layer it changes.
+A failure should map to a component, and an edit should state which component it changes.
 
-## 2. Put behavior in the cheapest reliable layer
+## 2. Put deterministic behavior in deterministic layers
 
 Prefer:
 
-- **code/control flow** for deterministic sequencing, retries, gates, and stop conditions
-- **tool interfaces** for invocation constraints
-- **context management** for what is visible, retrieved, summarized, cached, or dropped
+- **code/control flow** for sequencing, guards, retries, stop conditions, and validation
+- **tool schemas** for invocation contracts and side effects
+- **context management** for what is retained, elided, summarized, retrieved, or cached
 - **skills** for reusable procedures
-- **memory** for durable facts or state
-- **prompts** for rules that genuinely require model judgment
-- **subagents** only when separation of context/work is useful
-- **output plumbing** for schema, artifacts, validation, and handoff
+- **memory** for durable state/facts
+- **prompts** for judgment that cannot be enforced mechanically
+- **subagents** only when context or work separation is useful
 
-If code can enforce a requirement, do not pay to remind the model about it every turn.
+If code can enforce a requirement, do not repeatedly remind the model about it in the prompt.
 
-## 3. Use a compact task pack, not a standing encyclopedia
+## 3. Use capability-aware runtime policies
 
-For each task, classify:
+### Context management: cheap compaction first
 
-- task type and domain
-- required tools/data
-- acceptance criteria
-- output format
-- time/token/tool-call budget
-- relevant failure modes
+Use context management primarily when trajectories approach the usable context limit.
 
-Load instruction sources in this order:
+Default policy:
 
-1. task-specific procedural skill
-2. selectively retrieved domain guidance
-3. generic rigor / verification guidance
-4. minimal baseline
+1. keep the system/task preamble and recent turns verbatim
+2. above a **soft threshold**, elide bulky stale tool outputs into short stubs
+3. above a **hard threshold**, summarize the oldest middle-region history
+4. preserve enough headroom for future tool output, reasoning, and the final answer
 
-Use a full profession or domain profile only when the task genuinely needs many sections and the budget can absorb it.
+Do not add lossless recall machinery by default. Add it only when important observations are expensive or impossible to reproduce **and actual traces show the agent retrieves them**. Otherwise prefer re-reading/re-running or simple elision.
 
-The task pack should contain only:
+### Planning: conditional, not mandatory
+
+Use a lightweight persistent plan when traces show:
+
+- premature abandonment
+- repeated loss of task structure
+- failure to reach editing/execution
+- redundant re-localization
+
+For stronger agents, evaluate planning mainly as an **efficiency mechanism**: it may reduce repeated verification or wandering without improving accuracy. Remove or simplify it if it only adds overhead.
+
+### Action space: match model and task
+
+Use structured tools when the model benefits from scaffolding, typed arguments, state tracking, or automatic validation.
+
+Use a smaller/general interface when the model is already proficient with it and can combine operations efficiently.
+
+Do not infer tool preference from model size alone. Measure:
+
+- invalid/unresolved tool calls
+- failure before productive action
+- calls per task
+- cost per task
+- success by task type
+
+### Deterministic safety and recovery
+
+For coding/workspace agents, good default mechanisms include:
+
+- path/workspace guards
+- read-before-write and stale-file checks
+- permission classification
+- tool errors returned as observations instead of crashing the loop
+- fast post-edit diagnostics
+- stuck detection for repeated identical failing calls
+- bounded retry/backoff
+- bounded pre-completion verification
+
+These should live in code/control flow where possible.
+
+## 4. Load task context selectively
+
+Build a compact task pack containing only:
 
 - assumptions to check
 - ordered procedure
-- tool/reference constraints
-- likely failure modes and diagnostics
+- relevant tools/references
+- likely failure modes
 - validation requirements
 - definition of done
 
-Remove instructions that merely restate professional identity or generic background knowledge.
+Prefer this order:
 
-## 4. Preserve working-context headroom
+1. task-specific skill
+2. selectively retrieved domain guidance
+3. generic rigor/verification guidance
+4. minimal baseline
 
-Treat persistent context as a resource cost.
+Do not load a large profession/domain profile by default. If guidance does not change an action, check, tool choice, or completion criterion, omit it.
 
-Before execution:
+# II. Instrument for self-improvement
 
-- avoid duplicate instructions already present in the task/environment
-- retrieve large guidance only when it becomes relevant
-- cache stable context when the runtime supports it
-- summarize or drop stale tool output
-- preserve room for data, intermediate state, and final synthesis
-- keep the original task specification recoverable for final verification
+## 5. Maintain explicit evolution state
 
-## 5. Add bounded verification before completion
-
-Before stopping, run a small task-appropriate completion gate, such as:
-
-- re-read acceptance criteria
-- run tests / validators
-- verify required files exist
-- validate output schema
-- confirm every requested item is covered
-
-Bound the gate. Do not create unbounded reflection loops.
-
-## 6. Add narrow recovery mechanisms
-
-Create task-agnostic recovery rules near recurring failures, for example:
-
-- missing/invalid workdir → verify/create valid directory, retry once
-- long-running command → poll non-blockingly instead of restarting
-- transient tool error → bounded retry/backoff
-- malformed artifact → validate, repair once, then fail clearly
-- context overflow → compact/summarize before continuing
-
-Prefer a small recovery mechanism over a long “be robust” instruction.
-
-# Part II — Instrument the harness for self-improvement
-
-## 7. Maintain explicit evolution state
-
-Persist at least:
+Persist:
 
 - immutable baseline `H0`
-- current incumbent harness `Ht`
-- current best reliable score `S_best`
+- current incumbent `Ht`
+- best reliable score `S_best`
 - empirical noise tolerance `delta`
-- candidate/edit history
-- per-component contribution history
-- performance and resource metrics
-- protected evolve / held-out / OOD task manifests
+- edit/candidate history
+- per-component evidence
+- score, reliability, and resource metrics
+- protected evolve / held-out / OOD manifests
 - rollback snapshots
 
-Use `templates/harness-manifest.yaml` and `templates/evolution-log.jsonl` as starter schemas.
+Use `harness-manifest.yaml` and `evolution-log.jsonl` in this folder as the starter schemas.
 
-## 8. Measure more than accuracy
+## 6. Measure behavior, not just final score
 
-Track separately:
+Track at least:
 
 - task score / verifier result
-- first-pass delivery rate
-- completed-item accuracy or quality
-- end-to-end success, counting unrecoverable harness/infrastructure failures
+- end-to-end success
+- first-pass delivery / infrastructure failure
 - input/context tokens
 - output/reasoning tokens
 - total policy tokens if available
-- tool calls / trajectory steps
+- tool calls and trajectory steps
 - wall time and cost
-- token/time-limit stops
-- crashes / malformed deliverables
+- token/time/context-limit stops
+- malformed deliverables / crashes
 
-Do not silently drop failed runs from the denominator.
+Also track behavioral signatures useful for diagnosis:
 
-## 9. Estimate evaluation noise before evolving
+- context overflow rate
+- runs ending before productive action/edit
+- time spent localizing vs acting vs verifying
+- repeated identical failing actions
+- invalid/unresolved tool calls
+- rework / repeated edits
 
-Run the unchanged base harness multiple times on the evolve set.
+Do not silently remove failed runs from the denominator.
 
-Use repeated measurements to estimate `delta`, the natural score fluctuation of the same harness.
+## 7. Estimate evaluation noise before evolving
 
-`delta` is a measurement of evaluation noise, not a threshold to tune until candidates pass.
+Evaluate the unchanged base harness repeatedly on the evolve set and estimate `delta`, the natural score fluctuation of the same harness.
 
-Preserve a held-out set that the evolution loop never sees. When possible, also preserve an OOD set with different task wording, tools, environments, or verifiers.
+`delta` is a measurement, not a tunable acceptance knob.
 
-# Part III — The recursive improvement loop
+Keep held-out and OOD sets invisible to candidate proposal and selection.
 
-Run the following loop for a bounded number of rounds.
+# III. Recursive improvement loop
 
-## 10. Analyze failures before proposing changes
+## 8. Diagnose before editing
 
-From the current incumbent's trajectories, cluster failures by mechanism:
+Analyze incumbent trajectories and cluster failures by reusable mechanism, for example:
 
-- state not read / perceived
-- planning error
-- wrong tool choice
-- bad tool arguments
-- failed recovery
-- context overload or lost context
-- missing task-specific procedure
-- verification failure
-- premature or late stopping
-- deliverable/output failure
-- excessive cost / trajectory length
+- context overflow or lost state
+- premature stopping / excessive verification
+- bad planning or no useful plan
+- wrong action-space fit
+- invalid tool invocation
+- failed recovery / repeated action loop
+- missing procedure or retrieval
+- verification / output failure
+- excessive cost or trajectory length
 
-Produce cross-task failure feedback. Prefer recurring causal patterns over one-off task details.
+Prefer cross-task causal patterns over one-off task details.
 
-## 11. Propose atomic edits with explicit hypotheses
+## 9. Propose atomic edits with hypotheses
 
-Each atomic edit must record:
+Every atomic edit records:
 
 - `component`
 - `hypothesis`
@@ -212,187 +217,139 @@ Each atomic edit must record:
 - `expected_cost_change`
 - `risks`
 
-The proposer may reason from task-specific failures, but the **shipped diff** should encode a reusable mechanism rather than those task specifics.
+The rationale may mention failing tasks. The **shipped diff must encode a reusable mechanism**, not task-specific facts.
 
-## 12. Use an annealed edit budget
+## 10. Anneal the edit budget
 
-Limit how many independently attributable edits may be bundled into one candidate.
+Limit independently attributable edits per candidate.
 
 Practical default:
 
-- early rounds: at most 3–4 coordinated atomic edits
-- middle rounds: 2 edits
-- late rounds: 1 edit
+- early rounds: 3–4 coordinated edits max
+- middle rounds: 2
+- late rounds: 1
 
-The exact schedule may vary. The goal is to make later gains attributable to a specific mechanism.
+Later rounds should make credit assignment easier, not accumulate ever-larger bundles.
 
-## 13. Use the whole edit history
+## 11. Use the full history and explore structurally
 
-Condition new proposals on previous outcomes.
+For every measured edit retain its hypothesis, diff, score delta, cost delta, decision, and rejection reason.
 
-For every evaluated edit retain:
+Rejected mechanisms are evidence. Do not keep re-testing them without materially new implementation or evidence.
 
-- round
-- component
-- hypothesis
-- diff
-- score delta
-- cost delta
-- accepted/rejected status
-- rejection reason
+If several rounds show no improvement beyond `delta`, reserve a candidate for an underexplored component such as context management, action interface, skill retrieval, memory, subagents, or output plumbing. Do not let self-improvement collapse into prompt rewriting.
 
-Do not repeatedly retest a mechanism already falsified unless materially new evidence or implementation changes justify it.
+## 12. Prune continuously
 
-## 14. Explore underused components when stalled
+Mark components for deletion or simplification when they have no recent positive contribution.
 
-Track which component classes have received measured edits.
+Strong pruning candidates include:
 
-If progress across several rounds remains within `delta`, reserve at least one candidate for an underexplored component.
+- rarely used recall/retrieval machinery
+- standing prompt blocks that duplicate task instructions
+- benchmark-shaped logic
+- expensive mechanisms with no measurable gain
+- tools the model consistently ignores or misuses
 
-Do not let evolution collapse into endless prompt rewriting. Explore structural mechanisms such as:
+The harness should not grow monotonically.
 
-- control flow
-- context management
-- client/tool interface
-- skill retrieval
-- memory
-- subagent decomposition
-- output plumbing
+# IV. Screen, evaluate, and promote
 
-# Part IV — Screen and select candidates
+## 13. Leakage-screen the shipped diff first
 
-## 15. Screen the shipped diff for leakage before expensive evaluation
+Reject persistent diffs containing:
 
-Reject candidates whose persistent diff includes:
-
-- benchmark or task names
-- entity names specific to the evolve set
-- known answers or task-specific values
+- benchmark/task names or task-specific values
+- known answers
 - grader/rubric exploits
-- document-genre logic that exists only because of the evolve suite
+- document-genre logic unique to the evolve suite
 - benchmark-specific lookup tables
-- inert machinery that does not alter useful behavior
+- inert machinery unrelated to the stated hypothesis
 
 Screen the **diff**, not the proposer rationale.
 
-## 16. Evaluate candidates against the same evolve surface
+## 14. Evaluate components with matched comparisons
 
-For each screened candidate:
+Hold the model, tasks, execution loop, verifier, and unrelated components fixed whenever possible.
 
-- run the same task set and verifier policy as the incumbent
-- use the same number of trials where possible
-- collect both score and resource cost
-- count failed/missing rollouts as failures unless the evaluation protocol explicitly says otherwise
+Prefer paired comparisons on the same tasks. For component questions, run targeted ablations such as:
 
-Compute:
+- context policy A vs B at the same window budget
+- planning on vs off
+- structured tools vs minimal/general interface
+
+Measure both success and resource cost. A harness component is useful only relative to the model, task mix, and budget it is meant to serve.
+
+## 15. Apply conservative promotion gates
+
+For each candidate compute:
 
 - `dScore = score(candidate) - score(incumbent)`
 - `dCost = (cost(candidate) - cost(incumbent)) / cost(incumbent)`
 
-## 17. Apply a non-compensatory performance floor
-
-A candidate must not fall materially below the best reliable score seen so far.
-
-Operationally:
+A candidate must satisfy:
 
 `score(candidate) >= S_best - delta`
 
-A cost reduction does not compensate for a real performance regression beyond this floor.
+If `dScore > delta`, extra cost must be justified by the measured gain.
 
-## 18. Make added complexity pay rent
+If `dScore <= delta`, do not treat a small apparent gain as evidence by itself. Prefer candidates that materially reduce cost or test a genuinely new structural mechanism while still clearing the performance floor.
 
-If `dScore` clearly exceeds `delta`, allow extra cost only when justified by the measured gain.
+If no candidate is admissible, keep the incumbent.
 
-If `dScore` is within the noise band, do **not** treat the apparent score increase as strong evidence. Prefer candidates that:
+## 16. Promote, snapshot, and log
 
-- reduce cost materially, or
-- introduce a genuinely new structural mechanism worth testing
+For every accepted change:
 
-Do not keep a 20–30% cost increase for a tiny/noisy score gain.
+- snapshot the prior incumbent
+- log the exact diff and hypothesis
+- record score/reliability/cost deltas
+- update `S_best` monotonically from reliable accepted results
+- keep a one-step rollback path
 
-## 19. Promote only admissible candidates
+# V. Transfer and release
 
-A candidate may replace the incumbent only if all required gates pass:
-
-- leakage screen
-- performance floor
-- cost/complexity rule
-- domain-specific safety/integrity guards
-
-Among admissible candidates, select the best measured performer. If none qualifies, keep the incumbent unchanged.
-
-Update `S_best` monotonically from reliable accepted results; never move the floor downward to make a regression look acceptable.
-
-## 20. Prune stale mechanisms
-
-Over a rolling window, identify components that have been exercised but have shown no positive measured contribution.
-
-Propose removal or simplification of those components.
-
-Persistent context blocks are especially strong pruning candidates when they:
-
-- rarely fire
-- duplicate task instructions
-- consume tokens every turn
-- were added for one benchmark/task genre
-- do not change a decision, check, tool call, or completion criterion
-
-The harness should not grow monotonically.
-
-# Part V — Transfer, release, and rollback
-
-## 21. Keep development and release evaluation separate
+## 17. Separate development from release evaluation
 
 Use three surfaces when feasible:
 
-1. **Evolve set** — visible to analysis/proposal/selection.
-2. **ID held-out set** — same broad distribution, never used for proposing or candidate selection.
-3. **OOD audit set** — different tasks, tools, wording, or verifiers.
+1. **Evolve** — visible to diagnosis/proposal/selection
+2. **ID held-out** — similar distribution, never used for candidate selection
+3. **OOD audit** — different tasks, tools, wording, environments, or verifiers
 
-Do not inspect held-out/OOD results every round and then adapt to them; that simply turns them into evolve data.
+Do not inspect held-out/OOD results every round and then adapt to them.
 
-Use them as periodic release audits. If you repeatedly release, rotate or refresh audit sets where possible.
+## 18. Release for transfer, not evolve-set prestige
 
-## 22. Prefer transfer over development score
+Prefer a smaller evolve-set gain that transfers to unseen work over a benchmark specialist.
 
-A harness with a smaller evolve-set gain but better unseen-task transfer is preferable to a benchmark specialist.
+Release reports should include:
 
-The release report should include both performance and cost.
+- unseen-task score
+- reliability/failure rates
+- cost and trajectory length
+- context-overflow rate
+- component-specific behavioral changes
 
-## 23. Roll back on production regression
+Rollback production regressions in success, integrity, latency/cost envelope, or output validity. Production failures should generate hypotheses for the next measured cycle, not immediate hot patches.
 
-Keep the previous accepted harness available.
-
-Rollback when a deployed change causes a material regression in:
-
-- end-to-end success
-- reliability
-- cost/latency beyond the accepted envelope
-- tool safety/integrity
-- output validity
-
-Production observations may generate hypotheses for the next evolution cycle, but do not hot-patch the harness from a single failure.
-
-# Part VI — Autonomous operating loop
-
-Use this as the high-level self-improvement controller:
+# VI. Autonomous controller
 
 ```text
-initialize H0
-measure baseline repeatedly -> delta
-set Ht = H0
-set S_best = reliable_score(H0)
+initialize immutable H0
+measure H0 repeatedly -> delta
+Ht = H0
+S_best = reliable_score(H0)
 
 for round in bounded_horizon:
     traces = run(Ht, evolve_set)
-    feedback = analyze_cross_task_failures(traces)
+    feedback = diagnose_cross_task_mechanisms(traces)
 
-    budget = anneal_edit_budget(round)
-    candidates = propose_edits(
+    candidates = propose_sparse_edits(
         Ht,
         feedback,
         edit_history,
-        budget,
+        annealed_budget(round),
         unexplored_components,
         prune_targets,
     )
@@ -400,124 +357,50 @@ for round in bounded_horizon:
     candidates = leakage_screen_shipped_diffs(candidates)
 
     for candidate in candidates:
-        score, cost = evaluate(candidate, evolve_set)
-        log(candidate, score, cost)
-        mark admissible only if:
+        score, cost, behavior = matched_evaluate(candidate, evolve_set)
+        log(candidate, score, cost, behavior)
+
+        admissible = (
             score >= S_best - delta
             and complexity_is_justified(score, cost, delta)
             and domain_guards_pass(candidate)
+        )
 
-    if any admissible candidate:
+    if admissible candidates exist:
         Ht = best_admissible_candidate
+        snapshot(Ht)
         S_best = max(S_best, reliable_score(Ht))
-        snapshot_for_rollback(Ht)
-    else:
-        keep Ht
 
+    update_component_evidence()
     mark_unproductive_components_for_pruning()
 
 periodically:
     audit Ht on protected held-out/OOD sets
-    compare against H0 and previous release
-    release only if transfer/reliability/cost envelope is acceptable
+    release only if transfer, reliability, and cost envelope are acceptable
 ```
 
 # Candidate record
 
-Use this shape for every proposed atomic edit:
-
 ```yaml
 round: 7
 component: context_mgmt
-hypothesis: "Old tool outputs are crowding out task state and causing late-stage errors."
-failure_pattern_targeted: "context loss after long tool trajectories"
+hypothesis: "Bulky stale tool outputs are causing context pressure without helping later actions."
+failure_pattern_targeted: "context overflow on long trajectories"
 source_diff: "..."
-expected_benefit: "better completion accuracy after long runs"
-expected_cost_change: "lower context tokens"
+expected_benefit: "fewer overflow stops with no success regression"
+expected_cost_change: "lower context tokens; fewer summarizer calls"
 risks:
-  - "summary may omit a needed detail"
+  - "elision may hide a needed detail"
 result:
   score_delta: null
   cost_delta: null
+  behavior_delta: null
   accepted: null
   rejection_reason: null
 ```
 
-# Harness review checklist
+# Compact policy
 
-Before calling a harness “good,” verify:
+**Build modularly → measure behavior → diagnose → propose sparse edits → screen → matched-evaluate → promote conservatively → prune → audit transfer → repeat.**
 
-### Runtime behavior
-- required state is read before acting
-- tools are selected and invoked correctly
-- recurring failures have bounded recovery
-- verification occurs before completion
-- stop conditions and deliverables are explicit
-
-### Context discipline
-- task-specific procedures outrank broad personas
-- standing instructions are minimal
-- large guidance is retrieved only when relevant
-- stale outputs are summarized/dropped
-- context headroom remains for execution
-
-### Architecture
-- components are independently editable
-- deterministic requirements live in code/control flow where feasible
-- skills/memory/subagents have clear purposes
-- output plumbing validates artifacts
-
-### Evolution discipline
-- baseline and noise are measured
-- each edit has a hypothesis and attributable diff
-- rejected edits remain in history
-- edit bundles shrink over time
-- underexplored components are tried when stalled
-- leakage is screened before scoring
-- cost grows only with justified gain
-- stale components are pruned
-- rollback is possible
-
-### Evaluation
-- failures stay in the denominator
-- reliability, correctness, and resource use are separate metrics
-- held-out/OOD data is protected from tuning
-- release decisions prioritize transfer, not evolve-set leaderboard gain
-
-# Anti-patterns
-
-Avoid:
-
-- giant always-on profession/persona prompts
-- self-improvement that only rewrites prompts
-- benchmark/rubric text leaking into the shipped harness
-- changing many unrelated mechanisms at once
-- selecting the single highest noisy score
-- keeping every historical addition forever
-- tuning thresholds on held-out/OOD results
-- repeatedly resending static guidance that could be retrieved or cached
-- dropping crashes or timeout runs from evaluation
-- reducing cost by accepting a meaningful success regression
-- hot-patching from one anecdotal failure without evaluation
-- allowing the harness to rewrite its evaluator, protected tests, permissions, or safety boundaries
-
-# Definition of done
-
-A self-improvement cycle is complete when:
-
-- the incumbent is versioned and rollbackable
-- accepted changes have attributable hypotheses and measured outcomes
-- no shipped diff contains evolve-set specifics
-- performance clears the noise-aware floor
-- added cost is justified
-- unnecessary context/components have been pruned
-- protected transfer evaluation does not show unacceptable regression
-- runtime metrics and failures are reported consistently
-
-## Compact policy
-
-**Observe → diagnose → propose sparse edits → screen → evaluate → promote conservatively → prune → audit transfer → repeat.**
-
-And for context:
-
-**If guidance does not change the next action, check, tool choice, or completion criterion, do not load it.**
+For context: **cheap compaction first; load only guidance that changes behavior.**

@@ -1,0 +1,87 @@
+{
+ "schema": "bench-claims-v2/1",
+ "date": "2026-10-12",
+ "spec": "vela-0.3b",
+ "engine": "vela",
+ "worker": null,
+ "device": "cpu",
+ "label": "gate-vela-0.3b-cpu",
+ "identity": {
+  "model": "vela:~/.cache/uktub-bench/vela/0.3B@fb6fd348d5ff@d6f03aa9baca",
+  "protocol": "vela2-halu-v1",
+  "minConfidence": 0.99
+ },
+ "commit": "2f0a15846e6427797fdc7085677f1cc01f58e665",
+ "dirty": true,
+ "dataset": {
+  "claimsSha256": "396330e267ca6c03ec42df9fbbb94ca70f7c6e19ec7ff25fbe9806a81f0c40b2",
+  "corpusSha256": "b620b96cb3bb286401a052e9e23841022ba2ffca3c9c7b789bfbb5cefd06a8be",
+  "papers": 1,
+  "claims": 2,
+  "stride": 6,
+  "offset": 0,
+  "selection": null
+ },
+ "chunking": {
+  "chunk_tokens": 512,
+  "overlap_tokens": 0,
+  "chars_per_token": 2.8,
+  "boundary": "section"
+ },
+ "maxJudgmentsRaisedFrom": 120,
+ "gpu": null,
+ "machine": {
+  "cpu": "Intel(R) Core(TM) i7-14650HX",
+  "cores": 24,
+  "memoryGb": 62,
+  "node": "v26.3.1"
+ },
+ "run": {
+  "startedAt": "2026-10-12T10:51:19.909Z",
+  "loadavgStart": [
+   17.33,
+   16.53,
+   14.99
+  ],
+  "loadavgEnd": [
+   16.41,
+   16.36,
+   15
+  ],
+  "seconds": 42
+ },
+ "records": [
+  {
+   "id": "v2-2609.10053v1-01",
+   "paper": "2609.10053v1",
+   "label": "TRUE",
+   "type": "reworded",
+   "fold": 1,
+   "score": 0.8988119725475245,
+   "unjudged": 0,
+   "chunks": 86,
+   "supportFound": false,
+   "fresh": 86,
+   "cached": 0,
+   "localizationFresh": 0,
+   "wallMs": 24337,
+   "refused": null
+  },
+  {
+   "id": "v2-2609.10053v1-08",
+   "paper": "2609.10053v1",
+   "label": "FALSE",
+   "type": "perturbed",
+   "fold": 1,
+   "score": 0.28658620648797695,
+   "unjudged": 0,
+   "chunks": 86,
+   "supportFound": false,
+   "fresh": 86,
+   "cached": 0,
+   "localizationFresh": 0,
+   "wallMs": 18052,
+   "refused": null
+  }
+ ]
+}

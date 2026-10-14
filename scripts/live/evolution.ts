@@ -14,6 +14,11 @@ export interface RunMetric {
   blocked: boolean;
   checksPassed: number;
   checksTotal: number;
+  /** Non-compensatory checks passed / total (safety, provenance, citation validity, delivery). */
+  criticalPassed: number;
+  criticalTotal: number;
+  /** Each required integrity check passed in this run; missing or duplicated checks are false. */
+  criticalChecks: Record<string, boolean>;
   /** Deterministic checks passed / total (the verifier result). */
   score: number;
   costUsd: number;
@@ -22,6 +27,32 @@ export interface RunMetric {
   toolCalls: number;
   steps: number;
   wallMs: number;
+  behavior?: RunBehaviorSignals;
+}
+
+/** One run's behaviour signatures (null: the run did not record it). */
+export interface RunBehaviorSignals {
+  peakContextFraction: number | null;
+  /** Pi compacted at least once (threshold, overflow or manual). */
+  compacted: boolean | null;
+  /** Pi recovered from at least one context overflow (a subset of compactions; a normal compaction is never an overflow). */
+  overflowed: boolean | null;
+  /** Invalid tool calls / all tool calls. */
+  invalidToolCallRate: number | null;
+  repeatedAction: boolean | null;
+  prematureStop: boolean | null;
+}
+
+/** Means over the completed runs; a field is null when no completed run recorded it. */
+export interface BehaviorStats {
+  peakContextFraction: number | null;
+  /** Share of runs where Pi compacted at all (diagnostic: a working host compaction, never a failure). */
+  compactionRate: number | null;
+  /** Share of runs where Pi recovered from a context overflow (diagnostic). */
+  contextOverflowRate: number | null;
+  invalidToolCallRate: number | null;
+  repeatedActionRate: number | null;
+  prematureStopRate: number | null;
 }
 
 export interface RunStats {
@@ -30,11 +61,16 @@ export interface RunStats {
   blocked: number;
   score: number;
   successRate: number;
+  /** Mean critical-check pass rate over completed runs; null when no completed run recorded critical checks. */
+  criticalRate: number | null;
+  /** Every completed run passed each named check; missing evidence is false. */
+  criticalChecks: Record<string, boolean>;
   costUsd: number;
   inputTokens: number;
   outputTokens: number;
   toolCalls: number;
   wallMs: number;
+  behavior?: BehaviorStats;
 }
 
 export interface Noise {
@@ -85,10 +121,70 @@ export interface HistoryEntry {
 const sum = (xs: number[]): number => xs.reduce((a, b) => a + b, 0);
 const mean = (xs: number[]): number => (xs.length === 0 ? 0 : sum(xs) / xs.length);
 
+/**
+ * The concrete evaluator protocol check set of scripts/live/experiment.ts
+ * (every real run carries exactly these ids; a missing check refuses, never
+ * passes by omission). No per-check statistics: presence only.
+ */
+export const PROTOCOL_CHECK_IDS = [
+  "stop-signal", "all-turns-completed", "citations-in-registry", "bibliography-matches-registry",
+  "compiled-after-last-edit", "pointers-issued-by-tools", "provider-warnings-disclosed",
+  "evidence-tools-used", "no-unrequested-removal",
+] as const;
+
+/**
+ * Non-compensatory checks: safety, provenance, citation validity and delivery.
+ * A candidate that regresses these is rejected no matter its average score or
+ * cost; behaviour signatures (compactions, invalid calls, stops) stay
+ * diagnostic and never veto on their own. Uses the check ids written by
+ * scripts/live/experiment.ts.
+ */
+export const CRITICAL_CHECK_IDS = ["citations-in-registry", "bibliography-matches-registry", "compiled-after-last-edit", "pointers-issued-by-tools", "evidence-tools-used", "no-unrequested-removal"] as const;
+
+/**
+ * Checks that join the critical set only for scenarios declaring them (the
+ * evidence-table pair is emitted only when the scenario has an
+ * `## Evidence table` section). `no-unrequested-removal` is protocol,
+ * carried by every real run, and unconditionally critical; only the
+ * evidence-table pair stays conditional (review 2026-10-13 finding 1).
+ */
+export const EVIDENCE_TABLE_CHECK_IDS = ["evidence-table-present", "evidence-table-valid"] as const;
+/**
+ * Length and sourced-numeric checks: same conditional emission as the
+ * evidence-table pair (independent-review finding: over-long notes and
+ * table numerics the agent never saw in any tool result passed all 11
+ * checks). Both are non-compensatory: `sourced-numerics` is provenance and
+ * `length-within-request` is an explicit user constraint.
+ */
+export const LENGTH_SOURCED_CHECK_IDS = ["length-within-request", "sourced-numerics"] as const;
+export const CONDITIONAL_CRITICAL_CHECK_IDS = [...EVIDENCE_TABLE_CHECK_IDS, ...LENGTH_SOURCED_CHECK_IDS] as const;
+
+const declaresEvidenceTable = (ids: Iterable<string>): boolean => {
+  const set = new Set(ids);
+  return (EVIDENCE_TABLE_CHECK_IDS as readonly string[]).some((id) => set.has(id));
+};
+
+/** The critical set for runs declaring these check ids: base plus integrity when an evidence table is declared. */
+export function criticalIdsFor(declaredIds: Iterable<string>): string[] {
+  return [...CRITICAL_CHECK_IDS, ...((declaresEvidenceTable(declaredIds) ? CONDITIONAL_CRITICAL_CHECK_IDS : []) as readonly string[])];
+}
+
+/** Named checks that regressed against a reference; absent evidence fails closed. */
+export function criticalCheckRegressions(candidate: RunStats, reference: RunStats): string[] {
+  const declared = new Set([...Object.keys(reference.criticalChecks ?? {}), ...Object.keys(candidate.criticalChecks ?? {})]);
+  return criticalIdsFor(declared).filter((id) => reference.criticalChecks?.[id] === true && candidate.criticalChecks?.[id] !== true);
+}
+
 /** Reduce a `metrics.json` written by scripts/live/experiment.ts. */
 export function runMetricsOf(m: any): RunMetric {
-  const checks: Array<{ ok: boolean }> = Array.isArray(m.checks) ? m.checks : [];
+  const checks: Array<{ id?: string; ok: boolean }> = Array.isArray(m.checks) ? m.checks : [];
   const passed = checks.filter((c) => c.ok === true).length;
+  const required = criticalIdsFor(checks.map((c) => String(c.id ?? "")));
+  const critical = checks.filter((c) => typeof c.id === "string" && (required as readonly string[]).includes(c.id));
+  const criticalChecks = Object.fromEntries(required.map((id) => {
+    const matching = checks.filter((c) => c.id === id);
+    return [id, matching.length === 1 && matching[0]?.ok === true];
+  }));
   const outcome = String(m.outcome ?? "");
   const usage = m.agent?.usage ?? {};
   return {
@@ -99,6 +195,9 @@ export function runMetricsOf(m: any): RunMetric {
     blocked: outcome.startsWith("blocked"),
     checksPassed: passed,
     checksTotal: checks.length,
+    criticalPassed: critical.filter((c) => c.ok === true).length,
+    criticalTotal: critical.length,
+    criticalChecks,
     score: checks.length === 0 ? 0 : passed / checks.length,
     costUsd: Number(usage.costUsd ?? 0) + Number(m.simulator?.usage?.costUsd ?? 0),
     inputTokens: Number(usage.inputTokens ?? 0),
@@ -106,22 +205,73 @@ export function runMetricsOf(m: any): RunMetric {
     toolCalls: Number(m.agent?.toolCalls ?? 0),
     steps: Number(usage.responses ?? 0),
     wallMs: Number(m.wallMs ?? 0),
+    behavior: behaviorSignalsOf(m),
+  };
+}
+
+/** A run recorded before behaviour was measured keeps what its metrics.json already carried (repeated identical calls); the rest is unrecorded. */
+function behaviorSignalsOf(m: any): RunBehaviorSignals {
+  const b = m.behavior;
+  const repeated = m.agent?.repeatedIdenticalCalls;
+  return {
+    peakContextFraction: b !== undefined && Number(b.contextWindowTokens) > 0 ? Number(b.peakContextTokens) / Number(b.contextWindowTokens) : null,
+    compacted: b !== undefined ? Number(b.compactions) > 0 : null,
+    overflowed: b !== undefined && b.overflowRecoveries !== undefined ? Number(b.overflowRecoveries) > 0 : null,
+    invalidToolCallRate: b !== undefined && Number(b.toolCalls) > 0 ? Number(b.invalidToolCalls) / Number(b.toolCalls) : null,
+    repeatedAction: Array.isArray(repeated) ? repeated.length > 0 : null,
+    prematureStop: b !== undefined ? b.prematureStop === true : null,
   };
 }
 
 /** Means over the completed runs; blocked runs are counted and reported, not averaged and not hidden. */
+const meanOrNull = (xs: Array<number | null>): number | null => {
+  const known = xs.filter((x): x is number => x !== null);
+  return known.length === 0 ? null : mean(known);
+};
+const flag = (b: boolean | null | undefined): number | null => (b === null || b === undefined ? null : b ? 1 : 0);
+
 export function summarize(runs: RunMetric[]): RunStats {
   const done = runs.filter((r) => !r.blocked);
+  const signals = done.flatMap((r) => (r.behavior === undefined ? [] : [r.behavior]));
+  const criticalRates = done.filter((r) => r.criticalTotal > 0).map((r) => r.criticalPassed / r.criticalTotal);
+  const declared = new Set(done.flatMap((r) => Object.keys(r.criticalChecks ?? {})));
+  const criticalChecks = Object.fromEntries(criticalIdsFor(declared).map((id) => [id, done.length > 0 && done.every((r) => r.criticalChecks?.[id] === true)]));
   return {
     runs: done.length,
     blocked: runs.length - done.length,
     score: mean(done.map((r) => r.score)),
     successRate: mean(done.map((r) => (r.success ? 1 : 0))),
+    criticalRate: criticalRates.length === 0 ? null : mean(criticalRates),
+    criticalChecks,
     costUsd: mean(done.map((r) => r.costUsd)),
     inputTokens: mean(done.map((r) => r.inputTokens)),
     outputTokens: mean(done.map((r) => r.outputTokens)),
     toolCalls: mean(done.map((r) => r.toolCalls)),
     wallMs: mean(done.map((r) => r.wallMs)),
+    ...(signals.length === 0 ? {} : {
+      behavior: {
+        peakContextFraction: meanOrNull(signals.map((s) => s.peakContextFraction)),
+        compactionRate: meanOrNull(signals.map((s) => flag(s.compacted))),
+        contextOverflowRate: meanOrNull(signals.map((s) => flag(s.overflowed ?? null))),
+        invalidToolCallRate: meanOrNull(signals.map((s) => s.invalidToolCallRate)),
+        repeatedActionRate: meanOrNull(signals.map((s) => flag(s.repeatedAction))),
+        prematureStopRate: meanOrNull(signals.map((s) => flag(s.prematureStop))),
+      },
+    }),
+  };
+}
+
+/** Candidate minus incumbent, per signature; null where either side did not record it. */
+export function behaviorDelta(candidate: BehaviorStats | undefined, incumbent: BehaviorStats | undefined): BehaviorStats | null {
+  if (candidate === undefined || incumbent === undefined) return null;
+  const diff = (c: number | null, i: number | null): number | null => (c === null || i === null ? null : c - i);
+  return {
+    peakContextFraction: diff(candidate.peakContextFraction, incumbent.peakContextFraction),
+    compactionRate: diff(candidate.compactionRate, incumbent.compactionRate),
+    contextOverflowRate: diff(candidate.contextOverflowRate, incumbent.contextOverflowRate),
+    invalidToolCallRate: diff(candidate.invalidToolCallRate, incumbent.invalidToolCallRate),
+    repeatedActionRate: diff(candidate.repeatedActionRate, incumbent.repeatedActionRate),
+    prematureStopRate: diff(candidate.prematureStopRate, incumbent.prematureStopRate),
   };
 }
 
@@ -192,6 +342,15 @@ export function decide(i: DecideInput): Decision {
   if (i.candidate.runs < p.minRuns || (attempts > 0 && i.candidate.blocked / attempts >= p.maxBlockedShare)) {
     reasons.push(`inconclusive: ${i.candidate.runs} completed run(s), ${i.candidate.blocked} blocked; rerun until enough runs complete`);
     return out("inconclusive", "n/a");
+  }
+  const failedCritical = criticalIdsFor(new Set([...Object.keys(i.candidate.criticalChecks ?? {}), ...Object.keys(i.incumbent.criticalChecks ?? {})])).filter((id) => i.candidate.criticalChecks?.[id] !== true);
+  if (failedCritical.length > 0) {
+    reasons.push(`critical: required check(s) did not pass in every candidate run: ${failedCritical.join(", ")}; missing checks fail closed and no critical failure is compensated by average score or cost`);
+    return out("rejected", "n/a");
+  }
+  if (i.candidate.successRate < i.incumbent.successRate) {
+    reasons.push(`end-to-end success regressed from ${(i.incumbent.successRate * 100).toFixed(0)} % to ${(i.candidate.successRate * 100).toFixed(0)} %; a success regression is never compensated by average score or cost`);
+    return out("rejected", "loss");
   }
   const floor = i.sBest - i.noise.scoreDelta;
   if (i.candidate.score < floor) {

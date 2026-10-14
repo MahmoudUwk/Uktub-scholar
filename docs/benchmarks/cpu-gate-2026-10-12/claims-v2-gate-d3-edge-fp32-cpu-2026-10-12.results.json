@@ -1,0 +1,113 @@
+{
+ "schema": "bench-claims-v2/1",
+ "date": "2026-10-12",
+ "spec": "d3-edge",
+ "engine": "llama-cpp",
+ "worker": {
+  "ready": true,
+  "model": "d3-edge",
+  "model_ref": "/home/mahmoud/.cache/uktub-bench/d3/models/d3-edge",
+  "revision": "18d61df78684675463af9ae732872478845c5a79",
+  "prompt": "criteria",
+  "dtype": "float32",
+  "model_sha256": "6e00d04abbdbdf6d35c9e12065769d9edaacc3bfe9404583891797718d239dc8",
+  "max_input_tokens": null,
+  "device": "cpu",
+  "load_s": 1.034,
+  "vram_after_load_mib": null,
+  "versions": {
+   "torch": "2.11.0+cu128",
+   "cuda": "12.8",
+   "transformers": "5.17.0",
+   "python": "3.12.13"
+  },
+  "gpu": null,
+  "stats": {
+   "rows_scored": 172,
+   "tokens_scored": 89418,
+   "infer_s": 137.203,
+   "peak_vram_mib": null,
+   "peak_vram_reserved_mib": null
+  }
+ },
+ "device": "cpu",
+ "label": "gate-d3-edge-fp32-cpu",
+ "identity": {
+  "model": "declared:d3-edge@18d61df78684:criteria",
+  "protocol": "systemone-noul-v1",
+  "minConfidence": 0.99
+ },
+ "commit": "2f0a15846e6427797fdc7085677f1cc01f58e665",
+ "dirty": true,
+ "dataset": {
+  "claimsSha256": "396330e267ca6c03ec42df9fbbb94ca70f7c6e19ec7ff25fbe9806a81f0c40b2",
+  "corpusSha256": "b620b96cb3bb286401a052e9e23841022ba2ffca3c9c7b789bfbb5cefd06a8be",
+  "papers": 1,
+  "claims": 2,
+  "stride": 6,
+  "offset": 0,
+  "selection": null
+ },
+ "chunking": {
+  "chunk_tokens": 512,
+  "overlap_tokens": 0,
+  "chars_per_token": 2.8,
+  "boundary": "section"
+ },
+ "maxJudgmentsRaisedFrom": 120,
+ "gpu": null,
+ "machine": {
+  "cpu": "Intel(R) Core(TM) i7-14650HX",
+  "cores": 24,
+  "memoryGb": 62,
+  "node": "v26.3.1"
+ },
+ "run": {
+  "startedAt": "2026-10-12T11:22:36.251Z",
+  "loadavgStart": [
+   8.4,
+   10.03,
+   8.56
+  ],
+  "loadavgEnd": [
+   16.05,
+   12.46,
+   9.66
+  ],
+  "seconds": 138
+ },
+ "records": [
+  {
+   "id": "v2-2609.10053v1-01",
+   "paper": "2609.10053v1",
+   "label": "TRUE",
+   "type": "reworded",
+   "fold": 1,
+   "score": 0.9319307526370658,
+   "unjudged": 0,
+   "chunks": 86,
+   "supportFound": false,
+   "fresh": 86,
+   "cached": 0,
+   "localizationFresh": 0,
+   "wallMs": 70442,
+   "refused": null
+  },
+  {
+   "id": "v2-2609.10053v1-08",
+   "paper": "2609.10053v1",
+   "label": "FALSE",
+   "type": "perturbed",
+   "fold": 1,
+   "score": 0.9754450212183033,
+   "unjudged": 0,
+   "chunks": 86,
+   "supportFound": false,
+   "fresh": 86,
+   "cached": 0,
+   "localizationFresh": 0,
+   "wallMs": 66823,
+   "refused": null
+  }
+ ]
+}

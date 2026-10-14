@@ -1,7 +1,7 @@
 # Benchmarks
 
-Immutable evaluation datasets and the runner protocol. Dated results are in [docs/benchmarks/](../docs/benchmarks/); adoption
-rationale is in [DECISIONS](../docs/DECISIONS.md); current behavior is in the [README](../README.md). An implemented adapter
+Immutable evaluation datasets and the runner protocol. Raw results are in [docs/benchmarks/](../docs/benchmarks/) (`*.json`); adoption
+rationale and the summarized measurements are in the [handoff](../docs/handoff.md); current behavior is in the [README](../README.md). An implemented adapter
 is not an adopted verifier, and a historical run is not a fresh verification of this checkout.
 
 ## Datasets
@@ -23,22 +23,18 @@ run command here. Results are never edited by hand.
 Node >= 22.19 (types stripped natively). `--text-dir` holds `<paper-id>.txt` files (`pdftotext -q`).
 
 ```bash
-# Local engine, exhaustive chunked evaluation (isolated env: see the Decision 2.0 status report)
+# Exhaustive chunked evaluation (isolated env: see the Decision 2.0 status report)
 node scripts/bench-claim-verify.ts --dataset benchmarks/datasets/claim-verification-v1 --text-dir /path/to/text \
   --engine decision2-eos --chunked --text-mode paragraph \
   --chunk-tokens 8192 --overlap-tokens 128 --chars-per-token 2.8 --boundary paragraph
-
-# Hosted engine (network and quota required)
-OPENROUTER_API_KEY=... UKTUB_OPENROUTER_MODEL=inception/mercury-decide:free \
-  node scripts/bench-claim-verify.ts --text-dir /path/to/text --engine openrouter --chunked
 ```
 
-The runner imports only the chunker, the config loader and the `ClaimEngine` adapters, keeps chunks in memory and caches scores
+The runner imports only the chunker, the config loader and the bar, keeps chunks in memory and caches scores
 in `~/.cache/uktub-bench/score-cache.json` (keyed by engine, revision, claim hash and chunk hash; `--cache FILE`, `--no-cache`).
 
 - **Modes.** Without `--chunked`, a claim sees the first 24,000 characters of its paper (`--cap`). With it, every chunk is
   verified. `--chunk-tokens`, `--overlap-tokens`, `--chars-per-token` and `--boundary` override `config/chunking.yaml`; give all
-  four to be independent of that file. `--workers N` sets lanes for network engines (resident local engines use one).
+  four to be independent of that file.
 - **Text mode.** `--text-mode normalized` (default, the historical text) collapses whitespace, so paragraph chunking splits at
   hard offsets; `paragraph` keeps blank-line paragraph breaks.
 - **Output.** A report `.md` and a `.results.json` per run in `docs/benchmarks/` (`--out-dir`, `--tag`), with raw per-claim and
@@ -49,13 +45,11 @@ in `~/.cache/uktub-bench/score-cache.json` (keyed by engine, revision, claim has
 - **Metrics (fixed 2026-10-04).** AUC is tie-corrected over each claim's best checked chunk. Support metrics (false supports,
   precision, recall, abstention, checked coverage) come from raw scores at any bar; a low score abstains and never refutes. The
   historical two-sided figure is labelled *compatibility decided accuracy*. Over-limit or failed rows are unchecked, never scored
-  as negatives. Older reports used rank-sum AUC without tie correction: see
-  [historical-auc-recomputed](../docs/benchmarks/historical-auc-recomputed-2026-10-04.md). Tests: `node --test tests/bench-metrics.spec.ts`.
-- **Engines.** `julia` (runner default, not the package default), `k2`, `laya`, `bev`, `lumma`, `openrouter`, `openrouter-chat`
-  (needs `UKTUB_OPENROUTER_CHAT_MODEL`), `decision2-kai`, `decision2-eos`, `vela`. The `decision2-*` engines use
+  as negatives. Older reports used rank-sum AUC without tie correction. Tests: `node --test tests/bench-metrics.spec.ts`.
+- **Engines.** `decision2-eos` (default) and `decision2-kai`. Other models run through the v2 runner (`scripts/bench-claims-v2-engines.ts`); the v1 runs of d1-omni, d3, Vela and OpenRouter in `docs/benchmarks/` were made with engines removed from this runner on 2026-10-12. The `decision2-*` engines use
   `scripts/decision2_decide.py` through `scripts/decision2-client.ts`, which keeps per-row refusals as results. They need an
   isolated venv (torch, transformers >= 5.17), pinned revisions and `UKTUB_DECISION2_MODEL` / `_REVISION` / `_PYTHON`; commands,
-  pins and results: [Decision 2.0 status report](../docs/benchmarks/decision2-evaluation-status-2026-10-04.md). Adapters are in
+  pins and results: the [handoff](../docs/handoff.md) (section 5 and appendix C). Adapters are in
   [claim.ts](../src/core/verify/claim.ts) and [engines.ts](../src/core/verify/engines.ts).
 
 Adoption bars: **AUC >= 0.80 and decided accuracy >= 0.90** on this dataset. That is dataset evidence, not a guarantee for
@@ -82,6 +76,6 @@ exemplars only; full excerpts stay outside the repository. Reports: `docs/benchm
 
 ## Skills and the manuscript review
 
-Skill acceptance runs (a real model, a real paper) are archived in [docs/benchmarks/skills/](../docs/benchmarks/skills/README.md). The four deterministic measures of
+Skill acceptance runs (a real model, a real paper) are archived under `docs/benchmarks/skills/` (artifacts only; the reports were folded into the handoff). The four deterministic measures of
 `uktub-scholar review` are checked against the published scores of SciSlopBench with `scripts/bench-review-parity.ts`
-([latest report](../docs/benchmarks/review-parity-2026-10-09.md)).
+(raw result: `docs/benchmarks/review-parity-2026-10-09.results.json`).

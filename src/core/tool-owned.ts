@@ -27,10 +27,10 @@ export function toolOwnedViolation(cwd: string, path: string): string | null {
   if (rel === "" || rel.startsWith("..") || isAbsolute(rel)) return null;
   const parts = rel.split(sep);
   if (parts[0] === ".registry") {
-    return "`.registry/` belongs to the registry service. Do not write it or work around this; use the paper_registry tool, or ask the user.";
+    return "`.registry/` belongs to the registry service. Do not write it or work around this; use the registry tool, or ask the user.";
   }
   if (rel === join("refs", "references.bib")) {
-    return "refs/references.bib is rendered from the registry and overwritten on the next registry write, so an agent edit is lost and cannot add a real paper. Register papers with paper_registry (needs a DOI or arXiv id from search_papers or the user); if the paper cannot be found, tell the user. Do not create or invent an entry or a claim about a paper you could not find; only if the user insists on a stub, write a marked placeholder with just the fields the user gave, in a separate .bib file.";
+    return "refs/references.bib is rendered from the registry and overwritten on the next registry write, so an agent edit is lost and cannot add a real paper. Register papers with registry (needs a DOI or arXiv id from papers or the user); if the paper cannot be found, tell the user. Do not create or invent an entry or a claim about a paper you could not find; only if the user insists on a stub, write a marked placeholder with just the fields the user gave, in a separate .bib file.";
   }
   return null;
 }
@@ -60,5 +60,5 @@ export function destructiveToolOwnedCommand(command: string): string | null {
   const registry = new RegExp(REGISTRY).test(command);
   return registry
     ? "This command would delete or overwrite the project's `.registry/` (the paper registry, extracted sources and cached judgments). That cannot be undone, and refs/references.bib is rendered from it."
-    : "This command would overwrite or delete refs/references.bib. It is rendered from the registry (`uktub-scholar sync-bib` or paper_registry sync_bibliography restores it), but the file is the project's bibliography.";
+    : "This command would overwrite or delete refs/references.bib. It is rendered from the registry (`uktub-scholar sync-bib` or registry sync_bibliography restores it), but the file is the project's bibliography.";
 }

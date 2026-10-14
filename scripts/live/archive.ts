@@ -27,7 +27,7 @@ function toolOrder(t: TurnRecord): string {
     const skill = /skills\/([^/]+)\/SKILL\.md/.exec(c.args?.path ?? "");
     if (c.name === "read" && skill) return `read(${skill[1]}/SKILL.md)`;
     if (c.name === "read" || c.name === "write" || c.name === "edit") return `${c.name}(${basename(c.args?.path ?? "?")})`;
-    return c.name.replace(/^mcp__uktub_scholar__/, "");
+    return c.name.replace(/^mcp__uktub__/, "");
   }).join(" → ");
 }
 

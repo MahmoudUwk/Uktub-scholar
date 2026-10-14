@@ -1,5 +1,5 @@
 /**
- * `paper_registry` (R1–R6): the one tool that manages the project's paper
+ * `registry` (R1–R6): the one tool that manages the project's paper
  * collection — batch registration, batch removal, projected reads, local
  * source attachment and bibliography synchronisation — over the canonical
  * SQLite registry. Every action composes the existing transactional core
@@ -391,7 +391,7 @@ async function removeAction(ctx: ToolContext, db: DatabaseSync, handles: string[
 
 // ── acquire ─────────────────────────────────────────────────────────────────
 
-/** Fetch an open-access source for registered papers (explicit form of what `verify_claim` does on demand and the registration hook does in the background). */
+/** Fetch an open-access source for registered papers (explicit form of what `verify` does on demand and the registration hook does in the background). */
 async function acquireAction(ctx: ToolContext, db: DatabaseSync, handles: string[] | undefined): Promise<ToolResult<PaperRegistryStructured>> {
   if (handles !== undefined && handles.length === 0) return invalid("`handles` is empty; omit it to acquire every paper that has no source");
   if (handles !== undefined && handles.length > REMOVE_BATCH_MAX) {
@@ -565,7 +565,7 @@ function readAction(db: DatabaseSync, args: PaperRegistryArgs): ToolResult<Paper
 
   const header =
     total === 0 && unresolved.length === 0
-      ? "registry is empty — register papers with paper_registry action register"
+      ? "registry is empty — register papers with registry action register"
       : `${total} paper${total === 1 ? "" : "s"} selected${selected === undefined ? " (whole registry)" : ""}; showing ${records.length}` +
         (more ? `; more remain — repeat the same request with cursor "${nextCursor}"` : "");
   const lines = [header, ...records.map((r) => recordText(r, fields))];

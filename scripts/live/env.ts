@@ -12,6 +12,7 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import type { CallResult, Session } from "./cases.ts";
 import { providerKeys } from "./keys.ts";
+import { captureStagedProvenance, type StagedProvenance } from "./provenance.ts";
 import { appendRedacted, redact, registerSecrets } from "./redact.ts";
 import { dockerAvailable, INSIDE_PACKAGE, runSandboxed, sandboxCommand, stagePackage, writePiSettings, type SandboxSpec } from "./sandbox.ts";
 
@@ -46,6 +47,7 @@ const sh = (cmd: string, args: string[], cwd: string): string => spawnSync(cmd, 
 const newest = (dir: string): number => readdirSync(dir, { recursive: true, withFileTypes: true }).filter((e) => e.isFile()).reduce((m, e) => Math.max(m, statSync(join(e.parentPath, e.name)).mtimeMs), 0);
 
 export function createEnv(out: string, opts: { corpus?: boolean; maxJudgments?: number; piSettings?: Record<string, unknown>; acquireOnRegister?: boolean } = {}): Env {
+  out = resolve(out);
   if (existsSync(out)) throw new Error(`${out} exists; each run writes fresh evidence`);
   const repo = resolve(import.meta.dirname, "../..");
   const home = homedir();
@@ -73,7 +75,12 @@ export function createEnv(out: string, opts: { corpus?: boolean; maxJudgments?: 
   // The tested agent can read its own environment, so every write below redacts the forwarded key values (CROSSREF_MAILTO is an address, not a credential).
   registerSecrets(Object.fromEntries(Object.entries(secretEnv).filter(([k]) => /KEY|TOKEN|SECRET/.test(k))));
 
-  const consumer = stagePackage(repo, join(out, "stage"));
+  const stageDir = join(out, "stage");
+  const consumer = stagePackage(repo, stageDir);
+  // Provenance is captured once here, at staging/start — never recomputed at report time, so the record identifies
+  // the bytes the run actually used. Same helper the evolution controller checks (scripts/live/provenance.ts).
+  // stageDir is the stage root (tar/ + consumer/): the tarball hash lives in stage/tar, not in the consumer subdir.
+  const staged: StagedProvenance = captureStagedProvenance(repo, stageDir);
   const project = join(out, "project");
   for (const d of ["papers", "manuscript", "refs", "config"]) mkdirSync(join(project, d), { recursive: true });
   if (opts.corpus) {
@@ -142,9 +149,14 @@ export function createEnv(out: string, opts: { corpus?: boolean; maxJudgments?: 
       return { status: r.status, stdout: r.stdout, stderr: r.stderr };
     },
     manifest: (extra) => ({
-      commit: sh("git", ["rev-parse", "HEAD"], repo),
-      workingTreeDiffSha256: createHash("sha256").update(sh("git", ["diff", "HEAD"], repo)).digest("hex"),
-      untracked: sh("git", ["ls-files", "--others", "--exclude-standard"], repo).split("\n").filter(Boolean),
+      commit: staged.commit,
+      workingTreeDiffSha256: staged.workingTreeDiffSha256,
+      untracked: staged.untracked,
+      untrackedSha256: staged.untrackedSha256,
+      packageHash: staged.packageHash,
+      surfaceHash: staged.surfaceHash,
+      protectedHash: staged.protectedHash,
+      scopeHash: staged.scopeHash,
       image: sh("docker", ["image", "inspect", IMAGE, "--format", "{{.Id}}"], repo),
       docker: sh("docker", ["--version"], repo),
       node: process.version,
@@ -152,7 +164,7 @@ export function createEnv(out: string, opts: { corpus?: boolean; maxJudgments?: 
       engineDevice: "cpu (no NVIDIA container runtime on this host)",
       providerKeysPassed: passEnv, // names only, never values
       policy: POLICY,
-      startedAt: new Date().toISOString(),
+      startedAt: staged.capturedAt,
       ...extra,
     }),
   };

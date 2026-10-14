@@ -1,5 +1,5 @@
 /**
- * `verify_claim`: check ONE claim against all registered papers or an explicit
+ * `verify`: check ONE claim against all registered papers or an explicit
  * subset (or, rarely, direct passages) and return only supporting evidence
  * with exact source pointers, plus separately reported coverage. Retrieval,
  * source preparation and judgment are internal (see verify/workflow.ts); the
@@ -125,7 +125,7 @@ function render(s: Record<string, any>): string {
   if (s.mode === "direct") {
     lines.push(r.supportFound ? `SUPPORT FOUND in ${s.evidence.length} of ${cov.candidates.total} supplied passage(s).` : `NO SUPPORT FOUND in the ${cov.candidates.total} supplied passage(s).`);
   } else if (cov.sources.selected === 0 && cov.sources.unresolved.length === 0) {
-    lines.push("NO SUPPORT FOUND: there are no registered papers to check. Register papers with paper_registry first.");
+    lines.push("NO SUPPORT FOUND: there are no registered papers to check. Register papers with registry first.");
   } else if (cov.sources.ready === 0) {
     lines.push("NO SUPPORT FOUND: no usable source for any selected paper, so nothing was checked.");
   } else if (r.supportFound) {
