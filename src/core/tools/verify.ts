@@ -13,6 +13,7 @@
 import { Type, type Static } from "typebox";
 
 import { RegistryError, openRegistry } from "../registry.ts";
+import { documentWorkflow, MAX_DOCUMENT_UNITS, type DocumentUnitResult, type DocumentUnitStatus } from "../verify/document.ts";
 import { verifyWorkflow, type WorkflowHooks } from "../verify/workflow.ts";
 import { busyRefusal, refusalResult, type ToolContext, type ToolResult } from "./context.ts";
 
@@ -47,6 +48,49 @@ export const VerifyClaimParams = Type.Object({
 });
 export type VerifyClaimArgs = Static<typeof VerifyClaimParams>;
 
+/**
+ * Document mode, exclusive with the claim modes: check the TEXT AS WRITTEN.
+ * `document` names a project-relative .tex entry (includes expanded like
+ * provenance); `text` is a LaTeX fragment. Units come from the product's own
+ * extractor; each is verified verbatim (cited units against their own papers,
+ * uncited units against all papers). At most MAX_DOCUMENT_UNITS units per
+ * call (client policy). Exhaustive per unit at the configured bar (default
+ * 0.99): fast with the hosted engine, slow with local Eos.
+ */
+export const VerifyDocumentParams = Type.Object({
+  document: Type.Optional(Type.String({ minLength: 1, description: "Project-relative .tex entry to check as written (its includes are expanded)" })),
+  text: Type.Optional(Type.String({ minLength: 1, description: "LaTeX fragment to check as written" })),
+  offset: Type.Optional(Type.Integer({ minimum: 0, description: "First unit to check; a result that names a next offset has more units to check" })),
+});
+export type VerifyDocumentArgs = Static<typeof VerifyDocumentParams>;
+
+/** The tool accepts claim mode or document mode, never a mix. The server
+ * declares one object schema (MCP tools carry a single `type: object`
+ * input); exclusivity is enforced in code. */
+export const VerifyParams = Type.Object({
+  claim: Type.Optional(Type.String({ minLength: MIN_CLAIM_CHARS, maxLength: MAX_CLAIM_CHARS, description: "ONE proposition to find support for, stated as a sentence; it is passed to the verifier unchanged" })),
+  papers: Type.Optional(
+    Type.Union([Type.Literal("all"), Type.Array(Type.String(), { minItems: 1, maxItems: MAX_SCOPE_IDS })], {
+      description: `Scope: "all" registered papers, or an explicit list of DOIs/citekeys (at most ${MAX_SCOPE_IDS}); an empty list is refused, never read as all`,
+    }),
+  ),
+  query: Type.Optional(Type.String({ maxLength: MAX_QUERY_CHARS, description: "Optional locator words that only narrow WHICH passages are checked; the claim is unchanged and the search becomes query-limited, not exhaustive. An exhaustive check judges every passage of every selected paper and can take minutes for long papers; use a query when a focused check is enough" })),
+  passages: Type.Optional(
+    Type.Array(Type.Union([Type.Object({ source: Type.String({ description: "pointer from an earlier result (doi@revision#start-end)" }) }), Type.Object({ text: Type.String({ maxLength: MAX_DIRECT_TEXT_CHARS, description: "caller-supplied text; judged with no paper attribution" }) })]), {
+      minItems: 1,
+      maxItems: MAX_DIRECT_PASSAGES,
+      description: `Rare direct path instead of papers: judge exactly these passages (at most ${MAX_DIRECT_PASSAGES})`,
+    }),
+  ),
+  continuation: Type.Optional(Type.String({ description: "Token from the previous response of the SAME request: continues unfinished checking and/or the next page of evidence" })),
+  document: Type.Optional(Type.String({ minLength: 1, description: "Document mode (exclusive with claim, papers, query, passages, continuation): project-relative .tex entry to check as written, its includes expanded" })),
+  text: Type.Optional(Type.String({ minLength: 1, description: "Document mode (exclusive with claim, papers, query, passages, continuation): LaTeX fragment to check as written" })),
+  offset: Type.Optional(Type.Integer({ minimum: 0, description: `Document mode: first unit to check (pages of ${MAX_DOCUMENT_UNITS} units); the result names the next offset until the whole text is checked` })),
+});
+export type VerifyArgs = Static<typeof VerifyParams>;
+export { MAX_DOCUMENT_UNITS };
+export type { DocumentUnitResult, DocumentUnitStatus };
+
 const Nullable = <T extends ReturnType<typeof Type.String>>(t: T) => Type.Union([t, Type.Null()]);
 
 export const VerifyClaimOutput = Type.Object({
@@ -67,31 +111,98 @@ export const VerifyClaimOutput = Type.Object({
 export type VerifyClaimStructured = Record<string, any>;
 export type VerifyHooks = WorkflowHooks;
 
+export const VerifyDocumentOutput = Type.Object({
+  mode: Type.Literal("document"),
+  source: Type.String(),
+  summary: Type.Object({
+    total: Type.Integer(),
+    from: Type.Integer(),
+    units: Type.Integer(),
+    supported: Type.Integer(),
+    missingCitation: Type.Integer(),
+    citedUnsupported: Type.Integer(),
+    unsourced: Type.Integer(),
+    unregistered: Type.Integer(),
+    incomplete: Type.Integer(),
+  }),
+  engine: Type.Object({ name: Type.String(), model: Nullable(Type.String()), protocol: Type.String(), minConfidence: Type.Number(), cache: Type.Boolean() }),
+  units: Type.Array(
+    Type.Object({
+      id: Type.String(),
+      kind: Type.String(),
+      file: Type.String(),
+      line: Type.Integer(),
+      section: Type.String(),
+      excerpt: Type.String(),
+      status: Type.Union([Type.Literal("supported"), Type.Literal("cited-unsupported"), Type.Literal("missing-citation"), Type.Literal("unsourced"), Type.Literal("unregistered")]),
+      cites: Type.Array(Type.String()),
+      pointers: Type.Array(Type.String()),
+      suggested: Type.Array(Type.String()),
+      complete: Type.Boolean(),
+    }),
+  ),
+  next: Type.Union([Type.Integer(), Type.Null()]),
+});
+
+/** Either tool output: claim mode or document mode. */
+export const VerifyOutput = Type.Union([VerifyClaimOutput, VerifyDocumentOutput]);
+
 const invalid = (message: string) => refusalResult({ code: "ARGUMENT_INVALID", message });
 
-export async function verifyClaimTool(ctx: ToolContext, args: VerifyClaimArgs, hooks: VerifyHooks = {}): Promise<ToolResult<VerifyClaimStructured>> {
-  if (typeof args.claim !== "string" || args.claim.length < MIN_CLAIM_CHARS || args.claim.length > MAX_CLAIM_CHARS) {
+export async function verifyClaimTool(ctx: ToolContext, args: VerifyArgs, hooks: VerifyHooks = {}): Promise<ToolResult<VerifyClaimStructured>> {
+  const doc = (args as VerifyDocumentArgs).document;
+  const text = (args as VerifyDocumentArgs).text;
+  const docMode = doc !== undefined || text !== undefined;
+  if (docMode) {
+    if (doc !== undefined && text !== undefined) return invalid("give either `document` or `text`, not both");
+    if (doc !== undefined && typeof doc !== "string") return invalid("document must be a project-relative .tex path");
+    if (text !== undefined && typeof text !== "string") return invalid("text must be a LaTeX fragment");
+    const claim = (args as VerifyClaimArgs).claim;
+    const extra = ["papers", "query", "passages", "continuation"].filter((k) => (args as Record<string, unknown>)[k] !== undefined);
+    if (claim !== undefined || extra.length > 0) return invalid("document mode takes only `document` or `text` (and `offset`): it is exclusive with the claim modes");
+    const offset = (args as VerifyDocumentArgs).offset;
+    let db;
+    try {
+      db = openRegistry(ctx.root);
+    } catch (err) {
+      if (err instanceof RegistryError) return refusalResult({ code: err.code, message: err.message });
+      throw err;
+    }
+    try {
+      const out = await documentWorkflow(ctx, db, { ...(doc !== undefined ? { document: doc } : {}), ...(text !== undefined ? { text } : {}), ...(offset !== undefined ? { offset } : {}) }, hooks);
+      if (out.kind === "refused") return refusalResult({ code: out.code, message: out.message });
+      return { content: [{ type: "text", text: renderDocument(out.result) }], structuredContent: out.result, details: { mode: out.result.mode } };
+    } catch (err) {
+      const busy = busyRefusal(err);
+      if (busy !== null) return busy;
+      throw err;
+    } finally {
+      db.close();
+    }
+  }
+  const claimArgs = args as VerifyClaimArgs;
+  if (typeof claimArgs.claim !== "string" || claimArgs.claim.length < MIN_CLAIM_CHARS || claimArgs.claim.length > MAX_CLAIM_CHARS) {
     return invalid(`claim must be one proposition of ${MIN_CLAIM_CHARS}–${MAX_CLAIM_CHARS} characters`);
   }
-  const direct = args.passages !== undefined;
-  if (direct === (args.papers !== undefined)) {
+  const direct = claimArgs.passages !== undefined;
+  if (direct === (claimArgs.papers !== undefined)) {
     return invalid(direct ? "give either `papers` or `passages`, not both" : 'give a scope: `papers` ("all" or a list of DOIs/citekeys), or `passages` for the direct path');
   }
-  if (args.query !== undefined && args.query.length > MAX_QUERY_CHARS) return invalid(`query is longer than ${MAX_QUERY_CHARS} characters`);
+  if (claimArgs.query !== undefined && claimArgs.query.length > MAX_QUERY_CHARS) return invalid(`query is longer than ${MAX_QUERY_CHARS} characters`);
   if (direct) {
-    if (args.query !== undefined || args.continuation !== undefined) return invalid("`query` and `continuation` do not apply to direct passages");
-    if (!Array.isArray(args.passages) || args.passages.length === 0 || args.passages.length > MAX_DIRECT_PASSAGES) return invalid(`passages needs 1–${MAX_DIRECT_PASSAGES} items`);
-    for (const p of args.passages as unknown[]) {
+    if (claimArgs.query !== undefined || claimArgs.continuation !== undefined) return invalid("`query` and `continuation` do not apply to direct passages");
+    if (!Array.isArray(claimArgs.passages) || claimArgs.passages.length === 0 || claimArgs.passages.length > MAX_DIRECT_PASSAGES) return invalid(`passages needs 1–${MAX_DIRECT_PASSAGES} items`);
+    for (const p of claimArgs.passages as unknown[]) {
       const keys = typeof p === "object" && p !== null ? Object.keys(p) : [];
       const o = p as Record<string, unknown>;
       const ok = keys.length === 1 && ((keys[0] === "source" && typeof o.source === "string") || (keys[0] === "text" && typeof o.text === "string" && o.text.trim().length >= MIN_CLAIM_CHARS && o.text.length <= MAX_DIRECT_TEXT_CHARS));
       if (!ok) return invalid(`each passage is exactly one of {source: pointer} or {text: ${MIN_CLAIM_CHARS}–${MAX_DIRECT_TEXT_CHARS} characters}; text cannot claim a paper`);
     }
-  } else if (args.papers !== "all") {
-    if (!Array.isArray(args.papers) || args.papers.length === 0 || args.papers.some((h) => typeof h !== "string")) {
+  } else if (claimArgs.papers !== "all") {
+    if (!Array.isArray(claimArgs.papers) || claimArgs.papers.length === 0 || claimArgs.papers.some((h) => typeof h !== "string")) {
       return invalid('papers must be "all" or a non-empty list of DOIs/citekeys; an empty list is never read as all');
     }
-    if (args.papers.length > MAX_SCOPE_IDS) return refusalResult({ code: "BATCH_TOO_LARGE", message: `${args.papers.length} papers exceed the ${MAX_SCOPE_IDS}-paper scope cap (client policy); use "all" or split` });
+    if (claimArgs.papers.length > MAX_SCOPE_IDS) return refusalResult({ code: "BATCH_TOO_LARGE", message: `${claimArgs.papers.length} papers exceed the ${MAX_SCOPE_IDS}-paper scope cap (client policy); use "all" or split` });
   }
 
   let db;
@@ -102,7 +213,7 @@ export async function verifyClaimTool(ctx: ToolContext, args: VerifyClaimArgs, h
     throw err;
   }
   try {
-    const out = await verifyWorkflow(ctx, db, args, hooks);
+    const out = await verifyWorkflow(ctx, db, claimArgs, hooks);
     if (out.kind === "refused") return refusalResult({ code: out.code, message: out.message });
     return { content: [{ type: "text", text: render(out.result) }], structuredContent: out.result, details: { mode: out.result.mode } };
   } catch (err) {
@@ -115,6 +226,22 @@ export async function verifyClaimTool(ctx: ToolContext, args: VerifyClaimArgs, h
 }
 
 // ── rendering ───────────────────────────────────────────────────────────────
+
+function renderDocument(s: Record<string, any>): string {
+  const summary = s.summary as { total: number; from: number; units: number; supported: number; missingCitation: number; citedUnsupported: number; unsourced: number; unregistered: number; incomplete: number };
+  const units = s.units as DocumentUnitResult[];
+  const lines: string[] = [
+    `DOCUMENT: units ${summary.from + 1}–${summary.from + summary.units} of ${summary.total} checked as written (${s.source}) — ${summary.supported} supported, ${summary.missingCitation} missing-citation, ${summary.citedUnsupported} cited-unsupported, ${summary.unsourced} unsourced, ${summary.unregistered} unregistered${summary.incomplete > 0 ? `, ${summary.incomplete} incomplete` : ""}.`,
+  ];
+  for (const u of units) {
+    const where = u.file === "fragment.tex" ? "text" : `${u.file}:${u.line}`;
+    const extra = u.status === "supported" ? ` [${u.pointers.join(", ")}]` : u.status === "missing-citation" ? ` — cite ${(u.suggested as string[]).join(", ") || "a registered paper"} [${u.pointers.join(", ")}]` : "";
+    lines.push(`[${u.id}] ${where} (${u.kind}) "${u.excerpt}" — ${u.status}${extra}${u.complete ? "" : " (incomplete check)"}`);
+  }
+  if (s.next !== null) lines.push(`NOT DONE: ${summary.total - summary.from - summary.units} unit(s) not checked yet; call verify again with the same text and offset ${s.next}.`);
+  lines.push("No support found means the verifier did not find a passage supporting the unit under the configured bar; it is not evidence that the unit is false.");
+  return lines.join("\n");
+}
 
 function render(s: Record<string, any>): string {
   const r = s.result;

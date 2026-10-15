@@ -1,7 +1,7 @@
 /**
  * Behaviour signatures of one experiment run (harness skill v2, docs/plans/2026-10-11-harness-skill-v2-application.md): what the agent
  * did on the way to the deliverable, read from what Pi reported. Pure: scripts/live/experiment.ts feeds it the turns it recorded and
- * writes the result into metrics.json; scripts/live/evolution.ts turns that into rates.
+ * writes the result into metrics.json; scripts/live/evolution.ts holds the check ids runs are validated against.
  */
 export type InvalidKind = "validation" | "unknown_tool" | "unresolved_command";
 

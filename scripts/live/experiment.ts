@@ -1,7 +1,7 @@
 /**
  * One measured iteration (see experiments/README.md).
  *
- *   node scripts/live/experiment.ts <scenario> [--max-turns N] [--simulated-window TOKENS] [--arm A|B1|B2] [--user scripted|simulator] [--assistant-model provider/id] [--verify-engine eos|hosted]
+ *   node scripts/live/experiment.ts <scenario> [--max-turns N] [--simulated-window TOKENS] [--arm A|B1|B2|sections] [--user scripted|simulator] [--assistant-model provider/id] [--verify-engine eos|hosted]
  *
  * The user is scripted by default (PLAN §4.4: a deterministic state machine on file state reading ## Request,
  * ## Revision and ## Nudge from the scenario). `--user simulator` keeps the old path: a simulated user
@@ -61,7 +61,7 @@ export const EXPERIMENT_POLICY = {
 const MODEL_WINDOW_TOKENS = 1_048_576;
 
 const scenarioName = process.argv[2];
-if (scenarioName === undefined || scenarioName.startsWith("--")) throw new Error("usage: experiment.ts <scenario> [--max-turns N] [--simulated-window TOKENS] [--arm A|B1|B2] [--user scripted|simulator] [--assistant-model provider/id] [--verify-engine eos|hosted] [--pilot]");
+if (scenarioName === undefined || scenarioName.startsWith("--")) throw new Error("usage: experiment.ts <scenario> [--max-turns N] [--simulated-window TOKENS] [--arm A|B1|B2|sections] [--user scripted|simulator] [--assistant-model provider/id] [--verify-engine eos|hosted] [--pilot]");
 /** A harness shakedown run: labelled PILOT in the metrics, manifest and index, and never analysed (PLAN §1). */
 const pilot = process.argv.includes("--pilot");
 const um = process.argv.indexOf("--user");
@@ -132,7 +132,7 @@ mkdirSync(simProject);
 mkdirSync(simAgentDir);
 writeFileSync(join(simAgentDir, "settings.json"), JSON.stringify(PI_SETTINGS));
 writeFileSync(join(simAgentDir, "auth.json"), "{}");
-const uk = await startAgent(env.base("uktub", { ...assistantVerifyEnv, ...(arm !== undefined && !arm.agentProvenance ? { UKTUB_PROVENANCE: "off" } : {}) }), env.out, log, {
+const uk = await startAgent(env.base("uktub", { ...assistantVerifyEnv, ...(arm !== undefined && !arm.agentProvenance ? { UKTUB_PROVENANCE: "off" } : {}), ...(arm?.arm === "sections" ? { UKTUB_SECTION_WRITER: "on" } : {}) }), env.out, log, {
   label: "uktub",
   autoRetry: true,
   model: assistantModel,

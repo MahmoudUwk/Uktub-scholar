@@ -2,12 +2,12 @@
  * Shared run/package provenance for the live harness (one helper, two consumers).
  *
  * The acceptance/experiment runner (env.ts) captures the package identity at
- * staging/start via `captureStagedProvenance`; the evolution controller
- * (evolve.ts) checks those records via `validateRunSet` before any baseline,
- * evaluation or audit may use a run. One definition here, no second index:
- * the protected/evaluator file list itself stays in the evolve manifest; this
+ * staging/start via `captureStagedProvenance`; `validateRunSet` checks those
+ * records before a baseline, evaluation or audit may use a run. One definition
+ * here, no second index:
+ * the protected/evaluator file list itself stays in the manifest file; this
  * module only hashes and compares what it is given (globs read from the
- * manifest file on disk, never from the controller's evolving memory).
+ * manifest file on disk, never from caller memory).
  */
 import { createHash } from "node:crypto";
 import { existsSync, globSync, mkdtempSync, openSync, readSync, closeSync, readdirSync, readFileSync, rmSync, statSync } from "node:fs";

@@ -118,7 +118,7 @@ export function createEnv(out: string, opts: { corpus?: boolean; maxJudgments?: 
   const stageDir = join(out, "stage");
   const consumer = stagePackage(repo, stageDir);
   // Provenance is captured once here, at staging/start — never recomputed at report time, so the record identifies
-  // the bytes the run actually used. Same helper the evolution controller checks (scripts/live/provenance.ts).
+  // the bytes the run actually used. Same helper `validateRunSet` (scripts/live/provenance.ts) checks.
   // stageDir is the stage root (tar/ + consumer/): the tarball hash lives in stage/tar, not in the consumer subdir.
   const staged: StagedProvenance = captureStagedProvenance(repo, stageDir);
   const project = join(out, "project");

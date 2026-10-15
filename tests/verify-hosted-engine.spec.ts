@@ -1,13 +1,13 @@
-/** The `hosted` verification engine: d3-mini behind the hosted System One endpoint, one key away (the local default stays Eos). */
+/** The `hosted` verification engine: d3-mini behind the hosted System One endpoint, one key away (now the default; local Eos stays selectable). */
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
 import { createConfiguredEngine, HOSTED_KEY_URL, resolveEngineIdentity, VERIFICATION_ENGINES } from "../src/core/verify/engines.ts";
 
 describe("hosted verification engine", () => {
-  it("is a named engine next to the local default", () => {
+  it("is a named engine, now the default; local Eos stays selectable", () => {
     assert.ok((VERIFICATION_ENGINES as readonly string[]).includes("hosted"));
-    assert.equal(VERIFICATION_ENGINES[0], "eos", "the local default is unchanged");
+    assert.equal(VERIFICATION_ENGINES[0], "eos", "engine order is unchanged");
   });
 
   it("without a key, refuses with the one-click link to get a free key, and never a silent switch to another engine", () => {

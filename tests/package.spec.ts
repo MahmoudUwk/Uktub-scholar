@@ -68,7 +68,7 @@ describe("an installed copy (compiled, under node_modules)", () => {
     assert.equal(run(["list"], proj).status, 0);
   });
 
-  it("serves MCP over stdio with the package version and the five tools", async () => {
+  it("serves MCP over stdio with the package version and the six tools", async () => {
     const proj = join(site, "mcpproj");
     mkdirSync(proj);
     const t = new StdioClientTransport({ command: process.execPath, args: [bin, "mcp"], cwd: proj });
@@ -76,10 +76,13 @@ describe("an installed copy (compiled, under node_modules)", () => {
     await c.connect(t);
     try {
       const names = (await c.listTools()).tools.map((x) => x.name).sort();
-      assert.deepEqual(names, ["compile", "papers", "passages", "registry", "verify"]);
+      assert.deepEqual(names, ["compile", "doctor", "papers", "passages", "registry", "verify"]);
       const pkgVersion = (JSON.parse((await import("node:fs")).readFileSync(join(pkg, "package.json"), "utf8")) as { version: string }).version;
       assert.equal(c.getServerVersion()?.version, pkgVersion);
-      assert.match(c.getInstructions() ?? "", /verbatim/);
+      assert.match(c.getInstructions() ?? "", /Never fabricate/);
+      // The source-handling mechanics live where the agent uses them: the registry tool's own description.
+      const registry = (await c.listTools()).tools.find((x) => x.name === "registry")?.description ?? "";
+      for (const rule of [/not found/, /never substitute/, /only the papers already registered/, /never edit it by hand/, /UNREGISTERED PLACEHOLDER/]) assert.match(registry, rule);
     } finally {
       await c.close();
     }

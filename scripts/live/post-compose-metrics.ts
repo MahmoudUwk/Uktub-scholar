@@ -93,14 +93,6 @@ export interface GroupMetrics {
   notes: number;
 }
 
-const emptyA = (): PassAMetrics => ({
-  n: 0, verified: 0, skipped: 0, promoted: 0,
-  promotion: rate(0, 0), supported: rate(0, 0), recallSupported: rate(0, 0), fdr: rate(0, 0),
-  badPromoted: 0,
-});
-
-const emptyClass = (): PassBClassMetrics => ({ n: 0, verified: 0, found: 0, share: rate(0, 0) });
-
 export function computeGroup(rows: UnitRow[]): GroupMetrics {
   const a = rows.filter((r) => r.pass === "A");
   const aVer = a.filter((r) => r.outcome === "promoted" || r.outcome === "not-found");

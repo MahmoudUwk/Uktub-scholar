@@ -40,7 +40,7 @@ describe("loadChunkConfig", () => {
     assert.deepEqual(c, DEFAULTS);
     assert.equal(c.chunking.chars_per_token, 2.8, "the calibrated factor, so a default chunk fits the engine window");
     assert.deepEqual([c.chunking.chunk_tokens, c.chunking.overlap_tokens, c.chunking.boundary], [512, 0, "section"], "the measured policy: section chunks capped at 512 tokens (docs/benchmarks/evidence-chunking-sections-2026-10-04.md)");
-    assert.equal(c.verification.engine, "eos", "the owner's default engine (decision 2026-10-04)");
+    assert.equal(c.verification.engine, "hosted", "the owner's default engine (decision 2026-10-15)");
   });
 
   it("accepts boundary: section and refuses any other boundary word, naming the three that exist", () => {

@@ -142,7 +142,11 @@ export function unfoundQuotes(answer: string, manuscriptDir: string): { total: n
   const walk = (d: string): void => { for (const n of readdirSync(d)) { const p = join(d, n); if (statSync(p).isDirectory()) walk(p); else if (n.endsWith(".tex")) source += `${readFileSync(p, "utf8")}\n`; } };
   walk(manuscriptDir);
   const haystack = alnum(source);
-  const quotes = [...answer.matchAll(/[“"]([^”"\n]{30,500})[”"]/g)].map((m) => m[1]!);
+  // Quotation marks or backticks (a real review quoted in backticks); a backticked `path:line` reference is not a quote.
+  const quotes = [
+    ...[...answer.matchAll(/[“"]([^”"\n]{30,500})[”"]/g)].map((m) => m[1]!),
+    ...[...answer.matchAll(/`([^`\n]{30,500})`/g)].map((m) => m[1]!).filter((q) => /\s/.test(q) && !/^\S+:\d+(?:-\d+)?$/.test(q.trim())),
+  ];
   const missing = quotes.filter((q) => !haystack.includes(alnum(q.replace(/\.\.\.|…/g, " ")).slice(0, 50)));
   return { total: quotes.length, missing };
 }

@@ -12,8 +12,9 @@ export const GRADER_KEY_NAMES = ["OPENCODE_API_KEY"] as const;
 
 /** Host key name for the hosted decision endpoint (d3-mini). Forwarded only when `--verify-engine hosted` is set, renamed to VERIFY_API_KEY_ENV. */
 export const VERIFY_KEY_NAMES = ["VLLM_decision_API"] as const;
-/** Sandbox-side name of the hosted verify key (what the product reads). */
-export const VERIFY_API_KEY_ENV = "UKTUB_VERIFY_API_KEY";
+/** Sandbox-side name of the hosted verify key (what the product reads): the single definition in `src/core/verify/engines.ts`. */
+import { VERIFY_API_KEY_ENV } from "../../src/core/verify/engines.ts";
+export { VERIFY_API_KEY_ENV };
 
 /** Rename the host verify key for the sandbox (`VLLM_decision_API` → `UKTUB_VERIFY_API_KEY`); empty in, empty out. */
 export function verifySecrets(got: Record<string, string>): Record<string, string> {

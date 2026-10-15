@@ -10,8 +10,8 @@
 export const MCP_SERVER_NAME = "uktub" as const;
 /** Legacy server key in host MCP configuration files, renamed on install. */
 export const LEGACY_SERVER_KEY = "uktub-scholar" as const;
-/** The five canonical public tool names, in listing order. */
-export const TOOL_NAMES = ["papers", "registry", "compile", "verify", "passages"] as const;
+/** The six canonical public tool names, in listing order. */
+export const TOOL_NAMES = ["papers", "registry", "compile", "verify", "passages", "doctor"] as const;
 export type ToolName = (typeof TOOL_NAMES)[number];
 /** Namespaced spelling used by MCP hosts such as Pi and Claude Code. */
 export const MCP_TOOL_PREFIX = `mcp__${MCP_SERVER_NAME}__` as const;
@@ -48,7 +48,7 @@ export function normalizeToolName(name: string): string {
   return KNOWN_TOOLS.has(name) ? (TOOL_ALIASES[name] ?? name) : name;
 }
 
-/** Whether a normalized name is one of the five canonical tools. */
+/** Whether a normalized name is one of the six canonical tools. */
 export function isCanonicalToolName(name: string): name is ToolName {
   return (TOOL_NAMES as readonly string[]).includes(name);
 }

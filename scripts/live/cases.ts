@@ -1,5 +1,5 @@
 /**
- * Frozen live-acceptance cases for the CURRENT five tools (CASES_VERSION is part of the evidence; the runner records this file's sha256).
+ * Frozen live-acceptance cases for the CURRENT six tools (CASES_VERSION is part of the evidence; the runner records this file's sha256).
  *
  * Verdicts (decided here, before any run):
  *   PASS     every assertion held against real calls, real providers and real engines.
@@ -14,7 +14,7 @@ import { chmodSync, existsSync, mkdirSync, readdirSync, readFileSync, renameSync
 import { join } from "node:path";
 import { MCP_SERVER_NAME } from "../../src/core/tool-names.ts";
 
-export const CASES_VERSION = "2026-10-13.2";
+export const CASES_VERSION = "2026-10-15.1";
 
 /**
  * The launch command the installer wrote for this package's MCP server,
@@ -820,6 +820,26 @@ export const directCases: Case[] = [
       assert.match(String(err.file), /intro\.tex$/, `the error should name the included file, got ${err.file}`);
       assert.equal(err.line, 2);
       return { includedFile: err.file, line: err.line };
+    },
+  },
+  {
+    id: "doctor.reports-setup",
+    tool: "doctor",
+    contract: "doctor returns the four checks (verification, registry, compile, providers); verification is ok when the harness forwards the hosted key, else an error naming the one-click link",
+    async run(ctx) {
+      const r = ok(await ctx.mcp.call("doctor", {}));
+      const checks = r.checks as Array<{ name: string; status: string; detail: string; fix: string }>;
+      assert.deepEqual(checks.map((c) => c.name), ["verification", "registry", "compile", "providers"]);
+      const v = checks.find((c) => c.name === "verification");
+      assert.ok(v, "missing the verification check");
+      if (v.status === "ok") {
+        // OK names the engine the harness configured (the direct suite pins its sandbox engine; hosted when the key is forwarded).
+        assert.match(v.detail, /engine (hosted|eos|eos-onnx|openrouter|llama-cpp)\b/);
+      } else {
+        assert.equal(v.status, "error");
+        assert.match(`${v.detail} ${v.fix}`, /https:\/\/decision\.vllm-sr\.ai\//);
+      }
+      return { verification: v.status };
     },
   },
 ];

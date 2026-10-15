@@ -1,7 +1,7 @@
 /**
  * Post-compose replay: verify the document AS WRITTEN, offline, no writer.
  *
- *   node scripts/live/replay-post-compose.ts [--scratch <S>] [--only iter-01,iter-02] [--out <json>]
+ *   node scripts/live/replay-post-compose.ts [--archive <dir>] [--scratch <S>] [--only iter-01,iter-02] [--out <json>]
  *
  * For each archived iteration: copy evidence/project to <S>/replay/work/<iter>
  * (cp -rp; the archive is never opened in place), run the PRODUCT's own
@@ -48,6 +48,7 @@ const sha8 = (s: string): string => createHash("sha256").update(s, "utf8").diges
 const sha12 = (s: string): string => createHash("sha256").update(s, "utf8").digest("hex").slice(0, 12);
 
 interface Flags {
+  archive: string;
   scratch: string;
   only: string[] | null;
   out: string;
@@ -63,6 +64,7 @@ function parseFlags(argv: string[]): Flags {
   const onlyRaw = dflt("only");
   const pauseRaw = dflt("pause-ms");
   return {
+    archive: dflt("archive") ?? join(WORKTREE, "experiments", "runs", "adapter-literature-workflow-v1"),
     scratch,
     only: onlyRaw === undefined || onlyRaw === "" ? null : onlyRaw.split(",").map((s) => s.trim()).filter(Boolean),
     out: dflt("out") ?? join(WORKTREE, "docs", "benchmarks", `post-compose-replay-${DEFAULT_DATE}.json`),
@@ -122,7 +124,7 @@ function makeWritable(dir: string): void {
 
 async function main(): Promise<void> {
   const flags = parseFlags(process.argv.slice(2));
-  const archive = "/home/mahmoud/Desktop/AI_Projects/UktubAI/Uktub-scholar/experiments/runs/adapter-literature-workflow-v1";
+  const archive = flags.archive;
   const split = loadJson(join(flags.scratch, "archive", "SPLIT.json")) as Split;
   const allIters = [...split.dev, ...split.heldout].sort();
   const iters = flags.only ?? allIters;

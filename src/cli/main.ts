@@ -30,8 +30,9 @@ import { WriteQueue } from "../core/queue.ts";
 import { createSafeDownloader } from "../core/source/download.ts";
 import { paperRegistryTool, type PaperRegistryArgs } from "../core/tools/registry.ts";
 import type { ToolContext, ToolResult } from "../core/tools/context.ts";
-import { verifyClaimTool, type VerifyClaimArgs, type VerifyHooks } from "../core/tools/verify.ts";
+import { verifyClaimTool, type VerifyArgs, type VerifyHooks } from "../core/tools/verify.ts";
 import { searchPassagesTool, type SearchPassagesArgs } from "../core/tools/passages.ts";
+import { doctorTool } from "../core/tools/doctor.ts";
 import { managedCacheDir } from "../core/embed/config.ts";
 import { BIN_PATH } from "../core/launch.ts";
 import { LEGACY_SERVER_KEY, MCP_SERVER_NAME } from "../core/tool-names.ts";
@@ -80,9 +81,13 @@ commands:
   attach <doi|citekey> <file>   prepare a local PDF/TEI inside the project as a paper's source
   verify <claim> [--papers all|<doi|citekey>,...] [--query <words>] [--continuation <token>]
                                 find supporting passages for ONE claim (default: all papers)
+  verify (--document <entry.tex> | --text <fragment>)
+                                check the text as written, one unit at a time (cited units against their own
+                                papers, uncited units against all papers); at most 50 units per call
   search <query> [--papers all|<doi|citekey>,...] [--limit <n>]
                                 find the passages that best match a topic or question (keyword,
                                 plus semantic when an embedding server is available)
+  doctor [--json]               diagnose the setup: verification engine, registry, LaTeX, provider keys
   embed status | embed install --yes
                                 the managed embedding runtime: a pinned llama.cpp server and
                                 EmbeddingGemma, downloaded once (sha256-verified) into a shared cache;
@@ -125,11 +130,13 @@ function reportTool(result: ToolResult<unknown>, io: CliIo): number {
   return 0;
 }
 
-function parseVerifyArgs(args: string[]): VerifyClaimArgs | null {
+function parseVerifyArgs(args: string[]): VerifyArgs | null {
   const claimParts: string[] = [];
   let papers: "all" | string[] = "all";
   let query: string | undefined;
   let continuation: string | undefined;
+  let document: string | undefined;
+  let text: string | undefined;
   for (let i = 0; i < args.length; i++) {
     const a = args[i];
     if (a === "--papers" && args[i + 1] !== undefined) {
@@ -137,10 +144,16 @@ function parseVerifyArgs(args: string[]): VerifyClaimArgs | null {
       papers = v === "all" ? "all" : v.split(",").filter((h) => h.length > 0);
     } else if (a === "--query" && args[i + 1] !== undefined) query = args[++i];
     else if (a === "--continuation" && args[i + 1] !== undefined) continuation = args[++i];
+    else if (a === "--document" && args[i + 1] !== undefined) document = args[++i];
+    else if (a === "--text" && args[i + 1] !== undefined) text = args[++i];
     else claimParts.push(a);
   }
+  if (document !== undefined || text !== undefined) {
+    if (claimParts.length > 0 || papers !== "all" || query !== undefined || continuation !== undefined) return null;
+    return { ...(document !== undefined ? { document } : {}), ...(text !== undefined ? { text } : {}) } as VerifyArgs;
+  }
   if (claimParts.length === 0) return null;
-  return { claim: claimParts.join(" "), papers, ...(query !== undefined ? { query } : {}), ...(continuation !== undefined ? { continuation } : {}) } as VerifyClaimArgs;
+  return { claim: claimParts.join(" "), papers, ...(query !== undefined ? { query } : {}), ...(continuation !== undefined ? { continuation } : {}) } as VerifyArgs;
 }
 
 function parseSearchArgs(args: string[]): SearchPassagesArgs | null {
@@ -800,7 +813,7 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
       case "verify": {
         const parsed = parseVerifyArgs(args);
         if (parsed === null) {
-          err(`error: verify needs a claim\n${USAGE}`);
+          err(`error: verify needs a claim or --document/--text\n${USAGE}`);
           return 1;
         }
         return reportTool(await verifyClaimTool(toolContext(io, root), parsed, io.verifyHooks), io);
@@ -812,6 +825,20 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
           return 1;
         }
         return reportTool(await searchPassagesTool(toolContext(io, root), parsed), io);
+      }
+      case "doctor": {
+        for (const a of args) {
+          if (a !== "--json") {
+            err(`error: unexpected argument ${a}\n${USAGE}`);
+            return 1;
+          }
+        }
+        const result = await doctorTool(toolContext(io, root), {});
+        if (args.includes("--json")) {
+          out(JSON.stringify(result.structuredContent, null, 2));
+          return 0;
+        }
+        return reportTool(result, io);
       }
       case "embed":
         return await embedCommand(args, io);

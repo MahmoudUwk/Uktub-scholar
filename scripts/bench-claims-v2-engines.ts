@@ -1,7 +1,7 @@
 /**
  * claim-verification-v2: how the runner (bench-claims-v2.ts) launches each candidate of the model table, every one on the GPU and every one
  * through the product's `verify_claim` path. A candidate is either a PRODUCT engine configured by its documented environment (Eos, Kai through
- * the `eos` worker's model override, both Vela sizes through the `vela` worker), or an ADAPTER worker injected under a product engine name
+ * the `eos` worker's model override), or an ADAPTER worker injected under a product engine name
  * with a declared identity (Decision 3.0 and d1-omni have no product engine; their resident workers speak the same JSONL protocol). Every
  * revision is the one the earlier reports pinned, and the wording is the Decision 2.0 claim wording of `claim-noul-criteria-v1`.
  *
@@ -30,8 +30,6 @@ export interface EngineSpec {
 }
 
 const KAI_REVISION = "cd49ea3813fd8ba0928a9a23ef6c9a0f2f0cd764";
-const VELA_03_REVISION = "d6f03aa9baca4f9017fa8f8e9c2764d3bed3f409";
-const VELA_08_REVISION = "326b01d81f61fff7fd4ae570e54b87a49119e490";
 const D3_EDGE_REVISION = "18d61df78684675463af9ae732872478845c5a79";
 const D3_LITE_REVISION = "a8d25a91ef75552803f7009d25b7bd435991abd9";
 const D1_REVISION = "02b55d7076f15129e59ab3f94783f32c4b088674";
@@ -54,10 +52,6 @@ export function engineSpecs(home: string): Record<string, EngineSpec> {
   const d2 = join(home, "decision2");
   const d3 = join(home, "d3");
   const eosPython = join(d2, "venv/bin/python");
-  const vela = (dir: string, revision: string, weights: string): EngineSpec => ({
-    engine: "vela",
-    env: { UKTUB_VELA_PYTHON: eosPython, UKTUB_VELA_DIR: join(home, "vela", dir), UKTUB_VELA_REVISION: revision.slice(0, 12), UKTUB_VELA_BACKEND: "torch", UKTUB_VELA_DEVICE: "cuda", UKTUB_VELA_WEIGHTS_FILE: weights },
-  });
   const d3Spec = (id: string, revision: string): EngineSpec => ({
     engine: "llama-cpp",
     env: {},
@@ -83,8 +77,6 @@ export function engineSpecs(home: string): Record<string, EngineSpec> {
   return {
     eos: { engine: "eos", env: { UKTUB_EOS_PYTHON: eosPython, UKTUB_EOS_MODEL: join(d2, "models/eos") } },
     kai: { engine: "eos", env: { UKTUB_EOS_PYTHON: eosPython, UKTUB_EOS_MODEL: join(d2, "models/kai"), UKTUB_EOS_REVISION: KAI_REVISION } },
-    "vela-0.8b": vela("0.8B", VELA_08_REVISION, "model-00001-of-00001.safetensors"),
-    "vela-0.3b": vela("0.3B", VELA_03_REVISION, "model.safetensors"),
     "d3-lite": d3Spec("d3-lite", D3_LITE_REVISION),
     "d3-edge": d3Spec("d3-edge", D3_EDGE_REVISION),
     "d1-omni": {

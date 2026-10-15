@@ -2,7 +2,7 @@
  * Source extraction (KTD3–KTD5): acquired bytes → the one captured text that
  * evidence spans index. PDF text comes from `unpdf` (maintained pdf.js
  * wrapper, pure JS — no system binary); GROBID TEI (OpenAlex Content API)
- * from `fast-xml-parser`. Both are measured choices — see DECISIONS.
+ * from `fast-xml-parser`. Both are measured choices — see docs/handoff.md.
  *
  * Contract: unusable input never becomes text. Every failure is a
  * `SourceError` with a normalized code; raw parser exceptions never leave

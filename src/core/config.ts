@@ -56,10 +56,11 @@ export const DEFAULTS: ChunkConfig = {
   // continuation across a split is the neighbouring chunk. 2.8 chars/token: calibrated on the benchmark
   // corpus with the mmBERT tokenizer (median 4.1, densest paper 3.10; 0.9 headroom so a window never overflows).
   chunking: { chunk_tokens: 512, overlap_tokens: 0, chars_per_token: 2.8, boundary: "section" },
-  // engine: Decision 2.0 Eos, local (owner decision 2026-10-04). 0.99: client policy, the
+  // engine: hosted d3-mini, the measured best in class (owner decision 2026-10-15: 93 % recall at about 1 % false supports on
+  // claim-verification-v2, against 49 % for local Eos; free key, one click). 0.99: client policy, the
   // scientific-writing confidence bar. 4 lanes (one resident model serializes them) and 120
-  // judgments per call: client policy — seconds locally, ≈ 7 minutes on a 20-requests/minute hosted tier.
-  verification: { engine: "eos", min_confidence: 0.99, workers: 4, max_judgments: 120 },
+  // judgments per call: client policy — seconds on the hosted endpoint, minutes locally.
+  verification: { engine: "hosted", min_confidence: 0.99, workers: 4, max_judgments: 120 },
 };
 
 function validate(parsed: unknown): ChunkConfig {

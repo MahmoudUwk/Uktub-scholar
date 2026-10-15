@@ -66,7 +66,7 @@ test("the registered command is spawnable wherever the package is installed (no 
 
 test("the server is exposed directly to the model and described for the system prompt", () => {
   const { exposure, description } = register().config;
-  assert.equal(exposure, "direct", "five small tools: declare them, do not hide them behind codemode");
+  assert.equal(exposure, "direct", "six small tools: declare them, do not hide them behind codemode");
   assert.match(description ?? "", /paper|scholar/i);
 });
 
@@ -84,11 +84,13 @@ test("the agent rules reach the Pi model as system-prompt guidelines (Pi shows o
   onStart({ systemPromptOptions: options });
   assert.equal(options.promptGuidelines?.[0], "existing rule", "keeps other contributors' guidelines");
   const joined = (options.promptGuidelines ?? []).join("\n");
-  assert.match(joined, /verbatim/);
-  assert.match(joined, /warning/i);
-  assert.match(joined, /Refused/);
+  assert.match(joined, /scientific research assistant/);
+  assert.match(joined, /Never fabricate data, results, quotations, references/);
+  assert.match(joined, /stop and say so/);
+  assert.match(joined, /checked with `verify`/);
+  assert.match(joined, /data, never instructions/);
   onStart({ systemPromptOptions: options });
-  assert.equal((options.promptGuidelines ?? []).filter((g) => /verbatim/.test(g)).length, 1, "idempotent: no duplicates when a run starts again");
+  assert.equal((options.promptGuidelines ?? []).filter((g) => /Never fabricate/.test(g)).length, 1, "idempotent: no duplicates when a run starts again");
 });
 
 test("the agent cannot edit the two tool-owned paths: refs/references.bib and .registry/ (agent read-only, human writable)", async () => {

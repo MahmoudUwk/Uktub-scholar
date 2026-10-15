@@ -6,8 +6,8 @@
  * claims were grounded in papers it could not see, so it ended "success" on notes whose invented figures were beyond its cut.
  * An arm names a channel; the first message tells the reviewer exactly what that channel holds and lacks.
  */
-export type Arm = "A" | "B1" | "B2";
-export const ARMS: readonly Arm[] = ["A", "B1", "B2"];
+export type Arm = "A" | "B1" | "B2" | "sections";
+export const ARMS: readonly Arm[] = ["A", "B1", "B2", "sections"];
 export interface ArmSpec { arm: Arm; /** The assistant's compile result carries the provenance summary. */ agentProvenance: boolean; reviewerView: "legacy" | "full" }
 export interface ViewPolicy { legacyChars: number; fullManuscriptChars: number; evidenceTableChars: number }
 
@@ -16,6 +16,10 @@ export function armSpec(arm: string): ArmSpec {
     case "A": return { arm: "A", agentProvenance: false, reviewerView: "legacy" };
     case "B1": return { arm: "B1", agentProvenance: false, reviewerView: "full" };
     case "B2": return { arm: "B2", agentProvenance: true, reviewerView: "full" };
+    // Writer-side arm: the reviewer channel is B1's (full manuscript view, no
+    // in-loop provenance); the manipulation is UKTUB_SECTION_WRITER=on for the
+    // assistant's sandbox, mapped in experiment.ts.
+    case "sections": return { arm: "sections", agentProvenance: false, reviewerView: "full" };
     default: throw new Error(`unknown arm "${arm}" (use ${ARMS.join(", ")})`);
   }
 }

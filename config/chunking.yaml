@@ -5,7 +5,7 @@ chunking:
   chars_per_token: 2.8    # calibrated on this corpus with the mmBERT tokenizer (median 4.1, densest paper 3.10; 0.9 headroom so strict_encoding never raises)
   boundary: section       # section (headings, split only when larger than the cap) | paragraph | hard
 verification:
-  engine: eos             # ClaimEngine registry in src/core/verify/engines.ts (eos | eos-onnx | openrouter | llama-cpp | vela)
+  engine: hosted           # ClaimEngine registry in src/core/verify/engines.ts (eos | eos-onnx | openrouter | llama-cpp | hosted)
   min_confidence: 0.99    # client policy: scientific-writing confidence bar
   workers: 4              # concurrent chunk-verification lanes
   max_judgments: 120      # client policy: fresh judgments per call (≈ 7 min on a 20-requests/minute hosted tier)

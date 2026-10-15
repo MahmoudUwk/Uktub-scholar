@@ -13,10 +13,11 @@ const POLICY: ViewPolicy = { legacyChars: 6000, fullManuscriptChars: 60000, evid
 
 describe("arms", () => {
   it("A is the current system; B1 adds only the reviewer's visibility; B2 adds the in-loop provenance view for the assistant", () => {
-    assert.deepEqual(ARMS, ["A", "B1", "B2"]);
+    assert.deepEqual(ARMS, ["A", "B1", "B2", "sections"]);
     assert.deepEqual(armSpec("A"), { arm: "A", agentProvenance: false, reviewerView: "legacy" });
     assert.deepEqual(armSpec("B1"), { arm: "B1", agentProvenance: false, reviewerView: "full" });
     assert.deepEqual(armSpec("B2"), { arm: "B2", agentProvenance: true, reviewerView: "full" });
+    assert.deepEqual(armSpec("sections"), { arm: "sections", agentProvenance: false, reviewerView: "full" });
     assert.throws(() => armSpec("C"), /unknown arm/i);
   });
 });
@@ -31,7 +32,7 @@ describe("channelText", () => {
     assert.ok(!/Provenance view/.test(t));
   });
   it("states the full channel: whole manuscript, the evidence table as the assistant's own claim, the activity digest, the provenance view", () => {
-    for (const arm of ["B1", "B2"] as const) {
+    for (const arm of ["B1", "B2", "sections"] as const) {
       const t = channelText(armSpec(arm), POLICY);
       assert.match(t, /FULL text of every \.tex file/);
       assert.match(t, /assistant's own account/i);

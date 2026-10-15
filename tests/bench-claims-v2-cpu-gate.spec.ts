@@ -26,7 +26,6 @@ describe("seconds per chunk of a run on CPU", () => {
 describe("the CPU variant of an engine spec", () => {
   const specs = engineSpecs("/h");
   it("turns every device setting of a worker into cpu", () => {
-    assert.equal(cpuVariant(specs["vela-0.8b"]!).env.UKTUB_VELA_DEVICE, "cpu");
     assert.equal(cpuVariant(specs["d3-lite"]!).adapter!.env.UKTUB_D3_DEVICE, "cpu");
     assert.equal(cpuVariant(specs["d1-omni"]!).adapter!.env.UKTUB_D1_DEVICE, "cpu");
     assert.equal(cpuVariant(specs["intern-0.8b"]!).adapter!.env.UKTUB_INTERN_DEVICE, "cpu");

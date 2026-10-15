@@ -6,7 +6,15 @@ work are in [docs/handoff.md](docs/handoff.md).
 
 ## [Unreleased]
 
+### Changed
+- **Default verification engine is now `hosted`** (`vllm-sr/d3-mini` at `https://decision.vllm-sr.ai`, owner decision 2026-10-15; free key at https://decision.vllm-sr.ai/ in `UKTUB_VERIFY_API_KEY`): 93 % recall at about 1 % false supports on claim-verification-v2 (Eos 49 %), 0/278 false at the 0.99 bar (Eos 7/278). Explicit `eos` / `eos-onnx` / `openrouter` / `llama-cpp` keep working.
+
 ### Added
+- **`doctor` tool** (sixth tool: MCP, `uktub-scholar doctor [--json]`, Pi via MCP): no arguments, read-only. Returns `doctor: all checks passed` or `doctor: N problem(s)` with one check each for `verification` (configured engine and whether it can run now — hosted: one minimal authenticated probe judgment, 10 s; `eos`/`eos-onnx`: prerequisites via the existing discovery/self-check helpers, never loading the model), `registry` (present, schema version, paper and ready-source counts), `compile` (the Tectonic the product would use) and `providers` (which optional keys are set; missing is a warn). Every error carries its fix; the model-facing text says to tell the user the fix. Live case `doctor.reports-setup`.
+- **`verify` document mode** (`{document: project-relative .tex path}` or `{text: LaTeX fragment}`, exclusive with the claim modes): checks the text as written, one product-extracted unit at a time (cited units against their own papers, uncited units against all papers), with per-unit `supported` | `cited-unsupported` | `missing-citation` (with suggested citekeys) | `unsourced` | `unregistered`. Supported evidence is released through the existing path so the ledger records the exact unit text. At most 50 units per call (client policy); exhaustive per unit at the configured bar.
+- **Pi-only `write_section` tool** (registered by the Pi extension only when `UKTUB_SECTION_WRITER=on`): a same-model sub-session (`createAgentSession`, `SessionManager.inMemory()`, tools restricted to the Uktub `passages` and `verify` tools) writes one LaTeX section only from the listed papers' passages, then the text is checked with `verify` document mode with one repair round. `papers` is one string of citekeys (arrays and JSON strings coerced). It never writes files.
+- **Writing workflow** (`skills/uktub-research/SKILL.md`): outline per section, write each section with `write_section` (or from passages + `verify` with `text`), assemble, `compile`, `verify` with `document`, resolve every non-`supported` unit before reporting done.
+- **Experiment arm `sections`** (`pnpm experiment <scenario> --arm sections`): sets `UKTUB_SECTION_WRITER=on` for the assistant's sandbox (default off); reviewer channel is B1's; recorded in metrics/manifest/index.
 - **Hosted verify engine** (`verification.engine: hosted`): `vllm-sr/d3-mini` on `https://decision.vllm-sr.ai` with a free key from [decision.vllm-sr.ai](https://decision.vllm-sr.ai/) (`UKTUB_VERIFY_API_KEY`); without a key it refuses with that link and never switches engine. Local Eos stays the default. On claim-verification-v2: 93 % recall at about 1 % false supports (Eos 49 %); at the 0.99 bar 198/269 true and 0/278 false supported (`docs/benchmarks/claims-v2-d3-mini-api-2026-10-14.*`). The System One engine also accepts `UKTUB_VERIFY_API_KEY`/`UKTUB_VERIFY_MODEL` (key sent only to the configured HTTPS origin).
 - **Durable verify evidence** (registry schema v6, `claim_ledger`): released evidence with its verbatim claim text survives the 24 h continuation sweep; it is deleted only with its paper or source revision. v5 registries migrate (table starts empty). Provenance reads `verified` only from the ledger.
 - **`provenance --json`** adds `document_digest` and `units` (every extracted unit with id, kind, location, text, cites, status, pointers).
@@ -42,8 +50,8 @@ work are in [docs/handoff.md](docs/handoff.md).
 - **Live test harness** ([handoff](docs/handoff.md), section 8 and appendix E): Docker-isolated acceptance of every tool and action against real
   providers and engines, directly over stdio MCP (`pnpm live:direct`) and through a real Pi session on
   `google-vertex/gemini-3.8-flash` (`pnpm live:agent`, one labelled rerun on `gemini-3.5-flash-lite` after an HTTP 429); a
-  boundary probe (`pnpm live:probe`); user-simulation experiments (`pnpm experiment`); a self-improving loop with held-out and
-  out-of-domain scenarios (`pnpm evolve`). Verdicts are PASS / FAIL / BLOCKED / NOT_RUN with evidence and a manifest per run;
+  boundary probe (`pnpm live:probe`); user-simulation experiments (`pnpm experiment`, with held-out and
+  out-of-domain scenarios). Verdicts are PASS / FAIL / BLOCKED / NOT_RUN with evidence and a manifest per run;
   provider keys are forwarded by name from the shell or a gitignored `.env`.
 - **`pnpm sandbox`**: a fresh Pi in Docker, preconfigured with this package, Vertex AI (read-only ADC), the Eos engine and
   provider keys; the host's own Pi is untouched; state lives in `.sandbox/`.
@@ -116,7 +124,12 @@ work are in [docs/handoff.md](docs/handoff.md).
   (it could not reach Vertex) and the dead `runMcpServer`. Provider keys are no longer read from any other repository.
 - The `julia`, `laya`, `k2`, `bev` and `lumma` verification engines (all rejected in the benchmarks), their Python workers, the
   OpenRouter chat benchmark engine and the old runner's non-Decision-2.0 engines. `verification.engine` now accepts `eos`,
-  `eos-onnx`, `openrouter`, `llama-cpp` and `vela`. Superseded plans, reviews and per-run benchmark reports were archived outside the repository.
+  `eos-onnx`, `openrouter`, `llama-cpp` and `hosted`. Superseded plans, reviews and per-run benchmark reports were archived outside the repository.
+- **Rejected `vela` verify engine, `pnpm evolve` and the bench-only Python workers in the published package**: `velaEngine` with its
+  `UKTUB_VELA_*` envs, `scripts/vela_decide.py` and its specs; the `evolve` script, `scripts/live/evolve.ts` and the
+  self-improvement rules in `scripts/live/evolution.ts` (the protocol check ids the harness still imports stay); the package now ships
+  only `scripts/decision2_decide.py` and `scripts/decision2_onnx.py` (the `d1`/`d3`/`intern` bench workers and the embed-parity gate stay
+  in the checkout, out of the package).
 
 ## [0.2.0] - 2026-10-05
 

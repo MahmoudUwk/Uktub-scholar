@@ -38,7 +38,7 @@ import type { DownloadLike } from "../core/source/download.ts";
 import { paperRegistryTool, type PaperRegistryArgs } from "../core/tools/registry.ts";
 import { searchPassagesTool, type SearchPassagesArgs } from "../core/tools/passages.ts";
 import { searchPapersTool, type SearchPapersArgs } from "../core/tools/search.ts";
-import { verifyClaimTool, type VerifyClaimArgs } from "../core/tools/verify.ts";
+import { verifyClaimTool, type VerifyArgs } from "../core/tools/verify.ts";
 import { compileDocumentTool, type CompileDocumentArgs } from "../core/tools/compile.ts";
 import { createRegistry } from "../core/registry.ts";
 import {
@@ -169,7 +169,7 @@ export async function hostCallTool(name: ToolName, toolArgs: Record<string, unkn
       case "search":
         return await searchPapersTool(ctx, toolArgs as unknown as SearchPapersArgs);
       case "verify":
-        return await verifyClaimTool(ctx, toolArgs as unknown as VerifyClaimArgs);
+        return await verifyClaimTool(ctx, toolArgs as unknown as VerifyArgs);
       case "compile":
         return await compileDocumentTool(ctx, toolArgs as unknown as CompileDocumentArgs);
       default:

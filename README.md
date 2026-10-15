@@ -35,7 +35,11 @@ pnpm exec uktub-scholar mcp [target-dir]             # or run the stdio server d
 
 **Pi package** (`pi install /path/to/Uktub-scholar`): registers the MCP server, loads the `uktub-research` skill, adds the agent
 rules to Pi's system prompt, and blocks the agent's `edit`/`write` on `refs/references.bib` and `.registry/` (agent read-only,
-human writable; a shell is not blocked, but a destructive shell command touching them asks the human first). It appends a "Tool
+human writable; a shell is not blocked, but a destructive shell command touching them asks the human first). With
+`UKTUB_SECTION_WRITER=on` it also registers a Pi-only `write_section` tool: a sub-session on the same model writes one
+section in LaTeX only from the listed papers' passages (tools restricted to `passages` and `verify`), the text is checked
+with `verify` document mode with one repair round, and the tool returns the LaTeX, a summary and the unresolved units
+without writing files. It appends a "Tool
 notices" footer with any refusal, warning, interruption or registry change the final answer left out, and the server sends
 progress heartbeats so a host's request timeout does not kill a long call. To try the package without touching your own Pi, use
 `pnpm sandbox` (below).
@@ -47,7 +51,7 @@ about 10 MB, shared cache). Nothing downloads unless you run that command; Tecto
 Run `uktub-scholar init` in the research project to create `.registry/registry.db` and `refs/references.bib`. Nested projects are
 refused. You own layout, LaTeX sources, git, backups and toolchains.
 
-## The five tools
+## The six tools
 
 Exposed over MCP (`tools/list`, `tools/call`), through the Pi package and via the CLI, under bare names or host-namespaced ones
 (`mcp__uktub__papers`, `uktub/papers`).
@@ -58,8 +62,9 @@ The server id is `uktub`. Legacy long tool names remain accepted but are not adv
 | `papers(query, limit?)` | OpenAlex, Crossref and Semantic Scholar merged by RRF; default 5, maximum 20 |
 | `registry(action, …)` | Register, remove, read, attach a source, sync the bibliography, acquire sources |
 | `compile(entry?)` | Local Tectonic, PDF in `build/`; 120 s budget, at most 50 diagnostics |
-| `verify(claim, papers \| passages, query?, continuation?)` | Supporting passages for one claim, with coverage |
+| `verify(claim, papers \| passages, query?, continuation?)` or `verify(document\|text)` | Supporting passages for one claim, with coverage; or the text as written, one unit at a time |
 | `passages(query, papers?, limit?)` | Best-matching passages of the registered papers (section, page, pointer, excerpt) |
+| `doctor()` | Diagnose the setup: verification engine, registry, LaTeX, provider keys — with the fix for each problem |
 
 Caps are client policies unless a source is named. Provider failures in search become warnings; all providers failing refuses
 with `SEARCH_UNAVAILABLE`. Optional keys, read at call time: `OPENALEX_API_KEY`, `SEMANTIC_SCHOLAR_API_KEY` (without it Semantic
@@ -121,6 +126,15 @@ Direct path (rare): `passages: [{source: pointer} | {text}]` judges exactly thos
 this package issued within the last 24 hours and is checked against its current revision; `text` carries no authenticated paper
 provenance and can never claim a DOI.
 
+Document mode (exclusive with the above): `{document: project-relative .tex path}` (includes expanded like provenance)
+or `{text: LaTeX fragment}` checks the text as written. Each unit from the product's own extractor is verified verbatim:
+cited units against their own cited papers, uncited units against all registered papers. Per unit: `supported` (with
+pointers), `cited-unsupported`, `missing-citation` (support found in a registered paper the unit does not cite, with the
+suggested citekeys), `unsourced`, or `unregistered` (a citekey the registry does not know). Supported evidence is released
+through the existing path, so the ledger records the exact unit text and provenance later marks it verified while the
+wording is kept verbatim. At most 50 units per call (client policy); exhaustive per unit at the configured bar (default
+0.99), fast with the hosted engine and slow with local Eos.
+
 ### `passages`
 
 Retrieval for the writing agent: describe a topic, question or phrase and get the best-matching passages of the registered
@@ -140,7 +154,7 @@ have a server:
   and requires `--yes`). Archives are extracted safely. After that `passages` starts `llama-server` on loopback as a
   supervised child (resident for the session, restarted if it dies, ended when the host exits, even on SIGKILL on POSIX); a search
   never downloads. `embed status` shows what is installed. Linux x64 is verified by running the server; the other five builds are
-  digest-pinned and their archives verify and extract, but the servers have not run there ([handoff](docs/handoff.md), appendix F). A platform
+  digest-pinned and their archives verify and extract, but the servers have not run there ([handoff V1 (commit 331bb7b)](docs/handoff.md), appendix F). A platform
   with no pin is refused with the instruction to run your own server.
 - **Your own server**: any OpenAI-compatible `/v1/embeddings` endpoint, which wins over the managed runtime. Start `llama-server`
   with `--embeddings --pooling mean -c 2048 -b 2048 -ub 2048` (the default batch of 512 rejects a chunk of about 570 tokens) and
@@ -182,7 +196,7 @@ nothing.
 
 | Skill | What the agent can do | Needs |
 |---|---|---|
-| `uktub-research` | Use the five tools: search, register, cite, verify, search passages, compile | the package |
+| `uktub-research` | Use the six tools: search, register, cite, verify, search passages, compile, doctor | the package |
 | `uktub-figures` | Publication-quality plots from the user's data (page-width vector PDF, colour-blind palette, audit, a record of the plotted numbers) | python3, matplotlib |
 | `uktub-diagrams` | System and architecture diagrams as vector TikZ, checked by looking at the render | LaTeX (the compile tool), pdftoppm |
 | `uktub-review` | Referee-style review of a manuscript, grounded in `uktub-scholar review` | node |
@@ -204,6 +218,7 @@ nothing.
 | `provenance [entry.tex] [--json]` | The manuscript's provenance view (no model): verified, cited and uncited statements, figures no cited paper contains, word count; prints the full view |
 | `review [entry.tex] [--out <report.md>]` | Deterministic manuscript review (four structural measures, no model): full report with file:line evidence in `reviews/<date>-slop.md`, a few lines printed |
 | `verify <claim> [--papers all\|<handle>,...] [--query <words>] [--continuation <token>]` | Supporting passages for one claim |
+| `verify (--document <entry.tex> \| --text <fragment>)` | The text as written, one unit at a time (at most 50 units per call) |
 | `search <query> [--papers all\|<handle>,...] [--limit <n>]` | Passage search |
 | `embed status` / `embed install --yes` | Managed embedding runtime |
 | `eos status` / `eos install --yes [--gpu]` | Eos without PyTorch: a pinned ONNX export (about 700 MB) and a small Python environment (about 150 MB) |
@@ -217,31 +232,32 @@ documented defaults otherwise, then environment overrides. Malformed or unknown 
 
 | Key | Default | Source |
 |---|---|---|
-| `chunking.chunk_tokens` | 512 | cap of one chunk, measured ([handoff](docs/handoff.md), section 6); at most 1,433 characters, inside the excerpt limit |
+| `chunking.chunk_tokens` | 512 | cap of one chunk, measured ([handoff V1 (commit 331bb7b) §6](docs/handoff.md)); at most 1,433 characters, inside the excerpt limit |
 | `chunking.overlap_tokens` | 0 | fixed-window boundaries only; a section chunk is a unit |
 | `chunking.chars_per_token` | 2.8 | calibrated on the benchmark corpus |
 | `chunking.boundary` | `section` | `section` (document headings; split only when larger than the cap, tiny sections merged) \| `paragraph` \| `hard` |
-| `verification.engine` | `eos` | owner decision 2026-10-04; env `UKTUB_VERIFY_ENGINE` overrides |
+| `verification.engine` | `hosted` | owner decision 2026-10-15; env `UKTUB_VERIFY_ENGINE` overrides |
 | `verification.min_confidence` | 0.99 | client policy; env `UKTUB_VERIFY_MIN_CONFIDENCE` overrides |
 | `verification.workers` | 4 | client policy: concurrent engine calls |
 | `verification.max_judgments` | 120 | client policy: fresh judgments per call |
 
 ### Verification engines
 
-- **`eos` (default)**: [Decision 2.0 Eos 0.8B](https://huggingface.co/vllm-sr/Decision-2.0-Eos-0.8B), a resident local worker
+- **`eos`**: [Decision 2.0 Eos 0.8B](https://huggingface.co/vllm-sr/Decision-2.0-Eos-0.8B), a resident local worker (the default before 2026-10-15, still selectable)
   (`scripts/decision2_decide.py`) on the pinned reviewed revision, shared per process. It needs a Python environment you
   provide: `torch` (CUDA recommended), `transformers>=5.17`, `safetensors`, selected with `UKTUB_EOS_PYTHON` (default `python3`);
   `UKTUB_EOS_MODEL` (a local snapshot or HF id) and `UKTUB_EOS_REVISION` override the pin. A missing environment is a
   `VERIFY_ENGINE_MISSING` refusal naming the cause. Measured on claim-verification-v2 (547 claims over 48 papers, the real `verify` path at the
   default chunking, 0.99 bar): 68 % of the true claims supported, 2.5 % of the false ones, and the false supports are claims with one changed value,
-  direction or negation. Nine other models were compared with it on the same set and none is distinguishably better in that region ([handoff](docs/handoff.md), section 5; the raw per-model results are in `docs/benchmarks/*.json`).
+  direction or negation. Nine other models were compared with it on the same set and none is distinguishably better in that region ([handoff V1 (commit 331bb7b) §5](docs/handoff.md); the raw per-model results are in `docs/benchmarks/*.json`).
 - **`eos-onnx`**: the same model on ONNX Runtime without PyTorch. `uktub-scholar eos install --yes` downloads a pinned 8-bit export
   (Apache-2.0) and builds a small Python environment, then self-checks the worker; select it with `verification.engine: eos-onnx`. About
   49 ms per judgment on a CUDA GPU, 0.8 s on CPU. `UKTUB_EOS_ONNX_DIR` and `UKTUB_EOS_ONNX_PYTHON` use your own copy;
   `UKTUB_EOS_ONNX_REVISION`, `_SHA256` and `_BOOTSTRAP_PYTHON` adjust the pin and installer.
-- **`hosted`**: `vllm-sr/d3-mini` (4B) on the hosted System One endpoint `https://decision.vllm-sr.ai`, no local model or GPU.
-  Get a free key in one click at [decision.vllm-sr.ai](https://decision.vllm-sr.ai/), set `UKTUB_VERIFY_API_KEY`, and select it with
-  `verification.engine: hosted`; without a key it refuses with that link and never switches engine. On the same 547 claims it supported
+- **`hosted` (default)**: `vllm-sr/d3-mini` (4B) on the hosted System One endpoint `https://decision.vllm-sr.ai`, no local model or GPU.
+  Get a free key in one click at [decision.vllm-sr.ai](https://decision.vllm-sr.ai/) and set `UKTUB_VERIFY_API_KEY`
+  (owner decision 2026-10-15); without a key it refuses with that link and never switches engine. `uktub-scholar doctor`
+  (the `doctor` tool) probes it with one minimal judgment and reports whether verification can run. On the same 547 claims it supported
   93 % of the true claims at about 1 % false supports, and at the 0.99 bar 198 of 269 true and 0 of 278 false
   (`docs/benchmarks/claims-v2-d3-mini-api-2026-10-14.report.md`). The claim and passage text are sent to that service.
 - `openrouter`: `inception/mercury-decide:free` via the System One decisions API; needs `OPENROUTER_API_KEY`;
@@ -250,10 +266,7 @@ documented defaults otherwise, then environment overrides. Malformed or unknown 
   the judgment identity. For a hosted endpoint, `UKTUB_VERIFY_MODEL` sets the routed model id sent in each request and
   `UKTUB_VERIFY_API_KEY` the Bearer key, sent only to an HTTPS origin (a key with a plain-HTTP URL is refused); a 401
   names the missing key without ever printing it.
-- `vela` (experimental, **not adopted**): [Vela 2.0](https://huggingface.co/vllm-sr/Vela-2.0-0.3B) 0.3B on ONNX Runtime or any
-  size on PyTorch (`UKTUB_VELA_BACKEND=torch`), from a snapshot you provide (`UKTUB_VELA_DIR`; also `_REVISION`, `_DEVICE`,
-  `_WEIGHTS_FILE`, `_WEIGHTS_SHA256`, `_INFERENCE_SHA256`, `_PYTHON`); refuses weights that differ from the pinned sha256.
-Setup is in [engines.ts](src/core/verify/engines.ts); quality and licence decisions are in the [handoff](docs/handoff.md) (section 5). The Julia, Laya, K2, bev and Lumma adapters were removed on 2026-10-12 (all rejected; git history keeps them).
+Setup is in [engines.ts](src/core/verify/engines.ts); quality and licence decisions are in [handoff V1 (commit 331bb7b) §5](docs/handoff.md). The Julia, Laya, K2, bev and Lumma adapters were removed on 2026-10-12 (all rejected; git history keeps them).
 
 Offline tests never spend provider quota, and the package never reads credentials from other repositories.
 
@@ -278,7 +291,7 @@ pnpm sandbox                   # a fresh Pi in Docker with this package, Vertex 
 ```
 
 Live acceptance of every tool and action (directly and through a real Pi session in an isolated Docker sandbox) and
-user-simulation experiments are separate tiers: [handoff](docs/handoff.md), section 8 and appendix E, including the `pnpm sandbox`
+user-simulation experiments are separate tiers: [handoff V1 (commit 331bb7b) §8 and appendix E](docs/handoff.md), including the `pnpm sandbox`
 options. Measurements are summarized there and the raw data is in `docs/benchmarks/*.json`; a score is evidence about one dataset, not a guarantee.
 
 ## Repository layout

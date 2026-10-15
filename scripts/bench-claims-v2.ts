@@ -8,7 +8,7 @@
  * One deviation from the product defaults, on purpose: `verification.max_judgments` is raised so a long paper completes in one call
  * (the product would continue it with a continuation token; the score would be the same).
  *
- * Usage: node scripts/bench-claims-v2.ts (--engine eos-onnx | --spec kai|vela-0.8b|vela-0.3b|d3-lite|d3-edge|d1-omni|eos) --device cpu|gpu [--papers N] [--stride K --offset O | --ids file.json] [--resume] [--label L]
+ * Usage: node scripts/bench-claims-v2.ts (--engine eos-onnx | --spec kai|d3-lite|d3-edge|d1-omni|eos) --device cpu|gpu [--papers N] [--stride K --offset O | --ids file.json] [--resume] [--label L]
  * Output: <out>/claims-v2-<label>-<date>.results.json (records and run facts); the metrics come from bench-claims-v2-report.ts.
  */
 import { createHash } from "node:crypto";

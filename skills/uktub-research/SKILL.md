@@ -1,6 +1,6 @@
 ---
 name: uktub-research
-description: Using uktub-scholar's five tools for scholarly search, the paper registry (register, acquire, read, remove, attach, sync), citekeys, LaTeX compilation, one-claim evidence retrieval, and exploratory passage search.
+description: Using uktub-scholar's six tools (and `doctor` for setup problems) for scholarly search, the paper registry (register, acquire, read, remove, attach, sync), citekeys, LaTeX compilation, one-claim evidence retrieval, and exploratory passage search.
 ---
 
 # Scholarly research with uktub-scholar
@@ -109,6 +109,29 @@ The capabilities and arguments are identical in either form.
 - Search is hybrid when an embedding runtime is present (combining FTS5 BM25 lexical search and dense cosine vector search via Reciprocal Rank Fusion), or lexical BM25 when no embedder is configured.
 - Use `passages` to explore what the registered papers say about a topic or question.
 - **Retrieval is not verification**: always use `verify` to rigorously verify a factual proposition before citing it.
+
+## Writing a document from the papers
+
+No claim from memory: every factual statement needs a registry pointer.
+When writing a document, work section by section, never in one bulk write:
+
+1. Plan an outline: sections, each with a goal and the citekeys it may use.
+2. If `write_section` is available, write each section with it
+   (`goal`, plus `papers` as ONE string of citekeys separated by spaces or
+   commas). Otherwise write each section yourself only from `passages` of the
+   listed papers, then run `verify` with `text` on what you wrote.
+3. Assemble the sections into the manuscript, then `compile`.
+4. Run `verify` with `document` on the whole manuscript.
+5. Resolve every non-`supported` unit before reporting done: rewrite it from a
+   passage of its cited paper, add the suggested citation, delete it, or mark
+   it explicitly unverified. Recompile, re-verify, and list what is still
+   unverified in your final report.
+
+`verify` document mode checks the text as written, 50 units per call; when
+the result says NOT DONE, call again with the `offset` it names until every
+unit is checked. Cited units are checked against their own papers, uncited units against all
+registered papers. `missing-citation` names the paper to cite;
+`unregistered` names a citekey the registry does not know.
 
 ## Compiling the document
 

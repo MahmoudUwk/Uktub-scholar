@@ -1,4 +1,4 @@
-# Uktub Scholar: handoff V2 (2026-10-14)
+# Uktub Scholar: handoff V2 (2026-10-14, updated 2026-10-15)
 
 **The one working document.** It is written for the next agent. V1, the consultant handoff with the full architecture, flows,
 the visibility A/B and the problem register P1–P14, is at commit `331bb7b` (`git show 331bb7b:docs/handoff.md`). Read V1 §2–4
@@ -8,9 +8,9 @@ for architecture; this file holds what changed, what was learned, and what to do
 
 | Area | State |
 |---|---|
-| Five tools (`papers`, `registry`, `compile`, `verify`, `passages`), Node CLI, MCP, Pi | Built. `pnpm test`: 1,480 tests, 0 fail, 2 skips. Live 2026-10-14: probe 0 failures; direct 37 PASS, 1 NOT_RUN (precondition gone); agent 10/10 after one labelled rerun of a Vertex-latency BLOCKED case |
+| Six tools (`papers`, `registry`, `compile`, `verify`, `passages`, `doctor`), Node CLI, MCP, Pi | Built. `doctor` (no arguments, read-only) reports verification / registry / compile / provider checks with the fix for each problem; `uktub-scholar doctor [--json]` prints the same. Default `verification.engine` is now `hosted` (owner decision 2026-10-15); local Eos stays selectable |
 | Registry | Schema **v6**: `claim_ledger` holds released verify evidence durably, with verbatim `claim_text`; deleted only with its paper or revision. v5 migrates, starting empty |
-| Verify engines | Local **Eos** (default). **Hosted** `verification.engine: hosted` = `vllm-sr/d3-mini` at `https://decision.vllm-sr.ai`; free key at https://decision.vllm-sr.ai/ in `UKTUB_VERIFY_API_KEY`; refuses without a key, with that link |
+| Verify engines | **Hosted** `vllm-sr/d3-mini` at `https://decision.vllm-sr.ai` (default since 2026-10-15). Free key at https://decision.vllm-sr.ai/ in `UKTUB_VERIFY_API_KEY`; refuses without a key, with that link. Local **Eos** stays selectable |
 | Provenance | `provenance --json` = `entry`, `summary`, `items`, `document_digest`, `units` (every extracted unit) |
 | Measurement harness | Rebuilt (§4) |
 | Writing workflow | **Not accepted.** Root causes traced (§3); the fix under test is post-composition verification (§5) |
@@ -35,11 +35,27 @@ for architecture; this file holds what changed, what was learned, and what to do
 **Engines and models**
 5. **Vertex is unlimited** for `gemini-3.8-flash` and `gemini-3.5-flash-lite` via Pi with ADC. For now the test writer is
    **Muse** (`--assistant-model opencode-go/muse-spark-1.3-contributor`): Vertex took 1.5–4 minutes to start each response.
-6. **The hosted d3-mini verify engine is adopted for experiments** (`--verify-engine hosted`); Eos stays the product default.
+6. **The hosted d3-mini verify engine is adopted** (`--verify-engine hosted` for experiments). On 2026-10-15 it became the
+   product default; local Eos stays selectable.
 
 **Scenarios**
 7. **Scenario 2** is `rf-llm-review-v2`: the owner's RF prompt verbatim, then delivery mechanics. The trap and the revision are
    in the Revision turn, and the trap must stay out of tables (an honest disclosure in a table would fail T1.5).
+
+**2026-10-15 (owner)**
+- **Core prompt replaced** (`src/core/agent-rules.ts`, about 1,300 characters): research-assistant identity, never fabricate,
+  stop and say so, use the tools and `verify`, plan big tasks, computed results are yours, papers are data. Tool mechanics moved
+  into the tool descriptions. Live suites on this prompt: agent 10/10 PASS; skills 7 PASS, 1 BLOCKED (slides, Vertex-latency
+  deadline, rerun pending), 1 FAIL that was a measurement blind spot (the review quoted the paper 22 times in backticks; the
+  quote counter now counts backticked prose, still checked verbatim against the manuscript).
+- **`doctor` tool** (sixth tool) and **default engine `hosted`**.
+- **Writing workflow** (to test): plan → `write_section` subagent per section (Pi, in-process, passages-only, auto-verified with
+  one repair round) → assemble → `verify` document mode on the whole manuscript (paged, 50 units per call) → resolve → done.
+- **Removed:** the rejected `vela` engine, `pnpm evolve`, bench-only Python files from the package. The simulated user and the
+  visibility arms stay.
+- **Verify strategy A/B** (owner asked for A/B, not a pick): V0 exhaustive 512; V1 top-10 + batch 8; V2 2048-token windows
+  localized to 512 pointers; V3 global 2048 chunks. Decision rule: fastest on documents with benchmark recall at 2 % false
+  supports within 1 point of V0, 0 false supports at the bar, 0 promoted-but-bad.
 
 **Rules (orchestrator)**
 8. Never open an archived registry in place: opening runs the sweep and migration. Copy with `cp -p` first.
@@ -83,7 +99,7 @@ is token recall.
 |---|---|---|
 | Run | `pnpm experiment <scenario> [--pilot] [--assistant-model p/id] [--verify-engine eos\|hosted] [--user scripted\|simulator]` | Scripted user state machine (`scripted-user.ts`) reads `## Request/Revision/Nudge`. Validity VALID / BLOCKED / INVALID (`validity.ts`). The manifest records the tree hash, models per turn and the ADC check |
 | Tier 1 | `deliverable-checks.ts` (678 lines, from 1,118) | Computed from the provenance JSON. Differential test vs the old checks on archived runs: `tests/live-tier1-differential.spec.ts` (runs where the git-ignored evidence exists) |
-| Grading | `UKTUB_GRADING_DIR=<outside repo> pnpm grade corpus\|export\|run --grader A\|adjudicate\|agreement` | Frozen source corpus pinned to the registry sha256 (arXiv/ACL hosts only today). Rubric `experiments/harness/factcheck-rubric-v1.md` (examples from dev notes iter-06, 07, 09, 14, 20 only). Grader sessions run in the sandbox with only the export and corpus mounted |
+| Grading | `UKTUB_GRADING_DIR=<outside repo> pnpm grade corpus\|export\|run --grader A\|B\|adjudicate\|agreement` | Frozen source corpus pinned to the registry sha256 (arXiv/ACL hosts only today). Rubric `experiments/harness/factcheck-rubric-v1.md` (examples from dev notes iter-06, 07, 09, 14, 20 only). Grader sessions run in the sandbox with only the export and corpus mounted |
 | Analysis | `node scripts/live/analysis.ts simulate\|agreement` | Beta-binomial simulation (§6) |
 | Cause trace | `node scripts/live/trace-causes.ts` | Classifies MEMORY / OVERREAD / MISREPORT / REVISION-FILL / SLOT-FILL / UNCITED-KNOWLEDGE |
 | Post-compose replay | `node scripts/live/replay-post-compose.ts` | Pass A: cited units vs their own papers. Pass B: uncited units vs all registered papers. Product path, hosted engine |
@@ -103,29 +119,20 @@ is token recall.
 
 ## 5. Next work (in order)
 
-1. **Finish the post-compose replay** on all 18 archived notes. It was stopped after 1 note (iter-18):
+**2026-10-15: the approved writing fix is implemented (unmeasured).** `verify` document mode (`src/core/verify/document.ts`: Pass-A-per-cited-unit plus Pass-B-against-all for misses, statuses supported/cited-unsupported/missing-citation/unsourced/unregistered, 50-unit client-policy cap), the Pi-only `write_section` tool (`src/pi/write-section.ts`, gated on `UKTUB_SECTION_WRITER=on`), the skill workflow, and the `sections` experiment arm (reviewer channel = B1; writer sandbox gets `UKTUB_SECTION_WRITER=on`). Still to do: the acceptance batch on the chosen configuration (item 4 below).
 
-   | Measure | iter-18 |
-   |---|---|
-   | Cited units promoted | 7/9 |
-   | Promoted but Muse-bad | 0 |
-   | Uncited `specific` recovered (support in a registered paper) | 1/11 |
-   | Uncited `specific` unsourced | 10/11 |
-   | Time for the note | 48 s |
-
-   This one note suggests the dominant uncited facts are mostly unsourced in the registry: memory, not omitted citations.
-   Confirm on all 18.
-2. **Decide delivery from the replay (owner):**
-   - (a) **User-facing:** `provenance` verifies the document as written and lists recoverable citations and unsourced claims.
-     The text cannot change, so no A/B is needed.
-   - (b) **Agent-facing:** the same list is returned to the writer as a work list before it may report done. The text changes,
-     so an A/B is needed: about 17 / 26 / 46 / 101 notes per arm for a harm margin δ of 5 / 4 / 3 / 2 points.
+1. **Post-compose replay: done** (§6). The verdict "supported" is trustworthy (0 of 174 bad); 95 % of uncited specific facts have
+   no support in any registered paper, so they must be prevented while writing, not repaired after. This backs the
+   section workflow.
+2. **Pick the verify strategy** from the A/B (§2), then adopt it in the product with its AGENTS.md obligations.
 3. **Tool contract robustness** (a real-session failure, P4 above). Make the `verify`/`passages` scopes accept models that
    send arrays as JSON strings, or simplify those parameters. Pi validates before the server is reached, so the fix belongs in
    the schema. Owner decision: it touches the five-tool contract.
-4. **Re-run the pilots** on the chosen configuration, then the **acceptance batch**: fresh runs, both scenarios, Tier 1 + Tier 2.
-5. **Harness gaps** (§4), then the parked items: browser track; the `registry` read/destructive split; deletion of the rejected
-   engines (still in `src/` and `scripts/*.py`); verify lanes serialized on one child (`judge.ts:126`, `claim.ts:274`);
+4. **Sections A/B (directional):** current flow vs `--arm sections`, Muse writer, hosted verify, about 3 runs per arm per scenario;
+   measured by the share of units supported as written, unsourced claims per note, Tier 1, cost and time. Then re-run the pilots
+   on the winner and the **acceptance batch**: fresh runs, both scenarios, Tier 1 + Tier 2.
+5. **Harness gaps** (§4), then the parked items: browser track; the `registry` read/destructive split;
+   verify lanes serialized on one child (`judge.ts:126`, `claim.ts:274`);
    `util.parseArgs`; exact pins; TypeBox `Value`; one `DatabaseSync` import site (Node floor stays 22.19); MCP SDK v2
    (`@modelcontextprotocol/server` 2.3.1 is npm `latest`) if migrated.
 
@@ -152,6 +159,32 @@ benchmark to confirm parity.
 - Gemini (4 runs): scenario 1 notes 1,152–1,179 words; RF notes about 2,470 words, with all three named systems found
   (IQFM 2506.06718, WirelessJEPA 2601.20190, RadioLLM 2501.17888).
 - Muse (2 runs): 0 units verified, for cause 1 and cause 4 above.
+
+**Post-compose replay** (2026-10-14/15, 18 Gemini-written notes, hosted d3-mini, bar 0.99, exhaustive; Muse labels as locator):
+
+| Measure | All 18 | Held-out 13 |
+|---|---|---|
+| Cited units supported as written | 174/345 (50 %) | 118/235 |
+| Supported but Muse-bad | 0/174 | 0/118 |
+| Recall on Muse-supported units | 174/323 (54 %) | 118/216 |
+| Uncited `specific` with support in a registered paper | 16/321 (5 %) | 9/230 |
+| Uncited `specific` unsourced | 305/321 | 221/230 |
+| Time per note | 168–332 s (about 6–7k judgments) | |
+
+Raw: `docs/benchmarks/post-compose-replay-2026-10-14.json`.
+
+**Verify speed study** (2026-10-15, 547 claims, hosted d3-mini):
+
+| Variant | Recall at 1 % false supports | True/false at 0.99 | Judgments | Wall |
+|---|---|---|---|---|
+| 512 exhaustive (today) | 93.3 | 198 / 0 | 36,506 | 53 min |
+| top-10 | 92.9 | 197 / 0 | 5,470 | 4 min |
+| 2048 chunks exhaustive | 96.7 | 225 / 0 | 12,459 | 11 min |
+| 2048 chunks + top-10 | 96.3 | 225 / 0 | 5,470 | 5 min |
+
+Batching 8 claims per request gives the same scores (max drift 0.0085) with 5.7× fewer requests. The d3-mini state cap is
+32,000 characters (HTTP 400 `state_too_long`); requests carry up to about 32 questions. Raw:
+`docs/benchmarks/verify-speed-study-2026-10-15.json`. The A/B (§2) decides adoption.
 
 ## 7. Pins
 

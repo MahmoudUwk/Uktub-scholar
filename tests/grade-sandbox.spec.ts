@@ -38,7 +38,7 @@ describe("graderCommand", () => {
   it("mounts only note/corpus read-only plus writable out/agent dirs and read-only ADC", () => {
     const s = spec();
     const { args } = graderCommand(s, ["pi", "--mode", "rpc"]);
-    const vols = args.filter((a, i) => args[i - 1] === "-v");
+    const vols = args.filter((_, i) => args[i - 1] === "-v");
     assert.ok(vols.some((v) => v === `${s.noteDir}:/work/note:ro`), vols.join(" "));
     assert.ok(vols.some((v) => v === `${s.corpusDir}:/work/corpus:ro`), vols.join(" "));
     const out = vols.find((v) => v.startsWith(`${s.outDir}:`)) ?? "";

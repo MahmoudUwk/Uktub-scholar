@@ -1,7 +1,8 @@
 /**
  * Configured verification-engine registry (KTD6): maps `verification.engine` from config/chunking.yaml to a ClaimEngine. The default
- * is `eos` (a local resident worker, owner decision 2026-10-04); every other engine is selectable only (OpenRouter Mercury Decide is
- * the best measured; `vela` was benchmarked and not adopted, docs/DECISIONS.md; Julia, Laya, K2, bev and Lumma were removed 2026-10-12). Every knob is a named env; the engine itself never
+ * is `hosted` (owner decision 2026-10-15); local Eos (`eos`, `eos-onnx`) stays selectable, as do the other engines (OpenRouter Mercury Decide is
+ * the best measured; rejected engines — Julia, Laya, K2, bev and Lumma removed 2026-10-12, vela removed 2026-10-15 — live in git
+ * history, rationale in docs/handoff.md). Every knob is a named env; the engine itself never
  * reads ambient state.
  */
 
@@ -17,9 +18,6 @@ import {
   eosOnnxEngine,
   openrouterDecisionsEngine,
   systemoneEndpointEngine,
-  velaEngine,
-  VELA_MODEL,
-  VELA_REVISION,
   type ClaimEngine,
 } from "./claim.ts";
 
@@ -42,7 +40,6 @@ export const VERIFICATION_ENGINES = [
   "eos-onnx",
   "openrouter",
   "llama-cpp",
-  "vela",
   "hosted",
 ] as const;
 
@@ -56,7 +53,6 @@ const PROTOCOLS: Record<(typeof VERIFICATION_ENGINES)[number], string> = {
   "eos-onnx": "decision2-noul-v1",
   openrouter: SYSTEMONE_PROTOCOL,
   "llama-cpp": SYSTEMONE_PROTOCOL,
-  vela: "vela2-halu-v1",
   hosted: SYSTEMONE_PROTOCOL,
 };
 
@@ -153,15 +149,6 @@ export async function resolveEngineIdentity(
       // The host serves no models listing today: the requested model stands in, guarded by the per-response echo check.
       return { model: `hosted:${served ?? HOSTED_MODEL}`, protocol: SYSTEMONE_PROTOCOL };
     }
-    case "vela": {
-      // Same rule as eos-onnx: under the pinned digests the worker refuses any other weights or inference code, so the pin IS the
-      // identity (and moving the snapshot keeps cached judgments). An override of the revision, a digest or the export drops that
-      // guarantee: fingerprint the directory instead.
-      const revision = (env.UKTUB_VELA_REVISION ?? VELA_REVISION).slice(0, 12);
-      const overridden = ["UKTUB_VELA_REVISION", "UKTUB_VELA_WEIGHTS_SHA256", "UKTUB_VELA_INFERENCE_SHA256", "UKTUB_VELA_WEIGHTS_FILE", "UKTUB_VELA_BACKEND"].some((k) => env[k] !== undefined);
-      const dir = env.UKTUB_VELA_DIR;
-      return { model: `vela:${overridden && dir !== undefined && dir !== "" ? localModelRef(dir) : VELA_MODEL}@${revision}`, protocol: "vela2-halu-v1" };
-    }
     default:
       throw new Error(`unknown verification engine: ${engine}`);
   }
@@ -170,7 +157,7 @@ export async function resolveEngineIdentity(
 /** Resident worker engines (a model loaded into GPU memory) are shared per process and
  *  configuration, so a long-lived host does not reload the model for every call. */
 const resident = new Map<string, ClaimEngine>();
-const RESIDENT_ENGINES = new Set(["eos", "eos-onnx", "vela"]);
+const RESIDENT_ENGINES = new Set(["eos", "eos-onnx"]);
 
 function residentKey(env: Record<string, string | undefined>, engine: string): string {
   return `${engine}|${Object.entries(env).filter(([k, v]) => v !== undefined && k.startsWith("UKTUB_")).sort(([a], [b]) => (a < b ? -1 : 1)).map(([k, v]) => `${k}=${v}`).join("&")}`;
@@ -212,8 +199,6 @@ function buildEngine(env: Record<string, string | undefined>, engine: string): C
       }
       return systemoneEndpointEngine({ env, url: `${HOSTED_URL}/v1/systemone`, label: "hosted", apiKey, model: HOSTED_MODEL });
     }
-    case "vela":
-      return velaEngine({ env });
     default:
       throw new Error(
         `unknown verification.engine "${engine}" (known: ${VERIFICATION_ENGINES.join(", ")})`,

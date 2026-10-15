@@ -64,6 +64,15 @@ describe("unfoundQuotes", () => {
     assert.equal(r.total, 3);
     assert.deepEqual(r.missing, ["the authors guarantee convergence on every household in the world"]);
   });
+  it("also counts prose quoted in backticks (a real review quoted that way), but not a file:line reference", async () => {
+    const { unfoundQuotes } = await import("../scripts/live/skill-cases.ts");
+    const dir = mkdtempSync(join(tmpdir(), "quote-"));
+    writeFileSync(join(dir, "r.tex"), "No fixed random seed is set; each training run uses a fresh environment seed.\n");
+    const answer = "It says `each training run uses a fresh environment seed` (see `manuscript/results.tex:218-219`), and `the authors guarantee convergence on every household`.";
+    const r = unfoundQuotes(answer, dir);
+    assert.equal(r.total, 2);
+    assert.deepEqual(r.missing, ["the authors guarantee convergence on every household"]);
+  });
 });
 
 describe("numbersNotInPaper", () => {

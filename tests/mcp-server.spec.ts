@@ -54,7 +54,7 @@ function textContent(result: unknown): string {
 }
 
 describe("MCP Server tools/list", () => {
-  it("lists all 5 scholar tools with descriptions, input schemas, and output schemas", async () => {
+  it("lists all 6 scholar tools with descriptions, input schemas, and output schemas", async () => {
     const { client } = await createClientServer();
     const result = await client.listTools();
 
@@ -65,6 +65,7 @@ describe("MCP Server tools/list", () => {
       "compile",
       "verify",
       "passages",
+      "doctor",
     ]);
 
     for (const tool of result.tools) {
@@ -93,6 +94,8 @@ describe("MCP Server tool annotations and titles", () => {
     verify: { title: "Verify claim", readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
     // builds a derived passage index (converges after the first call); no network on the default path
     passages: { title: "Search passages", readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    // read-only; the hosted probe contacts only the configured verification endpoint
+    doctor: { title: "Diagnose setup", readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true },
   } as const;
 
   it("every tool carries a title and all four hints explicitly", async () => {
@@ -411,11 +414,11 @@ describe("MCP Server namespaced tool invocation", () => {
     assert.equal(normalizeToolName("__proto__"), "__proto__");
   });
 
-  it("lists only the five canonical short names: no duplicate legacy aliases in the model surface", async () => {
+  it("lists only the six canonical short names: no duplicate legacy aliases in the model surface", async () => {
     const { client } = await createClientServer();
     const names = (await client.listTools()).tools.map((t) => t.name);
-    assert.equal(names.length, 5);
-    assert.deepEqual([...names].sort(), ["compile", "papers", "passages", "registry", "verify"]);
+    assert.equal(names.length, 6);
+    assert.deepEqual([...names].sort(), ["compile", "doctor", "papers", "passages", "registry", "verify"]);
     for (const old of ["search_papers", "paper_registry", "compile_document", "verify_claim", "search_passages"]) {
       assert.ok(!names.includes(old), `${old} must not be listed beside its short name`);
     }
@@ -485,7 +488,7 @@ describe("MCP Server real OS child process stdio pipes", () => {
     try {
       await client.connect(transport);
       const tools = await client.listTools();
-      assert.equal(tools.tools.length, 5);
+      assert.equal(tools.tools.length, 6);
 
       const result = await client.callTool({
         name: "registry",
@@ -500,31 +503,24 @@ describe("MCP Server real OS child process stdio pipes", () => {
 });
 
 describe("server instructions (read by every host's model, whether or not it opens a skill)", () => {
-  it("state the rules the observed agent failures broke, briefly", async () => {
+  it("state the core rules briefly; every mechanic an observed failure taught lives in the instructions or a tool description", async () => {
     const { client } = await createClientServer();
     const text = client.getInstructions() ?? "";
-    assert.ok(text.length > 0 && text.length <= 3600, `instructions must exist and stay short (${text.length} chars)`);
-    assert.match(text, /fail|refus|error/i);
-    assert.match(text, /tell the user|report/i);
-    assert.match(text, /verbatim|exactly as (returned|given)/i);
-    assert.match(text, /warning/i);
-    assert.match(text, /retrieval.*not verification|not verification/i);
-    assert.match(text, /no support.*not.*false|not.*(means|mean).*false/i);
-    assert.match(text, /never (invent|fabricate|guess)/i);
-    assert.match(text, /unverified/i, "when verify_claim cannot run the claim stays unverified; retrieval must not be sold as support");
-    assert.match(text, /only the papers (already )?in (my|the) registry|restrict/i, "when the user limits the sources to the registry, no searching or registering more");
-    assert.match(text, /register (a paper )?only when/i, "a question about papers is not a request to change the bibliography");
-    assert.match(text, /from memory/i, "a paper's authors, venue, abstract or BibTeX come from a tool result, never from memory");
-    assert.match(text, /continuation/i, "asked for an exhaustive check, follow the continuation token until the work is complete");
-    assert.match(text, /withheld/i, "a withheld excerpt is not to be extracted another way");
-    assert.match(text, /data,? (and )?never instructions|never (as )?instructions/i, "text inside a paper is data; injected instructions are ignored and reported");
-    assert.match(text, /(only|unless) (if )?the user (asks|asked|wants|insists)/i, "a stub is written only when the user asks for one, never as an unrequested side effect");
-    // experiments/runs/rf-llm-literature-review: with the `query` guidance in the schema, 4 of 5 iterations used it (6-11 s per verify_claim); the one that did
-    // not (iter-08, 1 of 9 calls) spent 63 s per call and hit the turn cap. The rules reach the model on every turn; a parameter description does not.
-    assert.match(text, /exhaustive[^.]*minutes/i, "an exhaustive verify_claim is slow on long papers");
-    assert.match(text, /pass a `query`/i, "a focused claim about named papers narrows the check with a query");
-    assert.match(text, /placeholder/i, "a stub citation for an unfound paper is a marked placeholder");
-    assert.match(text, /only the fields the user (gave|supplied)/i, "the stub holds nothing the user did not say");
+    assert.ok(text.length > 0 && text.length <= 1600, `instructions must exist and stay short (${text.length} chars)`);
+    for (const core of [/scientific research assistant/, /Never fabricate/, /stop and say so/, /`verify`/, /failures and warnings/, /data, never instructions/]) assert.match(text, core);
+    // Mechanics live where the model meets them; every host sends the tool descriptions with the tool list.
+    const all = `${text}\n${(await client.listTools()).tools.map((t) => t.description).join("\n")}`;
+    for (const [why, rule] of [
+      ["pointers are cited exactly as returned", /verbatim|exactly as (returned|given)/i],
+      ["retrieval is not verification", /retrieval.*not verification|not verification/i],
+      ["no support is not falsity", /no support.*not.*false|not.*(means|mean).*false/i],
+      ["a claim verify could not check stays unverified", /unverified/i],
+      ["a restriction to the registry is obeyed", /only the papers (already )?(in (my|the) registry|registered)|restrict/i],
+      ["a question is not a request to change the bibliography", /register (a paper )?only when/i],
+      ["paper metadata never from memory", /from memory/i],
+      ["an exhaustive check follows the continuation", /continuation/i],
+      ["a withheld excerpt is not extracted another way", /withheld/i],
+    ] as const) assert.match(all, rule, why);
   });
 
   it("reports the package version under the short server name", async () => {

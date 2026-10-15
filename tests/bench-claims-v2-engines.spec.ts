@@ -12,7 +12,7 @@ import { engineSpecs } from "../scripts/bench-claims-v2-engines.ts";
 describe("engine specs of the v2 runner", () => {
   const specs = engineSpecs("/h");
   it("name every candidate of the v2 table once, in a stable order", () => {
-    assert.deepEqual(Object.keys(specs), ["eos", "kai", "vela-0.8b", "vela-0.3b", "d3-lite", "d3-edge", "d1-omni", "intern-0.8b", "kev-0.8b", "kev-0.8b-native", "d3-mini-api", "eos-onnx", "eos-q8"]);
+    assert.deepEqual(Object.keys(specs), ["eos", "kai", "d3-lite", "d3-edge", "d1-omni", "intern-0.8b", "kev-0.8b", "kev-0.8b-native", "d3-mini-api", "eos-onnx", "eos-q8"]);
   });
   it("run through a product engine, or are injected under a product engine name with a declared identity", () => {
     for (const [id, s] of Object.entries(specs)) {
@@ -25,7 +25,7 @@ describe("engine specs of the v2 runner", () => {
     for (const [id, s] of Object.entries(specs)) if (s.adapter) assert.ok(existsSync(join("scripts", s.adapter.script)), `${id}: ${s.adapter.script}`);
   });
   it("pin every model to a recorded revision: the 40-hex commit, or the 12-hex prefix the earlier reports use (Eos is pinned by the product itself)", () => {
-    const revs = Object.entries(specs).map(([id, s]) => [id, s.adapter?.env.UKTUB_D3_REVISION ?? s.adapter?.env.UKTUB_D1_REVISION ?? s.adapter?.env.UKTUB_INTERN_REVISION ?? s.server?.declaredId.match(/@([0-9a-f]{12})/)?.[1] ?? s.env.UKTUB_EOS_REVISION ?? s.env.UKTUB_VELA_REVISION] as const);
+    const revs = Object.entries(specs).map(([id, s]) => [id, s.adapter?.env.UKTUB_D3_REVISION ?? s.adapter?.env.UKTUB_D1_REVISION ?? s.adapter?.env.UKTUB_INTERN_REVISION ?? s.server?.declaredId.match(/@([0-9a-f]{12})/)?.[1] ?? s.env.UKTUB_EOS_REVISION] as const);
     for (const [id, r] of revs) if (id !== "eos" && id !== "eos-onnx" && id !== "eos-q8" && !specs[id]!.remote) assert.match(r ?? "", /^[0-9a-f]{12}([0-9a-f]{28})?$/, id);
   });
   it("a hosted candidate has no weights to pin: it names the served model and the wording, so a rerun of the same claims is its parity check", () => {
@@ -35,13 +35,10 @@ describe("engine specs of the v2 runner", () => {
       assert.equal(s.remote.declaredId, `${s.remote.model}:${s.remote.wording}`, `${id}: the declared identity is the served model id and the wording`);
     }
   });
-  it("put the two Vela sizes and the d3 pair on different weights", () => {
-    assert.notEqual(specs["vela-0.8b"]!.env.UKTUB_VELA_DIR, specs["vela-0.3b"]!.env.UKTUB_VELA_DIR);
+  it("put the d3 pair on different weights", () => {
     assert.notEqual(specs["d3-lite"]!.adapter!.env.UKTUB_D3_MODEL, specs["d3-edge"]!.adapter!.env.UKTUB_D3_MODEL);
   });
   it("ask for the GPU everywhere an engine has the choice", () => {
-    assert.equal(specs["vela-0.8b"]!.env.UKTUB_VELA_DEVICE, "cuda");
-    assert.equal(specs["vela-0.3b"]!.env.UKTUB_VELA_DEVICE, "cuda");
     assert.equal(specs["d3-lite"]!.adapter!.env.UKTUB_D3_DEVICE, "cuda:0");
     assert.equal(specs["d1-omni"]!.adapter!.env.UKTUB_D1_DEVICE, "cuda:0");
     assert.equal(specs["intern-0.8b"]!.adapter!.env.UKTUB_INTERN_DEVICE, "cuda:0");
