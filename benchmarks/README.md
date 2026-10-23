@@ -49,7 +49,7 @@ in `~/.cache/uktub-bench/score-cache.json` (keyed by engine, revision, claim has
 - **Engines.** `decision2-eos` (default) and `decision2-kai`. Other models run through the v2 runner (`scripts/bench-claims-v2-engines.ts`); the v1 runs of d1-omni, d3, Vela and OpenRouter in `docs/benchmarks/` were made with engines removed from this runner on 2026-10-12. The `decision2-*` engines use
   `scripts/decision2_decide.py` through `scripts/decision2-client.ts`, which keeps per-row refusals as results. They need an
   isolated venv (torch, transformers >= 5.17), pinned revisions and `UKTUB_DECISION2_MODEL` / `_REVISION` / `_PYTHON`; commands,
-  pins and results: the [handoff](../docs/handoff.md) (section 5 and appendix C). Adapters are in
+  pins and results: handoff V1 in git history (`git show 331bb7b:docs/handoff.md`, section 5 and appendix C). Adapters are in
   [claim.ts](../src/core/verify/claim.ts) and [engines.ts](../src/core/verify/engines.ts).
 
 Adoption bars: **AUC >= 0.80 and decided accuracy >= 0.90** on this dataset. That is dataset evidence, not a guarantee for

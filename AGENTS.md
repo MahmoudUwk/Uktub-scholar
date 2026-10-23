@@ -42,7 +42,7 @@ in `docs/benchmarks/*.json`; `benchmarks/` owns datasets/protocols.
 - Use [Hermes](.agents/skills/hermes-subagent/SKILL.md) for any task within its brief: research, coding, docs, commands, downloads, installs or data work. Give a self-contained `worker-brief.md`
   naming scope, allowed tools/paths, acceptance checks and running workloads; prefer scratch directories. Independently read
   its output and rerun authoritative checks. The orchestrator owns integration and all git operations.
-- Native workers: Haiku, never Opus, at most 20; obey tighter session limits. Never use Sol/Astra (owner, October 13). If the permitted model is
+- Native workers: Haiku, or Sonnet for planning (owner, 2026-10-23), never Opus, at most 20; obey tighter session limits. Never use Sol/Astra (owner, October 13). If the permitted model is
   unavailable, use Hermes. Pi must not shell out to `pi -p` workers.
 - Read `.agents/skills/{openalex,semantic-scholar,crossref,europepmc}` before provider changes.
 - `archive/` outside this repo is out of scope: never read its credentials or port its code. Inspect `reference_repos/` before

@@ -48,8 +48,11 @@ local Eos selectable), passage search, document-as-written verification, a setup
 sources, a live test harness and a Docker sandbox. Direction (2026-10-15): the agent is a general scientific research
 assistant that plans and does what the user asks (literature, writing, analysis, code for simulations and experiments), with
 honesty enforced by tools (verification of the text as written, provenance, audits of cited and computed figures) and a short
-prompt rather than long rules. Next, prove the section-writing workflow and the acceptance batch, establish browser feasibility
-and build the static client, then continue evidence-gated work ([handoff](handoff.md) §5), better host adapters, and further skills for the Uktub agent (slide
+prompt rather than long rules. The browser MVP exists (`web/`). Direction (owner, 2026-10-23): verification judges whole
+paper sections with all of a paper's claims in one request, and runs automatically only after a section is written; section
+writers are agents that read the full text of at most 20 parent-assigned papers through a code-scoped registry and mark
+each claim with its sources; the parent writes abstract, introduction and conclusion last from the written sections. No
+summaries or paper cards ([handoff](handoff.md) §1). Then continue evidence-gated work, better host adapters, and further skills for the Uktub agent (slide
 and Word, Excel and PDF editing, scientific figures, manuscript review, grant proposals), each adopted on evidence from the
 skill libraries recorded in handoff V1 (commit 331bb7b, appendix F).
 
