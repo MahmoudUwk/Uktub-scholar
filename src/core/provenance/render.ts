@@ -65,7 +65,7 @@ export function renderFull(a: ProvenanceAudit, maxChars = FULL_CHARS): string {
   const lines: string[] = [
     "# Provenance view",
     "",
-    "How to read it. verified: the package's verify ledger holds support for this exact wording from a paper the statement cites (pointer shown). cited: the statement cites a registered paper but this wording was not verified. uncited: no citation. A prose statement that is not verified must carry the word \"unverified\" to ship (D1); the unlabelled ones are listed at the end. A figure is \"found\" when the number (or hardware name) occurs in the cited paper's captured text; this view never judges whether a paper supports a statement's meaning.",
+    "How to read it. verified: the package's verify ledger holds support for this exact wording from EVERY paper the statement cites (pointers shown). cited: the statement cites a registered paper but this wording was not verified. uncited: no citation. A prose statement that is not verified must carry the word \"unverified\" to ship (D1); the unlabelled ones are listed at the end. A figure is \"found\" when the number (or hardware name) occurs in the cited paper's captured text; this view never judges whether a paper supports a statement's meaning.",
     "",
     ...renderSummary(a, 1000).slice(0, 2),
   ];
@@ -88,7 +88,10 @@ export function renderFull(a: ProvenanceAudit, maxChars = FULL_CHARS): string {
   lines.push("", `## Verified statements (${by("verified").length})`);
   for (const u of by("verified")) lines.push(`- L${u.unit.line} "${clip(u.unit.plain, 100)}" -> ${(u.ledger?.pointers ?? []).slice(0, 2).join(", ")}`);
   lines.push("", `## Cited, wording not verified (${by("cited").length})`);
-  for (const u of by("cited")) lines.push(`- L${u.unit.line} [${u.unit.kind}] "${clip(u.unit.plain, 100)}" (${u.unit.cites.join(", ")})`);
+  for (const u of by("cited")) {
+    const missing = u.unsupportedCites.length > 0 ? ` — not supported by: ${u.unsupportedCites.join(", ")}` : "";
+    lines.push(`- L${u.unit.line} [${u.unit.kind}] "${clip(u.unit.plain, 100)}" (${u.unit.cites.join(", ")})${missing}`);
+  }
   const info = a.items.filter((i) => i.severity === "info");
   lines.push("", `## Figures in statements that cite no paper (${info.length})`);
   for (const i of info) lines.push(`- L${i.line} ${i.token} — "${clip(i.excerpt, 90)}"`);

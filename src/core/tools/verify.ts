@@ -13,6 +13,7 @@
 import { Type, type Static } from "typebox";
 
 import { RegistryError, openRegistry } from "../registry.ts";
+import type { ParsedAnnotations } from "../verify/annotations.ts";
 import { documentWorkflow, MAX_DOCUMENT_UNITS, TABLE_ROW_NOTE, type DocumentUnitResult, type DocumentUnitStatus } from "../verify/document.ts";
 import { normalizePapersScope } from "../verify/scope.ts";
 import { verifyWorkflow, type WorkflowHooks } from "../verify/workflow.ts";
@@ -102,7 +103,7 @@ export const VerifyClaimOutput = Type.Object({
   engine: Type.Object({ name: Type.String(), model: Nullable(Type.String()), protocol: Type.String(), minConfidence: Type.Number(), cache: Type.Boolean() }),
   coverage: Type.Object({
     sources: Type.Object({ selected: Type.Integer(), ready: Type.Integer(), unavailable: Type.Array(Type.Record(Type.String(), Type.Unknown())), unresolved: Type.Array(Type.Record(Type.String(), Type.Unknown())), preprint: Type.Array(Type.String()) }),
-    candidates: Type.Object({ total: Type.Integer(), perPaper: Type.Array(Type.Record(Type.String(), Type.Unknown())) }),
+    candidates: Type.Object({ total: Type.Integer(), excluded: Type.Optional(Type.Integer()), perPaper: Type.Array(Type.Record(Type.String(), Type.Unknown())) }),
     work: Type.Record(Type.String(), Type.Unknown()),
     output: Type.Object({ available: Type.Integer(), returned: Type.Integer(), deliveredEarlier: Type.Integer(), withheld: Type.Integer(), staleDropped: Type.Integer() }),
   }),
@@ -144,6 +145,9 @@ export const VerifyDocumentOutput = Type.Object({
       pointers: Type.Array(Type.String()),
       suggested: Type.Array(Type.String()),
       unregistered: Type.Array(Type.String()),
+      failedCites: Type.Optional(Type.Array(Type.String())),
+      supportWhere: Type.Optional(Type.Array(Type.Object({ citekey: Type.String(), at: Type.Union([Type.Literal("stated"), Type.Literal("elsewhere"), Type.Literal("unstated")]) }))),
+      unresolvedStated: Type.Optional(Type.Array(Type.String())),
       reason: Type.Optional(Type.String()),
       figures: Type.Optional(Type.Object({ found: Type.Integer(), missing: Type.Integer(), check: Type.Integer() })),
       note: Type.Optional(Type.String()),
@@ -151,6 +155,7 @@ export const VerifyDocumentOutput = Type.Object({
     }),
   ),
   next: Type.Union([Type.Integer(), Type.Null()]),
+  work: Type.Optional(Type.Object({ cells: Type.Integer(), fresh: Type.Integer(), cached: Type.Integer(), calls: Type.Integer() })),
 });
 
 const invalid = (message: string) => refusalResult({ code: "ARGUMENT_INVALID", message });
@@ -167,24 +172,7 @@ export async function verifyClaimTool(ctx: ToolContext, args: VerifyArgs, hooks:
     const extra = ["papers", "query", "passages", "continuation"].filter((k) => (args as Record<string, unknown>)[k] !== undefined);
     if (claim !== undefined || extra.length > 0) return invalid("document mode takes only `document` or `text` (and `offset`): it is exclusive with the claim modes");
     const offset = (args as VerifyDocumentArgs).offset;
-    let db;
-    try {
-      db = openRegistry(ctx.root);
-    } catch (err) {
-      if (err instanceof RegistryError) return refusalResult({ code: err.code, message: err.message });
-      throw err;
-    }
-    try {
-      const out = await documentWorkflow(ctx, db, { ...(doc !== undefined ? { document: doc } : {}), ...(text !== undefined ? { text } : {}), ...(offset !== undefined ? { offset } : {}) }, hooks);
-      if (out.kind === "refused") return refusalResult({ code: out.code, message: out.message });
-      return { content: [{ type: "text", text: renderDocument(out.result) }], structuredContent: out.result, details: { mode: out.result.mode } };
-    } catch (err) {
-      const busy = busyRefusal(err);
-      if (busy !== null) return busy;
-      throw err;
-    } finally {
-      db.close();
-    }
+    return runDocument(ctx, { ...(doc !== undefined ? { document: doc } : {}), ...(text !== undefined ? { text } : {}), ...(offset !== undefined ? { offset } : {}) }, hooks);
   }
   const claimArgs = args as VerifyClaimArgs;
   if (typeof claimArgs.claim !== "string" || claimArgs.claim.length < MIN_CLAIM_CHARS || claimArgs.claim.length > MAX_CLAIM_CHARS) {
@@ -242,6 +230,60 @@ export async function verifyClaimTool(ctx: ToolContext, args: VerifyArgs, hooks:
   }
 }
 
+// ── annotated entry (W4; internal seam, not in VerifyParams or the MCP tool list) ──
+
+/** Internal annotated input (the W4↔W5 contract): parsed writer output plus paging and scope. */
+export interface VerifyAnnotatedArgs {
+  parsed: ParsedAnnotations;
+  offset?: number;
+  scope?: readonly string[];
+}
+
+/**
+ * Check parsed annotated writer output (the internal W4↔W5 seam): fallback
+ * mode is exactly the claim-mode check of the bare latex; annotated mode runs
+ * the document branch over the latex with claims bound by unit.id and scope.
+ */
+export async function verifyAnnotatedTool(ctx: ToolContext, args: VerifyAnnotatedArgs, hooks: VerifyHooks = {}): Promise<ToolResult<VerifyClaimStructured>> {
+  if (args.parsed.mode === "fallback") {
+    return verifyClaimTool(ctx, { text: args.parsed.latex, ...(args.offset !== undefined ? { offset: args.offset } : {}) }, hooks);
+  }
+  return runDocument(
+    ctx,
+    {
+      text: args.parsed.latex,
+      ...(args.offset !== undefined ? { offset: args.offset } : {}),
+      annotated: { claims: args.parsed.claims, ...(args.scope !== undefined ? { scope: args.scope } : {}) },
+    },
+    hooks,
+  );
+}
+
+async function runDocument(
+  ctx: ToolContext,
+  req: { document?: string; text?: string; offset?: number; annotated?: { claims: ParsedAnnotations["claims"]; scope?: readonly string[] } },
+  hooks: VerifyHooks,
+): Promise<ToolResult<VerifyClaimStructured>> {
+  let db;
+  try {
+    db = openRegistry(ctx.root);
+  } catch (err) {
+    if (err instanceof RegistryError) return refusalResult({ code: err.code, message: err.message });
+    throw err;
+  }
+  try {
+    const out = await documentWorkflow(ctx, db, req, hooks);
+    if (out.kind === "refused") return refusalResult({ code: out.code, message: out.message });
+    return { content: [{ type: "text", text: renderDocument(out.result) }], structuredContent: out.result, details: { mode: out.result.mode } };
+  } catch (err) {
+    const busy = busyRefusal(err);
+    if (busy !== null) return busy;
+    throw err;
+  } finally {
+    db.close();
+  }
+}
+
 // ── rendering ───────────────────────────────────────────────────────────────
 
 function renderDocument(s: Record<string, any>): string {
@@ -252,7 +294,8 @@ function renderDocument(s: Record<string, any>): string {
   ];
   for (const u of units) {
     const where = u.file === "fragment.tex" ? "text" : `${u.file}:${u.line}`;
-    const extra = u.status === "supported" ? ` [${u.pointers.join(", ")}]` : u.status === "missing-citation" ? ` — cite ${(u.suggested as string[]).join(", ") || "a registered paper"} [${u.pointers.join(", ")}]` : u.status === "skipped" && u.reason !== undefined ? ` (${u.reason})` : u.status === "table-row" && u.figures !== undefined ? `: ${u.figures.found} figure(s) found, ${u.figures.missing} missing, ${u.figures.check} to check; ${u.note ?? TABLE_ROW_NOTE}` : "";
+    const failed = (u.failedCites ?? []).length > 0 ? ` — not supported by: ${(u.failedCites ?? []).join(", ")}` : "";
+    const extra = u.status === "supported" ? ` [${u.pointers.join(", ")}]` : u.status === "missing-citation" ? ` — cite ${(u.suggested as string[]).join(", ") || "a registered paper"} [${u.pointers.join(", ")}]${failed}` : u.status === "cited-unsupported" ? failed : u.status === "skipped" && u.reason !== undefined ? ` (${u.reason})` : u.status === "table-row" && u.figures !== undefined ? `: ${u.figures.found} figure(s) found, ${u.figures.missing} missing, ${u.figures.check} to check; ${u.note ?? TABLE_ROW_NOTE}` : "";
     const unknown = (u.unregistered ?? []).length > 0 ? ` (unknown citekey: ${(u.unregistered ?? []).join(", ")})` : "";
     lines.push(`[${u.id}] ${where} (${u.kind}) "${u.excerpt}" — ${u.status}${extra}${unknown}${u.complete ? "" : " (incomplete check)"}`);
   }
@@ -294,13 +337,22 @@ function render(s: Record<string, any>): string {
     if (cov.sources.preprint.length > 0) lines.push(`preprint: ${cov.sources.preprint.join(", ")} — read from an arXiv preprint of the work, which may differ from the published version; do not present its text as the published paper's`);
     if (cov.sources.unresolved.length > 0) lines.push(`unresolved handles (not registered, not checked): ${cov.sources.unresolved.map((u: { handle: string }) => u.handle).join(", ")}`);
     if (r.searched === "query_limited") {
-      const per = cov.candidates.perPaper as { citekey: string; chunks: number; matched: number; selected: number }[];
-      lines.push(`candidates: query-limited — only passages matching the locator were checked (${cov.candidates.total} of ${per.reduce((n, p) => n + p.chunks, 0)}); ${per.map((p) => `${p.citekey} ${p.selected}/${p.matched} matched of ${p.chunks}`).join("; ") || "no paper had a usable source"}. No candidates is a statement about the search, not a finding about the papers.`);
+      const per = cov.candidates.perPaper as { citekey: string; chunks?: number; units?: number; matched: number; selected: number }[];
+      const word = per.some((p) => p.units !== undefined) ? "sections" : "passages";
+      lines.push(`candidates: query-limited — only ${word} matching the locator were checked (${cov.candidates.total} of ${per.reduce((n, p) => n + (p.units ?? p.chunks ?? 0), 0)}); ${per.map((p) => `${p.citekey} ${p.selected}/${p.matched} matched of ${p.units ?? p.chunks}`).join("; ") || "no paper had a usable source"}. No candidates is a statement about the search, not a finding about the papers.`);
     } else if (r.searched === "candidate_limited") {
-      const per = cov.candidates.perPaper as { citekey: string; chunks: number; matched: number; selected: number }[];
-      lines.push(`candidates: candidate-limited — top retrieval candidates checked (${cov.candidates.total} of ${per.reduce((n, p) => n + p.chunks, 0)}), not exhaustive; ${per.map((p) => `${p.citekey} ${p.selected}/${p.matched} matched of ${p.chunks}`).join("; ") || "no paper had a usable source"}. No support found here is not evidence the papers lack support.`);
+      const per = cov.candidates.perPaper as { citekey: string; chunks?: number; units?: number; matched: number; selected: number }[];
+      const onUnits = per.some((p) => p.units !== undefined);
+      lines.push(onUnits
+        ? `candidates: candidate-limited — top retrieval sections checked (${cov.candidates.total} of ${per.reduce((n, p) => n + (p.units ?? 0), 0)}), not exhaustive; ${per.map((p) => `${p.citekey} ${p.selected}/${p.matched} matched of ${p.units}`).join("; ") || "no paper had a usable source"}. No support found here is not evidence the papers lack support.`
+        : `candidates: candidate-limited — top retrieval candidates checked (${cov.candidates.total} of ${per.reduce((n, p) => n + (p.chunks ?? 0), 0)}), not exhaustive; ${per.map((p) => `${p.citekey} ${p.selected}/${p.matched} matched of ${p.chunks}`).join("; ") || "no paper had a usable source"}. No support found here is not evidence the papers lack support.`);
     } else if (cov.sources.ready > 0) {
-      lines.push(`candidates: exhaustive — every usable passage (${cov.candidates.total}) of ${cov.sources.ready} paper(s) selected for checking`);
+      lines.push(cov.candidates.perPaper.length > 0 && "units" in (cov.candidates.perPaper[0] as Record<string, unknown>)
+        ? `candidates: exhaustive — every usable section (${cov.candidates.total}) of ${cov.sources.ready} paper(s) selected for checking`
+        : `candidates: exhaustive — every usable passage (${cov.candidates.total}) of ${cov.sources.ready} paper(s) selected for checking`);
+    }
+    if (typeof (cov.candidates as { excluded?: unknown }).excluded === "number" && (cov.candidates as { excluded: number }).excluded > 0) {
+      lines.push(`references: ${(cov.candidates as { excluded: number }).excluded} section(s) not checked (bibliography entries are excluded from judging)`);
     }
     const w = cov.work;
     lines.push(

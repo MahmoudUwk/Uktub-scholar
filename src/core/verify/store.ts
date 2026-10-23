@@ -22,6 +22,7 @@ import { chunkDocument } from "../chunk-document.ts";
 import type { SectionMark } from "../sections.ts";
 import { detectHeadings } from "../source/headings.ts";
 import { bumpGeneration, type DatabaseSync } from "../registry.ts";
+import { parsePointer } from "./pointer.ts";
 import type { PreparedSource } from "../source/prepare.ts";
 
 const sha256 = (s: string): string => createHash("sha256").update(s, "utf8").digest("hex");
@@ -34,7 +35,7 @@ export const revisionOf = (digest: string, extraction: string, text: string): st
   sha256(`${digest}\0${extraction}\0${sha256(text)}`).slice(0, 16);
 /** Version of the structure-aware chunking (splitter rules, heading detector, minimum-piece share):
  *  bump it when any of them changes so stored section chunks rebuild. */
-export const SECTION_CHUNKING_VERSION = "sections-v1";
+export const SECTION_CHUNKING_VERSION = "sections-v2";
 /** Chunk policy identity: any change to these fields rebuilds chunks under new ids.
  *  Fixed-window policies keep their original identity; section policies add the structure version. */
 export const chunkPolicyOf = (cfg: ChunkTextConfig): string =>
@@ -46,22 +47,25 @@ export const chunkPolicyOf = (cfg: ChunkTextConfig): string =>
     ),
   ).slice(0, 12);
 
+/** Unit-judging policy of a units run (absent on chunk runs): the judging-unit
+ *  cap and the section-chunking version the units were cut with. */
+export interface UnitPolicy {
+  maxChars: number;
+  chunking: string;
+}
+
+/** Content address of a judging unit in its own namespace (never equal to a chunk id). */
+export const unitIdOf = (doi: string, revision: string, cap: number, start: number, end: number): string =>
+  sha256(`unit|${doi}|${revision}|${cap}|${start}|${end}`).slice(0, 16);
+
 /** Client policy: a chunk with fewer non-space characters than this cannot
  *  support a claim and is not stored as a usable passage. */
 export const MIN_CHUNK_CHARS = 20;
 
 // ── pointers ────────────────────────────────────────────────────────────────
 
-/** `doi@revision#start-end`: zero-based, end-exclusive UTF-16 offsets into the captured text. */
-export const formatPointer = (doi: string, revision: string, start: number, end: number): string => `${doi}@${revision}#${start}-${end}`;
-
-export function parsePointer(pointer: string): { doi: string; revision: string; start: number; end: number } | null {
-  const m = /^(.+)@([0-9a-f]{16})#(\d+)-(\d+)$/.exec(pointer);
-  if (m === null) return null;
-  const start = Number(m[3]);
-  const end = Number(m[4]);
-  return Number.isSafeInteger(start) && Number.isSafeInteger(end) && start < end ? { doi: m[1], revision: m[2], start, end } : null;
-}
+/** Pointer helpers live in the Node-free `pointer.ts` (W2: the browser-bundled parser uses them); re-exported here. */
+export { formatPointer, parsePointer } from "./pointer.ts";
 
 // ── rows ────────────────────────────────────────────────────────────────────
 
@@ -141,12 +145,19 @@ export function getSource(db: DatabaseSync, doi: string): SourceRow | null {
   };
 }
 
-/** The captured text of a ready source with its page offsets — internal use only; never an output surface. */
-export function getSourceText(db: DatabaseSync, doi: string): { revision: string; text: string; pageStarts: number[] | null } | null {
-  const r = db.prepare("SELECT revision, text, page_starts_json FROM paper_sources WHERE doi = ? AND status = 'ready'").get(doi) as
-    | { revision: string; text: string; page_starts_json: string | null }
+/** The captured text of a ready source with its page offsets and section marks — internal use only; never an output surface. */
+export function getSourceText(db: DatabaseSync, doi: string): { revision: string; text: string; pageStarts: number[] | null; sections: SectionMark[] | null } | null {
+  const r = db.prepare("SELECT revision, text, page_starts_json, sections_json FROM paper_sources WHERE doi = ? AND status = 'ready'").get(doi) as
+    | { revision: string; text: string; page_starts_json: string | null; sections_json: string | null }
     | undefined;
-  return r === undefined ? null : { revision: r.revision, text: r.text, pageStarts: r.page_starts_json === null ? null : (JSON.parse(r.page_starts_json) as number[]) };
+  return r === undefined
+    ? null
+    : {
+        revision: r.revision,
+        text: r.text,
+        pageStarts: r.page_starts_json === null ? null : (JSON.parse(r.page_starts_json) as number[]),
+        sections: r.sections_json === null ? null : (JSON.parse(r.sections_json) as SectionMark[]),
+      };
 }
 
 export function chunksOf(db: DatabaseSync, doi: string): StoredChunk[] {
@@ -350,6 +361,8 @@ export interface RunSnapshot {
   model: string | null;
   protocol: string;
   minConfidence: number;
+  /** Present on unit-judging runs (absent on chunk runs). */
+  unitPolicy?: UnitPolicy;
 }
 
 /** Findings of the first call that later pages repeat. */
@@ -357,6 +370,8 @@ export interface RunCarry {
   unavailable: { doi: string; citekey: string; status: string; code: string | null; detail: string | null }[];
   unresolved: { handle: string; reason: string }[];
   staleDropped: number;
+  /** Reference sections skipped by unit judging (absent on chunk runs). */
+  excluded?: { doi: string; count: number }[];
 }
 
 export interface RunRow {

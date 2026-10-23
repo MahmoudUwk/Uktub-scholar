@@ -5,7 +5,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
-import { childUsageOf, slowScopeOf, slowStepsOf, totalCostUsd, writeSectionDrafts } from "../scripts/live/behavior.ts";
+import { annotatedUsageOf, childUsageOf, passagesAfterLastSection, slowScopeOf, slowStepsOf, totalCostUsd, writeSectionDrafts } from "../scripts/live/behavior.ts";
 
 const GAP = "model gap after a tool result";
 
@@ -80,5 +80,90 @@ describe("drafts of a run that did not complete", () => {
       { file: "write_section/01.tex", latex: "\\section{A}\nFirst." },
       { file: "write_section/02.tex", latex: "\\section{B}\nSecond." },
     ]);
+  });
+});
+
+describe("passagesAfterLastSection (W6.2)", () => {
+  const call = (name: string, parent?: string): { name: string; parent?: string } => ({ name, ...(parent === undefined ? {} : { parent }) });
+  const end = (name: string, isError = false, parent?: string): { name: string; isError: boolean; parent?: string } => ({ name, isError, ...(parent === undefined ? {} : { parent }) });
+  const turn = (calls: Array<{ name: string; parent?: string }>, ends: Array<{ name: string; isError: boolean; parent?: string }>): { calls: Array<{ name: string; parent?: string }>; ends: Array<{ name: string; isError: boolean; parent?: string }> } => ({ calls, ends });
+
+  it("is null when no write_section ever succeeded", () => {
+    assert.equal(
+      passagesAfterLastSection([turn([call("passages")], [end("passages")]), turn([call("write_section")], [end("write_section", true)])]),
+      null,
+      "passages alone and a failed section leave no section",
+    );
+  });
+
+  it("is 0 when nothing follows the last section, and counts only later parent passages", () => {
+    const turns = [
+      turn([call("passages")], [end("passages")]),
+      turn([call("write_section")], [end("write_section")]),
+      turn([call("bash")], [end("bash")]),
+    ];
+    assert.equal(passagesAfterLastSection(turns), 0, "no parent passages after the section");
+    assert.equal(
+      passagesAfterLastSection([
+        ...turns,
+        turn([call("passages"), call("passages", "w9"), call("mcp__uktub__passages")], [end("write_section", true), end("passages")]),
+      ]),
+      2,
+      "a failed section end is not a section; child calls and earlier calls are ignored",
+    );
+  });
+
+  it("the last successful section wins", () => {
+    const turns = [
+      turn([call("write_section")], [end("mcp__uktub__write_section")]),
+      turn([call("passages")], [end("passages")]),
+      turn([call("write_section")], [end("write_section")]),
+      turn([call("passages")], [end("passages")]),
+    ];
+    assert.equal(passagesAfterLastSection(turns), 1, "passages between sections belong to the earlier one");
+  });
+});
+
+describe("annotatedUsageOf (W5.13)", () => {
+  it("is all zeros when no end carries annotated detail", () => {
+    assert.deepEqual(annotatedUsageOf([{ name: "write_section", details: {} }, { name: "passages", details: {} }]), {
+      sections: 0,
+      markerCompliance: 0,
+      claims: 0,
+      statusShares: {},
+      multiSourceShare: 0,
+      unreadRate: 0,
+      work: { cells: 0, fresh: 0, cached: 0, calls: 0 },
+    });
+  });
+
+  it("sums sections, compliance, label shares, multi-source use, unread rate and work", () => {
+    const ends = [
+      {
+        name: "write_section",
+        details: {
+          annotated: {
+            mode: "annotated",
+            claims: [
+              { marker: 1, status: "supported", sources: ["a"], at: ["stated"], unread: [] },
+              { marker: 2, status: "cited-unsupported", sources: ["b"], at: ["unsupported"], unread: ["b"] },
+            ],
+            work: { cells: 10, fresh: 8, cached: 2, calls: 3 },
+          },
+        },
+      },
+      { name: "write_section", details: { annotated: { mode: "fallback", claims: [], work: { cells: 0, fresh: 0, cached: 0, calls: 0 } } } },
+      { name: "write_section", details: {} },
+      { name: "passages", details: {} },
+    ];
+    assert.deepEqual(annotatedUsageOf(ends), {
+      sections: 2,
+      markerCompliance: 0.5,
+      claims: 2,
+      statusShares: { supported: 0.5, "cited-unsupported": 0.5 },
+      multiSourceShare: 0,
+      unreadRate: 0.5,
+      work: { cells: 10, fresh: 8, cached: 2, calls: 3 },
+    });
   });
 });

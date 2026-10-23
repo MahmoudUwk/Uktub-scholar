@@ -151,7 +151,21 @@ describe("claim_ledger", () => {
     assert.equal(audit2.units[0]!.status, "verified", "control: citing the evidenced paper verifies");
   });
 
-  it("raising the bar demotes a unit to cited", () => {
+  it("A3 every cited paper must be evidenced: one release -> cited with the other listed, both -> verified", async () => {
+    releasedRun(CLAIM, LORA, NOW);
+    const tex = `\\begin{document}${CLAIM}~\\cite{${keys[LORA]}, ${keys[DORA]}}.\\end{document}`;
+    const { papers, ledger } = readProvenanceInputs(db);
+    const audit = auditProvenance({ paper: parsePaper(linesFromString(tex)), tex, papers, ledger });
+    assert.equal(audit.units[0]!.status, "cited");
+    assert.deepEqual(audit.units[0]!.unsupportedCites, [keys[DORA]]);
+    releasedRun(CLAIM, DORA, new Date(NOW.getTime() + 1000));
+    const second = readProvenanceInputs(db);
+    const audit2 = auditProvenance({ paper: parsePaper(linesFromString(tex)), tex, papers: second.papers, ledger: second.ledger });
+    assert.equal(audit2.units[0]!.status, "verified");
+    assert.deepEqual(audit2.units[0]!.unsupportedCites, []);
+  });
+
+  it("raising the bar demotes a unit to cited", async () => {
     releasedRun(CLAIM, LORA, NOW, 0.995);
     const tex = `\\begin{document}${CLAIM}~\\cite{${keys[LORA]}}.\\end{document}`;
     const { papers } = readProvenanceInputs(db);

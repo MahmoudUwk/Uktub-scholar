@@ -72,7 +72,15 @@ agent finishes a document that every statement is verified as written or labelle
 is registered (one bounded follow-up listing the rest, at most 2 per request; `UKTUB_COMPLETION_GATE=off` disables it), and blocks the agent's `edit`/`write` on `refs/references.bib` and `.registry/` (agent read-only,
 human writable; a shell is not blocked, but a destructive shell command touching them asks the human first). By default (disable with
 `UKTUB_SECTION_WRITER=off`) it also registers a `write_section` tool (also in the browser app, not in the MCP server): a sub-session on the same model writes one
-section in LaTeX only from the listed papers' passages (tools restricted to `passages` and `verify`). It checks every
+section in LaTeX only from the listed papers' passages. In Pi the parent lists at most 20 papers, and every one must have
+full text; otherwise the call is refused before the sub-session starts, naming each paper, the reason and the next step
+(acquire or attach a source, or drop it). The sub-session's `passages`, `registry` (read only) and `verify` reach only
+those papers and refuse any other; the browser app keeps `passages` and `verify` without that limit. In Pi the
+sub-session puts each claim on its own line ending in a `% cN` comment and lists, after a `---SOURCES---` line, the
+paper section or pointer it took each claim from. The check judges those stated sources first, then the rest of each
+cited paper, over whole paper sections. Every cited paper must support a claim. The result adds a claim table: where
+support was found, cited papers that did not support, sources the sub-session never opened, and malformed annotations.
+Markers and the sources list never reach the returned LaTeX. A draft without markers is checked as plain text. It checks every
 verification page, repairs at most once, then checks every page of the repaired text. The result contains the LaTeX,
 a summary, a counts line (first draft and final supported units, words) and unresolved units, including incomplete
 checks; its `details` carry the same counts plus the child session's turns, retries, tool calls, tokens and cost.
@@ -112,7 +120,9 @@ shared pool), `CROSSREF_MAILTO`. DataCite resolves arXiv DOIs at registration. `
 entry defaults to `manuscript/main.tex`, then `main.tex`, then a lone top-level `.tex`; ambiguity needs an explicit entry; a
 missing Tectonic refuses compilation only. After a successful compile with a registry present, the result carries a **provenance
 summary** of the manuscript (the same view as `uktub-scholar provenance`): per statement, row and caption whether `verify`
-supported that exact wording (the package's own durable verify ledger), only cites a registered paper, or cites nothing
+supported that exact wording from every paper it cites (the package's own durable verify ledger; when only some cited
+papers supported it, the statement counts as cited and the full view names the others), only cites a registered paper, or
+cites nothing
 (every prose statement and caption is counted; one that is not verified is listed as `UNLABELLED` unless its text says
 "unverified");
 per figure (numbers with units, hardware names) whether the cited paper's captured text contains it (`OPEN`: absent, or in a table

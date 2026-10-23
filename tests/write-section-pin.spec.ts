@@ -55,10 +55,12 @@ describe("write_section Pi pin (Phase 8b refactor guard)", () => {
           summary: { total: 1, from: 0, units: 1 },
           next: null,
         }) as never,
+      papersReady: async (_root: string, handles: readonly string[]) =>
+        handles.map((h) => ({ handle: h, citekey: h, doi: null, state: "ready" as const, detail: null })),
     });
     const ctx = {
       cwd: "/tmp/uktub-pin",
-      tools: [{ name: "mcp__uktub_scholar__verify" }, { name: "mcp__uktub_scholar__passages" }],
+      tools: [{ name: "mcp__uktub_scholar__verify" }, { name: "mcp__uktub_scholar__passages" }, { name: "mcp__uktub_scholar__registry" }],
       executeTool: async () => ({ content: [{ type: "text", text: "" }] }),
     } as never;
     const out = (await (tool.execute as unknown as (...a: unknown[]) => Promise<{ content: { text: string }[]; details: Record<string, unknown> }>)(

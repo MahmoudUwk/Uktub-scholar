@@ -1,3 +1,7 @@
+/**
+ * W6.1: the parent writes the abstract, introduction and conclusion itself,
+ * last, from the saved section files (structural assertions only).
+ */
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -5,12 +9,11 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
-import uktubScholarExtension, { bundledSkillPath, readWritingWorkflow, writingWorkflowSection } from "../src/pi/index.ts";
+import uktubScholarExtension, { bundledSkillPath, readWritingWorkflow, SECTION_WRITER_RULE, writingWorkflowSection } from "../src/pi/index.ts";
 
 const ROOT = fileURLToPath(new URL("..", import.meta.url));
 const SKILL = join(ROOT, "skills", "uktub-research", "SKILL.md");
 const HEADING = "## Writing a document from the papers";
-const SECTION_WRITER_TEXT = "For multi-section documents, draft each prose section with `write_section`";
 
 type StartHandler = (event: { systemPromptOptions: { promptGuidelines?: string[] } }) => unknown;
 
@@ -24,14 +27,17 @@ function startHandler(): StartHandler {
   return onStart;
 }
 
+const skillSection = (): string => {
+  const section = writingWorkflowSection(readFileSync(SKILL, "utf8"));
+  assert.ok(section !== null, "the current skill has the section");
+  return section;
+};
+
 describe("writingWorkflowSection", () => {
   it("returns exactly the document-writing section of the current skill (heading through the step before the next ## heading)", () => {
-    const section = writingWorkflowSection(readFileSync(SKILL, "utf8"));
-    assert.ok(section !== null, "the current skill has the section");
+    const section = skillSection();
     assert.ok(section.startsWith(HEADING), "starts with its heading");
     assert.ok(!/^## /m.test(section.slice(HEADING.length)), "stops before the next ## heading");
-    assert.match(section, /manuscript\/sections\/NN-name\.tex/);
-    assert.match(section, /unverified/);
     assert.ok(section.endsWith("."), "trimmed");
   });
 
@@ -74,17 +80,15 @@ describe("bundledSkillPath (one relative layout for a checkout and an installed 
 });
 
 describe("before_agent_start injects the writing workflow", () => {
-  it("keeps the existing rules and adds the workflow section exactly once, also when the run starts again", () => {
+  it("contains SECTION_WRITER_RULE once and the workflow once", () => {
     const onStart = startHandler();
-    const options: { promptGuidelines?: string[] } = { promptGuidelines: ["existing rule"] };
-    onStart({ systemPromptOptions: options });
+    const options: { promptGuidelines?: string[] } = {};
     onStart({ systemPromptOptions: options });
     const guidelines = options.promptGuidelines ?? [];
-    assert.equal(guidelines[0], "existing rule", "keeps other contributors' guidelines");
-    assert.match(guidelines.join("\n"), /Never fabricate data, results, quotations, references/, "agent rules still present");
+    assert.equal(guidelines.filter((g) => g === SECTION_WRITER_RULE).length, 1, "the section-writer rule rides once");
     const workflow = guidelines.filter((g) => g.startsWith(HEADING));
     assert.equal(workflow.length, 1, "workflow appended once");
-    assert.equal(workflow[0], writingWorkflowSection(readFileSync(SKILL, "utf8")), "verbatim section text");
+    assert.equal(workflow[0], skillSection(), "verbatim section text");
   });
 
   it("injects the workflow even when the section writer is disabled (it is the document workflow, not the section-writer rule)", () => {
@@ -94,12 +98,27 @@ describe("before_agent_start injects the writing workflow", () => {
       const onStart = startHandler();
       const options: { promptGuidelines?: string[] } = {};
       onStart({ systemPromptOptions: options });
-      const joined = (options.promptGuidelines ?? []).join("\n");
       assert.ok((options.promptGuidelines ?? []).some((g) => g.startsWith(HEADING)), "workflow present");
-      assert.ok(!joined.includes(SECTION_WRITER_TEXT), "section-writer rule absent when off");
+      assert.ok(!(options.promptGuidelines ?? []).includes(SECTION_WRITER_RULE), "section-writer rule absent when off");
     } finally {
       if (saved === undefined) delete process.env.UKTUB_SECTION_WRITER;
       else process.env.UKTUB_SECTION_WRITER = saved;
     }
+  });
+});
+
+describe("W6.1 abstract, introduction and conclusion last", () => {
+  it("the rule sends the three parts to the parent, written from saved sections with no passages", () => {
+    assert.match(SECTION_WRITER_RULE, /abstract, introduction and conclusion/);
+    assert.match(SECTION_WRITER_RULE, /passages/);
+  });
+
+  it("the workflow orders save sections before abstract/introduction/conclusion last before verify document", () => {
+    const section = skillSection();
+    const saveAt = section.indexOf("Save each section as soon as it is written");
+    const lastAt = section.indexOf("from the saved section files alone");
+    const verifyAt = section.indexOf("Run `verify` with `document` on the whole manuscript");
+    assert.ok(saveAt !== -1 && lastAt !== -1 && verifyAt !== -1, "all three steps present");
+    assert.ok(saveAt < lastAt && lastAt < verifyAt, "save sections, then abstract/introduction/conclusion last, then verify document");
   });
 });

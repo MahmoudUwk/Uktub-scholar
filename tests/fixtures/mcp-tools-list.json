@@ -940,6 +940,9 @@
                 "total": {
                   "type": "integer"
                 },
+                "excluded": {
+                  "type": "integer"
+                },
                 "perPaper": {
                   "type": "array",
                   "items": {

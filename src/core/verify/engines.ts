@@ -19,6 +19,7 @@ import {
   openrouterDecisionsEngine,
   systemoneEndpointEngine,
   type ClaimEngine,
+  type PackLimits,
 } from "./claim.ts";
 
 /** Default hosted decision model: free tier, measured best in class
@@ -43,12 +44,33 @@ export const VERIFICATION_ENGINES = [
   "hosted",
 ] as const;
 
-/** Decision protocol the System One engines speak: one `noul` question per
- *  (passage, claim) row in the benchmarked Decision 2.0 criteria wording,
- *  answer P(true). Part of the judgment identity — a change in how rows are
- *  posed must not reuse old scores (the `-criteria` suffix retires every
- *  judgment cached under the bare-claim wording). */
-export const SYSTEMONE_PROTOCOL = "systemone-noul-criteria-v1";
+/** Decision protocol the System One engines speak: keyed `noul` question packs
+ *  in the benchmarked Decision 2.0 criteria wording, answer P(true). Part of
+ *  the judgment identity — a change in how rows are posed must not reuse old
+ *  scores. The `-criteria` suffix retired every judgment cached under the
+ *  bare-claim wording; `-v2` retires the v1 one-question-per-request rows
+ *  (key `c`) in favour of keyed packs (a lone question keeps `c`, a pack of
+ *  n >= 2 uses `q1..qn`). */
+export const SYSTEMONE_PROTOCOL = "systemone-noul-criteria-v2";
+
+/** Hosted pack: 20 questions (client policy; provider cap `max_questions` 64
+ *  per GET /api/info), 120,000 bytes (client policy under the provider's
+ *  131,072 `max_request_tokens` estimate, which counts state bytes once per
+ *  question on every model except d3-turbo; V0 measured 4x32,000 chars as
+ *  131,772), 9 inputs (provider limit: at most 8 extra states per request per
+ *  GET /api/info plus the top-level state; measured 2026-10-23). */
+export const HOSTED_PACK: PackLimits = { maxQuestions: 20, maxRequestBytes: 120_000, maxStates: 9 };
+/** OpenRouter pack: 20 questions (client policy; 40 accepted in the
+ *  2026-10-23 probe); no byte bound (the state is read once, context 65,536
+ *  tokens). */
+export const OPENROUTER_PACK: PackLimits = { maxQuestions: 20 };
+
+/** Client policy: rows per `engine.run` call from the grid judge (D-batch):
+ *  20 for hosted and openrouter (one request's question pack), 8 for
+ *  eos, eos-onnx and llama-cpp. */
+export function gridBatchSizeOf(engine: string): number {
+  return engine === "hosted" || engine === "openrouter" ? 20 : 8;
+}
 
 const PROTOCOLS: Record<(typeof VERIFICATION_ENGINES)[number], string> = {
   eos: "decision2-noul-v1",
@@ -83,10 +105,12 @@ function localModelRef(ref: string): string {
   }
 }
 
-/** Ask an OpenAI-style `/v1/models` listing which model the endpoint serves. With a key for an HTTPS origin the probe
- *  authenticates the same way a judgment request does (the key is scoped to that origin and never logged); otherwise it
- *  asks anonymously, as before. */
-async function probeServedModel(baseUrl: string, fetchImpl: typeof fetch, apiKey?: string): Promise<string | null> {
+/** List every model id an OpenAI-style `/v1/models` listing serves, in order;
+ *  null when the endpoint says nothing usable (non-OK, throw, timeout, an
+ *  empty or id-less list). With a key for an HTTPS origin the probe
+ *  authenticates the same way a judgment request does (the key is scoped to
+ *  that origin and never logged); otherwise it asks anonymously, as before. */
+async function probeServedModels(baseUrl: string, fetchImpl: typeof fetch, apiKey?: string): Promise<string[] | null> {
   try {
     let https = false;
     try {
@@ -98,8 +122,9 @@ async function probeServedModel(baseUrl: string, fetchImpl: typeof fetch, apiKey
     const res = await fetchImpl(`${baseUrl.replace(/\/+$/, "")}/v1/models`, { headers, signal: AbortSignal.timeout(5_000) }); // client policy: identity probe must not stall a call
     if (!res.ok) return null;
     const body = (await res.json()) as { data?: { id?: unknown }[] };
-    const id = body.data?.[0]?.id;
-    return typeof id === "string" && id.length > 0 ? id : null;
+    if (!Array.isArray(body.data) || body.data.length === 0) return null;
+    const ids = body.data.map((d) => d?.id).filter((id): id is string => typeof id === "string" && id.length > 0);
+    return ids.length > 0 ? ids : null;
   } catch {
     return null;
   }
@@ -138,18 +163,25 @@ export async function resolveEngineIdentity(
       return { model: `openrouter:${env.UKTUB_OPENROUTER_MODEL ?? DEFAULT_OPENROUTER_MODEL}`, protocol: SYSTEMONE_PROTOCOL };
     case "llama-cpp": {
       const base = env[VERIFY_URL_ENV] ?? DEFAULT_LLAMA_CPP_URL;
-      const served = await probeServedModel(base, fetchImpl, env[VERIFY_API_KEY_ENV]);
-      if (served !== null) return { model: `llama-cpp:${served}`, protocol: SYSTEMONE_PROTOCOL };
+      const listing = await probeServedModels(base, fetchImpl, env[VERIFY_API_KEY_ENV]);
+      const configured = env[VERIFY_MODEL_ENV]?.trim() || undefined;
+      if (listing !== null) {
+        // A configured model is the identity only when the listing serves it;
+        // otherwise the weights behind the id are unknown and reuse stays disabled.
+        if (configured !== undefined) return listing.includes(configured) ? { model: `llama-cpp:${configured}`, protocol: SYSTEMONE_PROTOCOL } : null;
+        return { model: `llama-cpp:${listing[0]}`, protocol: SYSTEMONE_PROTOCOL };
+      }
       // A hosted endpoint may serve no models listing (404): the configured model id stands in. It is the id the
       // server echoes back in every judgment response, and the engine refuses an echo naming another model,
       // so reuse under it stays sound. With neither, there is no identity and reuse stays disabled.
-      const configured = env[VERIFY_MODEL_ENV]?.trim();
       return configured ? { model: `llama-cpp:${configured}`, protocol: SYSTEMONE_PROTOCOL } : null;
     }
     case "hosted": {
-      const served = await probeServedModel(HOSTED_URL, fetchImpl, env[VERIFY_API_KEY_ENV]);
-      // The host serves no models listing today: the requested model stands in, guarded by the per-response echo check.
-      return { model: `hosted:${served ?? HOSTED_MODEL}`, protocol: SYSTEMONE_PROTOCOL };
+      const listing = await probeServedModels(HOSTED_URL, fetchImpl, env[VERIFY_API_KEY_ENV]);
+      // The hosted model is the identity only when the listing serves it;
+      // without a listing the requested model stands in, guarded by the per-response echo check.
+      if (listing !== null && !listing.includes(HOSTED_MODEL)) return null;
+      return { model: `hosted:${HOSTED_MODEL}`, protocol: SYSTEMONE_PROTOCOL };
     }
     default:
       throw new Error(`unknown verification engine: ${engine}`);
@@ -217,7 +249,7 @@ function buildEngine(env: Record<string, string | undefined>, engine: string, fe
     case "eos-onnx":
       return eosOnnxEngine({ env });
     case "openrouter":
-      return openrouterDecisionsEngine({ env, model: env.UKTUB_OPENROUTER_MODEL ?? DEFAULT_OPENROUTER_MODEL, fetchImpl });
+      return openrouterDecisionsEngine({ env, model: env.UKTUB_OPENROUTER_MODEL ?? DEFAULT_OPENROUTER_MODEL, fetchImpl, pack: OPENROUTER_PACK });
     case "llama-cpp":
       return systemoneEndpointEngine({
         env,
@@ -232,7 +264,7 @@ function buildEngine(env: Record<string, string | undefined>, engine: string, fe
       if (!apiKey) {
         throw new Error(`the hosted verifier needs a free key: get one at ${HOSTED_KEY_URL} and set ${VERIFY_API_KEY_ENV}`);
       }
-      return systemoneEndpointEngine({ env, fetchImpl, url: `${HOSTED_URL}/v1/systemone`, label: "hosted", apiKey, model: HOSTED_MODEL });
+      return systemoneEndpointEngine({ env, fetchImpl, url: `${HOSTED_URL}/v1/systemone`, label: "hosted", apiKey, model: HOSTED_MODEL, pack: HOSTED_PACK });
     }
     default:
       throw new Error(

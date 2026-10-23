@@ -1,6 +1,6 @@
 /**
- * Custom Pi models for the live harness (owner decision 2026-10-19): MiniMax M3.1 Flash Free on OpenCode Go as the
- * assistant option and as grader B. Every agent dir gets a models.json that Pi's own loader accepts, with no key in it.
+ * Custom Pi models for the live harness (owner decision 2026-10-19): MiniMax M3.1 Flash on OpenCode Go as the
+ * assistant option and as grader B (the free variant was deprecated upstream on 2026-10-23: 410 ModelDeprecated). Every agent dir gets a models.json that Pi's own loader accepts, with no key in it.
  */
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
@@ -15,7 +15,7 @@ import { graderModel, graderModelId } from "../scripts/live/grade-lib.ts";
 import { writePiSettings } from "../scripts/live/sandbox.ts";
 
 const ROOT = resolve(import.meta.dirname, "..");
-const MINIMAX = { provider: "opencode-go", id: "minimax-m3.1-flash-free" };
+const MINIMAX = { provider: "opencode-go", id: "minimax-m3.1-flash" };
 
 /** Pi's own models.json validator (the exact schema the running Pi enforces). Not exported from the package index, so it is loaded by file path. */
 async function piModelConfig(): Promise<{ load(path: string): Promise<{ getError(): string | undefined; getProvider(id: string): { models?: Array<Record<string, unknown>>; apiKey?: unknown } | undefined }> }> {
@@ -39,8 +39,8 @@ describe("models.json for the live harness", () => {
       const cfg = await (await piModelConfig()).load(join(dir, "models.json"));
       assert.equal(cfg.getError(), undefined, cfg.getError());
       const model = cfg.getProvider("opencode-go")?.models?.find((m) => m.id === MINIMAX.id);
-      assert.ok(model, "minimax-m3.1-flash-free is registered under opencode-go");
-      assert.equal(model.name, "MiniMax M3.1 Flash Free");
+      assert.ok(model, "minimax-m3.1-flash is registered under opencode-go");
+      assert.equal(model.name, "MiniMax M3.1 Flash");
       assert.equal(model.api, "anthropic-messages");
       assert.equal(model.baseUrl, "https://opencode.ai/inference/go");
       assert.equal(typeof model.contextWindow, "number");
@@ -69,14 +69,14 @@ describe("models.json for the live harness", () => {
 
 describe("grader B and the opencode-go assistant", () => {
   it("parses the MiniMax setting and gives an opencode-go assistant its key by name", () => {
-    assert.deepEqual(parseModelSetting("opencode-go/minimax-m3.1-flash-free"), MINIMAX);
+    assert.deepEqual(parseModelSetting("opencode-go/minimax-m3.1-flash"), MINIMAX);
     const secrets = assistantSecretsForProvider("opencode-go", (name) => (name === "OPENCODE_API_KEY" ? "fake-test-value" : undefined));
     assert.deepEqual(Object.keys(secrets), ["OPENCODE_API_KEY"]);
   });
 
   it("makes grader B the MiniMax model on OpenCode Go; grader A stays Muse", () => {
     assert.deepEqual(graderModel("B"), MINIMAX);
-    assert.equal(graderModelId("B"), "opencode-go/minimax-m3.1-flash-free");
+    assert.equal(graderModelId("B"), "opencode-go/minimax-m3.1-flash");
     assert.equal(graderModelId("A"), "opencode-go/muse-spark-1.3-contributor");
   });
 });

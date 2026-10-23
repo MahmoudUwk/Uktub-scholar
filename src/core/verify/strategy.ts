@@ -25,6 +25,13 @@ export function verifySwitchFromEnv(env: Record<string, string | undefined>, eng
   return (env[VERIFY_STRATEGY_ENV] ?? "").trim() === "exhaustive" ? "exhaustive" : "top10";
 }
 
+/** The unit-judging path (V4): whole sections instead of 512-token chunks.
+ *  Selected by the existing knob, not advertised until V7; unset is the
+ *  chunk path byte for byte. */
+export function unitPathFromEnv(env: Record<string, string | undefined>): boolean {
+  return (env[VERIFY_STRATEGY_ENV] ?? "").trim() === "units";
+}
+
 /** Narrow `all` (the exhaustive candidates) to the strategy's top-K units. */
 export function topCandidates(all: Candidate[], rankedChunkIds: string[], k: number = TOP_K): Candidate[] {
   const byId = new Map(all.map((c) => [c.chunkId, c]));

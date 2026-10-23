@@ -11,8 +11,8 @@ import { GRADER_KEY_NAMES } from "./keys.ts";
 
 /** Grader A and the adjudicator (PLAN section 1): Meta through OpenCode Go. */
 export const GRADER_A = { provider: "opencode-go", id: "muse-spark-1.3-contributor" } as const;
-/** Grader B (owner decision 2026-10-19): MiniMax M3.1 Flash Free through OpenCode Go (custom Pi model, see sandbox.ts PI_CUSTOM_MODELS). */
-export const GRADER_B = { provider: "opencode-go", id: "minimax-m3.1-flash-free" } as const;
+/** Grader B (owner decision 2026-10-19): MiniMax M3.1 Flash through OpenCode Go (custom Pi model, see sandbox.ts PI_CUSTOM_MODELS). */
+export const GRADER_B = { provider: "opencode-go", id: "minimax-m3.1-flash" } as const;
 export type GraderName = "A" | "B";
 export const graderModel = (g: GraderName): { provider: string; id: string } =>
   g === "A" ? { ...GRADER_A } : { ...GRADER_B };

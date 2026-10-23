@@ -87,7 +87,11 @@ const page = (units: UnitVerdict[]): VerifyPage => ({ units, summary: { total: u
 /** The write_section tool wired to a fake child (the SDK loader and the verify page are the only seams). */
 function toolWith(child: FakeChild, verifyPage: (text: string, offset: number) => Promise<VerifyPage>) {
   const factory = (pi as Record<string, unknown>).makeSectionWriterTool as
-    | ((seams: { loadSdk: () => Promise<unknown>; verifyPage: (text: string, offset: number) => Promise<VerifyPage> }) => Tool)
+    | ((seams: {
+      loadSdk: () => Promise<unknown>;
+      verifyPage: (text: string, offset: number) => Promise<VerifyPage>;
+      papersReady: (root: string, handles: readonly string[]) => Promise<unknown[]>;
+    }) => Tool)
     | undefined;
   assert.equal(typeof factory, "function", "makeSectionWriterTool seam exported from src/pi/index.ts");
   return factory!({
@@ -96,12 +100,14 @@ function toolWith(child: FakeChild, verifyPage: (text: string, offset: number) =
       SessionManager: { inMemory: () => ({}) },
     }),
     verifyPage,
+    papersReady: async (_root: string, handles: readonly string[]) =>
+      handles.map((h) => ({ handle: h, citekey: h, doi: null, state: "ready" as const, detail: null })),
   });
 }
 
 const ctx = {
   cwd: "/tmp/uktub-observability-fixture",
-  tools: [{ name: "mcp__uktub_scholar__verify" }, { name: "mcp__uktub_scholar__passages" }],
+  tools: [{ name: "mcp__uktub_scholar__verify" }, { name: "mcp__uktub_scholar__passages" }, { name: "mcp__uktub_scholar__registry" }],
   executeTool: async () => ({ content: [{ type: "text", text: "" }] }),
 } as never;
 

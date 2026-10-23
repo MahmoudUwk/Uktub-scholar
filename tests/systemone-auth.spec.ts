@@ -90,7 +90,7 @@ describe("llama-cpp identity with a hosted model", () => {
       "llama-cpp",
       { fetchImpl: models("vllm-sr/d3-mini") },
     );
-    assert.deepEqual(identity, { model: "llama-cpp:vllm-sr/d3-mini", protocol: "systemone-noul-criteria-v1" });
+    assert.deepEqual(identity, { model: "llama-cpp:vllm-sr/d3-mini", protocol: "systemone-noul-criteria-v2" });
   });
 
   it("without a models listing the configured model id stands in (the server echoes it per judgment); without either there is no identity", async () => {
@@ -99,7 +99,7 @@ describe("llama-cpp identity with a hosted model", () => {
       "llama-cpp",
       { fetchImpl: models(null, 404) },
     );
-    assert.deepEqual(fallback, { model: "llama-cpp:vllm-sr/d3-mini", protocol: "systemone-noul-criteria-v1" });
+    assert.deepEqual(fallback, { model: "llama-cpp:vllm-sr/d3-mini", protocol: "systemone-noul-criteria-v2" });
     assert.equal(
       await resolveEngineIdentity({ UKTUB_VERIFY_URL: "https://decision.vllm-sr.ai" }, "llama-cpp", { fetchImpl: models(null, 404) }),
       null,

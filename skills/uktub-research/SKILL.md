@@ -115,14 +115,15 @@ The capabilities and arguments are identical in either form.
 No claim from memory: every factual statement needs a registry pointer.
 When writing a document, work section by section, never in one bulk write:
 
-1. Plan an outline: sections, each with a goal, a word budget (pass `max_words` to `write_section` when there is a length limit), and the citekeys it may use.
-2. If `write_section` is available, write each section with it
+1. Plan an outline: sections, each with a goal, a word budget (pass `max_words` to `write_section` when there is a length limit), and the citekeys it may use. The abstract, introduction and conclusion are outlined but written last.
+2. If `write_section` is available, write each body section with it
    (`goal`, `max_words`, plus `papers` as ONE string of citekeys separated by spaces or
    commas). Otherwise write each section yourself only from `passages` of the
    listed papers, then run `verify` with `text` on what you wrote.
 3. Save each section as soon as it is written, byte for byte, to its own file `manuscript/sections/NN-name.tex`, and `\input{sections/NN-name}` it from `manuscript/main.tex`; finished sections then survive an interruption, and later revisions are targeted edits of one section file, never a rewrite of the whole manuscript. Keep `supported` sentences from `write_section` verbatim (rewriting a supported sentence invalidates its verification; to shorten, delete whole sentences rather than paraphrasing them). Put citations before the period (e.g. `fact~\cite{ref}.`) or separate sentences with a space or blank line so sentence boundaries split cleanly. Then `compile`.
-4. Run `verify` with `document` on the whole manuscript.
-5. Resolve every non-`supported` unit before reporting done: rewrite it from a
+4. When every body section is saved, write the abstract, introduction and conclusion from the saved section files alone. Do not call `passages` or read papers for them. Restate what the sections say, reusing their supported sentences verbatim where you can (delete whole sentences to shorten), and cite only keys a section already cites. If one is not supported, delete it or write it as unverified; do not search for new passages.
+5. Run `verify` with `document` on the whole manuscript.
+6. Resolve every non-`supported` unit before reporting done: rewrite it from a
    passage of its cited paper, add the suggested citation, delete it, or mark
    it explicitly unverified by writing the word "unverified" in it (for example
    "(unverified)"). `compile` lists every statement that is neither verified nor

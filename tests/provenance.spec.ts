@@ -11,6 +11,7 @@ import { linesFromString, parsePaper } from "../src/core/review/latex.ts";
 import { countBodyWords, extractUnits } from "../src/core/provenance/units.ts";
 import { figuresOf, matchFigure, normalizePaperText } from "../src/core/provenance/figures.ts";
 import { auditProvenance, claimVariants, type Ledger, type PaperInput } from "../src/core/provenance/audit.ts";
+import { renderFull } from "../src/core/provenance/render.ts";
 
 const TEX = String.raw`\documentclass{article}
 \begin{document}
@@ -171,5 +172,46 @@ describe("countBodyWords", () => {
   it("is the only word counter: tables and captions in, math and citations out", () => {
     assert.equal(countBodyWords(TEX), 83);
     assert.ok(countBodyWords(TEX) > 40);
+  });
+});
+
+describe("every cited paper must support (V5b)", () => {
+  const TEX2 = String.raw`\documentclass{article}
+\begin{document}
+\section{Methods}
+Alpha beta finding holds in the tested cells~\cite{a2024x, b2024y}.
+\end{document}
+`;
+  const PAPERS2: PaperInput[] = [
+    { citekey: "a2024x", doi: "10.1111/a2024x", title: "A", text: "Alpha beta finding holds in the tested cells with care." },
+    { citekey: "b2024y", doi: "10.1111/b2024y", title: "B", text: "Unrelated control software logging output." },
+  ];
+
+  it("A1 one of two cites supported -> cited with the other listed; both -> verified", async () => {
+    const paper = paperOf(TEX2);
+    const half: Ledger = () => ({ pointers: ["10.1111/a2024x@r#0-10"], dois: ["10.1111/a2024x"] });
+    const s = auditProvenance({ paper, tex: TEX2, papers: PAPERS2, ledger: half }).units.find((u) => u.unit.plain.includes("Alpha beta"))!;
+    assert.equal(s.status, "cited");
+    assert.deepEqual(s.unsupportedCites, ["b2024y"]);
+    const full: Ledger = () => ({ pointers: ["10.1111/a2024x@r#0-10"], dois: ["10.1111/a2024x", "10.1111/b2024y"] });
+    const v = auditProvenance({ paper, tex: TEX2, papers: PAPERS2, ledger: full }).units.find((u) => u.unit.plain.includes("Alpha beta"))!;
+    assert.equal(v.status, "verified");
+    assert.deepEqual(v.unsupportedCites, []);
+  });
+
+  it("A2 an unregistered cite blocks verified and is listed", async () => {
+    const tex = TEX2.replace("b2024y", "nosuchkey");
+    const paper = paperOf(tex);
+    const ledger: Ledger = () => ({ pointers: ["10.1111/a2024x@r#0-10"], dois: ["10.1111/a2024x"] });
+    const s = auditProvenance({ paper, tex, papers: PAPERS2, ledger }).units.find((u) => u.unit.plain.includes("Alpha beta"))!;
+    assert.equal(s.status, "cited");
+    assert.deepEqual(s.unsupportedCites, ["nosuchkey"]);
+  });
+
+  it("A4 renderFull names the failing cite", async () => {
+    const paper = paperOf(TEX2);
+    const half: Ledger = () => ({ pointers: ["10.1111/a2024x@r#0-10"], dois: ["10.1111/a2024x"] });
+    const a = auditProvenance({ paper, tex: TEX2, papers: PAPERS2, ledger: half });
+    assert.match(renderFull(a), /not supported by: b2024y/);
   });
 });

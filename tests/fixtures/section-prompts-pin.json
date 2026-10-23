@@ -1,0 +1,44 @@
+{
+  "annotatedRepair": "The section you wrote was checked as written against its stated sources. These claims are NOT supported; rewrite each one from a passage of its cited paper, add the missing citation, or delete it:\n- [c2] (cited-unsupported) \"Invented sentence about lamp light.\" \u2014 not supported by: jones2023\nUnread sources (open one before rewriting the claim):\nc2 jones2023 section=Appendix was never opened: run passages with a query from the heading words (\"Appendix\"), or replace the source or drop the claim.\nReturn the full revised section in the same single code block: one claim per line ending ` % cN`, then `---SOURCES---` and its lines.",
+  "annotatedRepairFailures": [
+    {
+      "excerpt": "Invented sentence about lamp light.",
+      "failedCites": [
+        "jones2023"
+      ],
+      "id": "c2",
+      "pointers": [],
+      "status": "cited-unsupported",
+      "suggested": []
+    }
+  ],
+  "annotatedWriter": "Write only the section body in LaTeX for this goal:\nSummarize invented calibration findings.\nYou may use only facts from passages of these registered papers: smith2024, jones2023.\nUse the passages, registry and verify tools to read them; use no other tools.\nEnd every factual sentence with \\cite{<key>} of the paper that states it.\nWrite no fact from memory. If the papers do not support something, leave it out or write it as explicitly unverified.\nPut each factual sentence on its own line and end that line with a LaTeX comment ` % c1`, ` % c2` and so on (numbers 1 to 20, each used once).\nAfter the LaTeX add a line `---SOURCES---`, then one line per paper a sentence cites: `cN | citekey | section=<heading exactly as passages printed it>` or `cN | citekey | ptr=<pointer from passages or verify>`; 1 to 4 lines per sentence.\nReturn the LaTeX and the sources together in ONE code block, nothing else.",
+  "defaultRepair": "The section you wrote was checked as written against the registered papers. These units are NOT supported; rewrite each one from a passage of its cited paper, add the missing citation, or delete it:\n- [u2] (missing-citation) \"Invented sentence about steady cultures.\" \u2014 support found in: smith2024\nReturn only the full revised LaTeX section body, no explanation.",
+  "defaultWriter": "Write only the section body in LaTeX for this goal:\nSummarize invented calibration findings.\nYou may use only facts from passages of these registered papers: smith2024, jones2023.\nUse the passages, registry and verify tools to read them; use no other tools.\nEnd every factual sentence with \\cite{<key>} of the paper that states it.\nWrite no fact from memory. If the papers do not support something, leave it out or write it as explicitly unverified.\nReturn only the LaTeX section body, no explanation.",
+  "repairFailures": [
+    {
+      "excerpt": "Invented sentence about steady cultures.",
+      "id": "u2",
+      "pointers": [],
+      "status": "missing-citation",
+      "suggested": [
+        "smith2024"
+      ]
+    }
+  ],
+  "repairNotes": [
+    {
+      "citekey": "jones2023",
+      "hint": "c2 jones2023 section=Appendix was never opened: run passages with a query from the heading words (\"Appendix\"), or replace the source or drop the claim.",
+      "marker": 2,
+      "ref": "section=Appendix"
+    }
+  ],
+  "writerParams": {
+    "goal": "Summarize invented calibration findings.",
+    "papers": [
+      "smith2024",
+      "jones2023"
+    ]
+  }
+}

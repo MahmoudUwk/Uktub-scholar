@@ -13,6 +13,7 @@ import { Type, type Static } from "typebox";
 
 import { parsePapersParam } from "../core/verify/papers-param.ts";
 import type {
+  AnnotatedClaimLine,
   SectionResult,
   UnitVerdict,
   WriteSectionParams as SectionParams,
@@ -49,6 +50,15 @@ export const ForwardVerifyParams = Type.Object({
   papers: Type.Optional(Type.String({ description: "Citekey(s) separated by spaces or commas, or 'all'" })),
   query: Type.Optional(Type.String({ description: "Optional keywords to rank candidate passages first" })),
   continuation: Type.Optional(Type.String({ description: "OMIT on first call. Only pass the exact `vfy1:...` token returned by an incomplete prior verify call." })),
+});
+
+/** The sub-session `registry` forward (D1): metadata reads over the assigned papers only, fixed to `action: "read"`. */
+export const ForwardRegistryParams = Type.Object({
+  action: Type.Optional(Type.Literal("read", { description: "Fixed: the child may only read paper metadata" })),
+  handles: Type.Optional(Type.Array(Type.String(), { description: "Restrict to these assigned papers (omit for every assigned paper)" })),
+  fields: Type.Optional(Type.Array(Type.String(), { description: "Read fields besides doi and citekey" })),
+  limit: Type.Optional(Type.Integer({ minimum: 1, description: "Read page size" })),
+  cursor: Type.Optional(Type.String({ description: "Continuation token from the previous page of the same request" })),
 });
 
 /** Compatibility shim for models that send `papers` as an array or a JSON string of one: join to the one-string form. */
@@ -109,9 +119,28 @@ export function sectionCountsLine(out: SectionResult): string {
   return `first draft ${out.firstDraft.ok}/${out.firstDraft.units} supported; final ${out.final.ok}/${out.final.units}; ${out.words} words`;
 }
 
-/** Result text composition both hosts return: LaTeX + `---` + summary + counts line + `unresolvedBlock`. */
+/** Result text composition both hosts return: LaTeX + `---` + summary + counts line + `unresolvedBlock`, plus the claim table in annotated mode. */
 export function composeSectionResultText(out: SectionResult): string {
-  return `${out.latex}\n\n---\n${out.summary}\n${sectionCountsLine(out)}\n${unresolvedBlock(out.unresolved)}`;
+  const base = `${out.latex}\n\n---\n${out.summary}\n${sectionCountsLine(out)}\n${unresolvedBlock(out.unresolved)}`;
+  const table = annotatedTable(out);
+  return table === null ? base : `${base}\n${table}`;
+}
+
+/** The per-claim table of an annotated check (W5.9): per-paper support, unread-source notes, annotation problems. Null unless annotated. */
+export function annotatedTable(out: SectionResult): string | null {
+  const a = out.annotated;
+  if (a?.mode !== "annotated") return null;
+  const claimLine = (c: AnnotatedClaimLine): string => {
+    const parts = c.sources.map((k, i) => (c.at[i] === "unsupported" ? `not supported by ${k}` : `${k} ${c.at[i]}`));
+    return `c${c.marker} ${c.status}: ${parts.join("; ")}`;
+  };
+  const lines = ["Claims:", ...a.claims.map(claimLine)];
+  if (a.unread.length > 0) lines.push(`Source notes: ${a.unread.map((u) => u.hint).join(" ")}`);
+  if (a.problems.length > 0) {
+    const problems = a.problems.map((p) => [p.code, p.marker === null ? null : `c${p.marker}`, p.citekey ?? null].filter((x) => x !== null).join(" "));
+    lines.push(`Annotation problems: ${problems.join("; ")}`);
+  }
+  return lines.join("\n");
 }
 
 /** Refusal of a `verify` document-mode page, mapped exactly the same on both hosts (never success, never silent). */

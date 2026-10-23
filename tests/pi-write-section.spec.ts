@@ -307,8 +307,8 @@ describe("runWriteSection: table-row units (D4)", () => {
 describe("write_section child tool choice", () => {
   const p = { goal: "Summarize aging.", papers: ["a", "b"] };
 
-  it("the writer prompt names the passages and verify tools", () => {
-    assert.ok(buildWriterPrompt(p).includes("Use the passages and verify tools to read them; use no other tools."), buildWriterPrompt(p));
+  it("the writer prompt names the passages, registry and verify tools", () => {
+    assert.ok(buildWriterPrompt(p).includes("Use the passages, registry and verify tools to read them; use no other tools."), buildWriterPrompt(p));
   });
 
   type Captured = { tools: string[]; custom: string[]; prompts: string[] };
@@ -342,20 +342,22 @@ describe("write_section child tool choice", () => {
           SessionManager: { inMemory: () => ({}) },
         }) as never,
       verifyPage: async () => ({ units: [{ id: "u1", excerpt: "x", status: "supported", suggested: [], pointers: [] }], summary: { total: 1, from: 0, units: 1 }, next: null }) as never,
+      papersReady: async (_root: string, handles: readonly string[]) =>
+        handles.map((h) => ({ handle: h, citekey: h, doi: null, state: "ready" as const, detail: null })),
     });
     const ctx = {
       cwd: "/tmp/uktub-child-tools-fixture",
-      tools: [{ name: "mcp__uktub_scholar__verify" }, { name: "mcp__uktub_scholar__passages" }],
+      tools: [{ name: "mcp__uktub_scholar__verify" }, { name: "mcp__uktub_scholar__passages" }, { name: "mcp__uktub_scholar__registry" }],
       executeTool: async () => ({ content: [{ type: "text", text: "" }] }),
     } as never;
     await (tool.execute as unknown as (...a: unknown[]) => Promise<unknown>)("call-1", { goal: "Cells age.", papers: "a" }, undefined, undefined, ctx);
     return captured;
   }
 
-  it("the child gets the passages and verify tools, and the prompt says so", async () => {
+  it("the child gets the passages, registry and verify tools, and the prompt says so", async () => {
     const c = await childFor();
-    assert.deepEqual(c.tools, ["passages", "verify"]);
-    assert.deepEqual(c.custom, ["passages", "verify"]);
-    assert.ok(c.prompts.length >= 1 && c.prompts[0]!.includes("Use the passages and verify tools to read them; use no other tools."));
+    assert.deepEqual(c.tools, ["passages", "registry", "verify"]);
+    assert.deepEqual(c.custom, ["passages", "registry", "verify"]);
+    assert.ok(c.prompts.length >= 1 && c.prompts[0]!.includes("Use the passages, registry and verify tools to read them; use no other tools."));
   });
 });

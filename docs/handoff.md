@@ -23,16 +23,20 @@ documents. Fix mechanisms in code, not by adding prompt text.
 - **TDD for every behavior change:** a requirement test, a red for the right reason, the smallest fix, green. Use small phases,
   each one attributable. Never edit `src/` while a benchmark or live run uses the tree.
 - **Focus (owner, 2026-10-23):** keep the entire focus on the owner's explicit feedback on the harness flow (§1). For small side
-  problems (example: the hosted d3-mini vs d3-turbo identity label, §2), "just use the fastest most recent" option and move on.
+  problems (example: the hosted model choice, settled 2026-10-23), "just use the fastest most recent" option and move on.
   Do not open side studies.
 - **Communication:** the owner wants short answers ("tldr") and measured evidence, not argument. Ask (AskUserQuestion) only
   for real decisions; recommend one option. The owner corrects designs bluntly; take the correction literally.
 - **Testing (owner, 2026-10-23):**
   - Local Node harness only: Pi, CLI, `scripts/live`, `scripts/bench-*`. No browser UI tests for this work.
-  - Writer models: Vertex `google-vertex/gemini-3.8-flash` (user ADC) and OpenCode Go `opencode-go/minimax-m3.1-flash-free`.
+  - Writer models: Vertex `google-vertex/gemini-3.8-flash` (user ADC) and OpenCode Go `opencode-go/minimax-m3.1-flash`. The
+    `-free` variant answers 410 `ModelDeprecated` since 2026-10-23; the harness entry and grader B moved to the same model without
+    the suffix (its price is not published, so the harness's dollar figure for it is unknown, not zero).
   - Verifiers: hosted d3-mini (free key) and OpenRouter **free** models only. No paid OpenRouter spend.
-- **Git:** commit or push only on an explicit owner request (`AGENTS.md`). The owner did ask on 2026-10-23, and that request
-  covered that one push only.
+- **Git:** commit or push only on an explicit owner request (`AGENTS.md`). Each request covers that one push only (two so far,
+  both 2026-10-23).
+- **Worktrees:** while a live run or benchmark uses a tree, build in detached worktrees (`~/.cache/uktub-bench/wt-*`) and merge
+  only each worktree's own base-vs-worktree delta.
 
 ## 1. Current direction (owner, 2026-10-23): verification and section-writer redesign
 
@@ -47,11 +51,10 @@ design".
    - Cap: 16,000 chars (client policy; the hosted limit is 32,000). Longer sections are split at sentence ends.
    - Ask all claims citing a paper in **one request**, as keyed questions.
    - A paper supports a claim iff **any** of its sections scores ≥ 0.99.
-   - **Bibliography entries are excluded** and the exclusion is disclosed. Measured caution: appendix text often sits inside
-     "References" sections (§2), so exclude entries, not whole sections.
+   - **Bibliography entries are excluded** and the exclusion is disclosed. Appendix text often sits inside "References"
+     sections (§3), so exclude entries, not whole sections.
    - `passages` keeps its 512-token chunks.
-3. **A claim citing several papers is verified only if EVERY cited paper supports it.** This changes the provenance audit,
-   which today needs one supporting cite.
+3. **A claim citing several papers is verified only if EVERY cited paper supports it**, in verify and in the provenance audit.
 4. **Section writers** are agentic children that read full text through the **normal tools**: `passages`, `registry` read and
    the `verify` forward. No new reading tool.
    - The parent assigns the papers, at most **20 full-text papers** per section.
@@ -73,58 +76,58 @@ Full plan with phases, red tests and limits (orchestrator-checked against the co
 
 ## 2. Queue (in order)
 
-1. **W0, running at handoff:** Hermes PID 109866. Baseline traces of today's `write_section`: 3 runs each on Vertex and
-   OpenCode Go, scenario `adapter-literature-workflow-v2`, hosted verifier.
-   - Notes: `~/.cache/uktub-bench/hermes-w0-writer-baselines-2026-10-23/`. Run dirs:
-     `experiments/runs/adapter-literature-workflow-v2/iter-NN/`.
-   - When it ends, read `REPORT.md` and re-check it against the traces.
-   - If it died, rerun only what is missing.
-   - Do not edit `src/` while it runs.
-2. **Hosted model and identity (side issue; owner: use the fastest most recent).**
-   - `resolveEngineIdentity("hosted")` takes `data[0]` of `GET /v1/models` (`src/core/verify/engines.ts`, `probeServedModel`).
-     The host now lists `vllm-sr/d3-turbo` first, so d3-mini judgments are cached under a d3-turbo id.
-   - Pick the hosted model per the owner's rule (latency and model list: https://decision.vllm-sr.ai/docs).
-   - One small TDD fix: the identity is the configured model when the listing contains it, else no cache reuse.
-   - If the model changes, rerun the A0 baseline on it (about 4 min, free) before any B arm.
-3. **Track V (verification core):**
-   - V1 paper units, with bibliography entries excluded. First measure how much "References" text is appendix. Decide
-     between an appendix-heading detector (a splitter change: property/golden tests and a `SECTION_CHUNKING_VERSION` bump) and
-     splitting at the end of the bibliography (no splitter change).
-   - V2 keyed adapters:
-     - pack ≤ 20 questions, hosted byte estimate ≤ 120,000 per request;
-     - an invalid question is answered in place, so treat it as a failed pair;
-     - split a request only on `request_too_long`;
-     - retry 5xx and network errors twice;
-     - protocol `systemone-noul-criteria-v2`.
-   - V3 grid judge:
-     - OR over a paper's units;
-     - every cited paper must support;
-     - a failed pair marks only its claims `incomplete`, where today one failure stops every lane (`src/core/verify/judge.ts`);
-     - no schema change.
-   - V4 claim mode on units (continuation token v4).
-   - V5 document mode bundled per paper.
-   - V6 the pre-registered A/B.
-   - V7 flip the default and delete the per-chunk path, `strategy.ts` and `UKTUB_VERIFY_STRATEGY`. Amend AGENTS.md
-     ("verify and passages share section chunks").
-4. **Track W (writer contract):**
-   - W1 code-scoped registry for the child, ≤ 20 full-text papers, refused up front.
-   - W2 `% cN` + SOURCES parser.
-   - W3 source trace and `unread-source`.
-   - W4 annotated verification (needs V3 and V5).
-   - W5 `write_section` assembly: claim table, repair by cN.
-   - W6 parent rule and skill: abstract, introduction and conclusion last. The texts are `SECTION_WRITER_RULE` in
-     `src/pi/index.ts` and the writing steps in `skills/uktub-research/SKILL.md`; regenerate the pins first.
-   - W7 live pilot on `rag-review-50refs-v1`: current writer vs new contract, both models, N=3.
-5. **Benchmark gate (pre-registered):** `docs/benchmarks/section-verify-ab-2026-10-23.json`. It holds the design, the A0
-   results and three amendments: the every-cited-paper rule, bibliography vs appendix, and the identity caveat.
-   - Arms: A0 current, B1 section units with 1 question per request, B2 keyed bundles (the product path), B3 at an 8k cap.
-   - d3-mini runs all arms. `mercury-decide:free` runs B2 only, at ≤ 900 requests per UTC day.
-   - Adopt per engine only if all hold: false supports ≤ A0 + 1 and ≤ 1/278; no doc promotion that A0 lacks unless a human
-     accepts it; true supports ≥ A0 − 2 points; recall@2%FP ≥ A0 − 1 point; B2 vs B1 gives 0 new false supports;
-     doc requests ≤ 1/5 of A0.
+**Done 2026-10-23 and pushed:** every part of §1 except the browser port.
+- V1 paper units with bibliography entries excluded (an appendix-heading detector after References, `sections-v2`).
+- V2/V2b keyed packs: ≤ 20 questions, ≤ 9 states, byte estimate ≤ 120,000, protocol `systemone-noul-criteria-v2`, 5xx retry.
+- V3 grid judge: OR over units, every cited paper must support, a failed pair marks only its own claims incomplete.
+- V4 claim mode on units and V5 document mode per paper, both opt-in via `UKTUB_VERIFY_STRATEGY=units`. V5b: the provenance
+  audit needs every cited paper.
+- W1 child scoped to ≤ 20 full-text papers. W2 `% cN` parser. W3 source trace.
+- W4 annotated check: stated sources first, then elsewhere. It always uses units, and the section scope replaces "all".
+- W5 `write_section` contract and claim table (always on in Pi). W6 front matter written last.
+- The hosted identity fix (P0). The hosted model stays `vllm-sr/d3-mini` (owner: "pick like 4B models").
+- Plans per phase: `~/.cache/uktub-bench/plan-*-2026-10-23.md`. Measurements: §3.
+
+1. **V6, the pre-registered A/B, running at handoff** (Hermes, notes
+   `~/.cache/uktub-bench/hermes-v6-ab-d3mini-2026-10-23/`, frozen tree `wt-final-2026-10-23`).
+   - Arms on d3-mini: B1, B2, B3, against the recorded A0. The design is in
+     `docs/benchmarks/section-verify-ab-2026-10-23.json` (5 amendments, the last being multi-state packing).
+   - Preliminary B2 claims: 232/269 true and 0/278 false at 0.99; r2 0.989 (A0: 197/269, 0/278, 0.978).
+   - **Open, root cause first:** B2's first pass lost every cell of 25 papers (280 claims). A refill pass cleared them.
+     The cause is unknown: the logs hold no status codes. Hypothesis: the per-key token limit (750k tokens/min), since unit
+     arms send about 3.6× A0's characters. Run a probe that logs status codes before accepting V6.
+   - S2 needs a human to read every unit B2 promotes that A0 did not.
+   - The mercury-decide:free arms (B2 only, ≤ 900 requests per UTC day) are not run.
+2. **W7 live pilot** (plan `~/.cache/uktub-bench/plan-w4-w6-build-2026-10-23.md`, W7 section).
+   - `rag-review-50refs-v1`: C0 = the pre-redesign writer (commit `86e909b`, `--verify-engine hosted`) vs C1 = current with
+     `--verify-engine hosted-units`.
+   - Models: MiniMax and Vertex, N = 3. Gates: marker compliance ≥ 90 %, requests per section ≤ 250, parent `passages`
+     after the last section = 0, Tier 1 6/6, blind Tier 2 bad rate ≤ 5 %.
+   - A first C1 smoke (MiniMax, `adapter-literature-workflow-v2`) was running at handoff:
+     `~/.cache/uktub-bench/c1-smoke-2026-10-23/`, tree `wt-c1-2026-10-23`.
+3. **V7** (after V6 and W7 pass): make units the default, delete the per-chunk path, `strategy.ts` and
+   `UKTUB_VERIFY_STRATEGY`, and amend AGENTS.md ("verify and passages share section chunks").
+4. **Browser port** (backlog §7) after V7.
 
 ## 3. Key measurements (raw data in `docs/benchmarks/`; scratch evidence in `~/.cache/uktub-bench/`)
 
+- **Redesign build, 2026-10-23** (all orchestrator-verified):
+  - Live CLI smokes on hosted d3-mini over a copy of the claims-v2 registry:
+    - claim 2610.00717-04: the unit path judged 34 sections and 13 windows in 7 POSTs and found the appendix support. The
+      chunk path, top 10 of 95 chunks in 2 POSTs, found none.
+    - document mode: a sentence with one supporting cite is `supported`; the same sentence with a second, unrelated cite is
+      `cited-unsupported — not supported by: <key>` (9 POSTs, 4.6 s).
+  - Hosted request limits, measured: the top-level state plus up to 8 `states` entries per request (9 extra → 400
+    `too_many_states`); `q1..qn` keys are answered per key.
+  - V5b Tier 1 replay (offline, 5 runs): one unit flips, iter-21 u17 from verified to cited (hu2021lora never supported it);
+    the control run is byte-identical. V2b packing also changes the request shape of the default chunk path, whose scores
+    were not re-measured.
+  - Heading rule on 66 held-out PDFs: 29 cuts after References, all real headings, 0 false cuts.
+  - Fixes found in review, each test-first:
+    - `primePage` now prepares sources and re-derives stale marks;
+    - `supportWhere` labels supporting papers only;
+    - the harness forwards the hosted key for `hosted-units`;
+    - `S1 Title` supplement headings are detected.
 - **d3-mini A0, current product, 2026-10-23, identical to 2026-10-15** (`section-verify-ab-2026-10-23.json`):
   - claim-verification-v2: 197/269 true and 0/278 false supported at 0.99; recall@2%FP 0.978; 5,470 requests; 220 s.
   - 18 notes: 1,155 units, 184/345 cited supported, 10,040 requests.
@@ -142,6 +145,25 @@ Full plan with phases, red tests and limits (orchestrator-checked against the co
   - Section-scale probe (2026-10-23, one paper): 40 questions per request accepted; a supporting sentence found at every
     position up to 31k tokens; multi- vs single-question drift ≤ 0.001.
   - Context 65,536 tokens; browser reachable. Free tier: 1,000 requests per UTC day account-wide, 20/min.
+- **W0, today's `write_section` before the redesign, 2026-10-23** (scenario `adapter-literature-workflow-v2`, hosted
+  verifier; analysis `~/.cache/uktub-bench/hermes-w0-analysis-2026-10-23/REPORT.md`, orchestrator spot-checked):
+  - MiniMax `minimax-m3.1-flash`, 3 valid runs (iter-31, 32, 35), medians (range):
+    - wall 3,009 s (2,042–3,627); 5 `write_section` calls (4–5); 54 cited sentences; 1,194 words; 12 unresolved;
+    - supported: 50 % in the first draft, 81 % final;
+    - child calls: 129 `verify` (125–192, one claim per call), 42 `passages`; 0 cited-never-read;
+    - 2,887 judgment pairs per run (2,580–4,533), 599 verify runs; Tier 1 6/6 in all three.
+  - Vertex `gemini-3.8-flash`: no valid run in 4 attempts. iter-27, 28 and 34 fell back to flash-lite after 429; iter-36
+    was blocked by "fetch failed". Treat it as untested today.
+  - Seen failure modes: a 429 inside the child (iter-27); a repair that returned drafting chatter as the section
+    (iter-27); an experiment-design section whose setup claims have no source by construction (iter-32).
+- **References vs appendix, claims-v2, 2026-10-23** (`~/.cache/uktub-bench/hermes-v1-refs-appendix-2026-10-23/`;
+  hand-read boundaries in `ground-truth.json`, orchestrator spot-checked):
+  - 44 of 48 papers have a References-labelled span: 950,065 chars, 25 % of the text. 52.8 % of it is appendix, in 22 papers
+    (median tail 19,927 chars, max 68,939). The other 4 papers have no References mark.
+  - Prototype appendix-heading rule (tuned on the same papers, so in-sample): finds the appendix in 21/22, with 0 false cuts
+    and 0 entry chars leaked. It drops 2,300 appendix chars. Miss: 2609.18631 (an unmarked appendix title).
+  - Entry-density cut: keeps 10,350 entry chars and drops 9,688 appendix chars. Rejected.
+  - All 13 A0 references-only true supports keep their evidence under both rules.
 - **Paper sections, claims-v2:** 1,018 sections in 48 papers. Non-reference sections: median ~2.0k chars, p90 ~6.3k,
   max 33.9k. "References" is 25 % of text and often includes appendices.
 - **Writer, older live runs (2026-10-18/20, 50-reference review):**
@@ -197,11 +219,15 @@ Full plan with phases, red tests and limits (orchestrator-checked against the co
 - Node 26.12.1 on this host, 26.3.1 in the Docker sandbox (floor 22.19); pnpm 10.30.
 - BusyTeX 1.4.1 with TeX Live 2026 recommended. Tectonic `src/core/compile/tectonic.lock.json`.
 - Eos ONNX `src/core/verify/eos-onnx.lock.json`. Embeddings `src/core/embed/models.lock.json` (EmbeddingGemma 2, llama.cpp b11476).
-- Hosted verifier `vllm-sr/d3-mini` (see queue item 2). Protocol `systemone-noul-criteria-v1`, until V2 makes it v2.
-- Chunks are 512 tokens with section boundaries (`config/chunking.yaml`); `passages` keeps them.
+- Hosted verifier `vllm-sr/d3-mini` (owner, 2026-10-23), protocol `systemone-noul-criteria-v2`; `HOSTED_PACK` 20 questions,
+  9 states, 120,000 bytes.
+- Chunks are 512 tokens with section boundaries (`config/chunking.yaml`, `sections-v2`); `passages` keeps them. Judging units
+  are whole sections ≤ 16,000 chars (`paper-units.ts`).
 
 ## 7. Backlog (not scheduled)
 
+- Fix the import cycle between `core/tools/verify.ts` and `core/verify/document.ts` (a test imports in a set order).
+- `frontmatter-new-cite` audit item: deferred until W7 shows front-matter new cites.
 - Port the redesign to the browser after V7/W7. Hosted d3-mini stays unreachable from a page (no CORS); OpenRouter's free
   pool is 1,000 requests a day.
 - OpenCode Go and Ollama Cloud block browser CORS (upstream issue anomalyco/opencode#52178). Vertex browser keys are blocked

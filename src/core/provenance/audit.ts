@@ -26,7 +26,7 @@ export const isNonVerifiedProse = (u: UnitAudit): boolean => u.unit.kind !== "ro
 export const unlabelledUnverifiedUnits = (a: ProvenanceAudit): UnitAudit[] => a.units.filter((u) => isNonVerifiedProse(u) && !u.labelledUnverified);
 /** A unit written as nothing but bibliography commands (`\bibliographystyle{plain}`, `\bibliography{refs}`). */
 const BIBLIOGRAPHY_ONLY = /^\s*(?:\\(?:bibliographystyle|bibliography|addbibresource)\s*(?:\[[^\]]*\]\s*)?\{[^}]*\}\s*)+$/;
-export interface UnitAudit { unit: Unit; status: "verified" | "cited" | "uncited"; ledger: LedgerHit | null; unregistered: string[]; figures: FigureAudit[]; labelledUnverified: boolean }
+export interface UnitAudit { unit: Unit; status: "verified" | "cited" | "uncited"; ledger: LedgerHit | null; unregistered: string[]; figures: FigureAudit[]; labelledUnverified: boolean; unsupportedCites: string[] }
 export interface OpenItem { severity: "open" | "check" | "info"; status: FigureStatus; papers: string[]; file: string; line: number; section: string; kind: Unit["kind"]; token: string; why: string; excerpt: string }
 export interface ProvenanceSummary {
   words: number;
@@ -137,9 +137,19 @@ export function auditProvenance(input: { paper: Paper; tex: string; papers: Pape
     const unregistered = unit.cites.filter((k) => !byKey.has(k));
     for (const k of unregistered) unregisteredAll.add(k);
     let hit: LedgerHit | null = null;
+    let unsupportedCites: string[] = [];
     if (unit.kind !== "row") {
       const found = input.ledger(claimVariants(unit.plain));
-      if (found !== null && registered.some((p) => found.dois.includes(p.doi))) hit = found;
+      // Verified only when every cited, registered paper supports this wording
+      // (O1: an unregistered or sourceless cite blocks verified). Otherwise the
+      // unsupported cites are listed: registered cites the ledger does not
+      // cover, then unregistered keys.
+      if (found !== null && found.dois.length > 0) {
+        const covered = new Set(found.dois);
+        const missing = registered.filter((p) => !covered.has(p.doi)).map((p) => p.citekey);
+        if (registered.length > 0 && unregistered.length === 0 && missing.length === 0) hit = found;
+        else unsupportedCites = [...missing, ...unregistered];
+      }
     }
     units.push({
       unit,
@@ -148,6 +158,7 @@ export function auditProvenance(input: { paper: Paper; tex: string; papers: Pape
       unregistered,
       figures: figures.map((f) => auditFigure(f, unit, registered, texts, unit.cites.length > 0, input.results ?? [])),
       labelledUnverified: UNVERIFIED_LABEL.test(unit.plain),
+      unsupportedCites,
     });
   }
   const items: OpenItem[] = [];

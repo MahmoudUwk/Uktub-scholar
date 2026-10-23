@@ -4,17 +4,19 @@ import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 import type { ToolContext } from "../core/tools/context.ts";
-import { verifyClaimTool, type VerifyArgs } from "../core/tools/verify.ts";
+import type { AnnotationProblem, ParsedAnnotations } from "../core/verify/annotations.ts";
+import { verifyAnnotatedTool, verifyClaimTool, type VerifyArgs, type VerifyHooks } from "../core/tools/verify.ts";
 import { MCP_SERVER_NAME, MCP_TOOL_PREFIX, normalizeToolName } from "../core/tool-names.ts";
 import { WriteQueue } from "../core/queue.ts";
 import { createSafeDownloader } from "../core/source/download.ts";
 import { coerceSectionArgs, createChildTally, runWriteSection, toSectionParams, type UnitVerdict, type VerifyPage } from "./write-section.ts";
-import { composeSectionResultText, ForwardPassagesParams, ForwardVerifyParams, lastAssistantText, normalizeForwardPapers, verifyRefusalText, VERIFY_MALFORMED_TEXT, WriteSectionParams, type WriteSectionArgs } from "../agent/section-tool.ts";
+import { composeSectionResultText, ForwardPassagesParams, ForwardRegistryParams, ForwardVerifyParams, lastAssistantText, verifyRefusalText, VERIFY_MALFORMED_TEXT, WriteSectionParams, type WriteSectionArgs } from "../agent/section-tool.ts";
 /** The shared `write_section` definition (one identity for Pi and the browser); Pi's behavior is byte-identical. */
 export {
   composeSectionResultText,
   coerceSectionArgs,
   ForwardPassagesParams,
+  ForwardRegistryParams,
   ForwardVerifyParams,
   lastAssistantText,
   normalizeForwardPapers,
@@ -30,6 +32,9 @@ export {
   type WriteSectionArgs,
 } from "../agent/section-tool.ts";
 import { AGENT_RULES } from "../core/agent-rules.ts";
+import { checkSectionPapers, scopeForwardArgs, scopeRegistryArgs, type SectionPaper, type SectionScope } from "../agent/section-scope.ts";
+import { createSourceTrace, type SourceTrace } from "../agent/source-trace.ts";
+import { readSectionPapers } from "./section-papers.ts";
 import { BIN_PATH } from "../core/launch.ts";
 import { BLOCK_PREFIX, type Notice, clearedIds, extractNotices, footerFor } from "../core/notices.ts";
 import { destructiveToolOwnedCommand, toolOwnedViolation } from "../core/tool-owned.ts";
@@ -39,7 +44,8 @@ import { writingWorkflowSection } from "../agent/workflow.ts";
 /** The bin shim of THIS package copy: `pi install` does not link bins onto PATH, so a bare `uktub-scholar` is ENOENT. */
 
 export const SECTION_WRITER_RULE =
-  "For multi-section documents, draft each prose section with `write_section` (pass `max_words` to stay within any length limit) and paste its returned LaTeX into the manuscript verbatim (rewriting invalidates verification; if trimming is needed, delete whole sentences rather than paraphrasing), then run `verify` on the full document.";
+  "For multi-section documents, draft each prose section with `write_section` (pass `max_words` to stay within any length limit) and paste its returned LaTeX into the manuscript verbatim (rewriting invalidates verification; if trimming is needed, delete whole sentences rather than paraphrasing), then run `verify` on the full document. " +
+  "Exception: write the abstract, introduction and conclusion yourself, after all other sections are saved, from those saved sections only (no `passages` for them), and verify them like any prose.";
 
 /** The document-writing section of the skill text (see `src/agent/workflow.ts`, runtime-neutral). */
 export { writingWorkflowSection };
@@ -58,7 +64,7 @@ export function bundledSkillPath(moduleUrl: string): string {
   return fileURLToPath(new URL("../../skills/uktub-research/SKILL.md", moduleUrl));
 }
 
-/** Always-on document workflow appended to every session's system prompt (2888 characters, measured from the current SKILL.md; client policy: its context cost is accepted). */
+/** Always-on document workflow appended to every session's system prompt (3398 characters, measured from the current SKILL.md; client policy: its context cost is accepted). */
 const WRITING_WORKFLOW = readWritingWorkflow(bundledSkillPath(import.meta.url));
 
 export default function uktubScholarExtension(pi: ExtensionAPI): void {
@@ -243,9 +249,24 @@ function entryOf(pkgDir: string): string | null {
 export interface SectionWriterSeams {
   loadSdk?: () => Promise<PiSdk>;
   verifyPage?: (text: string, offset: number) => Promise<VerifyPage>;
+  /** Annotated checker over parsed claims (default: the real annotated verify, scoped to the section's papers). */
+  verifyAnnotated?: (parsed: ParsedAnnotations, offset: number, scope: SectionScope) => Promise<VerifyPage>;
+  /** Resolve assigned handles to readiness rows (default: readSectionPapers on the project registry). */
+  papersReady?: (root: string, handles: readonly string[]) => Promise<SectionPaper[]>;
+  /** Observe the child's source trace (test-only until W5 wires it into verification). */
+  onTrace?: (trace: SourceTrace) => void;
+  /** The engine behind the default checkers (test seam; production: the configured engine). */
+  verifyHooks?: VerifyHooks;
 }
 
 export const sectionWriterTool: ToolDefinition<typeof WriteSectionParams> = makeSectionWriterTool();
+
+/** Count annotation problems by code for details.annotated (the W7 analysis). */
+export function problemCounts(problems: AnnotationProblem[]): Record<string, number> {
+  const counts: Record<string, number> = {};
+  for (const p of problems) counts[p.code] = (counts[p.code] ?? 0) + 1;
+  return counts;
+}
 
 export function makeSectionWriterTool(seams: SectionWriterSeams = {}): ToolDefinition<typeof WriteSectionParams> {
   return {
@@ -266,41 +287,113 @@ export function makeSectionWriterTool(seams: SectionWriterSeams = {}): ToolDefin
     } catch (err) {
       return { content: [{ type: "text", text: `write_section refused: ${err instanceof Error ? err.message : String(err)}` }], details: {} };
     }
-    const mcpNameOf = (kind: "verify" | "passages"): string => {
+    const mcpNameOf = (kind: "verify" | "passages" | "registry"): string => {
       const name = ctx.tools.map((t) => (typeof (t as { name?: unknown }).name === "string" ? ((t as { name: string }).name) : "")).find((n) => normalizeToolName(n) === kind);
       if (!name) throw new Error(`write_section needs the ${kind} tool in the parent session`);
       return name;
     };
     let verifyName: string;
     let passagesName: string;
+    let registryName: string;
     try {
       verifyName = mcpNameOf("verify");
       passagesName = mcpNameOf("passages");
+      registryName = mcpNameOf("registry");
     } catch (err) {
       return { content: [{ type: "text", text: `write_section refused: ${err instanceof Error ? err.message : String(err)}` }], details: {} };
     }
+    // Abort already cancelled: never create the child.
+    signal?.throwIfAborted();
+    // Code-scoped papers (W1): readiness is checked before the child exists;
+    // the writer prompt and every forward below see only the assigned keys.
+    let rows: SectionPaper[];
+    try {
+      rows = await (seams.papersReady ?? readSectionPapers)(ctx.cwd, section.papers);
+    } catch (err) {
+      return { content: [{ type: "text", text: `write_section refused: ${err instanceof Error ? err.message : String(err)}` }], details: {} };
+    }
+    const checked = checkSectionPapers(section.papers, rows);
+    if (!checked.ok) {
+      return { content: [{ type: "text", text: checked.message }], details: {} };
+    }
+    const scope: SectionScope = checked.scope;
+    // The verify-tool context for the document-mode default below, factored
+    // out so the merge can wire the annotated default in one line (W5.12).
+    const makeVctx = (): ToolContext => ({
+      root: ctx.cwd,
+      fetch: ((...a: Parameters<typeof fetch>) => globalThis.fetch(...a)) as ToolContext["fetch"],
+      env: process.env as Record<string, string | undefined>,
+      now: () => new Date(),
+      queue: new WriteQueue(),
+      download: createSafeDownloader(),
+      ...(signal !== undefined ? { signal } : {}),
+    });
+    const checkDocumentPage = async (text: string, offset: number): Promise<VerifyPage> => {
+      const result = await verifyClaimTool(makeVctx(), { text, offset } as VerifyArgs, seams.verifyHooks);
+      const refused = (result.details as { refused?: { code?: string; message?: string } }).refused;
+      if (refused !== undefined) throw new Error(verifyRefusalText(refused));
+      const sc = result.structuredContent as { units: UnitVerdict[]; summary: { total: number; from: number; units: number }; next: number | null } | null | undefined;
+      if (sc == null || !Array.isArray(sc.units) || typeof sc.summary?.total !== "number" || sc.next === undefined) {
+        throw new Error(VERIFY_MALFORMED_TEXT);
+      }
+      return { units: sc.units, summary: sc.summary, next: sc.next };
+    };
+    // The annotated default (W5): stated sources first, scoped to the section's papers, same refusal and shape checks.
+    const checkAnnotatedPage = async (parsed: ParsedAnnotations, offset: number, scope: SectionScope): Promise<VerifyPage> => {
+      const result = await verifyAnnotatedTool(makeVctx(), { parsed, offset, scope: [...scope.keys] }, seams.verifyHooks);
+      const refused = (result.details as { refused?: { code?: string; message?: string } }).refused;
+      if (refused !== undefined) throw new Error(verifyRefusalText(refused));
+      const sc = result.structuredContent as { units: UnitVerdict[]; summary: { total: number; from: number; units: number }; next: number | null; work?: VerifyPage["work"] } | null | undefined;
+      if (sc == null || !Array.isArray(sc.units) || typeof sc.summary?.total !== "number" || sc.next === undefined) {
+        throw new Error(VERIFY_MALFORMED_TEXT);
+      }
+      return { units: sc.units, summary: sc.summary, next: sc.next, ...(sc.work !== undefined ? { work: sc.work } : {}) };
+    };
+    // Source trace (W3): every forward below records its real outcome; the
+    // annotated checker (W5) reads it for unread sources.
+    const trace: SourceTrace = createSourceTrace();
+    seams.onTrace?.(trace);
     // The SDK import is lazy (and dynamic): the extension file loads without it, and only a write_section call pays for it.
     // Already cancelled: never create the child.
     signal?.throwIfAborted();
-    const forward = (kind: string, mcpName: string, description: string, parameters: ToolDefinition["parameters"]): ToolDefinition => ({
+    const forward = (
+      kind: string,
+      mcpName: string,
+      description: string,
+      parameters: ToolDefinition["parameters"],
+      scopeArgs: (p: unknown, scope: SectionScope) => { ok: true; args: unknown } | { ok: false; message: string },
+    ): ToolDefinition => ({
       name: kind,
-      label: kind === "verify" ? "Verify claim" : "Search passages",
+      label: kind === "verify" ? "Verify claim" : kind === "registry" ? "Read registry" : "Search passages",
       description,
       parameters,
       execute: async (_id, p, nestedSignal, _u, _c) => {
+        // Out-of-scope papers refuse the whole forward: never narrow silently, never call the parent tool.
+        const scoped = scopeArgs(p, scope);
+        if (!scoped.ok) {
+          return {
+            content: [{ type: "text", text: scoped.message }],
+            details: { refused: { code: "OUT_OF_SCOPE" } },
+            isError: true,
+          };
+        }
         // Both signals stay live: the parent's cancellation must never be
         // masked by the nested call's own signal.
         const combined =
           nestedSignal !== undefined && signal !== undefined
             ? AbortSignal.any([signal, nestedSignal])
             : (nestedSignal ?? signal);
+        const outcome = await ctx.executeTool(mcpName, scoped.args, combined !== undefined ? { signal: combined } : undefined);
+        try {
+          trace.record(kind as "passages" | "registry" | "verify", outcome);
+        } catch {
+          // Report-only: recording never breaks a forward or changes its text.
+        }
         return {
           content: [
             {
               type: "text",
-              text: textOfOutcome(
-                await ctx.executeTool(mcpName, normalizeForwardPapers(p), combined !== undefined ? { signal: combined } : undefined),
-              ),
+              text: textOfOutcome(outcome),
             },
           ],
           details: {},
@@ -318,11 +411,12 @@ export function makeSectionWriterTool(seams: SectionWriterSeams = {}): ToolDefin
         ...(ctx.model !== undefined && ctx.model !== null ? { model: ctx.model as never } : {}),
         cwd: ctx.cwd,
         sessionManager: SessionManager.inMemory(),
-        tools: ["passages", "verify"],
+        tools: ["passages", "registry", "verify"],
         excludeTools: ["mcp__*", "write_section"],
         customTools: [
-          forward("passages", passagesName, "Search the registered papers for passages about a query.", ForwardPassagesParams),
-          forward("verify", verifyName, "Check one claim against the registered papers.", ForwardVerifyParams),
+          forward("passages", passagesName, "Search the registered papers for passages about a query.", ForwardPassagesParams, scopeForwardArgs),
+          forward("registry", registryName, "Read metadata of the assigned papers.", ForwardRegistryParams, scopeRegistryArgs),
+          forward("verify", verifyName, "Check one claim against the registered papers.", ForwardVerifyParams, scopeForwardArgs),
         ],
       });
       // Child-session totals come from its own events; released on every settle path below.
@@ -344,29 +438,13 @@ export function makeSectionWriterTool(seams: SectionWriterSeams = {}): ToolDefin
             if (text === "") throw new Error("the writer sub-session returned no text");
             return text;
           },
-          verifyDocument: seams.verifyPage ?? (async (text: string, offset: number) => {
-            const vctx: ToolContext = {
-              root: ctx.cwd,
-              fetch: ((...a: Parameters<typeof fetch>) => globalThis.fetch(...a)) as ToolContext["fetch"],
-              env: process.env as Record<string, string | undefined>,
-              now: () => new Date(),
-              queue: new WriteQueue(),
-              download: createSafeDownloader(),
-              ...(signal !== undefined ? { signal } : {}),
-            };
-            const result = await verifyClaimTool(vctx, { text, offset } as VerifyArgs);
-            const refused = (result.details as { refused?: { code?: string; message?: string } }).refused;
-            if (refused !== undefined) throw new Error(verifyRefusalText(refused));
-            const sc = result.structuredContent as { units: UnitVerdict[]; summary: { total: number; from: number; units: number }; next: number | null } | null | undefined;
-            if (sc == null || !Array.isArray(sc.units) || typeof sc.summary?.total !== "number" || sc.next === undefined) {
-              throw new Error(VERIFY_MALFORMED_TEXT);
-            }
-            return { units: sc.units, summary: sc.summary, next: sc.next };
-          }),
+          verifyDocument: seams.verifyPage ?? checkDocumentPage,
+          verifyAnnotated: async (parsed, offset) => (seams.verifyAnnotated ?? checkAnnotatedPage)(parsed, offset, scope),
+          trace,
           abortWriter: () => session.abort(),
           disposeWriter: () => session.dispose(),
         },
-        { goal: section.goal, papers: section.papers, ...(section.query !== undefined ? { query: section.query } : {}), ...(section.maxWords !== undefined ? { maxWords: section.maxWords } : {}) },
+        { goal: section.goal, papers: [...scope.keys], ...(section.query !== undefined ? { query: section.query } : {}), ...(section.maxWords !== undefined ? { maxWords: section.maxWords } : {}) },
         signal,
       );
       } finally {
@@ -374,9 +452,28 @@ export function makeSectionWriterTool(seams: SectionWriterSeams = {}): ToolDefin
       }
       void toolCallId;
       void onUpdate;
+      const annotated = out.annotated;
       return {
         content: [{ type: "text", text: composeSectionResultText(out) }],
-        details: { child: tally.stats(Date.now()), firstDraft: out.firstDraft, final: out.final, repaired: out.repaired, words: out.words },
+        details: {
+          child: tally.stats(Date.now()),
+          firstDraft: out.firstDraft,
+          final: out.final,
+          repaired: out.repaired,
+          words: out.words,
+          ...(annotated !== undefined
+            ? {
+              annotated: {
+                mode: annotated.mode,
+                firstDraft: annotated.firstDraft,
+                claims: annotated.claims,
+                problems: problemCounts(annotated.problems),
+                checkCalls: annotated.checkCalls,
+                work: annotated.work,
+              },
+            }
+            : {}),
+        },
       };
     }
   },

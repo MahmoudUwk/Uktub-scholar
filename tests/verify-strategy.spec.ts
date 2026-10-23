@@ -125,7 +125,7 @@ const stubFetch = (seen: Seen[], scores: Record<string, number> = {}) =>
     return new Response(JSON.stringify({ answers }), { status: 200 });
   }) as unknown as typeof fetch;
 
-describe("systemone adapter: one question per request", () => {
+describe("systemone adapter: keyed packs", () => {
   const URL = "https://decision.vllm-sr.ai/v1/systemone";
 
   it("keeps the one-question shape", async () => {
@@ -136,19 +136,20 @@ describe("systemone adapter: one question per request", () => {
     assert.deepEqual((seen[0]!.body.questions as Record<string, unknown>).c, criteriaQuestion("c", "criteria"));
   });
 
-  it("same-state rows travel as separate one-question requests, in order", async () => {
+  it("same-state rows travel as one keyed pack, in order", async () => {
     const seen: Seen[] = [];
-    const e = systemoneEndpointEngine({ url: URL, label: "hosted", fetchImpl: stubFetch(seen) });
+    const e = systemoneEndpointEngine({ url: URL, label: "hosted", fetchImpl: stubFetch(seen), pack: { maxQuestions: 20 } });
     const out = await e.run([
       { state: "S", instructions: "q0" },
       { state: "S", instructions: "q1" },
       { state: "OTHER", instructions: "q2" },
     ]);
     assert.deepEqual(out, [0.5, 0.5, 0.5]);
-    assert.equal(seen.length, 3);
-    for (const s of seen) assert.deepEqual(Object.keys((s.body.questions ?? {}) as object), ["c"]);
+    assert.equal(seen.length, 2);
+    assert.deepEqual(Object.keys(seen[0]!.body.questions ?? {}), ["q1", "q2"]);
     assert.equal(seen[0]!.body.state, "S");
-    assert.equal(seen[2]!.body.state, "OTHER");
+    assert.deepEqual(Object.keys(seen[1]!.body.questions ?? {}), ["c"]);
+    assert.equal(seen[1]!.body.state, "OTHER");
   });
 
   it("a missing or invalid answer is an engine failure, never a score", async () => {

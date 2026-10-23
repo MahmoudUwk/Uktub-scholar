@@ -23,11 +23,11 @@ import type { ToolContext } from "../tools/context.ts";
 import { MAX_ACQUISITIONS_PER_CALL, RETRY_FAILED_AFTER_MS, SOURCE_PREP_CONCURRENCY, prepareSources } from "./acquire.ts";
 export { MAX_ACQUISITIONS_PER_CALL, RETRY_FAILED_AFTER_MS, SOURCE_PREP_CONCURRENCY };
 import type { ClaimEngine } from "./claim.ts";
-import { createConfiguredEngine, resolveEngineIdentityCached, type EngineIdentity } from "./engines.ts";
+import { createConfiguredEngine, gridBatchSizeOf, resolveEngineIdentityCached, type EngineIdentity } from "./engines.ts";
 import { EXCERPT_MAX_CHARS, containEvidence, localizePassages, type ContainedEvidence, type PriorDelivery, type SupportedPassage } from "./evidence.ts";
-import { isSupported, judgePassages, type JudgeResult } from "./judge.ts";
-import { locatorTokens, selectCandidates, lexicalRank, type Candidate } from "./retrieve.ts";
-import { TOP_K, topCandidates, verifySwitchFromEnv, type VerifyStrategy } from "./strategy.ts";
+import { isSupported, judgeClaimUnits, judgePassages, type GridResult, type JudgeResult } from "./judge.ts";
+import { locatorTokens, selectCandidates, lexicalRank, UNITS_PER_PAPER_QUERY, type Candidate } from "./retrieve.ts";
+import { TOP_K, topCandidates, unitPathFromEnv, verifySwitchFromEnv, type VerifyStrategy } from "./strategy.ts";
 import { resolveScope, type ScopePaper } from "./scope.ts";
 import {
   chunkPolicyOf,
@@ -39,6 +39,7 @@ import {
   getSource,
   getSourceText,
   pageOf,
+  parsePointer,
   passageHashOf,
   resolvePointer,
   saveEvidence,
@@ -46,10 +47,14 @@ import {
   markDelivered,
   pointerIssued,
   claimHashOf,
+  unitIdOf,
+  SECTION_CHUNKING_VERSION,
   type EvidenceRow,
   type RunCarry,
   type RunSnapshot,
 } from "./store.ts";
+import { SECTION_UNIT_MAX_CHARS } from "./paper-units.ts";
+import { foldRankedToUnits, loadPaperUnits, unitCandidates, type LoadedPaperUnits } from "./unit-select.ts";
 
 /** Client policy: rows per engine call — bounds how long a cancellation waits. */
 export const JUDGE_BATCH_SIZE = 8;
@@ -61,6 +66,20 @@ export interface WorkflowHooks {
   createEngine?: (engineName: string) => ClaimEngine;
   /** Fetch used for the engine-identity probe (tests inject; production uses global fetch). */
   fetchImpl?: typeof fetch;
+  /** Judging-unit cap for the unit path (a bench-only knob; default SECTION_UNIT_MAX_CHARS). */
+  unitMaxChars?: number;
+  /** Annotated checking always uses the unit path through this hook (not env, not config, not a schema field). */
+  unitPath?: boolean;
+}
+
+/** Primed page grids (V5a document mode): round 1 judges every claim over its
+ *  paper units; round 2 judges localization windows of supported units plus
+ *  the "all" rechecks of claims no cited paper supports. */
+export interface PrimeSession {
+  round1: GridResult;
+  round2: GridResult;
+  /** Annotated replay guard: claimHash → unit hashes the replay may serve (absent = unguarded). */
+  only?: Map<string, Set<string>>;
 }
 
 export interface VerifyRequest {
@@ -79,14 +98,15 @@ const refuse = (code: RefusalCode, message: string): WorkflowOutcome => ({ kind:
 
 // ── continuation tokens ─────────────────────────────────────────────────────
 
-/** The token only names the run; everything else (what was delivered, where the work stopped) lives with the run.
- *  v3: runs freeze their candidate order at creation, so older tokens (whose top-10 order was never captured) are refused. */
-const encodeToken = (runId: string): string => Buffer.from(JSON.stringify({ v: 3, r: runId })).toString("base64url");
+/** The token only names the run and its path version; everything else (what was delivered, where the work stopped) lives with the run.
+ *  v3: chunk runs freeze their candidate order at creation; v4: unit runs freeze pointer candidates.
+ *  Older versions (whose top-10 order was never captured) are refused. */
+const encodeToken = (runId: string, version: 3 | 4): string => Buffer.from(JSON.stringify({ v: version, r: runId })).toString("base64url");
 
-function decodeToken(token: string): { runId: string } | null {
+function decodeToken(token: string): { runId: string; version: number } | null {
   try {
     const t = JSON.parse(Buffer.from(token, "base64url").toString("utf8")) as { v?: number; r?: unknown };
-    return t.v === 3 && typeof t.r === "string" ? { runId: t.r } : null;
+    return (t.v === 3 || t.v === 4) && typeof t.r === "string" ? { runId: t.r, version: t.v } : null;
   } catch {
     return null;
   }
@@ -106,39 +126,118 @@ const once = <T>(fn: () => T): (() => T) => {
   };
 };
 
-// ── entry ───────────────────────────────────────────────────────────────────
+// ── setup (shared by the claim entry and the document prime) ────────────────
 
-export async function verifyWorkflow(ctx: ToolContext, db: DatabaseSync, req: VerifyRequest, hooks: WorkflowHooks): Promise<WorkflowOutcome> {
-  let cfg: ChunkConfig;
-  try {
-    cfg = loadChunkConfig(ctx.root, { env: ctx.env });
-  } catch (err) {
-    if (err instanceof ConfigError) return refuse("CONFIG_INVALID", err.message);
-    throw err;
-  }
+export interface VerifySetup {
+  cfg: ChunkConfig;
+  engineName: string;
+  getEngine: () => ClaimEngine;
+  identityOf: () => Promise<EngineIdentity | null>;
+  /** Judging-unit cap for the unit path. */
+  cap: number;
+}
+
+/** Config, engine and identity for one call (throws ConfigError like the entry). */
+export function loadVerifySetup(ctx: ToolContext, hooks: WorkflowHooks): VerifySetup {
+  const cfg = loadChunkConfig(ctx.root, { env: ctx.env });
   const engineName = cfg.verification.engine;
   const fetchImpl = hooks.fetchImpl ?? (ctx.fetch as unknown as typeof fetch);
   const getEngine = once(() => (hooks.createEngine ? hooks.createEngine(engineName) : createConfiguredEngine(ctx.env, engineName, { fetchImpl })));
   const identityOf = async (): Promise<EngineIdentity | null> => resolveEngineIdentityCached(ctx.env, engineName, { fetchImpl });
-  const judge = (identity: EngineIdentity | null, passages: { text: string; hash: string }[]): Promise<JudgeResult> =>
-    judgePassages(
-      {
-        db,
-        queue: ctx.queue,
-        now: ctx.now,
-        identity,
-        createEngine: getEngine,
-        workers: cfg.verification.workers,
-        batchSize: JUDGE_BATCH_SIZE,
-        maxFresh: cfg.verification.max_judgments,
-        signal: ctx.signal,
-      },
-      req.claim,
-      passages,
-    );
+  return { cfg, engineName, getEngine, identityOf, cap: hooks.unitMaxChars ?? SECTION_UNIT_MAX_CHARS };
+}
 
-  if (req.passages !== undefined) return directWorkflow(ctx, db, req, cfg, identityOf, judge);
-  return registryWorkflow(ctx, db, req, cfg, engineName, identityOf, judge);
+// ── entry ───────────────────────────────────────────────────────────────────
+
+export async function verifyWorkflow(ctx: ToolContext, db: DatabaseSync, req: VerifyRequest, hooks: WorkflowHooks, session?: PrimeSession): Promise<WorkflowOutcome> {
+  let setup: VerifySetup;
+  try {
+    setup = loadVerifySetup(ctx, hooks);
+  } catch (err) {
+    if (err instanceof ConfigError) return refuse("CONFIG_INVALID", err.message);
+    throw err;
+  }
+  const { cfg, engineName, getEngine, identityOf, cap: unitCap } = setup;
+  const unitPath = hooks.unitPath ?? unitPathFromEnv(ctx.env);
+  const baseJudge = (identity: EngineIdentity | null, passages: { text: string; hash: string }[]): Promise<JudgeResult> =>
+    unitPath
+      ? judgeClaimUnits(
+          {
+            db,
+            queue: ctx.queue,
+            now: ctx.now,
+            identity,
+            createEngine: getEngine,
+            workers: cfg.verification.workers,
+            batchSize: gridBatchSizeOf(engineName),
+            maxFresh: cfg.verification.max_judgments,
+            signal: ctx.signal,
+          },
+          req.claim,
+          passages,
+        )
+      : judgePassages(
+          {
+            db,
+            queue: ctx.queue,
+            now: ctx.now,
+            identity,
+            createEngine: getEngine,
+            workers: cfg.verification.workers,
+            batchSize: JUDGE_BATCH_SIZE,
+            maxFresh: cfg.verification.max_judgments,
+            signal: ctx.signal,
+          },
+          req.claim,
+          passages,
+        );
+  const judge = session !== undefined && unitPath ? sessionJudge(session, req.claim, baseJudge) : baseJudge;
+
+  if (req.passages !== undefined) return directWorkflow(ctx, db, req, cfg, identityOf, baseJudge);
+  return registryWorkflow(ctx, db, req, cfg, engineName, identityOf, judge, unitPath, unitCap, session);
+}
+
+/**
+ * A primed page's judge: scores the grid already holds are served (scored if
+ * known; unchecked if the grid left the cell unscored); anything the prime
+ * never covered falls back to a real grid judgment.
+ */
+function sessionJudge(session: PrimeSession, claim: string, base: Judge): Judge {
+  return async (identity, passages) => {
+    const claimHash = claimHashOf(claim);
+    const scoreOf = (hash: string): number | undefined => session.round1.scores.get(claimHash)?.get(hash) ?? session.round2.scores.get(claimHash)?.get(hash);
+    const primedUnchecked = (hash: string): boolean =>
+      session.round1.unchecked.some((u) => u.claimHash === claimHash && u.hash === hash) ||
+      session.round2.unchecked.some((u) => u.claimHash === claimHash && u.hash === hash);
+    const scores = new Map<string, number>();
+    const unchecked: string[] = [];
+    const miss: { text: string; hash: string }[] = [];
+    for (const p of passages) {
+      const s = scoreOf(p.hash);
+      if (s !== undefined) scores.set(p.hash, s);
+      else if (primedUnchecked(p.hash)) unchecked.push(p.hash);
+      else miss.push(p);
+    }
+    if (miss.length === 0) {
+      return {
+        scores,
+        cached: 0,
+        fresh: 0,
+        unchecked,
+        interruption: unchecked.length > 0 ? { reason: "engine_failure", detail: "the primed page check left passages unscored" } : null,
+      };
+    }
+    const fb = await base(identity, miss);
+    for (const [h, s] of fb.scores) scores.set(h, s);
+    unchecked.push(...fb.unchecked);
+    return {
+      scores,
+      cached: fb.cached,
+      fresh: fb.fresh,
+      unchecked,
+      interruption: fb.interruption ?? (unchecked.length > fb.unchecked.length ? { reason: "engine_failure", detail: "the primed page check left passages unscored" } : null),
+    };
+  };
 }
 
 type Judge = (identity: EngineIdentity | null, passages: { text: string; hash: string }[]) => Promise<JudgeResult>;
@@ -148,6 +247,77 @@ type Judge = (identity: EngineIdentity | null, passages: { text: string; hash: s
 interface Narrowed {
   units: Candidate[];
   stats: RunSnapshot["selection"];
+}
+
+/**
+ * Unit-path candidate selection (V4): explicit lists (no query) judge all
+ * non-reference units exhaustively on any engine; "all" without a query judges
+ * the BM25 top-10 units (candidate_limited); a locator query judges the top 3
+ * units per paper (query_limited); a claim with no searchable words under
+ * "all" falls back to exhaustive. Frozen "all"/query candidates are pointers.
+ */
+export function newUnitSelection(
+  db: DatabaseSync,
+  ready: ScopePaper[],
+  requested: "all" | "ids",
+  query: string | null,
+  claim: string,
+  cap: number,
+): { stats: RunSnapshot["selection"]; limited: boolean; candidates: Candidate[]; candidateIds: string[] | null; excluded: { doi: string; count: number }[] } {
+  const loaded = new Map<string, LoadedPaperUnits>();
+  for (const p of ready) {
+    const l = loadPaperUnits(db, p.doi, cap);
+    if (l !== null) loaded.set(p.doi, l);
+  }
+  const excluded = [...loaded].filter(([, l]) => l.excluded > 0).map(([doi, l]) => ({ doi, count: l.excluded }));
+  const unitsOf = (doi: string) => loaded.get(doi)?.units ?? [];
+  const orderOf = new Map(ready.map((p, i) => [p.doi, i]));
+  const inReadingOrder = <T extends { doi: string; unit: { start: number } }>(list: T[]): T[] =>
+    [...list].sort((a, b) => (orderOf.get(a.doi) ?? 0) - (orderOf.get(b.doi) ?? 0) || a.unit.start - b.unit.start);
+
+  const exhaustive = (): { stats: RunSnapshot["selection"]; limited: boolean; candidates: Candidate[]; candidateIds: string[] | null } => {
+    const candidates: Candidate[] = [];
+    const stats: RunSnapshot["selection"] = [];
+    for (const p of ready) {
+      const paperUnits = unitsOf(p.doi);
+      candidates.push(...unitCandidates(p.doi, loaded.get(p.doi)?.revision ?? "", cap, paperUnits, candidates.length));
+      stats.push({ doi: p.doi, chunksTotal: paperUnits.length, matched: paperUnits.length, selected: paperUnits.length });
+    }
+    return { stats, limited: false, candidates, candidateIds: null };
+  };
+
+  // BM25 still runs over chunk_fts: ask for the chunk count of the selected
+  // papers, then fold the ranked chunk starts to units.
+  const chunkTotal =
+    ready.length === 0
+      ? 0
+      : Number((db.prepare(`SELECT COUNT(*) AS n FROM chunks WHERE doi IN (${ready.map(() => "?").join(",")})`).get(...ready.map((p) => p.doi)) as { n: number }).n);
+  const buildRanked = (rankQuery: string, cut: { perPaper?: number; top?: number }): { stats: RunSnapshot["selection"]; candidates: Candidate[]; candidateIds: string[] } => {
+    const ranked = lexicalRank(db, [...loaded.keys()], rankQuery, chunkTotal);
+    const starts = ranked.map((r) => ({ doi: r.doi, start: r.start }));
+    const uncut = foldRankedToUnits(starts, unitsOf);
+    const cutFolded = inReadingOrder(foldRankedToUnits(starts, unitsOf, cut));
+    const matched = new Map<string, number>();
+    for (const f of uncut) matched.set(f.doi, (matched.get(f.doi) ?? 0) + 1);
+    const candidates: Candidate[] = [];
+    const stats: RunSnapshot["selection"] = [];
+    for (const p of ready) {
+      const paperUnits = cutFolded.filter((f) => f.doi === p.doi).map((f) => f.unit);
+      candidates.push(...unitCandidates(p.doi, loaded.get(p.doi)?.revision ?? "", cap, paperUnits, candidates.length));
+      stats.push({ doi: p.doi, chunksTotal: unitsOf(p.doi).length, matched: matched.get(p.doi) ?? 0, selected: paperUnits.length });
+    }
+    return { stats, candidates, candidateIds: candidates.map((c) => formatPointer(c.doi, c.revision, c.start, c.end)) };
+  };
+
+  if (query !== null) {
+    const r = buildRanked(query, { perPaper: UNITS_PER_PAPER_QUERY });
+    return { ...r, limited: false, excluded };
+  }
+  if (requested === "ids" || locatorTokens(claim).length === 0) {
+    return { ...exhaustive(), excluded };
+  }
+  const r = buildRanked(claim, { top: TOP_K });
+  return { ...r, limited: true, excluded };
 }
 
 /**
@@ -184,6 +354,9 @@ async function registryWorkflow(
   engineName: string,
   identityOf: () => Promise<EngineIdentity | null>,
   judge: Judge,
+  unitPath: boolean,
+  unitCap: number,
+  session?: PrimeSession,
 ): Promise<WorkflowOutcome> {
   const bar = cfg.verification.min_confidence;
   const policy = chunkPolicyOf(cfg.chunking);
@@ -201,7 +374,9 @@ async function registryWorkflow(
   const { selected, unresolved } = resolveScope(db, req.papers);
   const strategy = verifySwitchFromEnv(ctx.env, engineName);
   const baseKey = requested === "all" ? "all" : digest12(`${selected.map((p) => p.doi).sort().join(",")}|${unresolved.map((u) => u.handle).sort().join(",")}`);
-  const scopeKey = query === null ? `${baseKey}|strategy:${strategy}` : baseKey;
+  // The unit path judges different candidates than the chunk path; non-query
+  // runs name it in the scope key (query mode's key ignores the strategy).
+  const scopeKey = query === null ? `${baseKey}|strategy:${unitPath ? "units" : strategy}` : baseKey;
 
   const detailsOf = (dois: string[]): Map<string, ScopePaper> =>
     new Map(selectPapers(db, { dois, limit: Math.max(1, dois.length) }).map((p) => [p.doi, { doi: p.doi, citekey: p.citekey, title: p.title, citable: p.citable }]));
@@ -224,6 +399,19 @@ async function registryWorkflow(
     if (token === null || run === null) return refuse("CONTINUATION_INVALID", "the continuation is not a live token this tool issued (it may have expired)");
     const snap = run.snapshot;
     if (run.claimHash !== claimHashOf(req.claim) || snap.mode === "direct" || snap.requested !== requested || snap.query !== query || snap.scopeKey !== scopeKey) {
+      return refuse("CONTINUATION_INVALID", "the continuation was issued for a different claim, scope, locator query or candidate strategy");
+    }
+    // The token version must agree with the snapshot's path (and the run's
+    // unit cap): v3 under units, v4 without, or a changed cap is refused
+    // before any judgment.
+    if (unitPath) {
+      if (token.version !== 4 || snap.unitPolicy === undefined) {
+        return refuse("CONTINUATION_INVALID", "the continuation was issued for a different claim, scope, locator query or candidate strategy");
+      }
+      if (unitCap !== snap.unitPolicy.maxChars) {
+        return refuse("CONTINUATION_INVALID", "the judging-unit cap changed since the run began; repeat the request without a continuation");
+      }
+    } else if (token.version !== 3 || snap.unitPolicy !== undefined) {
       return refuse("CONTINUATION_INVALID", "the continuation was issued for a different claim, scope, locator query or candidate strategy");
     }
     for (const p of snap.papers) {
@@ -251,19 +439,45 @@ async function registryWorkflow(
       if (!Array.isArray(savedIds) || savedIds.some((id) => typeof id !== "string" || id.length === 0)) {
         return refuse("CONTINUATION_INVALID", "the run's saved candidates are unreadable; repeat the request without a continuation");
       }
-      const sel = db.prepare("SELECT doi, chunk_index, chunk_id, revision, char_start, char_end, content_hash, text FROM chunks WHERE chunk_id = ?");
-      const frozen: Candidate[] = [];
-      for (const id of savedIds) {
-        const r = sel.get(id) as { doi: string; chunk_index: number; chunk_id: string; revision: string; char_start: number; char_end: number; content_hash: string; text: string } | undefined;
-        if (r === undefined) {
-          return refuse("CONTINUATION_INVALID", "a passage saved with the run is no longer in the registry; repeat the request without a continuation");
+      if (snap.unitPolicy !== undefined) {
+        // Unit runs freeze pointers: re-resolve each against its paper's
+        // current revision (the revision guard above already pins it).
+        const frozen: Candidate[] = [];
+        for (const [ordinal, id] of savedIds.entries()) {
+          const p = parsePointer(id);
+          const src = p === null ? null : getSourceText(db, p.doi);
+          if (p === null || src === null || src.revision !== p.revision || p.start < 0 || p.end > src.text.length) {
+            return refuse("CONTINUATION_INVALID", "a passage saved with the run is no longer in the registry; repeat the request without a continuation");
+          }
+          const slice = src.text.slice(p.start, p.end);
+          frozen.push({ doi: p.doi, chunkIndex: ordinal, chunkId: unitIdOf(p.doi, p.revision, snap.unitPolicy.maxChars, p.start, p.end), revision: p.revision, start: p.start, end: p.end, text: slice, hash: passageHashOf(slice) });
         }
-        frozen.push({ doi: r.doi, chunkIndex: r.chunk_index, chunkId: r.chunk_id, revision: r.revision, start: r.char_start, end: r.char_end, text: r.text, hash: r.content_hash });
+        candidateLimited = query === null;
+        units = frozen;
+      } else {
+        const sel = db.prepare("SELECT doi, chunk_index, chunk_id, revision, char_start, char_end, content_hash, text FROM chunks WHERE chunk_id = ?");
+        const frozen: Candidate[] = [];
+        for (const id of savedIds) {
+          const r = sel.get(id) as { doi: string; chunk_index: number; chunk_id: string; revision: string; char_start: number; char_end: number; content_hash: string; text: string } | undefined;
+          if (r === undefined) {
+            return refuse("CONTINUATION_INVALID", "a passage saved with the run is no longer in the registry; repeat the request without a continuation");
+          }
+          frozen.push({ doi: r.doi, chunkIndex: r.chunk_index, chunkId: r.chunk_id, revision: r.revision, start: r.char_start, end: r.char_end, text: r.text, hash: r.content_hash });
+        }
+        // A frozen non-query list is the limited strategy's capture; a frozen
+        // query list stays query-limited (the strategy never applies to it).
+        candidateLimited = query === null;
+        units = frozen;
       }
-      // A frozen non-query list is the limited strategy's capture; a frozen
-      // query list stays query-limited (the strategy never applies to it).
-      candidateLimited = query === null;
-      units = frozen;
+    } else if (snap.unitPolicy !== undefined) {
+      // An exhaustive unit run freezes nothing: reload the current units
+      // (the revision and cap guards above pin them).
+      candidateLimited = false;
+      units = [];
+      for (const p of snap.papers) {
+        const loaded = loadPaperUnits(db, p.doi, snap.unitPolicy.maxChars);
+        if (loaded !== null) units.push(...unitCandidates(p.doi, loaded.revision, snap.unitPolicy.maxChars, loaded.units, units.length));
+      }
     } else {
       candidateLimited = false;
       units = selectCandidates(db, snap.papers.map((p) => p.doi), query).flatMap((p) => p.candidates);
@@ -285,35 +499,65 @@ async function registryWorkflow(
     }
     scopePapers = ready;
     const identity = ready.length > 0 ? await identityOf() : null;
-    const perPaper = selectCandidates(db, ready.map((p) => p.doi), query);
-    const all = perPaper.flatMap((p) => p.candidates);
-    candidateStats = perPaper.map((p) => ({ doi: p.doi, chunksTotal: p.chunksTotal, matched: p.matched, selected: p.candidates.length }));
-    // Freeze the strategy's narrowed order with the run: continuations replay
-    // these ids in this order and never re-rank. Exhaustive stays null (with
-    // its source revision and policy guard); a narrowing that cannot rank
-    // falls back to exhaustive and still reports exhaustive honestly.
-    const narrowed = strategy !== "exhaustive" && query === null ? narrowCandidates(db, all, req.claim, strategy) : null;
-    candidateLimited = narrowed !== null;
-    units = narrowed === null ? all : narrowed.units;
-    if (narrowed !== null) candidateStats = narrowed.stats;
-    snapshot = {
-      mode: query === null ? "registry" : "query",
-      query,
-      requested,
-      papers: ready.map((p) => {
-        const src = getSource(db, p.doi)!;
-        return { doi: p.doi, revision: src.revision!, policy: src.chunkPolicy ?? policy };
-      }),
-      scopeKey,
-      selected: selected.length,
-      candidateIds: query === null ? (narrowed === null ? null : narrowed.units.map((c) => c.chunkId)) : all.map((c) => c.chunkId),
-      selection: candidateStats,
-      engine: engineName,
-      model: identity?.model ?? null,
-      protocol: identity?.protocol ?? "unidentified",
-      minConfidence: bar,
-    };
-    carry = { unavailable: sourceReport, unresolved, staleDropped: 0 };
+    if (unitPath) {
+      const sel = newUnitSelection(db, ready, requested, query, req.claim, unitCap);
+      candidateStats = sel.stats;
+      candidateLimited = sel.limited;
+      // Annotated replay guard: the prime judged only these unit hashes for
+      // this claim (identical normalized wording shares the claimHash entry),
+      // so the replay serves primed scores and never sends an unprimed cell.
+      const onlySet = session?.only?.get(claimHashOf(req.claim));
+      units = onlySet === undefined ? sel.candidates : sel.candidates.filter((c) => onlySet.has(c.hash));
+      snapshot = {
+        mode: query === null ? "registry" : "query",
+        query,
+        requested,
+        papers: ready.map((p) => {
+          const src = getSource(db, p.doi)!;
+          return { doi: p.doi, revision: src.revision!, policy: src.chunkPolicy ?? policy };
+        }),
+        scopeKey,
+        selected: selected.length,
+        candidateIds: sel.candidateIds,
+        selection: candidateStats,
+        engine: engineName,
+        model: identity?.model ?? null,
+        protocol: identity?.protocol ?? "unidentified",
+        minConfidence: bar,
+        unitPolicy: { maxChars: unitCap, chunking: SECTION_CHUNKING_VERSION },
+      };
+      carry = { unavailable: sourceReport, unresolved, staleDropped: 0, excluded: sel.excluded };
+    } else {
+      const perPaper = selectCandidates(db, ready.map((p) => p.doi), query);
+      const all = perPaper.flatMap((p) => p.candidates);
+      candidateStats = perPaper.map((p) => ({ doi: p.doi, chunksTotal: p.chunksTotal, matched: p.matched, selected: p.candidates.length }));
+      // Freeze the strategy's narrowed order with the run: continuations replay
+      // these ids in this order and never re-rank. Exhaustive stays null (with
+      // its source revision and policy guard); a narrowing that cannot rank
+      // falls back to exhaustive and still reports exhaustive honestly.
+      const narrowed = strategy !== "exhaustive" && query === null ? narrowCandidates(db, all, req.claim, strategy) : null;
+      candidateLimited = narrowed !== null;
+      units = narrowed === null ? all : narrowed.units;
+      if (narrowed !== null) candidateStats = narrowed.stats;
+      snapshot = {
+        mode: query === null ? "registry" : "query",
+        query,
+        requested,
+        papers: ready.map((p) => {
+          const src = getSource(db, p.doi)!;
+          return { doi: p.doi, revision: src.revision!, policy: src.chunkPolicy ?? policy };
+        }),
+        scopeKey,
+        selected: selected.length,
+        candidateIds: query === null ? (narrowed === null ? null : narrowed.units.map((c) => c.chunkId)) : all.map((c) => c.chunkId),
+        selection: candidateStats,
+        engine: engineName,
+        model: identity?.model ?? null,
+        protocol: identity?.protocol ?? "unidentified",
+        minConfidence: bar,
+      };
+      carry = { unavailable: sourceReport, unresolved, staleDropped: 0 };
+    }
     runId = randomBytes(8).toString("hex");
     const created = { runId, snapshot, carry };
     await ctx.queue.runExclusive(() => createRun(db, created.runId, req.claim, created.snapshot, created.carry, ctx.now()));
@@ -341,7 +585,9 @@ async function registryWorkflow(
   if (startWork !== -1 && units.length > startWork) {
     const slice = units.slice(startWork);
     const s1 = await judge(effective, slice.map((c) => ({ text: c.text, hash: c.hash })));
-    if (s1.interruption?.reason === "engine_failure" && s1.scores.size === 0) {
+    // A primed page reports zero-success at the page level, never per claim:
+    // a claim with no primed score is incomplete, not a refusal.
+    if (s1.interruption?.reason === "engine_failure" && s1.scores.size === 0 && session === undefined) {
       return refuse("VERIFY_ENGINE_MISSING", `${s1.interruption.detail}`);
     }
     interruption = s1.interruption;
@@ -442,7 +688,7 @@ async function registryWorkflow(
   }
   await ctx.queue.runExclusive(() => markDelivered(db, runId, page.map((e) => ({ doi: e.doi, revision: e.revision, start: e.start, end: e.end, released: e.excerpt?.length ?? 0 })), { claim: req.claim, now: ctx.now() }));
   const outputRemaining = contained.length - page.length;
-  const continuation = nextWork !== null || outputRemaining > 0 ? encodeToken(runId) : null;
+  const continuation = nextWork !== null || outputRemaining > 0 ? encodeToken(runId, snapshot.unitPolicy !== undefined ? 4 : 3) : null;
   const available = delivered.length + contained.length;
   const withheldCount = delivered.filter((e) => e.releasedChars === 0).length + contained.filter((e) => e.excerpt === null).length;
 
@@ -468,6 +714,7 @@ async function registryWorkflow(
 
   // ── assemble ──────────────────────────────────────────────────────────────
   const noCandidates = candidateStats.filter((p) => p.matched === 0).map((p) => p.doi);
+  const excludedTotal = (carry.excluded ?? []).reduce((n, e) => n + e.count, 0);
   const limitations: string[] = [];
   if (carry.unavailable.length > 0) limitations.push("sources_unavailable");
   if (carry.unavailable.some((u) => u.code === "deferred")) limitations.push("sources_deferred");
@@ -477,6 +724,7 @@ async function registryWorkflow(
   if (candidateLimited) limitations.push("candidate_limited");
   if (query !== null && (units.length === 0 || noCandidates.length > 0)) limitations.push("no_candidates");
   if (candidateLimited && units.length === 0) limitations.push("no_candidates");
+  if (excludedTotal > 0) limitations.push("references_not_checked");
   if (interruption !== null) limitations.push("interrupted");
   if (carry.staleDropped > 0) limitations.push("source_changed");
   if (outputRemaining > 0) limitations.push("output_paged");
@@ -494,7 +742,14 @@ async function registryWorkflow(
         sources: { selected: snapshot.selected, ready: snapshot.papers.length, unavailable: carry.unavailable, unresolved: carry.unresolved, preprint: snapshot.papers.filter((p) => getSource(db, p.doi)?.kind === "arxiv-preprint-pdf").map((p) => citekeyOf(p.doi)) },
         candidates: {
           total: units.length,
-          perPaper: candidateStats.map((p) => ({ doi: p.doi, citekey: citekeyOf(p.doi), chunks: p.chunksTotal, matched: p.matched, selected: p.selected })),
+          ...(snapshot.unitPolicy !== undefined ? { excluded: excludedTotal } : {}),
+          perPaper: candidateStats.map((p) => ({
+            doi: p.doi,
+            citekey: citekeyOf(p.doi),
+            ...(snapshot.unitPolicy !== undefined ? { units: p.chunksTotal } : { chunks: p.chunksTotal }),
+            matched: p.matched,
+            selected: p.selected,
+          })),
         },
         work: { checked, fresh, cached, unchecked, localizationFresh, complete: workComplete, interruption },
         output: { available, returned: page.length, deliveredEarlier: delivered.length, withheld: withheldCount, staleDropped: carry.staleDropped },

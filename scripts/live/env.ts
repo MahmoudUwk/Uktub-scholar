@@ -25,11 +25,18 @@ export const POLICY = {
 };
 
 /** Assistant-sandbox env for `--verify-engine` (default `eos` sets nothing: the product default stands). */
+/** A harness engine choice that runs the product's hosted engine (its free key must be forwarded). */
+export function usesHostedEngine(name: string): boolean {
+  return verifyEngineEnv(name).UKTUB_VERIFY_ENGINE === "hosted";
+}
+
 export function verifyEngineEnv(name: string): Record<string, string> {
   if (name === "eos") return {};
   // The product's own `hosted` engine (d3-mini, src/core/verify/engines.ts): no URL or model duplicated here.
   if (name === "hosted") return { UKTUB_VERIFY_ENGINE: "hosted" };
-  throw new Error(`--verify-engine must be eos|hosted, got ${JSON.stringify(name)}`);
+  // Harness arg (not a product knob): the hosted engine on the whole-section unit path (UKTUB_VERIFY_STRATEGY=units).
+  if (name === "hosted-units") return { UKTUB_VERIFY_ENGINE: "hosted", UKTUB_VERIFY_STRATEGY: "units" };
+  throw new Error(`--verify-engine must be eos|hosted|hosted-units, got ${JSON.stringify(name)}`);
 }
 
 /**

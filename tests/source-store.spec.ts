@@ -15,7 +15,7 @@ import { createRegistry, deregisterPapers, generationOf, registerPaper } from ".
 import type { ChunkTextConfig } from "../src/core/chunk.ts";
 import type { PreparedSource } from "../src/core/source/prepare.ts";
 import {
-  cachedJudgments, chunkPolicyOf, chunksOf, claimHashOf, createRun, ensureChunks, evidenceOfRun, formatPointer, getRun, getSource, RUN_TTL_MS, setRunState,
+  cachedJudgments, chunkPolicyOf, chunksOf, claimHashOf, createRun, ensureChunks, evidenceOfRun, formatPointer, getRun, getSource, RUN_TTL_MS, SECTION_CHUNKING_VERSION, setRunState,
   parsePointer, passageHashOf, publishSource, recordSourceFailure, resolvePointer, revisionOf, saveEvidence, saveJudgments,
 } from "../src/core/verify/store.ts";
 
@@ -219,6 +219,19 @@ describe("section-aware chunk storage", () => {
     ensureChunks(db, DOI, SEC);
     assert.equal(sectionsOf(), null);
     assert.deepEqual([...new Set(chunksOf(db, DOI).map((c) => c.section))], [""]);
+  });
+
+  it("after the sections-v2 bump an old stored unpdf source gains appendix marks through ensureChunks", () => {
+    assert.equal(SECTION_CHUNKING_VERSION, "sections-v2");
+    const sentence = "Battery cells age faster at high temperature. ";
+    const text = [`1. Introduction\n${sentence.repeat(3)}`, `References\n[1] A. Author, A title, Venue, 2024.`, `A Parallel Decoding Scheme\n${sentence.repeat(3)}`].join("\n");
+    // what a sections-v1 detector stored: the appendix heading after References was invisible
+    const stale = ["1. Introduction", "References"].map((h) => ({ start: text.indexOf(h), heading: h, level: 1 }));
+    publishSource(db, DOI, source(text, { sections: stale }), CFG, NOW);
+    assert.deepEqual(sectionsOf()?.map((m) => m.heading), ["1. Introduction", "References"]);
+    ensureChunks(db, DOI, SEC);
+    assert.deepEqual(sectionsOf()?.map((m) => m.heading), ["1. Introduction", "References", "A Parallel Decoding Scheme"]);
+    assert.ok(chunksOf(db, DOI).some((c) => c.section === "A Parallel Decoding Scheme"));
   });
 });
 

@@ -6,7 +6,9 @@
  * It never writes files: the manuscript belongs to the user and the main agent assembles it.
  */
 import type { DocumentUnitStatus } from "../core/verify/document-status.ts";
+import { parseAnnotatedOutput, type AnnotationProblem, type ParsedAnnotations } from "../core/verify/annotations.ts";
 import { countBodyWords } from "../core/provenance/units.ts";
+import { createSourceTrace, unreadSources, type SourceTrace, type UnreadSource } from "./source-trace.ts";
 
 export interface WriteSectionParams {
   goal: string;
@@ -26,6 +28,12 @@ export interface UnitVerdict {
   complete?: boolean;
   /** Figure counts of a `table-row` unit (D4); a row with no missing figure is resolved. */
   figures?: { found: number; missing: number; check: number };
+  /** Papers that do not support this claim (annotated mode only). */
+  failedCites?: string[];
+  /** Where each cited paper's support was found (annotated mode only). */
+  supportWhere?: Array<{ citekey: string; at: "stated" | "elsewhere" | "unstated" }>;
+  /** Stated refs that resolve to no unit (annotated mode only). */
+  unresolvedStated?: string[];
 }
 
 /** One document-mode page of the EXACT section text (core pages MAX_DOCUMENT_UNITS units). */
@@ -33,6 +41,8 @@ export interface VerifyPage {
   units: UnitVerdict[];
   summary: { total: number; from: number; units: number };
   next: number | null;
+  /** Verification effort that produced the page (annotated mode only). */
+  work?: { cells: number; fresh: number; cached: number; calls: number };
 }
 
 export interface SectionDeps {
@@ -48,6 +58,14 @@ export interface SectionDeps {
   abortWriter: () => Promise<void>;
   /** Release the owned writer; called exactly once when the lifecycle settles. */
   disposeWriter: () => void;
+  /**
+   * Annotated checker (W4 contract): judges the parsed claims with stated
+   * sources first. Present only in annotated mode; the no-marker fallback
+   * stays on `verifyDocument` above.
+   */
+  verifyAnnotated?: (parsed: ParsedAnnotations, offset: number) => Promise<VerifyPage>;
+  /** The child's source trace (W3); report-only, never mutates a verdict. */
+  trace?: SourceTrace;
 }
 
 /** Verification counts of one text: units checked, supported, and supported-but-interrupted. */
@@ -68,7 +86,35 @@ export interface SectionResult {
   repaired: boolean;
   /** Reader-visible words of the returned LaTeX (the provenance body-word definition). */
   words: number;
+  /** Annotated-mode detail (present only when the verifyAnnotated seam ran). */
+  annotated?: AnnotatedSummary;
 }
+
+/** One marked claim of an annotated check: per cited paper, where support was found. */
+export interface AnnotatedClaimLine {
+  marker: number;
+  status: DocumentUnitStatus;
+  /** Cited papers in claim order. */
+  sources: string[];
+  /** Per-paper outcome aligned with `sources`: where support was found, or "unsupported". */
+  at: Array<"stated" | "elsewhere" | "unstated" | "unsupported">;
+  /** Cited papers whose stated source the trace never saw. */
+  unread: string[];
+}
+
+/** Annotated-mode detail: table input (section-tool) and Pi details share it. */
+export interface AnnotatedSummary {
+  mode: "annotated" | "fallback";
+  firstDraft: { mode: "annotated" | "fallback"; markers: number; citedUnits: number };
+  claims: AnnotatedClaimLine[];
+  problems: AnnotationProblem[];
+  unread: UnreadSource[];
+  checkCalls: number;
+  work: { cells: number; fresh: number; cached: number; calls: number };
+}
+
+/** Client policy: at most 4 annotated-checker calls (pages included) per write_section run; the fifth throws. */
+export const MAX_CHECK_CALLS = 4;
 
 /** Child-session totals, tallied from the child's own events (never from its text). */
 export interface ChildStats {
@@ -116,19 +162,39 @@ export function stripCodeFences(text: string): string {
   return (m?.[1] ?? text).trim();
 }
 
-export function buildWriterPrompt(p: WriteSectionParams): string {
-  return [
+export function buildWriterPrompt(p: WriteSectionParams, opts?: { annotated?: boolean }): string {
+  const head = [
     "Write only the section body in LaTeX for this goal:",
     p.goal,
     "",
     `You may use only facts from passages of these registered papers: ${p.papers.join(", ")}.`,
-    "Use the passages and verify tools to read them; use no other tools.",
+    "Use the passages, registry and verify tools to read them; use no other tools.",
     "End every factual sentence with \\cite{<key>} of the paper that states it.",
     "Write no fact from memory. If the papers do not support something, leave it out or write it as explicitly unverified.",
     p.query !== undefined ? `Focus on: ${p.query}.` : "",
     p.maxWords !== undefined ? `At most ${p.maxWords} words.` : "",
-    "Return only the LaTeX section body, no explanation.",
+  ];
+  if (opts?.annotated !== true) return [...head, "Return only the LaTeX section body, no explanation."].filter((l) => l !== "").join("\n");
+  return [
+    ...head,
+    "Put each factual sentence on its own line and end that line with a LaTeX comment ` % c1`, ` % c2` and so on (numbers 1 to 20, each used once).",
+    "After the LaTeX add a line `---SOURCES---`, then one line per paper a sentence cites: `cN | citekey | section=<heading exactly as passages printed it>` or `cN | citekey | ptr=<pointer from passages or verify>`; 1 to 4 lines per sentence.",
+    "Return the LaTeX and the sources together in ONE code block, nothing else.",
   ].filter((l) => l !== "").join("\n");
+}
+
+export function buildAnnotatedRepairPrompt(failures: UnitVerdict[], notes: UnreadSource[]): string {
+  const lines = failures.map((f) => {
+    const cause = (f.failedCites?.length ?? 0) > 0 ? ` — not supported by: ${f.failedCites!.join(", ")}` : f.suggested.length > 0 ? ` — support found in: ${f.suggested.join(", ")}` : "";
+    return `- [${f.id}] (${f.status}) "${f.excerpt}"${cause}`;
+  });
+  const unread = notes.length > 0 ? ["Unread sources (open one before rewriting the claim):", ...notes.map((n) => n.hint)] : [];
+  return [
+    "The section you wrote was checked as written against its stated sources. These claims are NOT supported; rewrite each one from a passage of its cited paper, add the missing citation, or delete it:",
+    ...lines,
+    ...unread,
+    "Return the full revised section in the same single code block: one claim per line ending ` % cN`, then `---SOURCES---` and its lines.",
+  ].join("\n");
 }
 
 export function buildRepairPrompt(failures: UnitVerdict[]): string {
@@ -206,15 +272,116 @@ export async function runWriteSection(deps: SectionDeps, params: WriteSectionPar
     return outcome.value;
   };
   if (signal !== undefined) signal.addEventListener("abort", onAbort);
+  /**
+   * Annotated-mode check of one parsed output: with markers through the
+   * annotated checker (call-counted, capped), without through the unchanged
+   * document path. Marked units are renamed to cN so failures, the repair
+   * brief and the table share one naming.
+   */
+  const runAnnotatedFlow = async (first: string, countsOf: (units: UnitVerdict[]) => SectionCounts): Promise<SectionResult> => {
+    const checkAnnotated = deps.verifyAnnotated!;
+    const trace = deps.trace ?? createSourceTrace();
+    let checkCalls = 0;
+    const work = { cells: 0, fresh: 0, cached: 0, calls: 0 };
+    const callAnnotated = async (parsed: ParsedAnnotations, offset: number): Promise<VerifyPage> => {
+      checkCalls += 1;
+      if (checkCalls > MAX_CHECK_CALLS) {
+        throw new Error(`annotated check budget exceeded: at most ${MAX_CHECK_CALLS} verifyAnnotated calls (pages included) per write_section run (client policy)`);
+      }
+      const page = await checkAnnotated(parsed, offset);
+      const w = page.work;
+      if (w !== undefined) {
+        const n = (x: unknown): number => (typeof x === "number" && Number.isFinite(x) ? x : 0);
+        work.cells += n(w.cells);
+        work.fresh += n(w.fresh);
+        work.cached += n(w.cached);
+        work.calls += n(w.calls);
+      }
+      return page;
+    };
+    const checkParsed = async (parsed: ParsedAnnotations): Promise<{ parsed: ParsedAnnotations; units: UnitVerdict[]; failed: UnitVerdict[] }> => {
+      const raw = parsed.mode === "annotated" ? await checkText(parsed.latex, (o) => callAnnotated(parsed, o)) : await checkText(parsed.latex);
+      const markerOf = new Map(parsed.claims.map((c) => [c.unitId, c.marker]));
+      const units = raw.units.map((u) => (markerOf.has(u.id) ? { ...u, id: `c${markerOf.get(u.id)}` } : u));
+      return { parsed, units, failed: units.filter((u) => !resolvedUnit(u)) };
+    };
+    const unreadOf = (parsed: ParsedAnnotations): UnreadSource[] => unreadSources(parsed.claims, trace);
+    const firstParsed = parseAnnotatedOutput(first);
+    const firstDraftMeta = {
+      mode: firstParsed.mode,
+      markers: firstParsed.claims.length,
+      citedUnits: firstParsed.units.filter((u) => u.cites.length > 0).length,
+    };
+    const firstCheck = await checkParsed(firstParsed);
+    await settleAbort();
+    let current = firstCheck;
+    let repaired = false;
+    // Annotation problems alone never trigger a repair: only failed units do.
+    if (firstCheck.failed.length > 0) {
+      repaired = true;
+      const failedMarkers = new Set<number>();
+      for (const c of firstParsed.claims) {
+        if (firstCheck.failed.some((u) => u.id === `c${c.marker}`)) failedMarkers.add(c.marker);
+      }
+      const notes = unreadOf(firstParsed).filter((u) => failedMarkers.has(u.marker));
+      const second = stripCodeFences(await runWriterSettled(buildAnnotatedRepairPrompt(firstCheck.failed, notes)));
+      current = await checkParsed(parseAnnotatedOutput(second));
+      await settleAbort();
+    }
+    const n = current.units.length;
+    const ok = current.units.filter(resolvedUnit).length;
+    const incomplete = current.units.filter((u) => u.complete === false).length;
+    const summary = [
+      repaired ? `${ok}/${n} supported (incomplete: ${incomplete}) after one repair round.` : `${ok}/${n} supported (incomplete: ${incomplete}), no repair needed.`,
+      ...current.units.filter((u) => !resolvedUnit(u)).map((u) => `[${u.id}] ${u.status}: \"${u.excerpt}\"${u.suggested.length > 0 ? ` (suggests ${u.suggested.join(", ")})` : ""}`),
+    ].join("\n");
+    const unread = unreadOf(current.parsed);
+    const unreadKeys = new Map<number, string[]>();
+    for (const u of unread) unreadKeys.set(u.marker, [...(unreadKeys.get(u.marker) ?? []), u.citekey]);
+    const unitById = new Map(current.units.map((u) => [u.id, u]));
+    const claims: AnnotatedClaimLine[] = current.parsed.claims.map((c) => {
+      const unit = unitById.get(`c${c.marker}`);
+      const where = new Map((unit?.supportWhere ?? []).map((s) => [s.citekey, s.at] as const));
+      const failed = new Set(unit?.failedCites ?? []);
+      return {
+        marker: c.marker,
+        status: unit?.status ?? "skipped",
+        sources: [...c.cites],
+        at: c.cites.map((k) => where.get(k) ?? (failed.has(k) ? "unsupported" : "unstated")),
+        unread: unreadKeys.get(c.marker) ?? [],
+      };
+    });
+    return {
+      latex: current.parsed.latex,
+      summary,
+      unresolved: current.units.filter((u) => !resolvedUnit(u) || u.complete === false),
+      firstDraft: countsOf(firstCheck.units),
+      final: countsOf(current.units),
+      repaired,
+      words: countBodyWords(current.parsed.latex),
+      annotated: {
+        mode: current.parsed.mode,
+        firstDraft: firstDraftMeta,
+        claims,
+        problems: current.parsed.problems,
+        unread,
+        checkCalls,
+        work: { ...work },
+      },
+    };
+  };
   /** Every page of the EXACT text, in order; refuses malformed pagination rather than a partial set. */
-  const checkText = async (text: string): Promise<{ text: string; failed: UnitVerdict[]; units: UnitVerdict[] }> => {
+  const checkText = async (
+    text: string,
+    fetchPage: (offset: number) => Promise<VerifyPage> = (o) => deps.verifyDocument(text, o),
+  ): Promise<{ text: string; failed: UnitVerdict[]; units: UnitVerdict[] }> => {
     let offset = 0;
     let total: number | null = null;
     const seenIds = new Set<string>();
     const units: UnitVerdict[] = [];
     for (;;) {
       await settleAbort();
-      const page = await deps.verifyDocument(text, offset);
+      const page = await fetchPage(offset);
       await settleAbort();
       const got = page as Partial<VerifyPage> | null | undefined;
       const summary = got?.summary;
@@ -266,6 +433,15 @@ export async function runWriteSection(deps: SectionDeps, params: WriteSectionPar
       await fireAbort();
       signal.throwIfAborted();
     }
+    const countsOf = (units: UnitVerdict[]): SectionCounts => ({
+      units: units.length,
+      ok: units.filter(resolvedUnit).length,
+      incomplete: units.filter((u) => u.complete === false).length,
+    });
+    if (deps.verifyAnnotated !== undefined) {
+      const annotatedFirst = stripCodeFences(await runWriterSettled(buildWriterPrompt(params, { annotated: true })));
+      return runAnnotatedFlow(annotatedFirst, countsOf);
+    }
     const first = stripCodeFences(await runWriterSettled(buildWriterPrompt(params)));
     const firstCheck = await checkText(first);
     await settleAbort();
@@ -288,11 +464,6 @@ export async function runWriteSection(deps: SectionDeps, params: WriteSectionPar
     ].join("\n");
     // Supported-but-incomplete checks stay explicitly unresolved: their
     // coverage was interrupted, so a clean "none" would misreport them.
-    const countsOf = (units: UnitVerdict[]): SectionCounts => ({
-      units: units.length,
-      ok: units.filter(resolvedUnit).length,
-      incomplete: units.filter((u) => u.complete === false).length,
-    });
     return {
       latex: current.text,
       summary,

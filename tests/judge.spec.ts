@@ -194,6 +194,17 @@ describe("judgePassages", () => {
     ps.forEach((p, i) => assert.equal(r.scores.get(p.hash), 0.5 + i / 100));
   });
 
+  it("a per-row failure in the old path is an engine failure naming the failure, never a score", async () => {
+    const ps = passages(3);
+    const r = await judgePassages(
+      opts({ createEngine: () => ({ run: async () => [0.9, { failed: "HTTP 503" }, 0.9] as unknown as number[] }) }),
+      CLAIM,
+      ps,
+    );
+    assert.equal(r.interruption?.reason, "engine_failure");
+    assert.match(r.interruption!.detail, /503/);
+  });
+
   it("only the engine score decides support: a low score is never reported as contradiction", async () => {
     assert.equal(isSupported(0.995, 0.99), true);
     assert.equal(isSupported(0.2, 0.99), false);

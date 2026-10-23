@@ -16,7 +16,7 @@ const models = (id: string | null, status = 200) =>
 
 describe("resolveEngineIdentity", () => {
   it("hosted OpenRouter: the model slug is the identity", async () => {
-    assert.deepEqual(await resolveEngineIdentity({ UKTUB_OPENROUTER_MODEL: "inception/mercury-decide:free" }, "openrouter"), { model: "openrouter:inception/mercury-decide:free", protocol: "systemone-noul-criteria-v1" });
+    assert.deepEqual(await resolveEngineIdentity({ UKTUB_OPENROUTER_MODEL: "inception/mercury-decide:free" }, "openrouter"), { model: "openrouter:inception/mercury-decide:free", protocol: "systemone-noul-criteria-v2" });
     assert.match((await resolveEngineIdentity({}, "openrouter"))!.model, /^openrouter:/, "default model is named too");
   });
 

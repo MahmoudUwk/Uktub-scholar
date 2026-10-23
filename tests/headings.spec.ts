@@ -110,6 +110,94 @@ describe("detectHeadings — things that are not headings", () => {
   });
 });
 
+describe("detectHeadings — appendix headings after References", () => {
+  const withRefs = (...lines: string[]): string => doc("References", ...lines);
+  const afterRefs = (text: string): string[] => headingsOf(text).filter((h) => h !== "References");
+
+  it("lettered top-level headings, mixed and upper case", () => {
+    assert.deepEqual(afterRefs(withRefs("[1] A. Author, A title, Venue, 2024.", "", "A Parallel Decoding Scheme")), ["A Parallel Decoding Scheme"]);
+    assert.deepEqual(afterRefs(withRefs("[1] A. Author, A title, Venue, 2024.", "", "A TRAINING PROTOCOL DETAILS")), ["A TRAINING PROTOCOL DETAILS"]);
+    assert.deepEqual(afterRefs(withRefs("[1] A. Author, A title, Venue, 2024.", "", "A Interview Protocol")), ["A Interview Protocol"]);
+    assert.deepEqual(afterRefs(withRefs("[1] A. Author, A title, Venue, 2024.", "", "A Conditions for the mixing bound")), ["A Conditions for the mixing bound"]);
+  });
+
+  it("lettered numeric sub-levels, including digit-attached and deep nesting", () => {
+    const text = withRefs("[1] A. Author, A title, Venue, 2024.", "", "A MOTIVATING EXPERIMENTS", "A.1 COMPOSITIONAL GENERALIZATION", "A.1.1 CONVERGENCE BOUNDS");
+    assert.deepEqual(afterRefs(text), ["A MOTIVATING EXPERIMENTS", "A.1 COMPOSITIONAL GENERALIZATION", "A.1.1 CONVERGENCE BOUNDS"]);
+    assert.deepEqual(afterRefs(withRefs("[1] A. Author, A title, Venue, 2024.", "", "S1. Supplementary Experiments", "S1.1. Extended ablations")), [
+      "S1. Supplementary Experiments",
+      "S1.1. Extended ablations",
+    ]);
+    assert.deepEqual(afterRefs(withRefs("[1] A. Author, A title, Venue, 2024.", "", "Appendix", "A1. Derivation of the step size bound")), [
+      "Appendix",
+      "A1. Derivation of the step size bound",
+    ]);
+  });
+
+  it("supplement numbering without a trailing period (held-out regression: S1 Title, S1.1 Title)", () => {
+    const text = withRefs("[1] A. Author, A title, Venue, 2024.", "", "S1 Blount operator algebra", body, "S1.1 Coefficient section representation", body);
+    assert.deepEqual(afterRefs(text), ["S1 Blount operator algebra", "S1.1 Coefficient section representation"]);
+  });
+
+  it("appendix keywords, supplementary lines and boilerplate openers", () => {
+    for (const h of ["Appendix", "APPENDIX", "APPENDIX CONTENTS", "SUMMARY OF THE APPENDIX", "AI USE STATEMENT", "TABLES", "Author Contributions", "Impact Statement", "Checklist"]) {
+      assert.deepEqual(afterRefs(withRefs("[1] A. Author, A title, Venue, 2024.", "", h, body)), [h], h);
+    }
+    const supp = "Supplementary Materials: A Structured Account of Training Runs";
+    assert.deepEqual(afterRefs(withRefs("[1] A. Author, A title, Venue, 2024.", "", supp)), [supp]);
+  });
+
+  it("a numbered bibliography entry immediately before the appendix does not veto the true heading", () => {
+    const text = doc(
+      "References",
+      "[40] P. Hart and R. Nilsson. Generating a random permutation with random swaps. J. Probab. Theory, 57(2):159–179, 1981.",
+      "",
+      "A Conditions for the mixing bound",
+      "Proposition A.1 (Design conditions for the graph scheme). The graph scheme mixes rapidly.",
+    );
+    assert.deepEqual(headingsOf(text), ["References", "A Conditions for the mixing bound"]);
+  });
+
+  it("once the appendix starts, ordinary numbered sections work again", () => {
+    const text = withRefs("[1] A. Author, A title, Venue, 2024.", "", "Appendix", "1. Additional Proofs", body, "B. Extended Results", body);
+    assert.deepEqual(afterRefs(text), ["Appendix", "1. Additional Proofs", "B. Extended Results"]);
+  });
+
+  it("a canonical supplementary opener also ends the references span for what follows", () => {
+    const text = withRefs("[1] A. Author, A title, Venue, 2024.", "", "Supplementary Information", "1. Additional Proofs", body);
+    assert.deepEqual(afterRefs(text), ["Supplementary Information", "1. Additional Proofs"]);
+  });
+});
+
+describe("detectHeadings — bibliography entry lines are never appendix headings", () => {
+  const withRefs = (...lines: string[]): string => doc("References", ...lines);
+  const afterRefs = (text: string): string[] => headingsOf(text).filter((h) => h !== "References");
+
+  it("wrapped entry subtitles starting with a bare capital letter are entries, not headings", () => {
+    const one = withRefs("[49] Dana R. Whitfield, and solo coauthors. 2024. Accelerating Reviews:", "A Case Study in the Design of Research Tools", "Research Tool. In Extended Abstracts of the CHI Conference, 2024.");
+    assert.deepEqual(afterRefs(one), []);
+    const two = withRefs("[74] C. Wong and coauthors. 2025. Systematic Living Evidence (SyLECT):", "A Data-Driven Framework for Drug Selection in Trials", "Disease. medRxiv (2025). Preprint. doi:10.1101/2025.01.01.12345678.");
+    assert.deepEqual(afterRefs(two), []);
+  });
+
+  it("author-initial lines, numbered entries and entry continuations with years or venues", () => {
+    const text = withRefs(
+      "[12] A. Smith, B. Jones, Deep things, in Proc. IEEE, 2020.",
+      "A. Krizhevsky, I. Sutskever, and G. Hinton",
+      "C. Zhang, J. Wang, Z. Wang, S. K. S. Yau, Z. Lin, L. Zhou,",
+      "E. Hubinger, Sycophancy to Subterfuge: Investigating",
+      "Association for Computational Linguistics.",
+      "2. Li, X., Wang, Y.: Another study (2019)",
+    );
+    assert.deepEqual(afterRefs(text), []);
+  });
+
+  it("a bibliography with no appendix yields no cut", () => {
+    const text = doc("References", "[1] A. Author, A title, Venue, 2024.", "[2] B. Author, Another title, Venue, 2025.");
+    assert.deepEqual(headingsOf(text), ["References"]);
+  });
+});
+
 describe("detectHeadings — total and well-formed on hostile input", () => {
   it("empty, whitespace-only, no newline, and only newlines", () => {
     assert.deepEqual(detectHeadings(""), []);

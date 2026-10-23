@@ -6,7 +6,8 @@ the full entries before 2026-10-23 are in git history (`git show c9972da:CHANGEL
 
 ## [Unreleased]
 
-Checkpoint 2026-10-23: `pnpm test` 1,683 / 1,682 pass / 0 fail / 1 skip; both `tsc` runs, `typecheck:browser` and web `tsc` clean.
+Checkpoint 2026-10-23 (late): `pnpm test` 1,886 / 1,885 pass / 0 fail / 1 skip; both `tsc` runs and `typecheck:browser` clean
+(web `tsc` not rerun: no `web/` change).
 
 ### Added
 - Browser app (MVP, `web/`, TeXlyre fork): XeLaTeX in the browser (BusyTeX), per-project storage with its own registry,
@@ -17,12 +18,26 @@ Checkpoint 2026-10-23: `pnpm test` 1,683 / 1,682 pass / 0 fail / 1 skip; both `t
 - Hosted verifier (`vllm-sr/d3-mini`, free key) with top-10 candidates; durable verify evidence (`claim_ledger`, schema v6);
   provenance audit of statements, table rows and computed figures.
 - Live measurement harness (`scripts/live/`, `pnpm experiment`), benchmarks in `docs/benchmarks/`, product skills.
+- Section-unit verification (opt-in via `UKTUB_VERIFY_STRATEGY=units` until the A/B decides): whole paper sections are
+  the judging unit; bibliography sections are excluded and disclosed; a claim's questions are packed per paper; continuation
+  token v4.
+- `write_section` in Pi: at most 20 assigned papers, each with full text, checked before the sub-session starts. The
+  sub-session's `passages`, `registry` (read) and `verify` reach only those papers.
+- `write_section` in Pi marks each claim `% cN` and lists its stated sources. The check judges stated sources first,
+  then the rest of each cited paper; the result has a claim table, repairs are by `cN`, and annotated checks are capped at
+  4 calls per run. The workflow now writes the abstract, introduction and conclusion last, from the saved sections.
 
 ### Changed
 - Default verification engine is `hosted`; questions use the criteria wording; shared 429 backoff.
+- Hosted requests carry keyed question packs, up to 20 questions and 9 states (protocol `systemone-noul-criteria-v2`, so
+  v1 cache rows are not reused). 5xx and network errors are retried twice. A failed question fails only its own claims.
+- Heading detection finds appendix headings after References (`sections-v2`; stored PDF marks re-derive on next use).
+- Provenance: a statement is verified only when EVERY paper it cites supports that wording.
+- Live harness: OpenCode Go writer and grader B use `minimax-m3.1-flash`; the `-free` id was deprecated upstream.
 - Short core prompt; tool mechanics live in tool descriptions. Pi 1.3.0 (root), pi-ai/pi-agent-core 1.4.0 (browser).
 
 ### Fixed
+- Hosted engine identity took the first model of `/v1/models` (now d3-turbo); it is the configured d3-mini, or no cache reuse.
 - Citations after the full stop escaped the registry check; continuation resumes the same candidates; Semantic Scholar key
   fallback; browser compile, deletion race and settings-reset defects; lifecycle and cancellation hardening.
 

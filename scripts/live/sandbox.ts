@@ -149,9 +149,10 @@ export function runInteractive(spec: SandboxSpec, command: string[]): Promise<nu
 
 /**
  * Custom Pi models the harness adds (models.json, Pi 1.3 schema: `providers.<id>.models[]`). Owner decision 2026-10-19: MiniMax M3.1
- * Flash Free on OpenCode Go is the assistant option and grader B. Source: OpenCode's live model list
- * (GET https://opencode.ai/zen/go/v1/models) includes `minimax-m3.1-flash-free`; Pi 1.3.0's static catalog does not.
- * Free tier: cost 0 (label only: the price is not in the live list). API type, baseUrl, reasoning and input types are copied
+ * Flash on OpenCode Go is the assistant option and grader B. Source: OpenCode's live model list
+ * (GET https://opencode.ai/zen/go/v1/models, 2026-10-23) includes `minimax-m3.1-flash`; Pi 1.3.0's static catalog does not. The
+ * `-free` variant answers 410 ModelDeprecated since 2026-10-23. Cost 0 is a placeholder, not a price: the live list publishes
+ * none, so the harness's dollar figure for this model is unknown, not zero. API type, baseUrl, reasoning and input types are copied
  * from Pi's catalog entry `minimax-m3` on opencode-go. contextWindow/maxTokens are ASSUMED equal to minimax-m3 (1000000 / 131072):
  * not published in the live list. No apiKey here: the key comes from OPENCODE_API_KEY in the sandbox environment.
  */
@@ -160,8 +161,8 @@ export const PI_CUSTOM_MODELS = {
     "opencode-go": {
       models: [
         {
-          id: "minimax-m3.1-flash-free",
-          name: "MiniMax M3.1 Flash Free",
+          id: "minimax-m3.1-flash",
+          name: "MiniMax M3.1 Flash",
           api: "anthropic-messages",
           baseUrl: "https://opencode.ai/inference/go",
           reasoning: true,

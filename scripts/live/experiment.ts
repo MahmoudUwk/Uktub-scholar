@@ -1,7 +1,7 @@
 /**
  * One measured iteration (see experiments/README.md).
  *
- *   node scripts/live/experiment.ts <scenario> [--max-turns N] [--simulated-window TOKENS] [--arm A|B1|B2|sections|no-gate] [--user scripted|simulator] [--assistant-model provider/id] [--verify-engine eos|hosted]
+ *   node scripts/live/experiment.ts <scenario> [--max-turns N] [--simulated-window TOKENS] [--arm A|B1|B2|sections|no-gate] [--user scripted|simulator] [--assistant-model provider/id] [--verify-engine eos|hosted|hosted-units]
  *
  * The user is scripted by default (PLAN §4.4: a deterministic state machine on file state reading ## Request,
  * ## Revision and ## Nudge from the scenario). `--user simulator` keeps the old path: a simulated user
@@ -14,9 +14,9 @@ import { appendFileSync, copyFileSync, existsSync, mkdirSync, readdirSync, readF
 import { spawnSync } from "node:child_process";
 import { join, relative, resolve } from "node:path";
 import { AGENT_POLICY, FALLBACK_MODEL, MODEL, formatModel, parseModelSetting, startAgent, TurnBlocked, type ToolEnd, type Turn } from "./agent.ts";
-import { behaviorOf, childUsageOf, simulatedWindowSettings, slowScopeOf, slowStepsOf, totalCostUsd, writeSectionDrafts } from "./behavior.ts";
+import { annotatedUsageOf, behaviorOf, childUsageOf, passagesAfterLastSection, simulatedWindowSettings, slowScopeOf, slowStepsOf, totalCostUsd, writeSectionDrafts } from "./behavior.ts";
 import { Blocked } from "./cases.ts";
-import { createEnv, assistantSecretsForProvider, verifyEngineEnv } from "./env.ts";
+import { createEnv, assistantSecretsForProvider, usesHostedEngine, verifyEngineEnv } from "./env.ts";
 import { walkFiles } from "./files.ts";
 import { GRADER_KEY_NAMES, providerKeys, VERIFY_API_KEY_ENV, VERIFY_KEY_NAMES, verifySecrets } from "./keys.ts";
 import { redact, registerSecrets } from "./redact.ts";
@@ -62,7 +62,7 @@ export const EXPERIMENT_POLICY = {
 const MODEL_WINDOW_TOKENS = 1_048_576;
 
 const scenarioName = process.argv[2];
-if (scenarioName === undefined || scenarioName.startsWith("--")) throw new Error("usage: experiment.ts <scenario> [--max-turns N] [--simulated-window TOKENS] [--arm A|B1|B2|sections|no-gate] [--user scripted|simulator] [--assistant-model provider/id] [--verify-engine eos|hosted] [--turn-max-minutes N] [--pilot]");
+if (scenarioName === undefined || scenarioName.startsWith("--")) throw new Error("usage: experiment.ts <scenario> [--max-turns N] [--simulated-window TOKENS] [--arm A|B1|B2|sections|no-gate] [--user scripted|simulator] [--assistant-model provider/id] [--verify-engine eos|hosted|hosted-units] [--turn-max-minutes N] [--pilot]");
 /** A harness shakedown run: labelled PILOT in the metrics, manifest and index, and never analysed (PLAN §1). */
 const pilot = process.argv.includes("--pilot");
 const um = process.argv.indexOf("--user");
@@ -109,9 +109,9 @@ const dotenvText = existsSync(join(repo, ".env")) ? readFileSync(join(repo, ".en
 const assistantSecrets: Record<string, string> = {
   ...assistantSecretsForProvider(assistantModel.provider, (n) => providerKeys(shellEnv, dotenvText, GRADER_KEY_NAMES)[n]),
 };
-if (verifyEngine === "hosted") {
+if (usesHostedEngine(verifyEngine)) {
   const got = verifySecrets(providerKeys(shellEnv, dotenvText, VERIFY_KEY_NAMES));
-  if (got[VERIFY_API_KEY_ENV] === undefined) throw new Error("BLOCKED: --verify-engine hosted needs VLLM_decision_API (shell or .env); not falling back to another engine");
+  if (got[VERIFY_API_KEY_ENV] === undefined) throw new Error(`BLOCKED: --verify-engine ${verifyEngine} needs VLLM_decision_API (shell or .env); not falling back to another engine`);
   Object.assign(assistantSecrets, got);
 }
 registerSecrets(assistantSecrets);
@@ -285,6 +285,8 @@ const slow = slowStepsOf(agentTurns, EXPERIMENT_POLICY.slowGapMs, label);
 const providerRetries = agentTurns.flatMap((t) => t.retries.map((r) => ({ turn: t.id, ...r })));
 const childAttribution = childUsageOf(agentTurns.flatMap((t) => t.ends));
 const childUsage = childAttribution.childUsage;
+const sectionsAfter = passagesAfterLastSection(agentTurns);
+const annotatedUsage = annotatedUsageOf(agentTurns.flatMap((t) => t.ends));
 const usage = (ts: Turn[]) => ({ responses: ts.reduce((a, t) => a + t.usage.responses, 0), inputTokens: ts.reduce((a, t) => a + t.usage.input, 0), outputTokens: ts.reduce((a, t) => a + t.usage.output, 0), reasoningTokens: ts.reduce((a, t) => a + t.usage.reasoning, 0), costUsd: Number(ts.reduce((a, t) => a + t.usage.costUsd, 0).toFixed(4)) });
 
 // registry + deliverables as the user ended up with them (paged read; citable + source metadata honored)
@@ -414,7 +416,7 @@ const metrics = {
   outcome: stopReason,
   userTurns: exchanges.length,
   wallMs: Date.now() - t0,
-  agent: { toolCalls: allCalls.length, byTool, refusalsOrErrors: refusals.length, refusals, retriesAfterRefusal, providerRetries, repeatedIdenticalCalls: repeats, toolMs: toolMs(), toolMsByTool: Object.fromEntries(Object.keys(byTool).map((k) => [k.split(":")[0], toolMs(k.split(":")[0])])), slowSteps: slow, slowStepsByScope: slowScopeOf(slow), childUsage, childUsageMissing: childAttribution.childUsageMissing, totalCostUsd: totalCostUsd(usage(agentTurns).costUsd, childUsage.costUsd), usage: usage(agentTurns), perTurn: agentTurns.map((t) => ({ id: t.id, ms: t.elapsedMs, calls: t.calls.length, inputTokens: t.usage.input, outputTokens: t.usage.output })) },
+  agent: { toolCalls: allCalls.length, byTool, refusalsOrErrors: refusals.length, refusals, retriesAfterRefusal, providerRetries, repeatedIdenticalCalls: repeats, toolMs: toolMs(), toolMsByTool: Object.fromEntries(Object.keys(byTool).map((k) => [k.split(":")[0], toolMs(k.split(":")[0])])), slowSteps: slow, slowStepsByScope: slowScopeOf(slow), childUsage, childUsageMissing: childAttribution.childUsageMissing, passagesAfterLastSection: sectionsAfter, annotatedUsage, totalCostUsd: totalCostUsd(usage(agentTurns).costUsd, childUsage.costUsd), usage: usage(agentTurns), perTurn: agentTurns.map((t) => ({ id: t.id, ms: t.elapsedMs, calls: t.calls.length, inputTokens: t.usage.input, outputTokens: t.usage.output })) },
   simulator: { usage: usage(exchanges.map((x) => x.sim)), formatFailures: exchanges.filter((x) => !x.formatOk).length, reviews: exchanges.map((x) => ({ turn: x.n, status: x.simStatus, review: x.simReview })) },
   provenance: finalProvenance.ok ? finalProvenance.audit.summary : { unavailable: finalProvenance.message },
   tier1: { documentDigest: provenanceDoc?.document_digest ?? null, report: tier1Report, gated: tierChecks.map((c) => c.id), reported: reportedChecks.map((c) => c.id) },
@@ -472,7 +474,7 @@ ${tierChecks.map((c) => `- ${c.ok ? "PASS" : "**FAIL**"} \`${c.id}\` — ${c.det
 ${reportedChecks.map((c) => `- ${c.ok ? "pass" : "noted"} \`${c.id}\` — ${c.detail}`).join("\n")}
 
 ### Tool use
-${table([["tool calls", allCalls.length], ["calls by tool", Object.entries(byTool).map(([k, v]) => `${k}×${v}`).join(", ") || "none"], ["refusals / tool errors", `${refusals.length} (${pct(refusals.length, allCalls.length)} of calls)`], ["retries immediately after a refusal of the same tool", retriesAfterRefusal], ["provider retries performed by Pi (transient failures, visible)", providerRetries.length ? providerRetries.map((r) => `${r.turn}: ${r.errorMessage.slice(0, 80)}`).join("; ") : "none"], ["identical calls repeated", repeats.length ? repeats.map((r) => `${r.tool}×${r.times}`).join(", ") : "none"], ["tool time", `${Math.round(toolMs() / 1000)} s (${Object.entries(metrics.agent.toolMsByTool).map(([k, v]) => `${k} ${Math.round((v as number) / 1000)} s`).join(", ")})`], [`slow steps (> ${EXPERIMENT_POLICY.slowGapMs / 1000} s)`, slow.length ? slow.map((s) => `${s.turn}: ${s.kind} ${Math.round(s.ms / 1000)} s (${s.detail}${s.parent === null ? "" : `, inside ${s.parentTool ?? "a child tool"}`})`).join("; ") : "none"], ["slow steps by scope: parent agent / inside write_section", `${metrics.agent.slowStepsByScope.parent.count} (${Math.round(metrics.agent.slowStepsByScope.parent.ms / 1000)} s) / ${metrics.agent.slowStepsByScope.child.count} (${Math.round(metrics.agent.slowStepsByScope.child.ms / 1000)} s)`]])}
+${table([["tool calls", allCalls.length], ["calls by tool", Object.entries(byTool).map(([k, v]) => `${k}×${v}`).join(", ") || "none"], ["refusals / tool errors", `${refusals.length} (${pct(refusals.length, allCalls.length)} of calls)`], ["retries immediately after a refusal of the same tool", retriesAfterRefusal], ["provider retries performed by Pi (transient failures, visible)", providerRetries.length ? providerRetries.map((r) => `${r.turn}: ${r.errorMessage.slice(0, 80)}`).join("; ") : "none"], ["identical calls repeated", repeats.length ? repeats.map((r) => `${r.tool}×${r.times}`).join(", ") : "none"], ["tool time", `${Math.round(toolMs() / 1000)} s (${Object.entries(metrics.agent.toolMsByTool).map(([k, v]) => `${k} ${Math.round((v as number) / 1000)} s`).join(", ")})`], [`slow steps (> ${EXPERIMENT_POLICY.slowGapMs / 1000} s)`, slow.length ? slow.map((s) => `${s.turn}: ${s.kind} ${Math.round(s.ms / 1000)} s (${s.detail}${s.parent === null ? "" : `, inside ${s.parentTool ?? "a child tool"}`})`).join("; ") : "none"], ["slow steps by scope: parent agent / inside write_section", `${metrics.agent.slowStepsByScope.parent.count} (${Math.round(metrics.agent.slowStepsByScope.parent.ms / 1000)} s) / ${metrics.agent.slowStepsByScope.child.count} (${Math.round(metrics.agent.slowStepsByScope.child.ms / 1000)} s)`], ["parent passages after the last write_section", sectionsAfter === null ? "n/a (no section written)" : String(sectionsAfter)]])}
 
 ### Behaviour signatures
 ${table([["peak context", `${behavior.peakContextTokens} tokens (${pct(behavior.peakContextTokens, behavior.contextWindowTokens)} of the ${behavior.contextWindowTokens}-token window${simulatedWindow !== undefined ? `; ${pct(behavior.peakContextTokens, simulatedWindow)} of the simulated ${simulatedWindow}` : ""})`], ["compactions by Pi", behavior.compactions ? `${behavior.compactions} (${behavior.overflowRecoveries} recovering from an overflow)` : "none"], ["invalid tool calls (all tools)", `${behavior.invalidToolCalls} of ${behavior.toolCalls}: validation ${behavior.invalidByKind.validation}, unknown tool ${behavior.invalidByKind.unknown_tool}, command not found ${behavior.invalidByKind.unresolved_command}`], ["agent turns that ended without a tool call", behavior.zeroCallTurns], ["premature stop", behavior.prematureStop ? `yes: a turn ended without a tool call and ${behavior.deliverableChecksFailed.join(", ")} failed` : "no"]])}
@@ -481,7 +483,7 @@ ${table([["peak context", `${behavior.peakContextTokens} tokens (${pct(behavior.
 ${refusals.length ? refusals.map((r) => `- \`${r.tool}\` ${r.code}: ${r.message} — args ${JSON.stringify(r.call).slice(0, 160)}`).join("\n") : "none"}
 
 ### Model usage
-${table([["agent responses", metrics.agent.usage.responses], ["agent input / output / reasoning tokens", `${metrics.agent.usage.inputTokens} / ${metrics.agent.usage.outputTokens} / ${metrics.agent.usage.reasoningTokens}`], ["agent cost (reported by the provider client, parent agent only)", `$${metrics.agent.usage.costUsd}`], ["write_section children: turns, retries, tool calls", `${metrics.agent.childUsage.turns}, ${metrics.agent.childUsage.retries}, ${metrics.agent.childUsage.toolCalls}`], ["write_section children: input / output tokens, cost", `${metrics.agent.childUsage.inputTokens} / ${metrics.agent.childUsage.outputTokens}, $${metrics.agent.childUsage.costUsd}`], ["write_section ends without child figures (not in the child numbers)", metrics.agent.childUsageMissing], ["total agent cost, parent + write_section children", `$${metrics.agent.totalCostUsd}`], ["simulator responses / cost", `${metrics.simulator.usage.responses} / $${metrics.simulator.usage.costUsd}`], ["simulator format failures", metrics.simulator.formatFailures]])}
+${table([["agent responses", metrics.agent.usage.responses], ["agent input / output / reasoning tokens", `${metrics.agent.usage.inputTokens} / ${metrics.agent.usage.outputTokens} / ${metrics.agent.usage.reasoningTokens}`], ["agent cost (reported by the provider client, parent agent only)", `$${metrics.agent.usage.costUsd}`], ["write_section children: turns, retries, tool calls", `${metrics.agent.childUsage.turns}, ${metrics.agent.childUsage.retries}, ${metrics.agent.childUsage.toolCalls}`], ["write_section children: input / output tokens, cost", `${metrics.agent.childUsage.inputTokens} / ${metrics.agent.childUsage.outputTokens}, $${metrics.agent.childUsage.costUsd}`], ["write_section ends without child figures (not in the child numbers)", metrics.agent.childUsageMissing], ["write_section annotated use (sections, marker compliance)", annotatedUsage.sections === 0 ? "none" : `${annotatedUsage.sections} sections, ${pct(annotatedUsage.markerCompliance * 100, 100)} marker-compliant, ${annotatedUsage.claims} claims, multi-source ${pct(annotatedUsage.multiSourceShare * 100, 100)}, unread ${pct(annotatedUsage.unreadRate * 100, 100)}, work cells/fresh/cached/calls ${annotatedUsage.work.cells}/${annotatedUsage.work.fresh}/${annotatedUsage.work.cached}/${annotatedUsage.work.calls}`], ["total agent cost, parent + write_section children", `$${metrics.agent.totalCostUsd}`], ["simulator responses / cost", `${metrics.simulator.usage.responses} / $${metrics.simulator.usage.costUsd}`], ["simulator format failures", metrics.simulator.formatFailures]])}
 
 ### Result
 ${table([["registered papers", records.length], [`ready sources (of ${records.length}; acquiring ${sources.acquiring}, unavailable ${sources.unavailable}, failed ${sources.failed}, metadata-only ${sources.metadataOnly})`, sources.ready], ["manuscript files", texFiles.join(", ") || "none"], ["citations in the manuscript", cited.length], ["pdf", pdfs.join(", ") || "none"], ["document digest", provenanceDoc?.document_digest.slice(0, 12) ?? "unavailable"], ["provenance words / verified / cited / uncited", tier1Report === null ? "unavailable" : `${tier1Report.words} / ${tier1Report.verified} / ${tier1Report.cited} / ${tier1Report.uncited}`], ["successful verifies", hits.filter((h) => h.supportFound).length]])}

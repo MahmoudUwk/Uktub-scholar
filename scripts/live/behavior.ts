@@ -171,3 +171,71 @@ export function writeSectionDrafts(ends: Array<{ name: string; isError: boolean;
   }
   return out;
 }
+
+// ── the parent's own reading after the writing is done ─────────────────────────────
+/**
+ * Parent calls named passages after the last successful write_section end
+ * (child calls excluded by their `parent` id); null when no section was
+ * ever written. A failed write_section end is not a section.
+ */
+export function passagesAfterLastSection(turns: Array<{ calls: Array<{ name: string; parent?: string }>; ends: Array<{ name: string; isError: boolean; parent?: string }> }>): number | null {
+  let lastSection = -1;
+  turns.forEach((t, i) => {
+    if (t.ends.some((e) => e.parent === undefined && !e.isError && bareName(e.name) === "write_section")) lastSection = i;
+  });
+  if (lastSection === -1) return null;
+  let n = 0;
+  for (const t of turns.slice(lastSection + 1)) {
+    for (const c of t.calls) if (c.parent === undefined && bareName(c.name) === "passages") n += 1;
+  }
+  return n;
+}
+
+// ── annotated write_section use (marker compliance, label shares, multi-source, unread, work) ──
+export interface AnnotatedUsage {
+  sections: number;
+  markerCompliance: number;
+  claims: number;
+  statusShares: Record<string, number>;
+  multiSourceShare: number;
+  unreadRate: number;
+  work: { cells: number; fresh: number; cached: number; calls: number };
+}
+
+/** Summed annotated detail over every write_section end that carries it (the W7 analysis input). */
+export function annotatedUsageOf(ends: Array<{ name: string; details?: unknown }>): AnnotatedUsage {
+  const num = (x: unknown): number => (typeof x === "number" && Number.isFinite(x) ? x : 0);
+  const usage: AnnotatedUsage = { sections: 0, markerCompliance: 0, claims: 0, statusShares: {}, multiSourceShare: 0, unreadRate: 0, work: { cells: 0, fresh: 0, cached: 0, calls: 0 } };
+  let compliant = 0;
+  let multi = 0;
+  let unread = 0;
+  let sources = 0;
+  const byStatus = new Map<string, number>();
+  for (const e of ends) {
+    if (bareName(e.name) !== "write_section") continue;
+    const a = (e.details as { annotated?: { mode?: unknown; claims?: Array<{ status?: unknown; sources?: unknown; unread?: unknown }>; work?: unknown } } | null | undefined)?.annotated;
+    if (a === null || typeof a !== "object") continue;
+    usage.sections += 1;
+    if (a.mode === "annotated") compliant += 1;
+    const claims = Array.isArray(a.claims) ? a.claims : [];
+    for (const c of claims) {
+      if (typeof c !== "object" || c === null) continue;
+      usage.claims += 1;
+      byStatus.set(String(c.status), (byStatus.get(String(c.status)) ?? 0) + 1);
+      const ns = Array.isArray(c.sources) ? c.sources.length : 0;
+      sources += ns;
+      if (ns > 1) multi += 1;
+      unread += Array.isArray(c.unread) ? c.unread.length : 0;
+    }
+    const w = (typeof a.work === "object" && a.work !== null ? a.work : {}) as Record<string, unknown>;
+    usage.work.cells += num(w.cells);
+    usage.work.fresh += num(w.fresh);
+    usage.work.cached += num(w.cached);
+    usage.work.calls += num(w.calls);
+  }
+  if (usage.sections > 0) usage.markerCompliance = compliant / usage.sections;
+  for (const [status, n] of byStatus) usage.statusShares[status] = usage.claims > 0 ? n / usage.claims : 0;
+  if (usage.claims > 0) usage.multiSourceShare = multi / usage.claims;
+  if (sources > 0) usage.unreadRate = unread / sources;
+  return usage;
+}

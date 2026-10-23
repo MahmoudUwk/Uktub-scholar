@@ -72,7 +72,7 @@ describe("system one criteria wording", () => {
     );
   });
 
-  it("the protocol identity names the criteria wording", () => {
-    assert.equal(SYSTEMONE_PROTOCOL, "systemone-noul-criteria-v1");
+  it("protocol identity v2 names the criteria wording", () => {
+    assert.equal(SYSTEMONE_PROTOCOL, "systemone-noul-criteria-v2");
   });
 });

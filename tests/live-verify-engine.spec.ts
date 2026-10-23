@@ -7,7 +7,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
-import { assistantSecretsForProvider, mergeAssistantSecrets, verifyEngineEnv } from "../scripts/live/env.ts";
+import { assistantSecretsForProvider, mergeAssistantSecrets, usesHostedEngine, verifyEngineEnv } from "../scripts/live/env.ts";
 import { parseDotenv, VERIFY_API_KEY_ENV, VERIFY_KEY_NAMES, verifySecrets } from "../scripts/live/keys.ts";
 
 describe("parseDotenv with the mixed-case verify key", () => {
@@ -25,6 +25,19 @@ describe("verifySecrets", () => {
 
   it("reads only its own names", () => {
     assert.deepEqual([...VERIFY_KEY_NAMES], ["VLLM_decision_API"]);
+  });
+});
+
+describe("verifyEngineUnits (W7 enabler)", () => {
+  it("hosted-units names the hosted engine on the whole-section unit path (a harness arg, not a product knob)", () => {
+    assert.deepEqual(verifyEngineEnv("hosted-units"), { UKTUB_VERIFY_ENGINE: "hosted", UKTUB_VERIFY_STRATEGY: "units" });
+    assert.throws(() => verifyEngineEnv("units"), /eos\|hosted\|hosted-units/);
+  });
+
+  it("every hosted variant needs the hosted key forwarded; eos does not", () => {
+    assert.equal(usesHostedEngine("hosted"), true);
+    assert.equal(usesHostedEngine("hosted-units"), true);
+    assert.equal(usesHostedEngine("eos"), false);
   });
 });
 

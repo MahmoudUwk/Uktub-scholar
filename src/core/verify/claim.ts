@@ -16,8 +16,10 @@ export const DEFAULT_MIN_CONFIDENCE = 0.99;
 export const MIN_CONFIDENCE_ENV = "UKTUB_VERIFY_MIN_CONFIDENCE";
 
 export interface ClaimEngine {
-  /** One resident process answers N rows; implementations may batch freely. */
-  run(rows: { state: string; instructions: string }[], opts?: RunOptions): Promise<number[]>;
+  /** One resident process answers N rows; implementations may batch freely.
+   *  A RowFailure element marks one row the engine refused: the caller, not
+   *  the batch, decides what that means. */
+  run(rows: { state: string; instructions: string }[], opts?: RunOptions): Promise<(number | RowFailure)[]>;
 }
 
 /** Optional per-call cancellation. Aborting stops new work promptly; an
@@ -32,6 +34,25 @@ export class CancelledError extends Error {
     super(message);
     this.name = "CancelledError";
   }
+}
+
+/** A per-row judgment failure inside an otherwise attempted engine call. The
+ *  detail is a static token, never server text. */
+export interface RowFailure {
+  failed: string;
+}
+
+/** Narrow an engine-call element to a per-row failure. */
+export function isRowFailure(value: unknown): value is RowFailure {
+  return typeof value === "object" && value !== null && typeof (value as { failed?: unknown }).failed === "string";
+}
+
+/** Client-policy limits for keyed question packs, shared by the HTTP engines. */
+export interface PackLimits {
+  maxQuestions: number;
+  maxRequestBytes?: number;
+  /** Inputs per request including the top-level state (default 1: one state per request). */
+  maxStates?: number;
 }
 
 const throwIfCancelled = (signal?: AbortSignal): void => {
@@ -317,9 +338,184 @@ function workerEngine(opts: {
   };
 }
 
-/** Shared TypeSafe System One HTTP client: one `noul` question per request in the
+/** One packed judgment POST: top-level per-key answers plus per-state answers,
+ *  or a thrown EngineError/CancelledError for a transport-level failure. */
+export interface KeyedTransport {
+  label: string;
+  send: (
+    state: string,
+    questions: Record<string, ReturnType<typeof criteriaQuestion>>,
+    signal?: AbortSignal,
+    /** Extra states packed into the same request (`states.s2`, `states.s3`, ...). */
+    states?: Record<string, { state: string; questions: Record<string, ReturnType<typeof criteriaQuestion>> }>,
+  ) => Promise<KeyedAnswers>;
+}
+
+/** Answers for the top-level state, plus per-extra-state answers. */
+export interface KeyedAnswers {
+  answers?: Record<string, { noul?: unknown; error?: unknown }>;
+  states?: Record<string, { answers?: Record<string, { noul?: unknown; error?: unknown }> }>;
+  model?: unknown;
+}
+
+/**
+ * Shared keyed packer for the System One HTTP engines (the judge knows no
+ * limits): rows keep first-seen state grouping, and packs build greedily over
+ * the groups in order — a pack is a list of entries (state, row indices); a
+ * row joins the pack while questions + 1 stays within maxQuestions, its bytes
+ * stay within maxRequestBytes, and its state is already an entry or a new
+ * entry stays within maxStates; otherwise the pack flushes and a group may
+ * span packs. Entry 0 rides as the top-level `state` and `questions`; entry
+ * i >= 1 rides as `states["s" + (i + 1)]`. A pack of exactly ONE question
+ * keeps key `c` (byte-identical to the old one-question shape); otherwise
+ * every entry numbers its own questions q1..qn. Answers map back per entry
+ * and key, never by position: a missing `states` entry or a missing answer
+ * without `error` is a malformed response (EngineError); a per-key `{error}`
+ * is a RowFailure for that row. A 4xx `request_too_long` with a pack of more
+ * than one question splits the pack's rows in halves in pack order
+ * (ceil(n/2) | rest), recursively; a pack of one becomes a RowFailure. A 5xx
+ * or network error after retries fails that pack's rows; later packs
+ * continue. `too_many_states` is a fatal EngineError (a client bug: the packer
+ * never exceeds the provider's extra-states limit).
+ */
+async function askRows(
+  rows: { state: string; instructions: string }[],
+  transport: KeyedTransport,
+  pack: PackLimits,
+  signal?: AbortSignal,
+): Promise<(number | RowFailure)[]> {
+  const out: (number | RowFailure)[] = new Array(rows.length);
+  const maxStates = pack.maxStates ?? 1;
+  const groups = new Map<string, number[]>();
+  const order: string[] = [];
+  rows.forEach((row, i) => {
+    const have = groups.get(row.state);
+    if (have !== undefined) have.push(i);
+    else {
+      groups.set(row.state, [i]);
+      order.push(row.state);
+    }
+  });
+  const encoder = new TextEncoder();
+  const questionBytes = (state: string, instructions: string): number =>
+    encoder.encode(state).length + encoder.encode(JSON.stringify(criteriaQuestion(instructions, "criteria"))).length;
+  // Greedy packs over the groups in first-seen order: each pack's rows stay in
+  // pack order (group, then row), and a group may span packs.
+  const packs: number[][] = [];
+  let inPack = new Set<string>();
+  let questions = 0;
+  let bytes = 0;
+  let cur: number[] = [];
+  const flush = (): void => {
+    if (cur.length > 0) packs.push(cur);
+    cur = [];
+    inPack = new Set<string>();
+    questions = 0;
+    bytes = 0;
+  };
+  for (const state of order) {
+    for (const i of groups.get(state)!) {
+      const qb = questionBytes(state, rows[i].instructions);
+      if (
+        questions > 0 &&
+        (questions + 1 > pack.maxQuestions ||
+          (pack.maxRequestBytes !== undefined && bytes + qb > pack.maxRequestBytes) ||
+          (!inPack.has(state) && inPack.size + 1 > maxStates))
+      ) {
+        flush();
+      }
+      inPack.add(state);
+      cur.push(i);
+      questions++;
+      bytes += qb;
+    }
+  }
+  flush();
+  for (const packIdxs of packs) {
+    throwIfCancelled(signal);
+    await runPack(rows, packIdxs, transport, signal, out);
+  }
+  return out;
+}
+
+/** Post one pack, splitting it in halves around `request_too_long`, in pack order. */
+async function runPack(
+  rows: { state: string; instructions: string }[],
+  packIdxs: number[],
+  transport: KeyedTransport,
+  signal: AbortSignal | undefined,
+  out: (number | RowFailure)[],
+): Promise<void> {
+  // Entries in first-seen order: entry 0 rides top-level, entry i >= 1 rides
+  // as `states["s" + (i + 1)]`. A pack of exactly ONE question in total keeps
+  // key `c`; otherwise every entry numbers its own questions q1..qn.
+  const entries: { state: string; idxs: number[] }[] = [];
+  const at = new Map<string, number>();
+  for (const ri of packIdxs) {
+    const st = rows[ri].state;
+    const ei = at.get(st);
+    if (ei === undefined) {
+      at.set(st, entries.length);
+      entries.push({ state: st, idxs: [ri] });
+    } else entries[ei].idxs.push(ri);
+  }
+  const keyOf = (j: number): string => (packIdxs.length === 1 ? "c" : `q${j + 1}`);
+  const entryQuestions = (idxs: number[]): Record<string, ReturnType<typeof criteriaQuestion>> =>
+    Object.fromEntries(idxs.map((ri, j) => [keyOf(j), criteriaQuestion(rows[ri].instructions, "criteria")]));
+  const entryKeys = entries.map((e) => e.idxs.map((_, j) => keyOf(j)));
+  let res: KeyedAnswers;
+  try {
+    res = await transport.send(
+      entries[0].state,
+      entryQuestions(entries[0].idxs),
+      signal,
+      entries.length > 1
+        ? Object.fromEntries(entries.slice(1).map((e, i) => [`s${i + 2}`, { state: e.state, questions: entryQuestions(e.idxs) }]))
+        : undefined,
+    );
+  } catch (err) {
+    if (err instanceof SplittableRequestError && packIdxs.length > 1) {
+      const mid = Math.ceil(packIdxs.length / 2);
+      await runPack(rows, packIdxs.slice(0, mid), transport, signal, out);
+      await runPack(rows, packIdxs.slice(mid), transport, signal, out);
+      return;
+    }
+    if (err instanceof SplittableRequestError) {
+      out[packIdxs[0]] = { failed: "request_too_long" };
+      return;
+    }
+    if (err instanceof TransientRequestError) {
+      for (const ri of packIdxs) out[ri] = { failed: err.message };
+      return;
+    }
+    throw err;
+  }
+  entries.forEach((entry, ei) => {
+    // Answers map back per entry and key, never by position: a missing
+    // `states` entry is a malformed response.
+    const entryAnswers = ei === 0 ? (res.answers ?? {}) : (res.states?.[`s${ei + 1}`]?.answers ?? null);
+    if (entryAnswers === null) throw new EngineError(`${transport.label}: response missing answers for packed state s${ei + 1}`);
+    entry.idxs.forEach((ri, j) => {
+      const answer = entryAnswers[entryKeys[ei][j]];
+      const p = answer?.noul;
+      if (typeof p === "number" && Number.isFinite(p) && p >= 0 && p <= 1) {
+        out[ri] = p;
+        return;
+      }
+      const token = (answer as { error?: unknown } | undefined)?.error;
+      if (answer !== undefined && token !== undefined) {
+        out[ri] = { failed: typeof token === "string" && /^[a-z][a-z0-9_]{0,63}$/.test(token) ? token : "invalid_question" };
+        return;
+      }
+      throw new EngineError(`${transport.label}: response missing a valid answers.${entryKeys[ei][j]}.noul`);
+    });
+  });
+}
+
+/** Shared TypeSafe System One HTTP client: keyed `noul` question packs in the
  *  benchmarked Decision 2.0 criteria wording (`wording.ts`, shared with the
- *  benchmark client so the two can never diverge), `answers.c.noul` = P(true). Stateless, worker-safe. An
+ *  benchmark client so the two can never diverge); answers map back by key, never by position. Stateless,
+ *  worker-safe. An
  *  optional API key is sent only as an `Authorization: Bearer` header to an HTTPS origin (a key for a plain-HTTP URL is a
  *  construction-time EngineError, never sent and never logged); an optional model id rides in the request body.
  *  HTTP 429 uses the shared backoff below (Retry-After / rate-limit reset
@@ -336,6 +532,8 @@ export function systemoneEndpointEngine(opts: {
   model?: string;
   /** Test seam: wait between 429 retries (production: setTimeout). */
   sleepImpl?: (ms: number) => Promise<void>;
+  /** Client-policy pack limits (default: one question per request). */
+  pack?: PackLimits;
 }): ClaimEngine {
   const doFetch = opts.fetchImpl ?? fetch;
   const apiKey = opts.apiKey !== undefined && opts.apiKey !== "" ? opts.apiKey : undefined;
@@ -359,21 +557,28 @@ export function systemoneEndpointEngine(opts: {
       throw new EngineError(`${opts.label} engine: the server reports model ${JSON.stringify(String(echoed)).slice(0, 120)}, not the configured ${model} — refusing judgments under a wrong identity`);
     }
   };
-  const postQuestion = async (state: string, instructions: string, signal?: AbortSignal): Promise<number> => {
+  /** One packed judgment POST: per-key answers, or a throw for a transport-level failure. */
+  const send = async (
+    state: string,
+    questions: Record<string, ReturnType<typeof criteriaQuestion>>,
+    signal?: AbortSignal,
+    states?: Record<string, { state: string; questions: Record<string, ReturnType<typeof criteriaQuestion>> }>,
+  ): Promise<KeyedAnswers> => {
     let res: Response;
     try {
-      res = await fetchWith429Retry(
+      res = await fetchWithTransientRetry(
         () =>
           doFetch(opts.url, {
             method: "POST",
             headers,
-            body: JSON.stringify({ ...(model === undefined ? {} : { model }), state, questions: { c: criteriaQuestion(instructions, "criteria") } }),
+            body: JSON.stringify({ ...(model === undefined ? {} : { model }), state, questions, ...(states === undefined ? {} : { states }) }),
             signal: requestSignal(signal),
           }),
         { label: `${opts.label} engine`, sleepImpl: opts.sleepImpl, signal },
       );
     } catch (e: unknown) {
       if (e instanceof RateLimitedError) throw new EngineError(`${e.message} — retry later, or use the local engine`);
+      if (e instanceof TransientRequestError) throw e; // static detail; the packer converts it to a RowFailure
       if (e instanceof CancelledError || signal?.aborted === true) throw new CancelledError();
       throw new EngineError(`${opts.label} engine unreachable at ${opts.url}: ${e instanceof Error ? e.message : String(e)}`);
     }
@@ -384,35 +589,39 @@ export function systemoneEndpointEngine(opts: {
         await res.body?.cancel().catch(() => undefined);
         throw new EngineError(`${opts.label} engine HTTP 401 at ${opts.url}: unauthorized — set UKTUB_VERIFY_API_KEY (the key itself is never logged)`);
       }
-      if (!res.ok) throw new EngineError(`${opts.label} engine HTTP ${res.status}: ${(await res.text()).slice(-300)}`);
-      let parsed: { answers?: Record<string, { noul?: number }>; model?: unknown };
+      if (!res.ok) {
+        const text = await res.text();
+        let code: unknown;
+        try {
+          code = (JSON.parse(text) as { error?: { code?: unknown } }).error?.code;
+        } catch {
+          code = undefined;
+        }
+        if (code === "request_too_long") throw new SplittableRequestError(`${opts.label} engine: request_too_long`);
+        // The packer never exceeds the provider's extra-states limit, so this
+        // is a client bug: fatal, never split.
+        if (code === "too_many_states") throw new EngineError(`${opts.label} engine: too_many_states — packed more states than the provider allows`);
+        throw new EngineError(`${opts.label} engine HTTP ${res.status}: ${text.slice(-300)}`);
+      }
+      let parsed: KeyedAnswers;
       try {
-        parsed = JSON.parse(await res.text()) as typeof parsed;
+        parsed = JSON.parse(await res.text()) as KeyedAnswers;
       } catch {
         // A non-JSON or cut-off body is never quoted: the message is static, and an abort still normalizes below.
         throw new EngineError(`${opts.label} engine returned an unreadable response`);
       }
       checkModelEcho(parsed);
-      const p = parsed.answers?.c?.noul;
-      if (typeof p !== "number" || !Number.isFinite(p) || p < 0 || p > 1) {
-        throw new EngineError(`${opts.label} engine: response missing a valid answers.c.noul`);
-      }
-      return p;
+      return parsed;
     } catch (e: unknown) {
       if (signal?.aborted === true) throw new CancelledError();
       throw e;
     }
   };
   return {
-    async run(rows, opts) {
+    async run(rows, runOpts) {
       if (rows.length === 0) return [];
-      throwIfCancelled(opts?.signal);
-      const pTrues: number[] = [];
-      for (const row of rows) {
-        throwIfCancelled(opts?.signal);
-        pTrues.push(await postQuestion(row.state, row.instructions, opts?.signal));
-      }
-      return pTrues;
+      throwIfCancelled(runOpts?.signal);
+      return askRows(rows, { label: `${opts.label} engine`, send }, opts.pack ?? { maxQuestions: 1 }, runOpts?.signal);
     },
   };
 }
@@ -510,6 +719,71 @@ export async function fetchWith429Retry(send: () => Promise<Response>, opts: Fet
   }
 }
 
+/** Client policy: transient (5xx or network) retry waits (owner). */
+export const TRANSIENT_RETRY_DELAYS_MS = [1_000, 4_000];
+
+/** Typed engine failure (R7-shaped): callers map it to a refusal result. */
+export class EngineError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "EngineError";
+  }
+}
+
+/** A transient send failure (5xx after retries, or an unreachable network): static
+ *  detail, never server text. The packer converts it to a per-row RowFailure. */
+class TransientRequestError extends EngineError {}
+
+/** A 4xx the packer may split around: only the provider's `request_too_long`
+ *  code for a multi-question pack. Every other 4xx is a fatal EngineError. */
+class SplittableRequestError extends EngineError {}
+
+/**
+ * Transient retry for the System One HTTP engines: wraps the 429 helper and
+ * retries status >= 500 or a thrown network error, reusing sleepImpl and
+ * abortableDelay. Never retries 4xx, the client's own 120 s TimeoutError, or
+ * an abort. Exhaustion throws TransientRequestError (static detail).
+ */
+export async function fetchWithTransientRetry(
+  send: () => Promise<Response>,
+  opts: {
+    label: string;
+    sleepImpl?: (ms: number, signal?: AbortSignal) => Promise<void>;
+    signal?: AbortSignal;
+    /** Forwarded to the 429 helper: a header-named reset this far out fails fast. */
+    farResetAfterMs?: number;
+    farResetDetail?: (resetAt: string, source: string) => string;
+  },
+): Promise<Response> {
+  const sleep = opts.sleepImpl ?? ((ms: number, signal?: AbortSignal) => abortableDelay(ms, signal));
+  for (let attempt = 0; ; attempt++) {
+    throwIfCancelled(opts.signal);
+    let res: Response;
+    try {
+      // Non-429 responses pass through untouched; RateLimitedError exhausts the
+      // allowance inside: neither is transient.
+      res = await fetchWith429Retry(send, {
+        label: opts.label,
+        sleepImpl: opts.sleepImpl,
+        signal: opts.signal,
+        farResetAfterMs: opts.farResetAfterMs,
+        farResetDetail: opts.farResetDetail,
+      });
+    } catch (err) {
+      if (err instanceof RateLimitedError || err instanceof CancelledError || opts.signal?.aborted === true) throw err;
+      // The client's own 120 s TimeoutError is a slow server, not a droppable packet: never retried.
+      if (err instanceof DOMException && err.name === "TimeoutError") throw err;
+      if (attempt >= TRANSIENT_RETRY_DELAYS_MS.length) throw new TransientRequestError(`${opts.label}: unreachable after ${attempt + 1} attempts`);
+      await sleep(TRANSIENT_RETRY_DELAYS_MS[attempt], opts.signal);
+      continue;
+    }
+    if (res.status < 500) return res;
+    await res.body?.cancel().catch(() => undefined); // the 5xx body is discarded before any wait or throw
+    if (attempt >= TRANSIENT_RETRY_DELAYS_MS.length) throw new TransientRequestError(`${opts.label}: HTTP ${res.status} after ${attempt + 1} attempts`);
+    await sleep(TRANSIENT_RETRY_DELAYS_MS[attempt], opts.signal);
+  }
+}
+
 /** Shared OpenRouter client behavior: per-call throttle (labelled client
  * policy — the free tier allows 20 req/min). Free-tier
  * models default to a 3.5 s spacing; explicit env wins. */
@@ -525,8 +799,8 @@ function openrouterThrottleMs(env: Record<string, string | undefined>, model: st
 /**
  * OpenRouter decisions-endpoint adapter (`/api/alpha/decisions`): the
  * TypeSafe `/v1/systemone` wire shape served by hosted decision models
- * (e.g. inception/mercury-decide, respan/span-01) — one `noul` question per
- * row in the benchmarked criteria wording, `answers.c.noul` = P(true). Key: `OPENROUTER_API_KEY`; model:
+ * (e.g. inception/mercury-decide, respan/span-01) — keyed `noul` question
+ * packs in the benchmarked criteria wording; answers map back by key. Key: `OPENROUTER_API_KEY`; model:
  * `UKTUB_OPENROUTER_MODEL`. Stateless client, worker-safe.
  */
 export function openrouterDecisionsEngine(opts: {
@@ -535,67 +809,85 @@ export function openrouterDecisionsEngine(opts: {
   model: string;
   /** Test seam: wait between 429 retries; may accept an optional abort signal. */
   sleepImpl?: (ms: number, signal?: AbortSignal) => Promise<void>;
+  /** Client-policy pack limits (default: one question per request). */
+  pack?: PackLimits;
 }): ClaimEngine {
   const key = opts.env.OPENROUTER_API_KEY;
   if (!key) throw new EngineError("openrouter decisions engine: OPENROUTER_API_KEY is not set");
   const doFetch = opts.fetchImpl ?? fetch;
   const throttleMs = openrouterThrottleMs(opts.env, opts.model);
   const lastCallAt = { value: 0 };
+  /** The openrouter throttle plus one packed judgment POST: per-key answers,
+   *  or a throw for a transport-level failure. The OpenRouter decisions
+   *  endpoint does not document `states`, so packs stay single-state here
+   *  (the packer's maxStates default is 1) and `states` is never sent. */
+  const label = `openrouter decisions (${opts.model})`;
+  const send = async (
+    state: string,
+    questions: Record<string, ReturnType<typeof criteriaQuestion>>,
+    signal?: AbortSignal,
+  ): Promise<KeyedAnswers> => {
+    let res: Response;
+    try {
+      res = await fetchWithTransientRetry(
+        async () => {
+          const wait = lastCallAt.value + throttleMs - Date.now();
+          if (wait > 0) await abortableDelay(wait, signal);
+          throwIfCancelled(signal);
+          lastCallAt.value = Date.now();
+          return doFetch("https://openrouter.ai/api/alpha/decisions", {
+            method: "POST",
+            headers: { authorization: `Bearer ${key}`, "content-type": "application/json" },
+            body: JSON.stringify({ model: opts.model, state, questions }),
+            signal: requestSignal(signal),
+          });
+        },
+        {
+          label,
+          // A reset far in the future is the exhausted DAILY free allowance, not a window: fail fast.
+          farResetAfterMs: 90_000, // client policy: beyond one window is the daily allowance
+          farResetDetail: (until, source) =>
+            `rate limited until ${until} (${source}); switch model (e.g. a paid or non-free id via UKTUB_OPENROUTER_MODEL) or wait for the daily reset`,
+          sleepImpl: opts.sleepImpl,
+          signal,
+        },
+      );
+    } catch (e: unknown) {
+      if (e instanceof RateLimitedError) throw new EngineError(e.message);
+      if (e instanceof TransientRequestError) throw e; // static detail; the packer converts it to a RowFailure
+      if (e instanceof CancelledError || signal?.aborted === true) throw new CancelledError();
+      throw new EngineError(`${label}: ${e instanceof Error ? e.message : String(e)}`);
+    }
+    // A caller abort while reading the body normalizes to CancelledError.
+    try {
+      if (!res.ok) {
+        const text = await res.text();
+        let code: unknown;
+        try {
+          code = (JSON.parse(text) as { error?: { code?: unknown } }).error?.code;
+        } catch {
+          code = undefined;
+        }
+        if (code === "request_too_long") throw new SplittableRequestError(`${label}: request_too_long`);
+        throw new EngineError(`${label}: HTTP ${res.status}: ${text.slice(-300)}`);
+      }
+      let parsed: KeyedAnswers;
+      try {
+        parsed = (await res.json()) as KeyedAnswers;
+      } catch {
+        throw new EngineError(`${label}: response is not valid JSON`);
+      }
+      return parsed;
+    } catch (e: unknown) {
+      if (signal?.aborted === true) throw new CancelledError();
+      throw e;
+    }
+  };
   return {
     async run(rows, ro) {
       if (rows.length === 0) return [];
       throwIfCancelled(ro?.signal);
-      const pTrues: number[] = [];
-      for (const row of rows) {
-        throwIfCancelled(ro?.signal);
-        const res = await fetchWith429Retry(
-          async () => {
-            const wait = lastCallAt.value + throttleMs - Date.now();
-            if (wait > 0) await abortableDelay(wait, ro?.signal);
-            throwIfCancelled(ro?.signal);
-            lastCallAt.value = Date.now();
-            return doFetch("https://openrouter.ai/api/alpha/decisions", {
-              method: "POST",
-              headers: { authorization: `Bearer ${key}`, "content-type": "application/json" },
-              body: JSON.stringify({ model: opts.model, state: row.state, questions: { c: criteriaQuestion(row.instructions, "criteria") } }),
-              signal: requestSignal(ro?.signal),
-            });
-          },
-          {
-            label: `openrouter decisions (${opts.model})`,
-            // A reset far in the future is the exhausted DAILY free allowance, not a window: fail fast.
-            farResetAfterMs: 90_000, // client policy: beyond one window is the daily allowance
-            farResetDetail: (until, source) =>
-              `rate limited until ${until} (${source}); switch model (e.g. a paid or non-free id via UKTUB_OPENROUTER_MODEL) or wait for the daily reset`,
-            sleepImpl: opts.sleepImpl,
-            signal: ro?.signal,
-          },
-        ).catch((e: unknown) => {
-          if (e instanceof RateLimitedError) throw new EngineError(e.message);
-          if (e instanceof CancelledError || ro?.signal?.aborted === true) throw new CancelledError();
-          throw new EngineError(`openrouter decisions (${opts.model}): ${e instanceof Error ? e.message : String(e)}`);
-        });
-        // A caller abort while reading the body normalizes to CancelledError.
-        try {
-          if (!res.ok) throw new EngineError(`openrouter decisions (${opts.model}): HTTP ${res.status}: ${(await res.text()).slice(-300)}`);
-          const parsed = (await res.json()) as { answers?: Record<string, { noul?: number }> };
-          const p = parsed.answers?.c?.noul;
-          if (typeof p !== "number") throw new EngineError(`openrouter decisions (${opts.model}): response missing answers.c.noul`);
-          pTrues.push(p);
-        } catch (e: unknown) {
-          if (ro?.signal?.aborted === true) throw new CancelledError();
-          throw e;
-        }
-      }
-      return pTrues;
+      return askRows(rows, { label, send }, opts.pack ?? { maxQuestions: 1 }, ro?.signal);
     },
   };
-}
-
-/** Typed engine failure (R7-shaped): callers map it to a refusal result. */
-export class EngineError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "EngineError";
-  }
 }
