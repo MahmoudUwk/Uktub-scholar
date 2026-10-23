@@ -1,0 +1,282 @@
+.editor-tabs-container {
+	height: var(--ui-editor-tabs-container-height, auto);
+	min-height: var(--ui-editor-tabs-container-min-height, 0);
+	max-height: var(--ui-editor-tabs-container-max-height, none);
+	background: var(--pico-secondary-background);
+	border-bottom: 1px solid var(--accent-border);
+	overflow: hidden;
+	flex-shrink: 0;
+	position: relative;
+	display: flex;
+	align-items: center;
+}
+
+.editor-tabs {
+	position: relative;
+	min-height: var(--ui-editor-tab-list-height, 36px);
+	max-height: var(--ui-editor-tab-list-height, 36px);
+	scroll-behavior: smooth;
+	white-space: nowrap;
+	flex: 1;
+}
+
+.scroll-button {
+	display: none;
+	flex-shrink: 0;
+	z-index: 3;
+}
+
+[dir="rtl"] .scroll-button svg {
+	transform: scaleX(-1);
+}
+
+.scroll-left {
+	border-right: none;
+	border-radius: var(--radius-xs) 0 0 var(--radius-xs);
+}
+
+.scroll-right {
+	border-left: none;
+	border-radius: 0 var(--radius-xs) var(--radius-xs) 0;
+}
+
+.editor-tabs-container.has-overflow .scroll-button {
+	display: flex;
+}
+
+.editor-tabs-container.has-overflow .editor-tabs {
+	margin-left: 0;
+	margin-right: 0;
+}
+
+.editor-tabs-container::before,
+.editor-tabs-container::after {
+	content: "";
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	width: 20px;
+	pointer-events: none;
+	z-index: 2;
+	opacity: 0;
+	transition: opacity var(--transition-normal);
+}
+
+.editor-tabs-container::before {
+	left: 24px;
+	background: linear-gradient(
+		to right,
+		var(--pico-secondary-background) 0%,
+		transparent 100%
+	);
+}
+
+.editor-tabs-container::after {
+	right: 52px;
+	background: linear-gradient(
+		to left,
+		var(--pico-secondary-background) 0%,
+		transparent 100%
+	);
+}
+
+.editor-tabs-container.has-overflow::before {
+	opacity: 1;
+}
+
+.editor-tabs-container.has-overflow::after {
+	opacity: 1;
+}
+
+.editor-tabs-container.at-start::before {
+	opacity: 0;
+}
+
+.editor-tabs-container.at-end::after {
+	opacity: 0;
+}
+
+.editor-tab {
+	display: flex;
+	align-items: center;
+	gap: var(--ui-editor-tab-gap, var(--space-sm));
+	padding: var(--ui-editor-tab-padding, var(--space-sm) var(--space-md));
+	background: var(--ui-editor-tab-background, var(--pico-background));
+	border: 1px solid var(--accent-border);
+	border-bottom: none;
+	border-radius: var(
+		--ui-editor-tab-radius,
+		var(--radius-sm) var(--radius-sm) 0 0
+	);
+	cursor: pointer;
+	user-select: none;
+	position: relative;
+	min-width: var(--ui-editor-tab-min-width, 120px);
+	max-width: var(--ui-editor-tab-max-width, 200px);
+	transition: all var(--transition-normal) ease;
+	margin-right: -1px;
+	--ui-control-label-font-size: var(
+		--ui-file-name-font-size,
+		var(--font-size-small)
+	);
+	font-size: var(--ui-file-name-font-size, var(--font-size-small));
+	height: var(--ui-editor-tab-height, 32px);
+	box-sizing: border-box;
+	color: var(--text-color);
+	flex-shrink: 0;
+	scroll-snap-align: start;
+	animation: fadeIn 0.2s ease-in-out;
+}
+
+.editor-tab:hover {
+	background: var(--pico-primary-focus);
+}
+
+.editor-tab.active {
+	background: var(--ui-editor-tab-active-background, var(--pico-background));
+	border-color: var(--ui-editor-tab-active-border-color, var(--pico-primary));
+	border-bottom: var(
+		--ui-editor-tab-active-border-bottom,
+		1px solid var(--pico-background)
+	);
+	z-index: 1;
+	margin-bottom: var(--ui-editor-tab-active-margin-bottom, -1px);
+	font-weight: var(--ui-editor-tab-active-font-weight, 500);
+}
+
+.editor-tab.dirty .tab-title {
+	display: flex;
+	align-items: center;
+	gap: var(--space-xs);
+}
+
+.editor-tab[draggable="true"]:hover {
+	cursor: pointer;
+}
+
+.editor-tab.dragging {
+	opacity: 0.6;
+	transform: scale(0.95);
+	cursor: grabbing;
+	z-index: 100;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.editor-tab.drag-over {
+	position: relative;
+}
+
+.editor-tab.drag-over::before {
+	content: "";
+	position: absolute;
+	left: -2px;
+	top: 0;
+	bottom: 0;
+	width: 3px;
+	background: var(--pico-primary);
+	border-radius: 2px;
+	animation: dragPulse 0.8s infinite;
+}
+
+.editor-tab.drag-over::after {
+	content: "";
+	position: absolute;
+	right: -2px;
+	top: 0;
+	bottom: 0;
+	width: 3px;
+	background: var(--pico-primary);
+	border-radius: 2px;
+	animation: dragPulse 0.8s infinite;
+}
+
+@keyframes dragPulse {
+	0%,
+	100% {
+		opacity: 1;
+		transform: scaleY(1);
+	}
+
+	50% {
+		opacity: 0.7;
+		transform: scaleY(0.9);
+	}
+}
+
+.editor-tabs.dragging {
+	pointer-events: none;
+}
+
+.editor-tabs.dragging .editor-tab:not(.dragging) {
+	pointer-events: auto;
+}
+
+.editor-tab.dragging .tab-close {
+	opacity: 0;
+}
+
+.tab-icon {
+	position: relative;
+}
+
+.editor-tab.active .tab-icon {
+	color: var(--pico-primary);
+}
+
+.tab-title {
+	flex: 1;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	display: flex;
+	align-items: center;
+	gap: var(--space-xs);
+}
+
+.tab-close {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 16px;
+	height: 16px;
+	border: none;
+	background: none;
+	border-radius: var(--radius-xs);
+	cursor: pointer;
+	opacity: 0;
+	transition: all var(--transition-normal);
+	color: var(--pico-secondary);
+	flex-shrink: 0;
+	padding: 0;
+}
+
+.editor-tab:hover .tab-close,
+.editor-tab.active .tab-close {
+	opacity: 1;
+}
+
+.editor-tab:focus-visible {
+	outline: 2px solid var(--pico-primary);
+	outline-offset: -2px;
+}
+
+@keyframes fadeIn {
+	from {
+		opacity: 0;
+		transform: translateY(-2px);
+	}
+
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+.editor-tab-context-menu {
+	position: fixed;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+	z-index: var(--z-focus);
+	min-width: 180px;
+	padding: var(--space-xs) 0;
+}

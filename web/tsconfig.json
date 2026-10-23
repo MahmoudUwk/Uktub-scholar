@@ -1,0 +1,43 @@
+{
+	"compilerOptions": {
+		"target": "ES2022",
+		"useDefineForClassFields": true,
+		"lib": ["ES2022", "DOM", "DOM.Iterable", "ES2024.Promise"],
+		"module": "ESNext",
+		"skipLibCheck": true,
+		/* Bundler mode */
+		"moduleResolution": "bundler",
+		"allowImportingTsExtensions": true,
+		"resolveJsonModule": true,
+		"isolatedModules": true,
+		"noEmit": true,
+		"noEmitOnError": true,
+		"jsx": "react-jsx",
+		/* Linting */
+		"strict": true,
+		"noUnusedLocals": false,
+		"noUnusedParameters": false,
+		"noFallthroughCasesInSwitch": false,
+		"paths": {
+			"@/*": ["./src/*"],
+			"@src/*": ["./src/*"],
+			"@uktub-root/*": ["../*"],
+			"@chelys/*": ["./src/chelys/*"],
+			"@tests/*": ["./tests/*"]
+		}
+	},
+	"include": [
+		"src/**/*",
+		"scripts/**/*",
+		"extras/**/*",
+		"build.ts",
+		"plugins.config.js",
+		"texlyre.config.ts",
+		"../src/browser/shims/uktub-assets.d.ts"
+	],
+	"references": [
+		{
+			"path": "./tsconfig.node.json"
+		}
+	]
+}

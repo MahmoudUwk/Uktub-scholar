@@ -1,0 +1,9 @@
+{
+  "variant": "pkg-warn",
+  "status": 0,
+  "hasPdf": true,
+  "logChars": 18093,
+  "files": [
+    "manuscript/main.tex"
+  ]
+}

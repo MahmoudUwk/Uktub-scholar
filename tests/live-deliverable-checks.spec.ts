@@ -21,6 +21,7 @@ import {
   checkTierFigures,
   checkTierPdfCurrent,
   checkTierPointers,
+  checkTierProseVerifiedOrLabelled,
   collectCompileInputs,
   countSources,
   defaultResolveEntry,
@@ -61,7 +62,7 @@ function unit(over: Partial<TierProvenanceUnit> = {}): TierProvenanceUnit {
 function doc(over: Partial<TierProvenanceDoc> = {}): TierProvenanceDoc {
   return {
     entry: "manuscript/main.tex",
-    summary: { words: 10, audited: 1, verified: 0, cited: 1, uncited: 0, figures: { ok: 0, check: 0, open: 0, info: 0 }, unregistered: [] },
+    summary: { words: 10, audited: 1, verified: 0, cited: 1, uncited: 0, figures: { ok: 0, check: 0, open: 0, info: 0, computed: 0 }, unregistered: [], labelledUnverified: 0, unlabelledUnverified: 0 },
     items: [],
     document_digest: "ab".repeat(32),
     units: [unit()],
@@ -425,5 +426,27 @@ describe("parseScenarioSections", () => {
   it("leaves the table path null when the scenario declares no requirement", () => {
     const spec = parseScenarioSections("## Prompt\np\n## Success\ns\n");
     assert.equal(spec.evidenceTablePath, null);
+  });
+});
+
+describe("checkTierProseVerifiedOrLabelled (D1 label or fail)", () => {
+  const withUnlabelled = (n: number): TierProvenanceDoc => {
+    const d = doc();
+    return { ...d, summary: { ...d.summary, unlabelledUnverified: n, labelledUnverified: 0 } };
+  };
+  it("passes when every non-verified prose statement is labelled or verified", () => {
+    const c = checkTierProseVerifiedOrLabelled(withUnlabelled(0));
+    assert.equal(c.id, "prose-verified-or-labelled");
+    assert.equal(c.ok, true);
+  });
+  it("fails when a non-verified prose statement is neither verified nor labelled, and names the count", () => {
+    const c = checkTierProseVerifiedOrLabelled(withUnlabelled(2));
+    assert.equal(c.ok, false);
+    assert.match(c.detail, /2 .*unverified|2 .*not verified/);
+  });
+  it("fails closed when the audit has no unlabelled count", () => {
+    const d = doc();
+    const { unlabelledUnverified: _omitted, ...summary } = d.summary as TierProvenanceDoc["summary"] & { unlabelledUnverified?: number };
+    assert.equal(checkTierProseVerifiedOrLabelled({ ...d, summary } as TierProvenanceDoc).ok, false);
   });
 });

@@ -175,3 +175,110 @@ describe("verify document mode: per-unit status", () => {
     assert.equal(refused(await verifyClaimTool(ctx(), { document: "manuscript/nope.tex" } as VerifyArgs, h)), "ARGUMENT_INVALID");
   });
 });
+
+describe("verify document mode: unit bounds, identity memo, empty input, partial cites", () => {
+  it("skips units outside the claim-length bounds instead of spending checks on them", async () => {
+    twoPapers();
+    const builds = { n: 0 };
+    const inner = hooks();
+    const h: VerifyHooks = {
+      fetchImpl: inner.fetchImpl,
+      createEngine: (name) => {
+        builds.n += 1;
+        return inner.createEngine!(name);
+      },
+    };
+    const long = `Word ${"x".repeat(3000)} end.`;
+    assert.ok(long.length > 2000, "the long unit exceeds the claim maximum");
+    const r = await verifyClaimTool(ctx(), { text: `${section("Length")} Boils. ${long}` } as VerifyArgs, h);
+    assert.equal(refused(r), undefined);
+    const s = S(r);
+    assert.ok(Value.Check(VerifyDocumentOutput, s), "document output matches its schema");
+    const us = unitsOf(s);
+    assert.equal(us.length, 2);
+    assert.equal(us[0]?.status, "skipped");
+    assert.equal((us[0] as Doc).reason, "too short");
+    assert.equal(us[1]?.status, "skipped");
+    assert.equal((us[1] as Doc).reason, "too long — split it");
+    assert.equal((s.summary as Doc).skipped, 2);
+    assert.equal(builds.n, 0, "skipped units cost no engine checks");
+    const text = (r as { content: { text: string }[] }).content[0]!.text;
+    assert.match(text, /skipped/);
+    assert.match(text, /too short/);
+    assert.match(text, /too long/);
+  });
+
+  it("probes the engine identity once for a whole document call", async () => {
+    twoPapers();
+    let probes = 0;
+    const h: VerifyHooks = {
+      fetchImpl: (async () => {
+        probes += 1;
+        return new Response("nope", { status: 404 });
+      }) as unknown as typeof fetch,
+      createEngine: () => ({ run: async (rows: { state: string; instructions: string }[]) => rows.map(() => 0.05) }),
+    };
+    const c: ToolContext = {
+      root,
+      fetch: (async () => {
+        throw new Error("no network");
+      }) as ToolContext["fetch"],
+      env: {},
+      now: NOW,
+      queue: new WriteQueue(),
+    };
+    const text = [0, 1, 2].map((i) => `Background sentence number ${i} about nothing in particular xyzzy.`).join(" ");
+    const r = await verifyClaimTool(c, { text } as VerifyArgs, h);
+    assert.equal(refused(r), undefined);
+    assert.equal(unitsOf(S(r)).length, 3);
+    assert.equal(probes, 1, "three unit checks share one identity probe");
+    const again = await verifyClaimTool(c, { text } as VerifyArgs, h);
+    assert.equal(refused(again), undefined);
+    assert.equal(probes, 1, "the identity stays memoized per process and configuration");
+  });
+
+  it("refuses a fragment with no checkable units", async () => {
+    twoPapers();
+    for (const text of ["", "   "]) {
+      const r = await verifyClaimTool(ctx(), { text } as VerifyArgs, hooks());
+      assert.equal(refused(r), "ARGUMENT_INVALID");
+      assert.match((r as { content: { text: string }[] }).content[0]!.text, /no checkable units/);
+    }
+  });
+
+  it("checks units with partially unknown citekeys against the registered papers and reports the unknown keys", async () => {
+    twoPapers();
+    const known = keys[BERLIN_A]!;
+    const text = [`${section("Background")} ${TEMP} ${cite(`${known},nosuchkey`)}.`, `A claim with an unknown key ${cite("alsounknown")}.`, ""].join("\n");
+    const r = await verifyClaimTool(ctx(), { text } as VerifyArgs, hooks());
+    assert.equal(refused(r), undefined);
+    const s = S(r);
+    assert.ok(Value.Check(VerifyDocumentOutput, s), "document output matches its schema");
+    const us = unitsOf(s);
+    const mixed = us.find((u) => cited(u, known));
+    assert.equal(mixed?.status, "supported", "the registered paper is still checked");
+    assert.deepEqual((mixed as Doc).unregistered, ["nosuchkey"]);
+    const onlyUnknown = us.find((u) => cited(u, "alsounknown"));
+    assert.equal(onlyUnknown?.status, "unregistered", "a unit citing only unknown keys stays unregistered");
+    assert.match((r as { content: { text: string }[] }).content[0]!.text, /unknown citekey: nosuchkey/);
+  });
+
+  it("marks top-10 candidate-limited units complete when all selected candidates are judged, and incomplete only when interrupted or a source is unavailable", async () => {
+    // A paper with 15 chunks (> 10) triggers candidate_limited under the hosted top10 default.
+    const paragraphs = Array.from({ length: 15 }, (_, i) =>
+      i === 0 ? `${TEMP} (${MARK} alpha).` : `Paragraph ${i} with distinct filler words ${"w".repeat(120)} end.`,
+    );
+    registerPaper(db, { doi: BERLIN_A, title: "Berlin A", authors: ["Holder, Ada"], year: 2024, bibtex: BIB.replace("x,", "ba,"), bibtexSource: "crossref" }, { now: NOW });
+    const smallChunkCfg = { chunk_tokens: 40, overlap_tokens: 0, chars_per_token: 2.8, boundary: "paragraph" as const };
+    publishSource(db, BERLIN_A, { kind: "local-file", ref: "ba.pdf", license: null, digest: "a".padStart(64, "0"), extraction: "t@1", text: paragraphs.join("\n\n"), pageStarts: [0] }, smallChunkCfg, NOW());
+    const key = (db.prepare("SELECT citekey FROM papers WHERE doi = ?").get(BERLIN_A) as { citekey: string }).citekey;
+
+    const text = `${section("Background")} ${TEMP} ${cite(key)}. ${CHEESE} ${cite(key)}.`;
+    const r = await verifyClaimTool(ctx(), { text } as VerifyArgs, hooks());
+    assert.equal(refused(r), undefined);
+    const s = S(r);
+    assert.equal((s.summary as Doc).incomplete, 0, "candidate-limited top10 check that judged all 10 candidates is not an incomplete document unit");
+    for (const u of unitsOf(s)) assert.equal(u.complete, true);
+    assert.doesNotMatch((r as { content: { text: string }[] }).content[0]!.text, /incomplete check/);
+  });
+});

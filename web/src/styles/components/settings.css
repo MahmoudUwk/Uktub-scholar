@@ -1,0 +1,109 @@
+.header-settings-button {
+	border: none;
+}
+
+.settings-sidebar {
+	width: var(--ui-settings-sidebar-width, var(--sidebar-width));
+	flex-shrink: 0;
+	overflow-y: auto;
+	overscroll-behavior: contain;
+	border-right: 1px solid var(--accent-border);
+	background: var(--pico-secondary-background);
+}
+
+.settings-search {
+	position: sticky;
+	top: 0;
+	z-index: 1;
+	padding: var(--space-sm);
+	border-bottom: 1px solid var(--accent-border);
+	background: var(--pico-secondary-background);
+}
+
+.search-highlight {
+	padding: 0 1px;
+	border-radius: 2px;
+	background: yellow;
+	color: black;
+}
+
+.setting-with-highlight[data-nested="true"] {
+	margin-left: var(--space-lg);
+	padding-left: var(--space-md);
+	border-left: 1px solid var(--accent-border);
+}
+
+.subcategories {
+	margin-left: var(--space-md);
+}
+
+.settings-content {
+	flex: 1;
+	min-width: 0;
+	padding: 0 var(--space-md);
+	overflow-y: auto;
+	overscroll-behavior: contain;
+}
+
+.settings-content h3 {
+	margin: var(--space-sm) 0 0;
+	padding-bottom: var(--space-sm);
+	border-bottom: 1px solid var(--accent-border);
+	font-size: var(
+		--ui-settings-heading-font-size,
+		var(--ui-panel-title-font-size, var(--font-size-small))
+	);
+	line-height: 1.25;
+}
+
+.ui-panel[data-role="modal"]:has(.settings-wrapper) {
+	--ui-modal-width: var(
+		--ui-settings-modal-width,
+		var(--ui-modal-width-large, 900px)
+	);
+	height: var(--ui-settings-modal-height, min(700px, 90vh));
+}
+
+.ui-panel[data-role="modal"]:has(.settings-wrapper)
+	.ui-panel-content[data-role="modal"] {
+	display: flex;
+	overflow: hidden;
+}
+
+.settings-wrapper,
+.settings-container {
+	display: flex;
+	flex: 1;
+	min-height: 0;
+	position: relative;
+}
+
+.settings-wrapper {
+	flex-direction: column;
+}
+
+.settings-container {
+	overflow: hidden;
+}
+
+.settings-refresh-indicator {
+	position: absolute;
+	right: var(--space-lg);
+	bottom: var(--space-lg);
+	z-index: 100;
+	animation: refreshIndicatorPulse 2s infinite;
+	pointer-events: none;
+}
+
+@keyframes refreshIndicatorPulse {
+	0%,
+	100% {
+		opacity: 1;
+		transform: scale(1);
+	}
+
+	50% {
+		opacity: 0.8;
+		transform: scale(1.05);
+	}
+}

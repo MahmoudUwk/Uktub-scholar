@@ -1,0 +1,18 @@
+.statistics-modal-content {
+	display: grid;
+	grid-template-columns: minmax(0, var(--statistics-panel-width)) minmax(0, 1fr);
+	gap: var(--space-lg);
+	max-height: calc(
+		90vh -
+		var(--ui-modal-header-min-height, 0px) -
+		(2 * var(--ui-modal-content-padding, var(--space-md)))
+	);
+	overflow-y: auto;
+}
+
+@media (max-width: 768px) {
+	.statistics-modal-content {
+		grid-template-columns: 1fr;
+		gap: var(--space-md);
+	}
+}

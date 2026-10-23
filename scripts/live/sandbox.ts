@@ -147,11 +147,46 @@ export function runInteractive(spec: SandboxSpec, command: string[]): Promise<nu
   });
 }
 
+/**
+ * Custom Pi models the harness adds (models.json, Pi 1.3 schema: `providers.<id>.models[]`). Owner decision 2026-10-19: MiniMax M3.1
+ * Flash Free on OpenCode Go is the assistant option and grader B. Source: OpenCode's live model list
+ * (GET https://opencode.ai/zen/go/v1/models) includes `minimax-m3.1-flash-free`; Pi 1.3.0's static catalog does not.
+ * Free tier: cost 0 (label only: the price is not in the live list). API type, baseUrl, reasoning and input types are copied
+ * from Pi's catalog entry `minimax-m3` on opencode-go. contextWindow/maxTokens are ASSUMED equal to minimax-m3 (1000000 / 131072):
+ * not published in the live list. No apiKey here: the key comes from OPENCODE_API_KEY in the sandbox environment.
+ */
+export const PI_CUSTOM_MODELS = {
+  providers: {
+    "opencode-go": {
+      models: [
+        {
+          id: "minimax-m3.1-flash-free",
+          name: "MiniMax M3.1 Flash Free",
+          api: "anthropic-messages",
+          baseUrl: "https://opencode.ai/inference/go",
+          reasoning: true,
+          input: ["text", "image"],
+          cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+          contextWindow: 1000000,
+          maxTokens: 131072,
+        },
+      ],
+    },
+  },
+};
+
+/** Write the harness's custom models.json into an agent dir (every Pi agent dir the harness creates gets one). */
+export function writePiModels(agentDir: string): void {
+  mkdirSync(agentDir, { recursive: true });
+  writeFileSync(join(agentDir, "models.json"), JSON.stringify(PI_CUSTOM_MODELS, null, 2));
+}
+
 /** Write the per-run Pi settings: only the staged package (by its in-container path), no retry (a retry would hide a provider failure). */
 export function writePiSettings(agentDir: string, extra: Record<string, unknown> = {}): void {
   mkdirSync(agentDir, { recursive: true });
   writeFileSync(join(agentDir, "settings.json"), JSON.stringify({ packages: [INSIDE_PACKAGE], retry: { enabled: false }, ...extra }, null, 2));
   writeFileSync(join(agentDir, "auth.json"), "{}");
+  writePiModels(agentDir);
 }
 
 /** Docker and the sandbox image must exist before any run relies on them. */
@@ -187,8 +222,11 @@ export interface GraderSandboxSpec {
   outDir: string;
   /** Per-session Pi agent dir (writable at /pi-agent). */
   agentDir: string;
-  /** Host ADC file (read-only; grader B reaches Vertex through it). */
-  adcFile: string;
+  /**
+   * Host ADC file (read-only). Optional: only grader B (Vertex) needs it; Muse
+   * grader/adjudicator sessions omit it and get no ADC mount or credential env.
+   */
+  adcFile?: string;
   /** Environment for the process; the container receives nothing else from the host. */
   env: Record<string, string>;
   /**
@@ -205,7 +243,7 @@ export function graderDockerArgs(spec: GraderSandboxSpec, command: string[]): st
   const env: Record<string, string> = {
     HOME: GRADER_INSIDE.home,
     PI_CODING_AGENT_DIR: GRADER_INSIDE.agentDir,
-    GOOGLE_APPLICATION_CREDENTIALS: GRADER_INSIDE.adc,
+    ...(spec.adcFile !== undefined ? { GOOGLE_APPLICATION_CREDENTIALS: GRADER_INSIDE.adc } : {}),
     ...spec.env,
   };
   return [
@@ -219,7 +257,7 @@ export function graderDockerArgs(spec: GraderSandboxSpec, command: string[]): st
     "-v", `${spec.corpusDir}:${GRADER_INSIDE.corpus}:ro`,
     "-v", `${spec.outDir}:${GRADER_INSIDE.out}`,
     "-v", `${spec.agentDir}:${GRADER_INSIDE.agentDir}`,
-    "-v", `${spec.adcFile}:${GRADER_INSIDE.adc}:ro`,
+    ...(spec.adcFile !== undefined ? ["-v", `${spec.adcFile}:${GRADER_INSIDE.adc}:ro`] : []),
     ...Object.entries(env).flatMap(([k, v]) => ["-e", `${k}=${v}`]),
     ...Object.keys(spec.secretEnv ?? {}).flatMap((k) => ["-e", k]),
     spec.image, ...command,

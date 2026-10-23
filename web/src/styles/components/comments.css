@@ -1,0 +1,84 @@
+.highlight-comment {
+	background-color: rgba(var(--pico-primary-rgb, 16, 149, 193), 0.2) !important;
+	transition: background-color 0.3s ease;
+}
+
+.comment-modal {
+	width: 100%;
+	min-width: 0;
+}
+
+.comment-form textarea {
+	height: auto;
+	min-height: 80px;
+	resize: vertical;
+}
+
+.comment-panel {
+	order: 3;
+}
+
+.editor-main-container {
+	display: flex;
+	flex: 1;
+	position: relative;
+	height: 100%;
+	overflow: hidden;
+}
+
+.editor-wrapper {
+	flex: 1;
+	position: relative;
+	min-width: 0;
+	overflow: hidden;
+}
+
+.editor-comment-panel {
+	height: 100%;
+	box-shadow: var(--shadow-md);
+}
+
+.floating-comment-button {
+	position: absolute;
+	top: 10px;
+	right: 10px;
+	z-index: 50;
+	width: max-content;
+	min-width: 0;
+	height: auto;
+	min-height: 0;
+	padding: var(--space-xs) var(--space-sm);
+	font-size: var(--ui-item-time-font-size, var(--font-size-micro));
+	line-height: 1.2;
+	white-space: nowrap;
+	box-shadow: var(--shadow-sm);
+}
+
+.comment-item {
+	position: relative;
+}
+
+.comment-item[data-state="resolved"] .ui-item-content {
+	color: var(--pico-secondary);
+	text-decoration: line-through;
+}
+
+.comment-line-section {
+	display: flex;
+	justify-content: flex-end;
+	margin-bottom: var(--space-sm);
+}
+
+.comment-button {
+	position: absolute;
+	z-index: 10;
+	width: auto;
+	padding: var(--space-xs) var(--space-sm);
+	border-radius: var(--radius-sm);
+	background-color: var(--pico-primary);
+	color: var(--pico-primary-inverse);
+	font-size: var(--font-size-micro);
+	box-shadow: var(--shadow-sm);
+	opacity: 0.9;
+	cursor: pointer;
+}

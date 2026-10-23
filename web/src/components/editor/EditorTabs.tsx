@@ -1,0 +1,537 @@
+// src/components/editor/EditorTabs.tsx
+import type React from 'react';
+import { useCallback, useEffect, useState, useRef } from 'react';
+
+import { t } from '@/i18n';
+import { createNamedLogger } from '@/logging';
+import { useEditorTabs } from '../../hooks/useEditorTabs';
+import { useHeaderVisibility } from '../../hooks/useHeaderVisibility';
+import { useWheelScroll } from '../../hooks/useWheelScroll';
+import { pluginRegistry } from '../../plugins/PluginRegistry';
+import type { EditorTab } from '../../types/editorTabs';
+import {
+	CloseIcon,
+	FileTextIcon,
+	FileIcon,
+	ChevronLeftIcon,
+	ChevronRightIcon,
+	HeaderShowIcon,
+} from '../common/Icons';
+
+const moduleLog = createNamedLogger('EditorTabs');
+
+const getTabIcon = (tab: EditorTab) => {
+	const ViewerIcon = pluginRegistry.getViewerForFile(
+		tab.filePath || tab.title,
+	)?.icon;
+	const Icon =
+		ViewerIcon ?? (tab.type === 'document' ? FileTextIcon : FileIcon);
+
+	return <Icon />;
+};
+
+interface EditorTabsProps {
+	onTabSwitch?: (tabId: string) => void;
+}
+
+interface ContextMenuState {
+	isVisible: boolean;
+	x: number;
+	y: number;
+	tabId: string | null;
+}
+
+const EditorTabs: React.FC<EditorTabsProps> = ({ onTabSwitch }) => {
+	const {
+		tabs,
+		activeTabId,
+		closeTab,
+		switchToTab,
+		updateTabEditorState,
+		reorderTabs,
+		closeOtherTabs,
+		closeTabsToLeft,
+		closeTabsToRight,
+	} = useEditorTabs();
+
+	const { headerVisible, setHeaderVisible } = useHeaderVisibility();
+
+	const [isDragging, setIsDragging] = useState(false);
+	const [dragOverIndex, setDragOverIndex] = useState<number>(-1);
+	const [draggedTabIndex, setDraggedTabIndex] = useState<number>(-1);
+
+	const [contextMenu, setContextMenu] = useState<ContextMenuState>({
+		isVisible: false,
+		x: 0,
+		y: 0,
+		tabId: null,
+	});
+
+	const contextMenuRef = useRef<HTMLDivElement>(null);
+	const tabsContainerRef = useRef<HTMLDivElement>(null);
+	const tabsRef = useRef<HTMLDivElement>(null);
+	const setTabsRef = useWheelScroll(tabsRef);
+
+	const updateScrollState = useCallback(() => {
+		const container = tabsContainerRef.current;
+		const tabs = tabsRef.current;
+
+		if (!container || !tabs) return;
+
+		const hasOverflow = tabs.scrollWidth > tabs.clientWidth;
+		const isAtStart = tabs.scrollLeft <= 0;
+		const isAtEnd = tabs.scrollLeft >= tabs.scrollWidth - tabs.clientWidth;
+
+		container.classList.toggle('has-overflow', hasOverflow);
+		container.classList.toggle('at-start', isAtStart);
+		container.classList.toggle('at-end', isAtEnd);
+	}, []);
+
+	const scrollLeft = useCallback(() => {
+		const tabs = tabsRef.current;
+		if (!tabs) return;
+
+		tabs.scrollBy({ left: -120, behavior: 'smooth' });
+	}, []);
+
+	const scrollRight = useCallback(() => {
+		const tabs = tabsRef.current;
+		if (!tabs) return;
+
+		tabs.scrollBy({ left: 120, behavior: 'smooth' });
+	}, []);
+
+	useEffect(() => {
+		const tabs = tabsRef.current;
+		if (!tabs) return;
+
+		const handleScroll = () => updateScrollState();
+		const handleResize = () => updateScrollState();
+
+		tabs.addEventListener('scroll', handleScroll, { passive: true });
+		window.addEventListener('resize', handleResize);
+
+		const resizeObserver = new ResizeObserver(handleResize);
+		resizeObserver.observe(tabs);
+
+		updateScrollState();
+
+		return () => {
+			tabs.removeEventListener('scroll', handleScroll);
+			window.removeEventListener('resize', handleResize);
+			resizeObserver.disconnect();
+		};
+	}, [updateScrollState]);
+
+	/* biome-ignore lint/correctness/useExhaustiveDependencies: tabs.length triggers recompute when overflow changes. */
+	useEffect(() => {
+		updateScrollState();
+	}, [tabs.length, updateScrollState]);
+
+	/* biome-ignore lint/correctness/useExhaustiveDependencies: tabs.length triggers scroll-into-view after tab list updates. */
+	useEffect(() => {
+		const tabsContainer = tabsRef.current;
+		if (!tabsContainer || !activeTabId) return;
+
+		const activeTab = tabsContainer.querySelector<HTMLElement>(
+			`[data-tab-id='${activeTabId}']`,
+		);
+		if (!activeTab) return;
+
+		requestAnimationFrame(() => {
+			activeTab.scrollIntoView({
+				behavior: 'smooth',
+				block: 'nearest',
+				inline: 'nearest',
+			});
+		});
+	}, [activeTabId, tabs.length]);
+
+	const handleTabClick = useCallback(
+		(e: React.MouseEvent, tabId: string) => {
+			e.preventDefault();
+			e.stopPropagation();
+			switchToTab(tabId);
+			onTabSwitch?.(tabId);
+		},
+		[switchToTab, onTabSwitch],
+	);
+
+	const handleCloseClick = useCallback(
+		(e: React.MouseEvent, tabId: string) => {
+			e.preventDefault();
+			e.stopPropagation();
+
+			const tabToClose = tabs.find((t) => t.id === tabId);
+			const isActiveTab = tabId === activeTabId;
+
+			closeTab(tabId);
+
+			if (isActiveTab && tabToClose) {
+				const remainingTabs = tabs.filter((t) => t.id !== tabId);
+				if (remainingTabs.length > 0) {
+					const currentIndex = tabs.findIndex((t) => t.id === tabId);
+					const nextIndex =
+						currentIndex < remainingTabs.length
+							? currentIndex
+							: remainingTabs.length - 1;
+					const nextTab = remainingTabs[nextIndex];
+					onTabSwitch?.(nextTab.id);
+				} else {
+					onTabSwitch?.('');
+				}
+			}
+		},
+		[closeTab, tabs, activeTabId, onTabSwitch],
+	);
+
+	const handleMiddleClick = useCallback(
+		(e: React.MouseEvent, tabId: string) => {
+			if (e.button === 1) {
+				e.preventDefault();
+				e.stopPropagation();
+				closeTab(tabId);
+			}
+		},
+		[closeTab],
+	);
+
+	const handleRightClick = useCallback((e: React.MouseEvent, tabId: string) => {
+		e.preventDefault();
+		e.stopPropagation();
+
+		setContextMenu({
+			isVisible: true,
+			x: e.clientX,
+			y: e.clientY,
+			tabId,
+		});
+	}, []);
+
+	const handleContextMenuAction = useCallback(
+		(action: 'closeOthers' | 'closeLeft' | 'closeRight') => {
+			if (!contextMenu.tabId) return;
+
+			switch (action) {
+				case 'closeOthers':
+					closeOtherTabs(contextMenu.tabId);
+					break;
+				case 'closeLeft':
+					closeTabsToLeft(contextMenu.tabId);
+					break;
+				case 'closeRight':
+					closeTabsToRight(contextMenu.tabId);
+					break;
+			}
+
+			setContextMenu({ isVisible: false, x: 0, y: 0, tabId: null });
+		},
+		[contextMenu.tabId, closeOtherTabs, closeTabsToLeft, closeTabsToRight],
+	);
+
+	const handleDragStart = useCallback(
+		(e: React.DragEvent, index: number, tabId: string) => {
+			e.dataTransfer.setData(
+				'text/plain',
+				JSON.stringify({
+					tabIndex: index,
+					tabId: tabId,
+				}),
+			);
+			e.dataTransfer.effectAllowed = 'move';
+
+			setIsDragging(true);
+			setDraggedTabIndex(index);
+		},
+		[],
+	);
+
+	const handleDragEnter = useCallback((e: React.DragEvent) => {
+		e.preventDefault();
+		e.stopPropagation();
+	}, []);
+
+	const handleDragOver = useCallback(
+		(e: React.DragEvent, index: number) => {
+			e.preventDefault();
+			e.stopPropagation();
+			e.dataTransfer.dropEffect = 'move';
+
+			if (draggedTabIndex !== index) {
+				setDragOverIndex(index);
+			}
+		},
+		[draggedTabIndex],
+	);
+
+	const handleDragLeave = useCallback((e: React.DragEvent) => {
+		e.preventDefault();
+		e.stopPropagation();
+
+		const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+		const x = e.clientX;
+		const y = e.clientY;
+
+		if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) {
+			setDragOverIndex(-1);
+		}
+	}, []);
+
+	const handleDrop = useCallback(
+		(e: React.DragEvent, dropIndex: number) => {
+			e.preventDefault();
+			e.stopPropagation();
+
+			try {
+				const dragData = e.dataTransfer.getData('text/plain');
+				if (!dragData) return;
+
+				const { tabIndex: sourceIndex } = JSON.parse(dragData);
+
+				if (sourceIndex !== dropIndex && sourceIndex >= 0 && dropIndex >= 0) {
+					reorderTabs(sourceIndex, dropIndex);
+				}
+			} catch (error) {
+				moduleLog.error('Error handling tab drop:', error);
+			} finally {
+				setIsDragging(false);
+				setDragOverIndex(-1);
+				setDraggedTabIndex(-1);
+			}
+		},
+		[reorderTabs],
+	);
+
+	const handleDragEnd = useCallback(() => {
+		setIsDragging(false);
+		setDragOverIndex(-1);
+		setDraggedTabIndex(-1);
+	}, []);
+
+	useEffect(() => {
+		const handleClickOutside = (e: MouseEvent) => {
+			if (
+				contextMenuRef.current &&
+				!contextMenuRef.current.contains(e.target as Node)
+			) {
+				setContextMenu({ isVisible: false, x: 0, y: 0, tabId: null });
+			}
+		};
+
+		if (contextMenu.isVisible) {
+			document.addEventListener('mousedown', handleClickOutside);
+			document.addEventListener('contextmenu', handleClickOutside);
+			return () => {
+				document.removeEventListener('mousedown', handleClickOutside);
+				document.removeEventListener('contextmenu', handleClickOutside);
+			};
+		}
+	}, [contextMenu.isVisible]);
+
+	useEffect(() => {
+		const handleCursorUpdate = (event: Event) => {
+			const customEvent = event as CustomEvent;
+			const { line, position, fileId, documentId, isEditingFile } =
+				customEvent.detail;
+
+			if (typeof line !== 'number' || typeof position !== 'number') return;
+
+			const targetTab = tabs.find(
+				(tab) =>
+					(isEditingFile && tab.fileId === fileId) ||
+					(!isEditingFile && tab.documentId === documentId),
+			);
+
+			if (targetTab && targetTab.id === activeTabId) {
+				updateTabEditorState(targetTab.id, {
+					currentLine: line,
+					cursorPosition: position,
+				});
+			}
+		};
+
+		document.addEventListener('editor-cursor-update', handleCursorUpdate);
+		return () =>
+			document.removeEventListener('editor-cursor-update', handleCursorUpdate);
+	}, [tabs, activeTabId, updateTabEditorState]);
+
+	if (tabs.length === 0) return null;
+
+	const getTabClasses = (index: number, tabId: string) => {
+		let classes = `editor-tab ui-tab ${tabId === activeTabId ? 'active' : ''}`;
+
+		const tab = tabs[index];
+		if (tab?.isDirty) {
+			classes += ' dirty';
+		}
+
+		if (draggedTabIndex === index) {
+			classes += ' dragging';
+		}
+
+		if (
+			dragOverIndex === index &&
+			draggedTabIndex !== index &&
+			draggedTabIndex !== -1
+		) {
+			classes += ' drag-over';
+		}
+
+		return classes;
+	};
+
+	const currentTabIndex = contextMenu.tabId
+		? tabs.findIndex((tab) => tab.id === contextMenu.tabId)
+		: -1;
+	const hasTabsToLeft = currentTabIndex > 0;
+	const hasTabsToRight =
+		currentTabIndex < tabs.length - 1 && currentTabIndex !== -1;
+	const hasOtherTabs = tabs.length > 1;
+
+	return (
+		<>
+			<div ref={tabsContainerRef} className='editor-tabs-container'>
+				<button
+					type='button'
+					className='scroll-button scroll-left ui-icon-button'
+					data-variant='subtle'
+					data-size='sm'
+					onClick={scrollLeft}
+					title={t('Scroll tabs left')}
+				>
+					<ChevronLeftIcon />
+				</button>
+
+				<div
+					ref={setTabsRef}
+					className='editor-tabs ui-tab-list scroll-x'
+					data-role='editor'
+					role='tablist'
+				>
+					{tabs.map((tab, index) => (
+						<div
+							key={tab.id}
+							data-tab-id={tab.id}
+							aria-selected={tab.id === activeTabId}
+							className={getTabClasses(index, tab.id)}
+							onClick={(e) => handleTabClick(e, tab.id)}
+							onMouseDown={(e) => handleMiddleClick(e, tab.id)}
+							onContextMenu={(e) => handleRightClick(e, tab.id)}
+							draggable={!isDragging || draggedTabIndex === index}
+							onDragStart={(e) => handleDragStart(e, index, tab.id)}
+							onDragEnter={handleDragEnter}
+							onDragOver={(e) => handleDragOver(e, index)}
+							onDragLeave={handleDragLeave}
+							onDrop={(e) => handleDrop(e, index)}
+							onDragEnd={handleDragEnd}
+							title={`${tab.filePath || tab.title}${tab.editorState.currentLine ? ` (${t('Line {line}', { line: tab.editorState.currentLine })})` : ''}`}
+							role='tab'
+							tabIndex={0}
+							onKeyDown={(e) => {
+								if (e.key === 'Enter' || e.key === ' ') {
+									e.preventDefault();
+									handleTabClick(e as any, tab.id);
+								}
+							}}
+						>
+							<span className='tab-icon ui-icon' data-tone='muted'>
+								{getTabIcon(tab)}
+								{tab.type === 'document' && (
+									<span
+										className='ui-status-dot'
+										data-tone='accent'
+										data-placement='corner'
+									/>
+								)}
+							</span>
+							<span className='tab-title ui-control-label'>
+								{tab.title}
+								{tab.isDirty && (
+									<span className='ui-status' data-tone='warning'>
+										•
+									</span>
+								)}
+								{tab.editorState.currentLine && (
+									<span className='ui-meta'>
+										:{tab.editorState.currentLine}
+									</span>
+								)}
+							</span>
+							<button
+								type='button'
+								className='tab-close ui-icon-button'
+								data-variant='ghost'
+								data-tone='danger'
+								data-size='xs'
+								onClick={(e) => handleCloseClick(e, tab.id)}
+								title={t('Close tab')}
+							>
+								<CloseIcon />
+							</button>
+						</div>
+					))}
+				</div>
+
+				<button
+					type='button'
+					className='scroll-button scroll-right ui-icon-button'
+					data-variant='subtle'
+					data-size='sm'
+					onClick={scrollRight}
+					title={t('Scroll tabs right')}
+				>
+					<ChevronRightIcon />
+				</button>
+
+				<button
+					type='button'
+					className={`ui-icon-button ${headerVisible ? 'active' : ''}`}
+					data-variant='subtle'
+					data-size='sm'
+					onClick={() => setHeaderVisible(!headerVisible)}
+					title={headerVisible ? t('Hide Header') : t('Show Header')}
+				>
+					<HeaderShowIcon />
+				</button>
+			</div>
+
+			{contextMenu.isVisible && (
+				<div
+					ref={contextMenuRef}
+					className='ui-menu editor-tab-context-menu'
+					style={{
+						left: contextMenu.x,
+						top: contextMenu.y,
+					}}
+				>
+					<button
+						type='button'
+						className='ui-menu-item'
+						onClick={() => handleContextMenuAction('closeOthers')}
+						disabled={!hasOtherTabs}
+					>
+						{t('Close Others')}
+					</button>
+					<button
+						type='button'
+						className='ui-menu-item'
+						onClick={() => handleContextMenuAction('closeLeft')}
+						disabled={!hasTabsToLeft}
+					>
+						{t('Close Tabs to the Left')}
+					</button>
+					<button
+						type='button'
+						className='ui-menu-item'
+						onClick={() => handleContextMenuAction('closeRight')}
+						disabled={!hasTabsToRight}
+					>
+						{t('Close Tabs to the Right')}
+					</button>
+				</div>
+			)}
+		</>
+	);
+};
+
+export default EditorTabs;

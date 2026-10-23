@@ -13,7 +13,8 @@
 import { Type, type Static } from "typebox";
 
 import { RegistryError, openRegistry } from "../registry.ts";
-import { documentWorkflow, MAX_DOCUMENT_UNITS, type DocumentUnitResult, type DocumentUnitStatus } from "../verify/document.ts";
+import { documentWorkflow, MAX_DOCUMENT_UNITS, TABLE_ROW_NOTE, type DocumentUnitResult, type DocumentUnitStatus } from "../verify/document.ts";
+import { normalizePapersScope } from "../verify/scope.ts";
 import { verifyWorkflow, type WorkflowHooks } from "../verify/workflow.ts";
 import { busyRefusal, refusalResult, type ToolContext, type ToolResult } from "./context.ts";
 
@@ -32,11 +33,11 @@ export { MAX_EVIDENCE_PER_PAGE, MAX_PAGE_EXCERPT_CHARS } from "../verify/workflo
 export const VerifyClaimParams = Type.Object({
   claim: Type.String({ minLength: MIN_CLAIM_CHARS, maxLength: MAX_CLAIM_CHARS, description: "ONE proposition to find support for, stated as a sentence; it is passed to the verifier unchanged" }),
   papers: Type.Optional(
-    Type.Union([Type.Literal("all"), Type.Array(Type.String(), { minItems: 1, maxItems: MAX_SCOPE_IDS })], {
+    Type.Union([Type.String({ minLength: 1 }), Type.Array(Type.String(), { minItems: 1, maxItems: MAX_SCOPE_IDS })], {
       description: `Scope: "all" registered papers, or an explicit list of DOIs/citekeys (at most ${MAX_SCOPE_IDS}); an empty list is refused, never read as all`,
     }),
   ),
-  query: Type.Optional(Type.String({ maxLength: MAX_QUERY_CHARS, description: "Optional locator words that only narrow WHICH passages are checked; the claim is unchanged and the search becomes query-limited, not exhaustive. An exhaustive check judges every passage of every selected paper and can take minutes for long papers; use a query when a focused check is enough" })),
+  query: Type.Optional(Type.String({ maxLength: MAX_QUERY_CHARS, description: "Optional locator words that only narrow WHICH passages are checked; the claim is unchanged and the search becomes query-limited, not exhaustive. The hosted engine otherwise checks the top-10 retrieval candidates per claim (every passage on other engines, or with UKTUB_VERIFY_STRATEGY=exhaustive) and can take minutes for long papers; use a query when a focused check is enough" })),
   passages: Type.Optional(
     Type.Array(Type.Union([Type.Object({ source: Type.String({ description: "pointer from an earlier result (doi@revision#start-end)" }) }), Type.Object({ text: Type.String({ maxLength: MAX_DIRECT_TEXT_CHARS, description: "caller-supplied text; judged with no paper attribution" }) })]), {
       minItems: 1,
@@ -54,7 +55,8 @@ export type VerifyClaimArgs = Static<typeof VerifyClaimParams>;
  * provenance); `text` is a LaTeX fragment. Units come from the product's own
  * extractor; each is verified verbatim (cited units against their own papers,
  * uncited units against all papers). At most MAX_DOCUMENT_UNITS units per
- * call (client policy). Exhaustive per unit at the configured bar (default
+ * call (client policy). Top-10 retrieval candidates per unit (the hosted
+ * default) at the configured bar (default
  * 0.99): fast with the hosted engine, slow with local Eos.
  */
 export const VerifyDocumentParams = Type.Object({
@@ -70,11 +72,11 @@ export type VerifyDocumentArgs = Static<typeof VerifyDocumentParams>;
 export const VerifyParams = Type.Object({
   claim: Type.Optional(Type.String({ minLength: MIN_CLAIM_CHARS, maxLength: MAX_CLAIM_CHARS, description: "ONE proposition to find support for, stated as a sentence; it is passed to the verifier unchanged" })),
   papers: Type.Optional(
-    Type.Union([Type.Literal("all"), Type.Array(Type.String(), { minItems: 1, maxItems: MAX_SCOPE_IDS })], {
+    Type.Union([Type.String({ minLength: 1 }), Type.Array(Type.String(), { minItems: 1, maxItems: MAX_SCOPE_IDS })], {
       description: `Scope: "all" registered papers, or an explicit list of DOIs/citekeys (at most ${MAX_SCOPE_IDS}); an empty list is refused, never read as all`,
     }),
   ),
-  query: Type.Optional(Type.String({ maxLength: MAX_QUERY_CHARS, description: "Optional locator words that only narrow WHICH passages are checked; the claim is unchanged and the search becomes query-limited, not exhaustive. An exhaustive check judges every passage of every selected paper and can take minutes for long papers; use a query when a focused check is enough" })),
+  query: Type.Optional(Type.String({ maxLength: MAX_QUERY_CHARS, description: "Optional locator words that only narrow WHICH passages are checked; the claim is unchanged and the search becomes query-limited, not exhaustive. The hosted engine otherwise checks the top-10 retrieval candidates per claim (every passage on other engines, or with UKTUB_VERIFY_STRATEGY=exhaustive) and can take minutes for long papers; use a query when a focused check is enough" })),
   passages: Type.Optional(
     Type.Array(Type.Union([Type.Object({ source: Type.String({ description: "pointer from an earlier result (doi@revision#start-end)" }) }), Type.Object({ text: Type.String({ maxLength: MAX_DIRECT_TEXT_CHARS, description: "caller-supplied text; judged with no paper attribution" }) })]), {
       minItems: 1,
@@ -123,6 +125,9 @@ export const VerifyDocumentOutput = Type.Object({
     citedUnsupported: Type.Integer(),
     unsourced: Type.Integer(),
     unregistered: Type.Integer(),
+    skipped: Type.Integer(),
+    tableRows: Type.Integer(),
+    tableRowsMissing: Type.Integer(),
     incomplete: Type.Integer(),
   }),
   engine: Type.Object({ name: Type.String(), model: Nullable(Type.String()), protocol: Type.String(), minConfidence: Type.Number(), cache: Type.Boolean() }),
@@ -134,18 +139,19 @@ export const VerifyDocumentOutput = Type.Object({
       line: Type.Integer(),
       section: Type.String(),
       excerpt: Type.String(),
-      status: Type.Union([Type.Literal("supported"), Type.Literal("cited-unsupported"), Type.Literal("missing-citation"), Type.Literal("unsourced"), Type.Literal("unregistered")]),
+      status: Type.Union([Type.Literal("supported"), Type.Literal("cited-unsupported"), Type.Literal("missing-citation"), Type.Literal("unsourced"), Type.Literal("unregistered"), Type.Literal("skipped"), Type.Literal("table-row")]),
       cites: Type.Array(Type.String()),
       pointers: Type.Array(Type.String()),
       suggested: Type.Array(Type.String()),
+      unregistered: Type.Array(Type.String()),
+      reason: Type.Optional(Type.String()),
+      figures: Type.Optional(Type.Object({ found: Type.Integer(), missing: Type.Integer(), check: Type.Integer() })),
+      note: Type.Optional(Type.String()),
       complete: Type.Boolean(),
     }),
   ),
   next: Type.Union([Type.Integer(), Type.Null()]),
 });
-
-/** Either tool output: claim mode or document mode. */
-export const VerifyOutput = Type.Union([VerifyClaimOutput, VerifyDocumentOutput]);
 
 const invalid = (message: string) => refusalResult({ code: "ARGUMENT_INVALID", message });
 
@@ -189,8 +195,10 @@ export async function verifyClaimTool(ctx: ToolContext, args: VerifyArgs, hooks:
     return invalid(direct ? "give either `papers` or `passages`, not both" : 'give a scope: `papers` ("all" or a list of DOIs/citekeys), or `passages` for the direct path');
   }
   if (claimArgs.query !== undefined && claimArgs.query.length > MAX_QUERY_CHARS) return invalid(`query is longer than ${MAX_QUERY_CHARS} characters`);
+  const continuation = typeof claimArgs.continuation === "string" && claimArgs.continuation.trim() !== "" ? claimArgs.continuation : undefined;
+  let normalizedPapers: "all" | string[] | undefined;
   if (direct) {
-    if (claimArgs.query !== undefined || claimArgs.continuation !== undefined) return invalid("`query` and `continuation` do not apply to direct passages");
+    if (claimArgs.query !== undefined || continuation !== undefined) return invalid("`query` and `continuation` do not apply to direct passages");
     if (!Array.isArray(claimArgs.passages) || claimArgs.passages.length === 0 || claimArgs.passages.length > MAX_DIRECT_PASSAGES) return invalid(`passages needs 1–${MAX_DIRECT_PASSAGES} items`);
     for (const p of claimArgs.passages as unknown[]) {
       const keys = typeof p === "object" && p !== null ? Object.keys(p) : [];
@@ -198,11 +206,13 @@ export async function verifyClaimTool(ctx: ToolContext, args: VerifyArgs, hooks:
       const ok = keys.length === 1 && ((keys[0] === "source" && typeof o.source === "string") || (keys[0] === "text" && typeof o.text === "string" && o.text.trim().length >= MIN_CLAIM_CHARS && o.text.length <= MAX_DIRECT_TEXT_CHARS));
       if (!ok) return invalid(`each passage is exactly one of {source: pointer} or {text: ${MIN_CLAIM_CHARS}–${MAX_DIRECT_TEXT_CHARS} characters}; text cannot claim a paper`);
     }
-  } else if (claimArgs.papers !== "all") {
-    if (!Array.isArray(claimArgs.papers) || claimArgs.papers.length === 0 || claimArgs.papers.some((h) => typeof h !== "string")) {
+  } else {
+    const parsed = normalizePapersScope(claimArgs.papers);
+    if (parsed === null) {
       return invalid('papers must be "all" or a non-empty list of DOIs/citekeys; an empty list is never read as all');
     }
-    if (claimArgs.papers.length > MAX_SCOPE_IDS) return refusalResult({ code: "BATCH_TOO_LARGE", message: `${claimArgs.papers.length} papers exceed the ${MAX_SCOPE_IDS}-paper scope cap (client policy); use "all" or split` });
+    if (parsed !== "all" && parsed.length > MAX_SCOPE_IDS) return refusalResult({ code: "BATCH_TOO_LARGE", message: `${parsed.length} papers exceed the ${MAX_SCOPE_IDS}-paper scope cap (client policy); use "all" or split` });
+    normalizedPapers = parsed;
   }
 
   let db;
@@ -213,7 +223,14 @@ export async function verifyClaimTool(ctx: ToolContext, args: VerifyArgs, hooks:
     throw err;
   }
   try {
-    const out = await verifyWorkflow(ctx, db, claimArgs, hooks);
+    const req = {
+      claim: claimArgs.claim,
+      ...(normalizedPapers !== undefined ? { papers: normalizedPapers } : {}),
+      ...(claimArgs.query !== undefined ? { query: claimArgs.query } : {}),
+      ...(claimArgs.passages !== undefined ? { passages: claimArgs.passages } : {}),
+      ...(continuation !== undefined ? { continuation } : {}),
+    };
+    const out = await verifyWorkflow(ctx, db, req, hooks);
     if (out.kind === "refused") return refusalResult({ code: out.code, message: out.message });
     return { content: [{ type: "text", text: render(out.result) }], structuredContent: out.result, details: { mode: out.result.mode } };
   } catch (err) {
@@ -228,15 +245,16 @@ export async function verifyClaimTool(ctx: ToolContext, args: VerifyArgs, hooks:
 // ── rendering ───────────────────────────────────────────────────────────────
 
 function renderDocument(s: Record<string, any>): string {
-  const summary = s.summary as { total: number; from: number; units: number; supported: number; missingCitation: number; citedUnsupported: number; unsourced: number; unregistered: number; incomplete: number };
-  const units = s.units as DocumentUnitResult[];
+  const summary = s.summary as { total: number; from: number; units: number; supported: number; missingCitation: number; citedUnsupported: number; unsourced: number; unregistered: number; skipped: number; tableRows: number; tableRowsMissing: number; incomplete: number };
+  const units = s.units as (DocumentUnitResult & { reason?: string })[];
   const lines: string[] = [
-    `DOCUMENT: units ${summary.from + 1}–${summary.from + summary.units} of ${summary.total} checked as written (${s.source}) — ${summary.supported} supported, ${summary.missingCitation} missing-citation, ${summary.citedUnsupported} cited-unsupported, ${summary.unsourced} unsourced, ${summary.unregistered} unregistered${summary.incomplete > 0 ? `, ${summary.incomplete} incomplete` : ""}.`,
+    `DOCUMENT: units ${summary.from + 1}–${summary.from + summary.units} of ${summary.total} checked as written (${s.source}) — ${summary.supported} supported, ${summary.missingCitation} missing-citation, ${summary.citedUnsupported} cited-unsupported, ${summary.unsourced} unsourced, ${summary.unregistered} unregistered${summary.skipped > 0 ? `, ${summary.skipped} skipped` : ""}${summary.tableRows > 0 ? `, ${summary.tableRows} table rows (${summary.tableRowsMissing} with a missing figure)` : ""}${summary.incomplete > 0 ? `, ${summary.incomplete} incomplete` : ""}.`,
   ];
   for (const u of units) {
     const where = u.file === "fragment.tex" ? "text" : `${u.file}:${u.line}`;
-    const extra = u.status === "supported" ? ` [${u.pointers.join(", ")}]` : u.status === "missing-citation" ? ` — cite ${(u.suggested as string[]).join(", ") || "a registered paper"} [${u.pointers.join(", ")}]` : "";
-    lines.push(`[${u.id}] ${where} (${u.kind}) "${u.excerpt}" — ${u.status}${extra}${u.complete ? "" : " (incomplete check)"}`);
+    const extra = u.status === "supported" ? ` [${u.pointers.join(", ")}]` : u.status === "missing-citation" ? ` — cite ${(u.suggested as string[]).join(", ") || "a registered paper"} [${u.pointers.join(", ")}]` : u.status === "skipped" && u.reason !== undefined ? ` (${u.reason})` : u.status === "table-row" && u.figures !== undefined ? `: ${u.figures.found} figure(s) found, ${u.figures.missing} missing, ${u.figures.check} to check; ${u.note ?? TABLE_ROW_NOTE}` : "";
+    const unknown = (u.unregistered ?? []).length > 0 ? ` (unknown citekey: ${(u.unregistered ?? []).join(", ")})` : "";
+    lines.push(`[${u.id}] ${where} (${u.kind}) "${u.excerpt}" — ${u.status}${extra}${unknown}${u.complete ? "" : " (incomplete check)"}`);
   }
   if (s.next !== null) lines.push(`NOT DONE: ${summary.total - summary.from - summary.units} unit(s) not checked yet; call verify again with the same text and offset ${s.next}.`);
   lines.push("No support found means the verifier did not find a passage supporting the unit under the configured bar; it is not evidence that the unit is false.");
@@ -260,6 +278,8 @@ function render(s: Record<string, any>): string {
     lines.push(`SUPPORT FOUND: ${cov.output.available} supporting passage(s) ${where}${r.complete ? "." : " — coverage is INCOMPLETE (see below)."}`);
   } else if (r.limitations.includes("interrupted")) {
     lines.push("NO SUPPORT FOUND YET: checking was interrupted before all selected passages were judged (see work).");
+  } else if (r.searched === "candidate_limited") {
+    lines.push(`NO SUPPORT FOUND among the ${cov.candidates.total} retrieval-selected candidate passage(s) (candidate-limited check, not exhaustive).`);
   } else {
     lines.push(`NO SUPPORT FOUND${r.searched === "query_limited" ? " in the query-limited search" : ` across all ${cov.candidates.total} checked passage(s)`}.`);
   }
@@ -276,6 +296,9 @@ function render(s: Record<string, any>): string {
     if (r.searched === "query_limited") {
       const per = cov.candidates.perPaper as { citekey: string; chunks: number; matched: number; selected: number }[];
       lines.push(`candidates: query-limited — only passages matching the locator were checked (${cov.candidates.total} of ${per.reduce((n, p) => n + p.chunks, 0)}); ${per.map((p) => `${p.citekey} ${p.selected}/${p.matched} matched of ${p.chunks}`).join("; ") || "no paper had a usable source"}. No candidates is a statement about the search, not a finding about the papers.`);
+    } else if (r.searched === "candidate_limited") {
+      const per = cov.candidates.perPaper as { citekey: string; chunks: number; matched: number; selected: number }[];
+      lines.push(`candidates: candidate-limited — top retrieval candidates checked (${cov.candidates.total} of ${per.reduce((n, p) => n + p.chunks, 0)}), not exhaustive; ${per.map((p) => `${p.citekey} ${p.selected}/${p.matched} matched of ${p.chunks}`).join("; ") || "no paper had a usable source"}. No support found here is not evidence the papers lack support.`);
     } else if (cov.sources.ready > 0) {
       lines.push(`candidates: exhaustive — every usable passage (${cov.candidates.total}) of ${cov.sources.ready} paper(s) selected for checking`);
     }

@@ -1,0 +1,187 @@
+.external-output-container,
+.latex-output-container,
+.typst-output-container {
+	contain: layout;
+	width: var(--latex-output-width);
+	height: 100%;
+	overflow: hidden;
+	border-left: 1px solid var(--accent-border);
+	background-color: var(--pico-secondary-background);
+}
+
+.external-output-container > .panel-content,
+.latex-output-container > .panel-content,
+.typst-output-container > .panel-content {
+	contain: paint;
+}
+
+.ui-panel-header[data-role="output"] .ui-tab-list[data-role="output"] {
+	min-width: 0;
+}
+
+.ui-panel-header[data-role="output"]
+	.ui-tab-list[data-role="output"]
+	> .ui-tab {
+	white-space: nowrap;
+}
+
+.log-viewer {
+	flex: 1;
+	height: 100%;
+	overflow: auto;
+	margin: var(--space-sm);
+	color: var(--text-color);
+}
+
+.pdf-viewer,
+.svg-viewer,
+.canvas-viewer {
+	display: flex;
+	flex: 1 1 auto;
+	min-width: 0;
+	min-height: 0;
+	height: 100%;
+	flex-direction: column;
+	overflow: hidden;
+}
+
+embed {
+	width: 100%;
+	height: 100%;
+	border: none;
+	flex: 1;
+}
+
+.editor-container-outer {
+	display: flex;
+	flex: 1;
+	min-height: 0;
+	overflow: hidden;
+	height: 100%;
+}
+
+.split-log-view {
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+	position: relative;
+}
+
+.visualizer-panel-wrapper {
+	flex: 0 0 auto;
+}
+
+.visualizer-panel {
+	flex: 1;
+	overflow-y: auto;
+	border-bottom: 1px solid var(--accent-border);
+}
+
+.log-view-container {
+	height: 100%;
+	overflow: hidden;
+}
+
+.raw-log-panel {
+	flex: 1;
+	min-height: 0;
+	overflow: hidden;
+	display: flex;
+	flex-direction: column;
+}
+
+.raw-log-panel .log-viewer {
+	margin: 0;
+}
+
+.external-button-status {
+	position: absolute;
+	top: -1px;
+	right: -1px;
+	display: inline-flex;
+	color: var(--pico-primary);
+	pointer-events: none;
+}
+
+.external-button-status svg {
+	width: 0.55rem;
+	height: 0.55rem;
+	stroke-width: 2.5;
+}
+
+.external-dropdown,
+.latex-dropdown,
+.typst-dropdown {
+	min-width: var(--dropdown-width);
+	padding: var(--space-sm);
+	overflow: hidden;
+}
+
+.header-compile-button {
+	margin-left: var(--space-md);
+}
+
+.compile-button .loading-spinner {
+	width: 14px;
+	height: 14px;
+	border-width: 2px;
+	margin-bottom: 0;
+	--spinner-thickness: 2px;
+}
+
+.compile-button .loading-spinner.has-progress {
+	width: 22px;
+	height: 22px;
+	--spinner-thickness: 3px;
+}
+
+.ui-menu-section[data-variant="control"]
+	+ .ui-menu-section[data-variant="control"] {
+	margin-top: var(--space-sm);
+	padding-top: var(--space-sm);
+}
+
+.typst-html-semantics {
+	color: transparent;
+	font-family: monospace;
+	white-space: pre;
+	user-select: text;
+}
+
+.typst-html-semantics span {
+	position: absolute;
+	display: inline-block;
+	color: transparent;
+	font-family: monospace;
+	transform-origin: left top;
+}
+
+.typst-html-semantics .typst-content-hint {
+	width: 1px;
+	height: 1px;
+	overflow: hidden;
+}
+
+.typst-html-semantics a {
+	position: absolute;
+	display: inline-block;
+	pointer-events: auto;
+	cursor: pointer;
+}
+
+.typst-html-semantics .typst-content-group {
+	pointer-events: visible;
+}
+
+.typst-html-semantics *::selection {
+	color: transparent;
+}
+
+.typst-html-semantics span::selection {
+	background: rgba(125, 185, 222, 0.63);
+}
+
+.typst-html-semantics .typst-content-fallback {
+	color: transparent;
+	background: transparent;
+}

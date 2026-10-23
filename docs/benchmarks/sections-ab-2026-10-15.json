@@ -1,0 +1,1002 @@
+{
+  "seed": 20261015,
+  "order": [
+    "1. C0 rf-llm-review-v2",
+    "2. C1 rf-llm-review-v2",
+    "3. C0 adapter-literature-workflow-v2",
+    "4. C0 adapter-literature-workflow-v2",
+    "5. C0 rf-llm-review-v2",
+    "6. C1 adapter-literature-workflow-v2",
+    "7. C1 adapter-literature-workflow-v2",
+    "8. C0 adapter-literature-workflow-v2",
+    "9. C1 rf-llm-review-v2",
+    "10. C1 adapter-literature-workflow-v2",
+    "11. C1 rf-llm-review-v2",
+    "12. C0 rf-llm-review-v2"
+  ],
+  "arms": {
+    "C0": "default (no --arm)",
+    "C1": "--arm sections"
+  },
+  "base": "pnpm experiment <scenario> --assistant-model opencode-go/muse-spark-1.3-contributor --verify-engine hosted",
+  "treeHash": "55f63081e056d3aea1b3b7ac258d78d429f1f877",
+  "treeMatchAll12": true,
+  "validity": {
+    "valid": 12,
+    "blocked": 0,
+    "invalid": 0
+  },
+  "runs": [
+    {
+      "scenario": "adapter-literature-workflow-v2",
+      "iter": "iter-04",
+      "arm": "C0-default",
+      "validity": "VALID",
+      "treeHash": "55f63081e056d3aea1b3b7ac258d78d429f1f877",
+      "outcome": "success",
+      "tier1": {
+        "checks": {
+          "citations-in-registry": true,
+          "bibliography-matches-registry": true,
+          "compiled-after-last-edit": true,
+          "pointers-resolve": true,
+          "figures-supported": true
+        },
+        "pass": 5,
+        "total": 5,
+        "report": {
+          "words": 1196,
+          "verified": 1,
+          "cited": 31,
+          "uncited": 0,
+          "figuresUncited": 0,
+          "figuresCheck": 0,
+          "figuresUnavailable": 0
+        }
+      },
+      "provenanceFinal": {
+        "words": 1196,
+        "verified": 1,
+        "cited": 31,
+        "uncited": 0,
+        "units": 32
+      },
+      "words": 1196,
+      "costUsd": 0.0307,
+      "wallMs": 433309,
+      "toolCalls": 41,
+      "byTool": {
+        "papers": 7,
+        "registry:register": 1,
+        "registry:read": 2,
+        "registry:acquire": 1,
+        "passages": 6,
+        "compile": 9,
+        "verify": 14,
+        "doctor": 1
+      },
+      "writeSection": {
+        "calls": 0,
+        "outcomes": []
+      },
+      "writerDocCheck": {
+        "calls": 2,
+        "documentPages": 0
+      },
+      "docVerify": {
+        "entry": "manuscript/main.tex",
+        "complete": true,
+        "ms": 843837,
+        "counts": {
+          "supported": 9,
+          "missing-citation": 0,
+          "cited-unsupported": 23,
+          "unsourced": 44,
+          "unregistered": 0
+        },
+        "units": 76,
+        "incomplete": 61,
+        "pages": 2
+      },
+      "gradingA": {
+        "labels": {
+          "background": 43,
+          "supported": 32,
+          "specific": 1
+        },
+        "trap_violated": false
+      }
+    },
+    {
+      "scenario": "adapter-literature-workflow-v2",
+      "iter": "iter-05",
+      "arm": "C0-default",
+      "validity": "VALID",
+      "treeHash": "55f63081e056d3aea1b3b7ac258d78d429f1f877",
+      "outcome": "success",
+      "tier1": {
+        "checks": {
+          "citations-in-registry": true,
+          "bibliography-matches-registry": true,
+          "compiled-after-last-edit": true,
+          "pointers-resolve": true,
+          "figures-supported": true
+        },
+        "pass": 5,
+        "total": 5,
+        "report": {
+          "words": 1194,
+          "verified": 0,
+          "cited": 27,
+          "uncited": 5,
+          "figuresUncited": 8,
+          "figuresCheck": 0,
+          "figuresUnavailable": 0
+        }
+      },
+      "provenanceFinal": {
+        "words": 1194,
+        "verified": 0,
+        "cited": 27,
+        "uncited": 5,
+        "units": 32
+      },
+      "words": 1194,
+      "costUsd": 0.0424,
+      "wallMs": 565571,
+      "toolCalls": 34,
+      "byTool": {
+        "doctor": 2,
+        "registry:register": 2,
+        "papers": 4,
+        "registry:acquire": 1,
+        "registry:read": 1,
+        "passages": 7,
+        "compile": 12,
+        "verify": 5
+      },
+      "writeSection": {
+        "calls": 0,
+        "outcomes": []
+      },
+      "writerDocCheck": {
+        "calls": 3,
+        "documentPages": 0
+      },
+      "docVerify": {
+        "entry": "manuscript/main.tex",
+        "complete": true,
+        "ms": 468666,
+        "counts": {
+          "supported": 2,
+          "missing-citation": 0,
+          "cited-unsupported": 25,
+          "unsourced": 32,
+          "unregistered": 0
+        },
+        "units": 59,
+        "incomplete": 58,
+        "pages": 2
+      },
+      "gradingA": {
+        "labels": {
+          "background": 30,
+          "supported": 27,
+          "specific": 2
+        },
+        "trap_violated": false
+      }
+    },
+    {
+      "scenario": "adapter-literature-workflow-v2",
+      "iter": "iter-06",
+      "arm": "C1-sections",
+      "validity": "VALID",
+      "treeHash": "55f63081e056d3aea1b3b7ac258d78d429f1f877",
+      "outcome": "success",
+      "tier1": {
+        "checks": {
+          "citations-in-registry": true,
+          "bibliography-matches-registry": true,
+          "compiled-after-last-edit": true,
+          "pointers-resolve": true,
+          "figures-supported": true
+        },
+        "pass": 5,
+        "total": 5,
+        "report": {
+          "words": 1074,
+          "verified": 3,
+          "cited": 41,
+          "uncited": 0,
+          "figuresUncited": 0,
+          "figuresCheck": 0,
+          "figuresUnavailable": 0
+        }
+      },
+      "provenanceFinal": {
+        "words": 1074,
+        "verified": 3,
+        "cited": 41,
+        "uncited": 0,
+        "units": 44
+      },
+      "words": 1074,
+      "costUsd": 0.0272,
+      "wallMs": 991889,
+      "toolCalls": 30,
+      "byTool": {
+        "doctor": 1,
+        "papers": 4,
+        "registry:register": 1,
+        "registry:read": 2,
+        "registry:acquire": 1,
+        "passages": 8,
+        "compile": 3,
+        "verify": 10
+      },
+      "writeSection": {
+        "calls": 0,
+        "outcomes": []
+      },
+      "writerDocCheck": {
+        "calls": 4,
+        "documentPages": 0
+      },
+      "docVerify": {
+        "entry": "manuscript/main.tex",
+        "complete": true,
+        "ms": 369788,
+        "counts": {
+          "supported": 8,
+          "missing-citation": 0,
+          "cited-unsupported": 36,
+          "unsourced": 11,
+          "unregistered": 0
+        },
+        "units": 55,
+        "incomplete": 46,
+        "pages": 2
+      },
+      "gradingA": {
+        "labels": {
+          "supported": 44,
+          "background": 11
+        },
+        "trap_violated": false
+      }
+    },
+    {
+      "scenario": "adapter-literature-workflow-v2",
+      "iter": "iter-07",
+      "arm": "C1-sections",
+      "validity": "VALID",
+      "treeHash": "55f63081e056d3aea1b3b7ac258d78d429f1f877",
+      "outcome": "success",
+      "tier1": {
+        "checks": {
+          "citations-in-registry": true,
+          "bibliography-matches-registry": true,
+          "compiled-after-last-edit": true,
+          "pointers-resolve": true,
+          "figures-supported": true
+        },
+        "pass": 5,
+        "total": 5,
+        "report": {
+          "words": 1379,
+          "verified": 0,
+          "cited": 37,
+          "uncited": 1,
+          "figuresUncited": 1,
+          "figuresCheck": 0,
+          "figuresUnavailable": 0
+        }
+      },
+      "provenanceFinal": {
+        "words": 1379,
+        "verified": 0,
+        "cited": 37,
+        "uncited": 1,
+        "units": 38
+      },
+      "words": 1379,
+      "costUsd": 0.0186,
+      "wallMs": 724262,
+      "toolCalls": 54,
+      "byTool": {
+        "doctor": 2,
+        "registry:register": 2,
+        "registry:read": 2,
+        "papers": 4,
+        "registry:acquire": 1,
+        "passages": 18,
+        "verify": 20,
+        "compile": 5
+      },
+      "writeSection": {
+        "calls": 1,
+        "outcomes": [
+          {
+            "ok": false,
+            "unresolved": null,
+            "error": "verify document mode refused (VERIFY_ENGINE_MISSING): hosted engine HTTP 429: {\"error\":{\"code\":\"rate_limit_exceeded\",\"message\":\"requests per minute limit reache"
+          }
+        ]
+      },
+      "writerDocCheck": {
+        "calls": 3,
+        "documentPages": 0
+      },
+      "docVerify": {
+        "entry": "manuscript/main.tex",
+        "complete": true,
+        "ms": 385138,
+        "counts": {
+          "supported": 14,
+          "missing-citation": 1,
+          "cited-unsupported": 23,
+          "unsourced": 27,
+          "unregistered": 0
+        },
+        "units": 65,
+        "incomplete": 52,
+        "pages": 2
+      },
+      "gradingA": {
+        "labels": {
+          "background": 27,
+          "supported": 37,
+          "specific": 1
+        },
+        "trap_violated": false
+      }
+    },
+    {
+      "scenario": "adapter-literature-workflow-v2",
+      "iter": "iter-08",
+      "arm": "C0-default",
+      "validity": "VALID",
+      "treeHash": "55f63081e056d3aea1b3b7ac258d78d429f1f877",
+      "outcome": "success",
+      "tier1": {
+        "checks": {
+          "citations-in-registry": true,
+          "bibliography-matches-registry": true,
+          "compiled-after-last-edit": true,
+          "pointers-resolve": true,
+          "figures-supported": true
+        },
+        "pass": 5,
+        "total": 5,
+        "report": {
+          "words": 1196,
+          "verified": 0,
+          "cited": 32,
+          "uncited": 1,
+          "figuresUncited": 2,
+          "figuresCheck": 0,
+          "figuresUnavailable": 0
+        }
+      },
+      "provenanceFinal": {
+        "words": 1196,
+        "verified": 0,
+        "cited": 32,
+        "uncited": 1,
+        "units": 33
+      },
+      "words": 1196,
+      "costUsd": 0.0196,
+      "wallMs": 344552,
+      "toolCalls": 29,
+      "byTool": {
+        "doctor": 1,
+        "papers": 7,
+        "registry:register": 1,
+        "registry:read": 2,
+        "registry:acquire": 1,
+        "passages": 8,
+        "registry:sync_bibliography": 1,
+        "compile": 6,
+        "verify": 2
+      },
+      "writeSection": {
+        "calls": 0,
+        "outcomes": []
+      },
+      "writerDocCheck": {
+        "calls": 2,
+        "documentPages": 0
+      },
+      "docVerify": {
+        "entry": "manuscript/main.tex",
+        "complete": true,
+        "ms": 275250,
+        "counts": {
+          "supported": 5,
+          "missing-citation": 3,
+          "cited-unsupported": 25,
+          "unsourced": 23,
+          "unregistered": 0
+        },
+        "units": 56,
+        "incomplete": 52,
+        "pages": 2
+      },
+      "gradingA": {
+        "labels": {
+          "background": 24,
+          "supported": 32
+        },
+        "trap_violated": false
+      }
+    },
+    {
+      "scenario": "adapter-literature-workflow-v2",
+      "iter": "iter-09",
+      "arm": "C1-sections",
+      "validity": "VALID",
+      "treeHash": "55f63081e056d3aea1b3b7ac258d78d429f1f877",
+      "outcome": "success",
+      "tier1": {
+        "checks": {
+          "citations-in-registry": true,
+          "bibliography-matches-registry": true,
+          "compiled-after-last-edit": true,
+          "pointers-resolve": true,
+          "figures-supported": true
+        },
+        "pass": 5,
+        "total": 5,
+        "report": {
+          "words": 1049,
+          "verified": 0,
+          "cited": 39,
+          "uncited": 0,
+          "figuresUncited": 0,
+          "figuresCheck": 0,
+          "figuresUnavailable": 0
+        }
+      },
+      "provenanceFinal": {
+        "words": 1049,
+        "verified": 0,
+        "cited": 39,
+        "uncited": 0,
+        "units": 39
+      },
+      "words": 1049,
+      "costUsd": 0.0392,
+      "wallMs": 680542,
+      "toolCalls": 63,
+      "byTool": {
+        "doctor": 1,
+        "papers": 4,
+        "registry:register": 1,
+        "registry:read": 2,
+        "registry:acquire": 1,
+        "passages": 20,
+        "verify": 24,
+        "registry:sync_bibliography": 1,
+        "compile": 9
+      },
+      "writeSection": {
+        "calls": 2,
+        "outcomes": [
+          {
+            "ok": false,
+            "unresolved": null,
+            "error": "verify document mode refused (VERIFY_ENGINE_MISSING): hosted engine HTTP 429: {\"error\":{\"code\":\"rate_limit_exceeded\",\"message\":\"requests per minute limit reache"
+          },
+          {
+            "ok": false,
+            "unresolved": null,
+            "error": "verify document mode refused (VERIFY_ENGINE_MISSING): hosted engine HTTP 429: {\"error\":{\"code\":\"rate_limit_exceeded\",\"message\":\"requests per minute limit reache"
+          }
+        ]
+      },
+      "writerDocCheck": {
+        "calls": 2,
+        "documentPages": 0
+      },
+      "docVerify": {
+        "entry": "manuscript/main.tex",
+        "complete": true,
+        "ms": 128588,
+        "counts": {
+          "supported": 19,
+          "missing-citation": 0,
+          "cited-unsupported": 20,
+          "unsourced": 28,
+          "unregistered": 0
+        },
+        "units": 67,
+        "incomplete": 42,
+        "pages": 2
+      },
+      "gradingA": {
+        "labels": {
+          "background": 26,
+          "supported": 39,
+          "specific": 2
+        },
+        "trap_violated": false
+      }
+    },
+    {
+      "scenario": "rf-llm-review-v2",
+      "iter": "iter-04",
+      "arm": "C0-default",
+      "validity": "VALID",
+      "treeHash": "55f63081e056d3aea1b3b7ac258d78d429f1f877",
+      "outcome": "success",
+      "tier1": {
+        "checks": {
+          "citations-in-registry": true,
+          "bibliography-matches-registry": true,
+          "compiled-after-last-edit": true,
+          "pointers-resolve": true,
+          "figures-supported": true
+        },
+        "pass": 5,
+        "total": 5,
+        "report": {
+          "words": 2411,
+          "verified": 0,
+          "cited": 53,
+          "uncited": 2,
+          "figuresUncited": 3,
+          "figuresCheck": 1,
+          "figuresUnavailable": 0
+        }
+      },
+      "provenanceFinal": {
+        "words": 2411,
+        "verified": 0,
+        "cited": 53,
+        "uncited": 2,
+        "units": 55
+      },
+      "words": 2411,
+      "costUsd": 0.0383,
+      "wallMs": 943062,
+      "toolCalls": 47,
+      "byTool": {
+        "doctor": 1,
+        "papers": 8,
+        "registry:register": 3,
+        "registry:acquire": 3,
+        "registry:read": 2,
+        "passages": 15,
+        "verify": 6,
+        "registry:sync_bibliography": 1,
+        "compile": 8
+      },
+      "writeSection": {
+        "calls": 0,
+        "outcomes": []
+      },
+      "writerDocCheck": {
+        "calls": 1,
+        "documentPages": 0
+      },
+      "docVerify": {
+        "entry": "manuscript/main.tex",
+        "complete": true,
+        "ms": 1629486,
+        "counts": {
+          "supported": 1,
+          "missing-citation": 0,
+          "cited-unsupported": 52,
+          "unsourced": 39,
+          "unregistered": 0
+        },
+        "units": 92,
+        "incomplete": 91,
+        "pages": 2
+      },
+      "gradingA": {
+        "labels": {
+          "background": 34,
+          "supported": 41,
+          "unsupported": 12,
+          "specific": 5
+        },
+        "trap_violated": false
+      }
+    },
+    {
+      "scenario": "rf-llm-review-v2",
+      "iter": "iter-05",
+      "arm": "C1-sections",
+      "validity": "VALID",
+      "treeHash": "55f63081e056d3aea1b3b7ac258d78d429f1f877",
+      "outcome": "success",
+      "tier1": {
+        "checks": {
+          "citations-in-registry": true,
+          "bibliography-matches-registry": true,
+          "compiled-after-last-edit": true,
+          "pointers-resolve": true,
+          "figures-supported": true
+        },
+        "pass": 5,
+        "total": 5,
+        "report": {
+          "words": 3788,
+          "verified": 3,
+          "cited": 108,
+          "uncited": 6,
+          "figuresUncited": 7,
+          "figuresCheck": 5,
+          "figuresUnavailable": 0
+        }
+      },
+      "provenanceFinal": {
+        "words": 3788,
+        "verified": 3,
+        "cited": 108,
+        "uncited": 6,
+        "units": 117
+      },
+      "words": 3788,
+      "costUsd": 0.0371,
+      "wallMs": 901037,
+      "toolCalls": 38,
+      "byTool": {
+        "doctor": 1,
+        "papers": 8,
+        "registry:register": 1,
+        "registry:read": 2,
+        "registry:acquire": 1,
+        "passages": 12,
+        "compile": 4,
+        "verify": 9
+      },
+      "writeSection": {
+        "calls": 0,
+        "outcomes": []
+      },
+      "writerDocCheck": {
+        "calls": 2,
+        "documentPages": 0
+      },
+      "docVerify": {
+        "entry": "manuscript/main.tex",
+        "complete": true,
+        "ms": 1913143,
+        "counts": {
+          "supported": 30,
+          "missing-citation": 1,
+          "cited-unsupported": 80,
+          "unsourced": 44,
+          "unregistered": 0
+        },
+        "units": 155,
+        "incomplete": 122,
+        "pages": 4
+      },
+      "gradingA": {
+        "labels": {
+          "background": 44,
+          "supported": 108,
+          "unsupported": 2,
+          "misattributed": 1
+        },
+        "trap_violated": false
+      }
+    },
+    {
+      "scenario": "rf-llm-review-v2",
+      "iter": "iter-06",
+      "arm": "C0-default",
+      "validity": "VALID",
+      "treeHash": "55f63081e056d3aea1b3b7ac258d78d429f1f877",
+      "outcome": "success",
+      "tier1": {
+        "checks": {
+          "citations-in-registry": true,
+          "bibliography-matches-registry": true,
+          "compiled-after-last-edit": true,
+          "pointers-resolve": true,
+          "figures-supported": true
+        },
+        "pass": 5,
+        "total": 5,
+        "report": {
+          "words": 2388,
+          "verified": 0,
+          "cited": 99,
+          "uncited": 2,
+          "figuresUncited": 3,
+          "figuresCheck": 5,
+          "figuresUnavailable": 0
+        }
+      },
+      "provenanceFinal": {
+        "words": 2388,
+        "verified": 0,
+        "cited": 99,
+        "uncited": 2,
+        "units": 101
+      },
+      "words": 2388,
+      "costUsd": 0.0548,
+      "wallMs": 693466,
+      "toolCalls": 43,
+      "byTool": {
+        "doctor": 1,
+        "papers": 8,
+        "registry:register": 2,
+        "registry:read": 2,
+        "registry:acquire": 2,
+        "registry:remove": 1,
+        "passages": 19,
+        "compile": 5,
+        "verify": 3
+      },
+      "writeSection": {
+        "calls": 0,
+        "outcomes": []
+      },
+      "writerDocCheck": {
+        "calls": 2,
+        "documentPages": 0
+      },
+      "docVerify": {
+        "complete": false,
+        "reason": "endpoint 429-saturated; budget exhausted"
+      },
+      "gradingA": {
+        "labels": {
+          "supported": 80,
+          "background": 23,
+          "unsupported": 19
+        },
+        "trap_violated": false
+      }
+    },
+    {
+      "scenario": "rf-llm-review-v2",
+      "iter": "iter-07",
+      "arm": "C1-sections",
+      "validity": "VALID",
+      "treeHash": "55f63081e056d3aea1b3b7ac258d78d429f1f877",
+      "outcome": "success",
+      "tier1": {
+        "checks": {
+          "citations-in-registry": true,
+          "bibliography-matches-registry": true,
+          "compiled-after-last-edit": true,
+          "pointers-resolve": true,
+          "figures-supported": true
+        },
+        "pass": 5,
+        "total": 5,
+        "report": {
+          "words": 3472,
+          "verified": 0,
+          "cited": 91,
+          "uncited": 8,
+          "figuresUncited": 10,
+          "figuresCheck": 6,
+          "figuresUnavailable": 0
+        }
+      },
+      "provenanceFinal": {
+        "words": 3472,
+        "verified": 0,
+        "cited": 91,
+        "uncited": 8,
+        "units": 99
+      },
+      "words": 3472,
+      "costUsd": 0.0494,
+      "wallMs": 589908,
+      "toolCalls": 44,
+      "byTool": {
+        "doctor": 1,
+        "papers": 9,
+        "registry:register": 1,
+        "registry:read": 1,
+        "registry:acquire": 2,
+        "passages": 18,
+        "verify": 7,
+        "compile": 5
+      },
+      "writeSection": {
+        "calls": 1,
+        "outcomes": [
+          {
+            "ok": false,
+            "unresolved": null,
+            "error": "verify document mode refused (VERIFY_ENGINE_MISSING): hosted engine HTTP 429: {\"error\":{\"code\":\"rate_limit_exceeded\",\"message\":\"requests per minute limit reache"
+          }
+        ]
+      },
+      "writerDocCheck": {
+        "calls": 2,
+        "documentPages": 0
+      },
+      "docVerify": {
+        "complete": false,
+        "reason": "endpoint 429-saturated; budget exhausted"
+      },
+      "gradingA": {
+        "labels": {
+          "background": 32,
+          "supported": 73,
+          "unsupported": 18,
+          "specific": 4
+        },
+        "trap_violated": false
+      }
+    },
+    {
+      "scenario": "rf-llm-review-v2",
+      "iter": "iter-08",
+      "arm": "C1-sections",
+      "validity": "VALID",
+      "treeHash": "55f63081e056d3aea1b3b7ac258d78d429f1f877",
+      "outcome": "success",
+      "tier1": {
+        "checks": {
+          "citations-in-registry": true,
+          "bibliography-matches-registry": true,
+          "compiled-after-last-edit": true,
+          "pointers-resolve": true,
+          "figures-supported": false
+        },
+        "pass": 4,
+        "total": 5,
+        "report": {
+          "words": 3078,
+          "verified": 0,
+          "cited": 75,
+          "uncited": 8,
+          "figuresUncited": 9,
+          "figuresCheck": 7,
+          "figuresUnavailable": 0
+        }
+      },
+      "provenanceFinal": {
+        "words": 3078,
+        "verified": 0,
+        "cited": 75,
+        "uncited": 8,
+        "units": 83
+      },
+      "words": 3078,
+      "costUsd": 0.0625,
+      "wallMs": 1287462,
+      "toolCalls": 44,
+      "byTool": {
+        "doctor": 2,
+        "papers": 8,
+        "registry:register": 2,
+        "registry:acquire": 2,
+        "registry:read": 1,
+        "passages": 13,
+        "compile": 4,
+        "verify": 12
+      },
+      "writeSection": {
+        "calls": 0,
+        "outcomes": []
+      },
+      "writerDocCheck": {
+        "calls": 3,
+        "documentPages": 0
+      },
+      "docVerify": {
+        "complete": false,
+        "reason": "endpoint 429-saturated; budget exhausted"
+      },
+      "gradingA": {
+        "labels": {
+          "background": 30,
+          "supported": 75
+        },
+        "trap_violated": false
+      }
+    },
+    {
+      "scenario": "rf-llm-review-v2",
+      "iter": "iter-09",
+      "arm": "C0-default",
+      "validity": "VALID",
+      "treeHash": "55f63081e056d3aea1b3b7ac258d78d429f1f877",
+      "outcome": "success",
+      "tier1": {
+        "checks": {
+          "citations-in-registry": true,
+          "bibliography-matches-registry": true,
+          "compiled-after-last-edit": true,
+          "pointers-resolve": true,
+          "figures-supported": true
+        },
+        "pass": 5,
+        "total": 5,
+        "report": {
+          "words": 2625,
+          "verified": 0,
+          "cited": 72,
+          "uncited": 10,
+          "figuresUncited": 11,
+          "figuresCheck": 0,
+          "figuresUnavailable": 0
+        }
+      },
+      "provenanceFinal": {
+        "words": 2625,
+        "verified": 0,
+        "cited": 72,
+        "uncited": 10,
+        "units": 82
+      },
+      "words": 2625,
+      "costUsd": 0.0548,
+      "wallMs": 996028,
+      "toolCalls": 41,
+      "byTool": {
+        "doctor": 1,
+        "papers": 7,
+        "registry:register": 2,
+        "registry:read": 2,
+        "registry:acquire": 2,
+        "passages": 19,
+        "compile": 5,
+        "verify": 3
+      },
+      "writeSection": {
+        "calls": 0,
+        "outcomes": []
+      },
+      "writerDocCheck": {
+        "calls": 3,
+        "documentPages": 0
+      },
+      "docVerify": {
+        "complete": false,
+        "reason": "endpoint 429-saturated; budget exhausted"
+      },
+      "gradingA": {
+        "labels": {
+          "background": 45,
+          "supported": 64,
+          "specific": 9,
+          "unsupported": 8
+        },
+        "trap_violated": false
+      }
+    }
+  ],
+  "corpus": {
+    "papers": 45,
+    "fetched": 16,
+    "reused": 20,
+    "unavailable": 9,
+    "refused_non_arxiv_acl": [
+      "10.1109/gcwkshps68340.2025.11591243 (backoffice.biblio.ugent.be)",
+      "10.24963/ijcai.2026/486 (www.ijcai.org)",
+      "10.3390/s22041416 (content.openalex.org)"
+    ],
+    "no_recorded_origin": [
+      "10.1109/tccn.2026.3724175",
+      "10.1109/ojcoms.2026.3661435",
+      "10.1109/mwc.2025.3596934",
+      "10.1109/twc.2024.3497923",
+      "10.1109/icmlcn64995.2025.11140266",
+      "10.1109/aic70896.2026.11717308"
+    ]
+  },
+  "caveats": [
+    "n=6/arm directional only",
+    "docVerify complete 8/12 (endpoint 429-saturated; rf iter-06/07/08/09 missing)",
+    "write_section fired 4x total, all 429-refused (auto-verify never ran); writer final-doc-check attempts 0/x successful in all 12 runs",
+    "docVerify units carry high incomplete flags (interrupted judgments under 429 load)",
+    "self-graded: writer and grader both Muse",
+    "RF corpus misses ijcai/ugent papers; affected units grade as unsupported"
+  ]
+}

@@ -13,11 +13,12 @@ const POLICY: ViewPolicy = { legacyChars: 6000, fullManuscriptChars: 60000, evid
 
 describe("arms", () => {
   it("A is the current system; B1 adds only the reviewer's visibility; B2 adds the in-loop provenance view for the assistant", () => {
-    assert.deepEqual(ARMS, ["A", "B1", "B2", "sections"]);
+    assert.deepEqual(ARMS, ["A", "B1", "B2", "sections", "no-gate"]);
     assert.deepEqual(armSpec("A"), { arm: "A", agentProvenance: false, reviewerView: "legacy" });
     assert.deepEqual(armSpec("B1"), { arm: "B1", agentProvenance: false, reviewerView: "full" });
     assert.deepEqual(armSpec("B2"), { arm: "B2", agentProvenance: true, reviewerView: "full" });
     assert.deepEqual(armSpec("sections"), { arm: "sections", agentProvenance: false, reviewerView: "full" });
+    assert.deepEqual(armSpec("no-gate"), { arm: "no-gate", agentProvenance: true, reviewerView: "legacy" });
     assert.throws(() => armSpec("C"), /unknown arm/i);
   });
 });

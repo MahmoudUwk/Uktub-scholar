@@ -44,9 +44,11 @@ export const VERIFICATION_ENGINES = [
 ] as const;
 
 /** Decision protocol the System One engines speak: one `noul` question per
- *  (passage, claim) row, answer P(true). Part of the judgment identity — a
- *  change in how rows are posed must not reuse old scores. */
-export const SYSTEMONE_PROTOCOL = "systemone-noul-v1";
+ *  (passage, claim) row in the benchmarked Decision 2.0 criteria wording,
+ *  answer P(true). Part of the judgment identity — a change in how rows are
+ *  posed must not reuse old scores (the `-criteria` suffix retires every
+ *  judgment cached under the bare-claim wording). */
+export const SYSTEMONE_PROTOCOL = "systemone-noul-criteria-v1";
 
 const PROTOCOLS: Record<(typeof VERIFICATION_ENGINES)[number], string> = {
   eos: "decision2-noul-v1",
@@ -163,30 +165,63 @@ function residentKey(env: Record<string, string | undefined>, engine: string): s
   return `${engine}|${Object.entries(env).filter(([k, v]) => v !== undefined && k.startsWith("UKTUB_")).sort(([a], [b]) => (a < b ? -1 : 1)).map(([k, v]) => `${k}=${v}`).join("&")}`;
 }
 
+/**
+ * Engine-identity probes memoized per process and engine configuration (the
+ * same key style as the resident-engine map), keyed additionally by the fetch
+ * implementation so test seams never share production entries. A document call
+ * checks dozens of units through one shared workflow path, so without this
+ * every unit would spend its own `/v1/models` probe (each up to 5 s).
+ */
+const identityCache = new WeakMap<object, Map<string, Promise<EngineIdentity | null>>>();
+
+export function resolveEngineIdentityCached(
+  env: Record<string, string | undefined>,
+  engine: string,
+  deps: { fetchImpl?: typeof fetch } = {},
+): Promise<EngineIdentity | null> {
+  const fetchImpl = deps.fetchImpl ?? fetch;
+  let byConfig = identityCache.get(fetchImpl);
+  if (byConfig === undefined) {
+    byConfig = new Map();
+    identityCache.set(fetchImpl, byConfig);
+  }
+  const key = residentKey(env, engine);
+  const have = byConfig.get(key);
+  if (have !== undefined) return have;
+  const pending = resolveEngineIdentity(env, engine, { fetchImpl });
+  byConfig.set(key, pending);
+  return pending;
+}
+
 /** Build the engine named by config. Unknown names throw an Error. */
-export function createConfiguredEngine(env: Record<string, string | undefined>, engine: string): ClaimEngine {
+export function createConfiguredEngine(
+  env: Record<string, string | undefined>,
+  engine: string,
+  deps: { fetchImpl?: typeof fetch } = {},
+): ClaimEngine {
   if (RESIDENT_ENGINES.has(engine)) {
     const key = residentKey(env, engine);
     const have = resident.get(key);
     if (have !== undefined) return have;
-    const made = buildEngine(env, engine);
+    const made = buildEngine(env, engine, deps.fetchImpl);
     resident.set(key, made);
     return made;
   }
-  return buildEngine(env, engine);
+  return buildEngine(env, engine, deps.fetchImpl);
 }
 
-function buildEngine(env: Record<string, string | undefined>, engine: string): ClaimEngine {
+function buildEngine(env: Record<string, string | undefined>, engine: string, fetchImpl?: typeof fetch): ClaimEngine {
   switch (engine) {
     case "eos":
       return eosEngine({ env });
     case "eos-onnx":
       return eosOnnxEngine({ env });
     case "openrouter":
-      return openrouterDecisionsEngine({ env, model: env.UKTUB_OPENROUTER_MODEL ?? DEFAULT_OPENROUTER_MODEL });
+      return openrouterDecisionsEngine({ env, model: env.UKTUB_OPENROUTER_MODEL ?? DEFAULT_OPENROUTER_MODEL, fetchImpl });
     case "llama-cpp":
       return systemoneEndpointEngine({
         env,
+        fetchImpl,
         url: (env[VERIFY_URL_ENV] ?? DEFAULT_LLAMA_CPP_URL).replace(/\/+$/, "") + "/v1/systemone",
         label: "llama-cpp",
         apiKey: env[VERIFY_API_KEY_ENV],
@@ -195,9 +230,9 @@ function buildEngine(env: Record<string, string | undefined>, engine: string): C
     case "hosted": {
       const apiKey = env[VERIFY_API_KEY_ENV]?.trim();
       if (!apiKey) {
-        throw new Error(`the hosted verifier needs a free key: get one at ${HOSTED_KEY_URL} and set ${VERIFY_API_KEY_ENV} (or use the local engine "eos")`);
+        throw new Error(`the hosted verifier needs a free key: get one at ${HOSTED_KEY_URL} and set ${VERIFY_API_KEY_ENV}`);
       }
-      return systemoneEndpointEngine({ env, url: `${HOSTED_URL}/v1/systemone`, label: "hosted", apiKey, model: HOSTED_MODEL });
+      return systemoneEndpointEngine({ env, fetchImpl, url: `${HOSTED_URL}/v1/systemone`, label: "hosted", apiKey, model: HOSTED_MODEL });
     }
     default:
       throw new Error(

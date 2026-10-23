@@ -118,7 +118,7 @@ export function createEnv(out: string, opts: { corpus?: boolean; maxJudgments?: 
   const stageDir = join(out, "stage");
   const consumer = stagePackage(repo, stageDir);
   // Provenance is captured once here, at staging/start — never recomputed at report time, so the record identifies
-  // the bytes the run actually used. Same helper `validateRunSet` (scripts/live/provenance.ts) checks.
+  // the bytes the run actually used.
   // stageDir is the stage root (tar/ + consumer/): the tarball hash lives in stage/tar, not in the consumer subdir.
   const staged: StagedProvenance = captureStagedProvenance(repo, stageDir);
   const project = join(out, "project");
@@ -199,9 +199,6 @@ export function createEnv(out: string, opts: { corpus?: boolean; maxJudgments?: 
       untracked: staged.untracked,
       untrackedSha256: staged.untrackedSha256,
       packageHash: staged.packageHash,
-      surfaceHash: staged.surfaceHash,
-      protectedHash: staged.protectedHash,
-      scopeHash: staged.scopeHash,
       image: sh("docker", ["image", "inspect", IMAGE, "--format", "{{.Id}}"], repo),
       docker: sh("docker", ["--version"], repo),
       node: process.version,

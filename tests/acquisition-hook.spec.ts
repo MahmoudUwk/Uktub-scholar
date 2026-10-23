@@ -41,13 +41,23 @@ const pdfFor = (title: string) => makePdf([[title, "Grids age slowly and caches 
 const call = (ctx: ToolContext, args: Record<string, unknown>) => paperRegistryTool(ctx, args as unknown as PaperRegistryArgs);
 const text = (r: { content: { text: string }[] }): string => r.content.map((c) => c.text).join("\n");
 
-/** OpenAlex lookups answer `locations[0].pdf_url`; a missing entry is a 404 (unknown work). */
+/** OpenAlex lookups answer `locations[0].pdf_url`; a missing entry is a 404 (unknown work). Europe PMC answers with no record;
+ *  Semantic Scholar answers its documented unknown-paper 404. */
 function acquisitionFetch(pdfUrls: Record<string, string | null>): { fetchFn: FetchLike; lookups: string[] } {
   const lookups: string[] = [];
   const { fetchFn } = createFakeFetch([
     {
       match: (u) => u.startsWith(`${SEARCH_CFG.openalexBaseUrl}/works/`),
       body: "",
+    },
+    {
+      match: (u) => u.startsWith("https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=DOI"),
+      body: JSON.stringify({ hitCount: 0, resultList: { result: [] } }),
+    },
+    {
+      match: (u) => u.startsWith(`${SEARCH_CFG.semanticScholarBaseUrl}/graph/v1/paper/DOI:`),
+      status: 404,
+      body: JSON.stringify({ error: "Paper not found" }),
     },
   ]);
   const wrapped: FetchLike = async (url, init) => {

@@ -115,23 +115,34 @@ The capabilities and arguments are identical in either form.
 No claim from memory: every factual statement needs a registry pointer.
 When writing a document, work section by section, never in one bulk write:
 
-1. Plan an outline: sections, each with a goal and the citekeys it may use.
+1. Plan an outline: sections, each with a goal, a word budget (pass `max_words` to `write_section` when there is a length limit), and the citekeys it may use.
 2. If `write_section` is available, write each section with it
-   (`goal`, plus `papers` as ONE string of citekeys separated by spaces or
+   (`goal`, `max_words`, plus `papers` as ONE string of citekeys separated by spaces or
    commas). Otherwise write each section yourself only from `passages` of the
    listed papers, then run `verify` with `text` on what you wrote.
-3. Assemble the sections into the manuscript, then `compile`.
+3. Save each section as soon as it is written, byte for byte, to its own file `manuscript/sections/NN-name.tex`, and `\input{sections/NN-name}` it from `manuscript/main.tex`; finished sections then survive an interruption, and later revisions are targeted edits of one section file, never a rewrite of the whole manuscript. Keep `supported` sentences from `write_section` verbatim (rewriting a supported sentence invalidates its verification; to shorten, delete whole sentences rather than paraphrasing them). Put citations before the period (e.g. `fact~\cite{ref}.`) or separate sentences with a space or blank line so sentence boundaries split cleanly. Then `compile`.
 4. Run `verify` with `document` on the whole manuscript.
 5. Resolve every non-`supported` unit before reporting done: rewrite it from a
    passage of its cited paper, add the suggested citation, delete it, or mark
-   it explicitly unverified. Recompile, re-verify, and list what is still
-   unverified in your final report.
+   it explicitly unverified by writing the word "unverified" in it (for example
+   "(unverified)"). `compile` lists every statement that is neither verified nor
+   so marked as `UNLABELLED`; a finished document has none. Check `compile` output: resolve any `OPEN` figure
+   (not found in the cited paper's text; fails deliverable checks) by citing the paper
+   that states it, removing the number, or writing "not reported"; a `table-row` unit is
+   checked by its figures, not its wording, and one with a missing figure is resolved
+   the same way. Separate unverified
+   notes/anecdotes (which cite no paper) into their own paragraph with a blank line so
+   they are not merged with cited statements. Recompile, re-verify, and list what is
+   still unverified in your final report.
 
 `verify` document mode checks the text as written, 50 units per call; when
 the result says NOT DONE, call again with the `offset` it names until every
 unit is checked. Cited units are checked against their own papers, uncited units against all
 registered papers. `missing-citation` names the paper to cite;
-`unregistered` names a citekey the registry does not know.
+`unregistered` names a citekey the registry does not know — a unit that also
+cites registered papers is still checked against them, and its unknown keys
+are listed on the result. `skipped` was not checked: too short to check, or
+too long (split it and check the parts).
 
 ## Compiling the document
 

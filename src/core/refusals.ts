@@ -33,6 +33,15 @@ export interface RefusalEntry {
   next: string;
 }
 
+/**
+ * Host-specific `next` wording per code (Phase 9a): a message says what
+ * happened; `next` says what to do, and a host whose remedies differ from
+ * the Node CLI's (install commands, env names, config paths) supplies its
+ * own `next` per code. Absent codes fall back to the table below, so Node
+ * output is unchanged.
+ */
+export type RefusalNextOverrides = Partial<Record<RefusalCode, string>>;
+
 export const REFUSALS: Record<RefusalCode, RefusalEntry> = {
   REGISTRY_NOT_INITIALIZED: {
     next: "run `uktub-scholar init` in the project root, then retry",
@@ -109,7 +118,10 @@ export interface Refused {
 /**
  * The one refusal rendering (KTD6): `Refused: CODE — <message>. Next: <next>.`
  * The code and next text are byte-stable per code; the message is free-form.
+ * A host passes its per-code `next` overrides (absent codes keep the table
+ * text, so single-argument calls render exactly as before).
  */
-export function renderRefusal(refused: Refused): string {
-  return `Refused: ${refused.code} — ${refused.message}. Next: ${REFUSALS[refused.code].next}.`;
+export function renderRefusal(refused: Refused, nextOverrides?: RefusalNextOverrides): string {
+  const next = nextOverrides?.[refused.code] ?? REFUSALS[refused.code].next;
+  return `Refused: ${refused.code} — ${refused.message}. Next: ${next}.`;
 };

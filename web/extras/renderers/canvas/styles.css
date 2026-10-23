@@ -1,0 +1,186 @@
+/* extras/renderers/canvas/styles.css */
+@import "../shared/toolbar.css";
+@import "../shared/layout.css";
+
+.canvas-renderer-viewer *,
+.canvas-renderer-viewer *::before,
+.canvas-renderer-viewer *::after {
+	box-sizing: content-box;
+}
+
+.canvas-page .textLayer,
+.canvas-page .textLayer *,
+.canvas-page .interactiveLayer,
+.canvas-page .interactiveLayer *,
+.canvas-page .annotationLayer,
+.canvas-page .annotationLayer * {
+	box-sizing: border-box;
+}
+
+.canvas-toolbar #toolbar-left {
+	display: flex;
+	align-items: center;
+	flex: 1 1 auto;
+	min-width: min-content;
+	overflow: hidden;
+}
+
+.canvas-toolbar #toolbar-left .ui-panel-header[data-role="plugin"],
+.canvas-toolbar #toolbar-left .ui-panel-header[data-role="plugin"] .file-info,
+.canvas-toolbar
+	#toolbar-left
+	.ui-panel-header[data-role="plugin"]
+	.filepath-info {
+	border: none;
+	background-color: transparent;
+	min-width: 0;
+}
+
+.canvas-toolbar
+	#toolbar-left
+	.ui-panel-header[data-role="plugin"]
+	.filepath-info
+	> span {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	min-width: 0;
+}
+
+.canvas-renderer-content {
+	contain: layout paint;
+	overflow: auto;
+}
+
+.canvas-virtual-wrapper {
+	min-width: min-content;
+	flex: 0 0 auto;
+}
+
+.canvas-virtual-wrapper > .canvas-page {
+	position: absolute;
+	margin: 0;
+}
+
+.canvas-renderer-viewer {
+	min-height: 100%;
+	min-width: min-content;
+	width: 100%;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	padding: 10px 0;
+	box-sizing: border-box;
+	background-color: var(--pico-background);
+	text-align: center;
+}
+
+.canvas-page {
+	background-color: white;
+	box-shadow: 0 2px 8px var(--color-shadow);
+	position: relative;
+	display: inline-block;
+	line-height: 0;
+	margin: var(--space-xs);
+}
+
+.canvas-page-canvas {
+	display: block;
+}
+
+.canvas-page .textLayer {
+	position: absolute;
+	left: 0;
+	top: 0;
+	overflow: hidden;
+	pointer-events: none;
+	z-index: 2;
+	--total-scale-factor: var(--scale-factor, 1);
+	contain: strict;
+	font-family: sans-serif;
+}
+
+.canvas-page .textLayer > span {
+	position: absolute;
+	white-space: pre;
+	cursor: text;
+	transform-origin: 0% 0%;
+	color: transparent;
+	pointer-events: auto;
+	line-height: 1;
+}
+
+.canvas-page .textLayer .highlight {
+	margin: -1px;
+	padding: 1px;
+	background-color: rgba(180, 0, 255, 0.25);
+	border-radius: var(--radius-sm);
+	pointer-events: none;
+}
+
+.canvas-page .textLayer .highlight.selected {
+	background-color: rgba(0, 100, 255, 0.25);
+}
+
+.canvas-page .textLayer svg {
+	pointer-events: none;
+}
+
+.canvas-page .textLayer svg text,
+.canvas-page .textLayer svg [data-text] {
+	pointer-events: auto;
+	cursor: text;
+}
+
+.canvas-page .interactiveLayer {
+	position: absolute;
+	top: 0;
+	left: 0;
+	overflow: hidden;
+	pointer-events: none;
+	z-index: 3;
+}
+
+.canvas-page .annotationLayer {
+	position: absolute;
+	top: 0;
+	left: 0;
+	pointer-events: none;
+	z-index: 3;
+}
+
+.canvas-page .annotationLayer section {
+	position: absolute;
+	text-align: initial;
+	pointer-events: auto;
+	user-select: none !important;
+}
+
+.canvas-page .annotationLayer .linkAnnotation > a {
+	pointer-events: auto;
+}
+
+.canvas-page .annotationLayer .textWidgetAnnotation input,
+.canvas-page .annotationLayer .textWidgetAnnotation textarea,
+.canvas-page .annotationLayer .choiceWidgetAnnotation select {
+	background: rgba(0, 54, 255, 0.13);
+	border: 1px solid transparent;
+	box-sizing: border-box;
+	font-size: var(--font-size-nano);
+	height: 100%;
+	margin: 0;
+	padding: 0 3px;
+	vertical-align: top;
+	width: 100%;
+}
+
+.canvas-page .annotationLayer .buttonWidgetAnnotation.checkBox input,
+.canvas-page .annotationLayer .buttonWidgetAnnotation.radioButton input {
+	background: rgba(0, 54, 255, 0.13);
+	border: 1px solid transparent;
+	box-sizing: border-box;
+	height: 100%;
+	margin: 0;
+	vertical-align: top;
+	width: 100%;
+}

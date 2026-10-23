@@ -9,3 +9,5 @@ verification:
   min_confidence: 0.99    # client policy: scientific-writing confidence bar
   workers: 4              # concurrent chunk-verification lanes
   max_judgments: 120      # client policy: fresh judgments per call (≈ 7 min on a 20-requests/minute hosted tier)
+provenance:
+  results_glob: results/**/*.{csv,json,txt,log}  # client policy: where the computed-results audit searches a figure no registered paper is cited for

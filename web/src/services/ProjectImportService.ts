@@ -1,0 +1,437 @@
+// src/services/ProjectImportService.ts
+import { t } from '@/i18n';
+import { createNamedLogger } from '@/logging';
+import type { Project, ProjectCreateInput } from '../types/projects';
+import { authService } from './AuthService';
+import { UnifiedDataStructureService } from './BackupLayoutService';
+import { ProjectDataService } from './ProjectDataService';
+import { uktubProjectService } from './UktubProjectService';
+import {
+	DirectoryTarget,
+	type WriteTarget,
+	WriteTargetService,
+	ZipTarget,
+} from './WriteTargetService';
+import { generateYjsProjectId } from '../utils/urlUtils';
+
+const moduleLog = createNamedLogger('ProjectImportService');
+
+export interface ImportableProject {
+	id: string;
+	name: string;
+	description: string;
+	originalOwnerId: string;
+	lastModified: number;
+	source: 'backup' | 'zip' | 'directory';
+	sourcePath?: string;
+}
+
+export interface ImportOptions {
+	makeCollaborator?: boolean;
+	conflictResolution?: 'skip' | 'overwrite' | 'create-new';
+}
+
+export interface ImportResult {
+	imported: string[];
+	skipped: string[];
+	errors: { projectId: string; error: string }[];
+}
+
+class ProjectImportService {
+	private dataSerializer = new ProjectDataService();
+	private fileSystemManager = new WriteTargetService();
+	private unifiedService = new UnifiedDataStructureService();
+
+	private generateUniqueProjectName(
+		baseName: string,
+		existingNames: Set<string>,
+	): string {
+		let candidateName = `${baseName} (imported)`;
+		let counter = 2;
+
+		while (existingNames.has(candidateName)) {
+			candidateName = `${baseName} (imported ${counter})`;
+			counter++;
+		}
+		return candidateName;
+	}
+
+	async scanBackupDirectory(
+		rootHandle: FileSystemDirectoryHandle,
+	): Promise<ImportableProject[]> {
+		const importableProjects: ImportableProject[] = [];
+
+		try {
+			const adapter = new DirectoryTarget(rootHandle);
+
+			if (!(await adapter.exists(this.unifiedService.getPaths().MANIFEST))) {
+				return [];
+			}
+
+			const data = await this.fileSystemManager.readUnifiedStructure(adapter);
+
+			if (!this.unifiedService.validateStructure(data)) {
+				return [];
+			}
+
+			const currentUser = authService.getCurrentUser();
+			if (!currentUser) return [];
+
+			const existingProjects = await authService.getProjectsByUser(
+				currentUser.id,
+			);
+			const existingProjectIds = new Set(existingProjects.map((p) => p.id));
+
+			for (const project of data.projects) {
+				if (!existingProjectIds.has(project.id)) {
+					importableProjects.push({
+						id: project.id,
+						name: project.name,
+						description: project.description,
+						originalOwnerId: project.ownerId,
+						lastModified:
+							project.lastSync || project.exportedAt || project.updatedAt,
+						source: 'backup',
+					});
+				}
+			}
+		} catch (error) {
+			moduleLog.error('Error scanning backup directory:', error);
+		}
+
+		return importableProjects;
+	}
+
+	async scanZipFile(file: File): Promise<ImportableProject[]> {
+		const importableProjects: ImportableProject[] = [];
+
+		try {
+			const zipAdapter = new ZipTarget();
+			await zipAdapter.loadFromBlob(file);
+
+			if (!(await zipAdapter.exists(this.unifiedService.getPaths().MANIFEST))) {
+				return [];
+			}
+
+			const data =
+				await this.fileSystemManager.readUnifiedStructure(zipAdapter);
+
+			if (!this.unifiedService.validateStructure(data)) {
+				return [];
+			}
+
+			for (const project of data.projects) {
+				importableProjects.push({
+					id: project.id,
+					name: project.name,
+					description: project.description,
+					originalOwnerId: project.ownerId,
+					lastModified:
+						project.lastSync || project.exportedAt || project.updatedAt,
+					source: 'zip',
+					sourcePath: file.name,
+				});
+			}
+		} catch (error) {
+			moduleLog.error('Error scanning ZIP file:', error);
+		}
+
+		return importableProjects;
+	}
+
+	async importFromBackup(
+		rootHandle: FileSystemDirectoryHandle,
+		projectIds: string[],
+		options: ImportOptions = {},
+	): Promise<ImportResult> {
+		const result: ImportResult = { imported: [], skipped: [], errors: [] };
+
+		try {
+			const adapter = new DirectoryTarget(rootHandle);
+			const data = await this.fileSystemManager.readUnifiedStructure(adapter);
+
+			const uktubPayloads = await this.readUktubPayloads(adapter, projectIds);
+			await this.processImport(data, projectIds, options, result, uktubPayloads);
+		} catch (error) {
+			moduleLog.error('Error importing from backup:', error);
+			projectIds.forEach((id) => {
+				result.errors.push({
+					projectId: id,
+					error: error instanceof Error ? error.message : t('Unknown error'),
+				});
+			});
+		}
+
+		return result;
+	}
+
+	async importFromZip(
+		file: File,
+		projectIds: string[],
+		options: ImportOptions = {},
+	): Promise<ImportResult> {
+		const result: ImportResult = { imported: [], skipped: [], errors: [] };
+
+		try {
+			const zipAdapter = new ZipTarget();
+			await zipAdapter.loadFromBlob(file);
+			const data =
+				await this.fileSystemManager.readUnifiedStructure(zipAdapter);
+
+			const uktubPayloads = await this.readUktubPayloads(zipAdapter, projectIds);
+			await this.processImport(data, projectIds, options, result, uktubPayloads);
+		} catch (error) {
+			moduleLog.error('Error importing from zip:', error);
+			projectIds.forEach((id) => {
+				result.errors.push({
+					projectId: id,
+					error: error instanceof Error ? error.message : t('Unknown error'),
+				});
+			});
+		}
+
+		return result;
+	}
+
+	private async processImport(
+		data: any,
+		projectIds: string[],
+		options: ImportOptions,
+		result: ImportResult,
+		uktubPayloads?: Map<string, { zip: Uint8Array; registry: Uint8Array | null }>,
+	): Promise<void> {
+		const currentUser = authService.getCurrentUser();
+		if (!currentUser) throw new Error(t('No authenticated user'));
+
+		const existingProjects = await authService.getProjectsByUser(
+			currentUser.id,
+		);
+		const existingProjectNames = new Set(existingProjects.map((p) => p.name));
+
+		for (const projectId of projectIds) {
+			try {
+				const projectMetadata = data.projects.find(
+					(p: any) => p.id === projectId,
+				);
+				if (!projectMetadata) {
+					result.errors.push({
+						projectId,
+						error: 'Project not found in source',
+					});
+					continue;
+				}
+
+				let finalProjectId = projectId;
+				let finalProjectName = projectMetadata.name;
+				let finalDocUrl = projectMetadata.docUrl;
+				let shouldCreateNewProject = true;
+
+				if (existingProjects.some((p) => p.id === projectId)) {
+					if (options.conflictResolution === 'skip') {
+						result.skipped.push(projectId);
+						continue;
+					}
+					if (options.conflictResolution === 'overwrite') {
+						await authService.deleteProject(projectId);
+						shouldCreateNewProject = true;
+					} else if (options.conflictResolution === 'create-new') {
+						finalProjectId = generateYjsProjectId();
+						finalProjectName = this.generateUniqueProjectName(
+							projectMetadata.name,
+							existingProjectNames,
+						);
+						finalDocUrl = `yjs:${finalProjectId}`;
+						shouldCreateNewProject = true;
+					}
+				}
+
+				if (shouldCreateNewProject) {
+					const projectToCreate: Omit<
+						Project,
+						'id' | 'createdAt' | 'updatedAt' | 'ownerId'
+					> = {
+						name: finalProjectName,
+						description: projectMetadata.description,
+						type: projectMetadata.type || 'latex',
+						group: projectMetadata.group,
+						docUrl: finalDocUrl,
+						tags: projectMetadata.tags || [],
+						isFavorite: false,
+					};
+
+					await this.createProjectDirectly(
+						projectToCreate,
+						finalProjectId,
+						currentUser.id,
+					);
+					existingProjectNames.add(finalProjectName);
+				}
+
+				const projectDataToImport = data.projectData.get(projectId);
+				if (projectDataToImport) {
+					const updatedMetadata = {
+						...projectDataToImport.metadata,
+						id: finalProjectId,
+						name: finalProjectName,
+						docUrl: finalDocUrl,
+					};
+
+					await this.importProjectDataSafely(
+						finalProjectId,
+						finalDocUrl,
+						updatedMetadata,
+						projectDataToImport,
+					);
+				}
+
+				// Archives written by the TeXlyre-format export carry the
+				// project's Uktub worker state (`/proj` files + registry DB).
+				// Import it into the NEW project's storage before it can be
+				// opened, so the first open shows the registry, bib, sections
+				// and results. A failed Uktub import fails this project's
+				// import: the created project is removed again (no
+				// half-imported project left listed). Archives without the
+				// payload import exactly as before.
+				const uktubPayload = uktubPayloads?.get(projectId);
+				if (uktubPayload) {
+					try {
+						await uktubProjectService.importUktubPayload(
+							finalProjectId,
+							uktubPayload,
+						);
+					} catch (error) {
+						try {
+							await authService.deleteProject(finalProjectId);
+						} catch {
+							// Cleanup is best-effort; the import error below
+							// is what matters.
+						}
+						result.errors.push({
+							projectId,
+							error: error instanceof Error ? error.message : t('Unknown error'),
+						});
+						continue;
+					}
+				}
+
+				result.imported.push(projectId);
+			} catch (error) {
+				result.errors.push({
+					projectId,
+					error: error instanceof Error ? error.message : t('Unknown error'),
+				});
+			}
+		}
+	}
+
+	/** Uktub payloads (`projects/<id>/uktub/`) carried by the archive, if any. */
+	private async readUktubPayloads(
+		adapter: WriteTarget,
+		projectIds: string[],
+	): Promise<
+		Map<string, { zip: Uint8Array; registry: Uint8Array | null }>
+	> {
+		const payloads = new Map<
+			string,
+			{ zip: Uint8Array; registry: Uint8Array | null }
+		>();
+		for (const projectId of projectIds) {
+			const payload = await this.readUktubPayload(adapter, projectId);
+			if (payload) payloads.set(projectId, payload);
+		}
+		return payloads;
+	}
+
+	private async readUktubPayload(
+		adapter: WriteTarget,
+		sourceProjectId: string,
+	): Promise<{ zip: Uint8Array; registry: Uint8Array | null } | null> {
+		const zipPath =
+			this.unifiedService.getUktubFilesZipPath(sourceProjectId);
+		if (!(await adapter.exists(zipPath))) return null;
+		const zip = await this.readPayloadBytes(adapter, zipPath);
+		if (!zip) return null;
+		const registryPath =
+			this.unifiedService.getUktubRegistryPath(sourceProjectId);
+		const registry = (await adapter.exists(registryPath))
+			? await this.readPayloadBytes(adapter, registryPath)
+			: null;
+		return { zip, registry };
+	}
+
+	private async readPayloadBytes(
+		adapter: WriteTarget,
+		path: string,
+	): Promise<Uint8Array | null> {
+		try {
+			const data: unknown = await adapter.readFile(path);
+			if (data instanceof Uint8Array) return Uint8Array.from(data);
+			if (data instanceof ArrayBuffer) return new Uint8Array(data);
+			if (typeof data === 'string') return new TextEncoder().encode(data);
+			return null;
+		} catch {
+			return null;
+		}
+	}
+
+	private async importProjectDataSafely(
+		projectId: string,
+		docUrl: string,
+		metadata: any,
+		projectData: any,
+	): Promise<void> {
+		const filteredData = {
+			manifest: {
+				version: '1.0.0',
+				lastSync: Date.now(),
+				mode: 'import' as const,
+			},
+			account: null,
+			projects: [metadata],
+			projectData: new Map([[projectId, projectData]]),
+		};
+
+		await this.dataSerializer.deserializeToIndexedDB(
+			filteredData,
+			projectId,
+			docUrl,
+		);
+	}
+
+	private async createProjectDirectly(
+		projectData: ProjectCreateInput,
+		projectId: string,
+		ownerId: string,
+	): Promise<void> {
+		const authDb =
+			(await authService.db) ||
+			(await authService.initialize().then(() => authService.db));
+
+		if (!authDb) {
+			throw new Error(t('Could not access auth database'));
+		}
+
+		const now = Date.now();
+		if (!projectData.docUrl) {
+			throw new Error(t('Imported project is missing its document URL'));
+		}
+
+		const newProject: Project = {
+			id: projectId,
+			name: projectData.name,
+			description: projectData.description,
+			type: projectData.type || 'latex',
+			group: projectData.group,
+			docUrl: projectData.docUrl,
+			createdAt: now,
+			updatedAt: now,
+			ownerId: ownerId,
+			tags: projectData.tags,
+			isFavorite: projectData.isFavorite,
+		};
+
+		await authDb.put('projects', newProject);
+	}
+}
+
+export const projectImportService = new ProjectImportService();

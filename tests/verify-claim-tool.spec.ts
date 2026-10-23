@@ -16,7 +16,7 @@ import { Value } from "typebox/value";
 import { WriteQueue } from "../src/core/queue.ts";
 import { createRegistry, deregisterPapers, registerPaper } from "../src/core/registry.ts";
 import type { ToolContext } from "../src/core/tools/context.ts";
-import { MAX_EVIDENCE_PER_PAGE, MAX_PAGE_EXCERPT_CHARS, VerifyClaimOutput, verifyClaimTool, type VerifyClaimArgs, type VerifyHooks } from "../src/core/tools/verify.ts";
+import { MAX_EVIDENCE_PER_PAGE, MAX_PAGE_EXCERPT_CHARS, VerifyClaimOutput, VerifyParams, verifyClaimTool, type VerifyClaimArgs, type VerifyHooks } from "../src/core/tools/verify.ts";
 import { EngineError } from "../src/core/verify/claim.ts";
 import { chunksOf, getSource, publishSource, resolvePointer } from "../src/core/verify/store.ts";
 import { SourceError } from "../src/core/source/extract.ts";
@@ -100,7 +100,8 @@ function ctx(over: Partial<ToolContext> = {}): ToolContext {
     fetch: (async () => {
       throw new Error("no network");
     }) as ToolContext["fetch"],
-    env: { UKTUB_VERIFY_MODEL_ID: "test-model" },
+    // The exhaustive path, pinned: the hosted top10 default is covered in verify-strategy.spec.ts.
+    env: { UKTUB_VERIFY_MODEL_ID: "test-model", UKTUB_VERIFY_STRATEGY: "exhaustive" },
     now: NOW,
     queue: new WriteQueue(),
     ...over,
@@ -122,9 +123,20 @@ describe("scope and arguments", () => {
     }
   });
   it("refuses an empty explicit ID list (never read as all) and an out-of-range claim", async () => {
-    assert.equal(refused(await run({ papers: [] }, NO_ENGINE)), "ARGUMENT_INVALID");
+    for (const empty of [[], "", "   ", "[]", '[""]', '["unclosed'] as unknown[]) {
+      assert.equal(refused(await run({ papers: empty as never }, NO_ENGINE)), "ARGUMENT_INVALID", JSON.stringify(empty));
+    }
     assert.equal(refused(await run({ claim: "short", papers: "all" }, NO_ENGINE)), "ARGUMENT_INVALID");
     assert.equal(refused(await run({ claim: "x".repeat(2001), papers: "all" }, NO_ENGINE)), "ARGUMENT_INVALID");
+  });
+  it("accepts papers as a JSON-string array or comma/space-separated string in both schema and tool", async () => {
+    addPaper("10.1111/aaa", "Alpha", paperText("A", 30, 5).text);
+    addPaper("10.2222/bbb", "Beta", paperText("B", 30, null).text);
+    for (const raw of ["10.1111/aaa", '["10.1111/aaa"]', "10.1111/aaa, 10.2222/bbb", '["10.1111/aaa", "10.2222/bbb"]']) {
+      assert.ok(Value.Check(VerifyParams, { claim: CLAIM, papers: raw }), `schema accepts ${raw}`);
+      const r = await run({ papers: raw as never }, engine().hooks);
+      assert.equal(S(r).result.supportFound, true, raw);
+    }
   });
   it("an empty registry is a valid empty scope and needs no engine", async () => {
     const r = await run({ papers: "all" }, NO_ENGINE);
@@ -204,8 +216,14 @@ describe("source preparation inside verification (R7, AE3)", () => {
   it("a paper whose source cannot be acquired is reported with its reason; others still contribute", async () => {
     addPaper("10.1111/aaa", "Alpha", paperText("A", 30, 5).text);
     addPaper("10.2222/bbb", "Beta Unreachable", null);
-    const { fetchFn } = createFakeFetch([{ match: (u) => u.startsWith("https://api.openalex.test/works/"), status: 404, body: "{}" }]);
-    const r = await run({ papers: "all" }, engine().hooks, ctx({ fetch: fetchFn, download: async () => { throw new SourceError("download_failed", "x"); }, providerConfig: { openalexBaseUrl: "https://api.openalex.test" } }));
+    const { fetchFn } = createFakeFetch([
+      { match: (u) => u.startsWith("https://api.openalex.test/works/"), status: 404, body: "{}" },
+      // Europe PMC answers with no record (documented: HTTP 200 + hitCount 0), so the outcome is a genuine "no open copy".
+      { match: (u) => u.startsWith("https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=DOI"), body: JSON.stringify({ hitCount: 0, resultList: { result: [] } }) },
+      // Semantic Scholar answers an unknown paper with its documented HTTP 404: also a genuine "no copy".
+      { match: (u) => u.startsWith("https://api.semanticscholar.test/graph/v1/paper/DOI:"), status: 404, body: JSON.stringify({ error: "Paper with id DOI:10.2222/bbb not found" }) },
+    ]);
+    const r = await run({ papers: "all" }, engine().hooks, ctx({ fetch: fetchFn, download: async () => { throw new SourceError("download_failed", "x"); }, providerConfig: { openalexBaseUrl: "https://api.openalex.test", semanticScholarBaseUrl: "https://api.semanticscholar.test" } }));
     assert.equal(S(r).result.supportFound, true);
     assert.equal(S(r).result.complete, false, "support was found but coverage is incomplete");
     assert.ok(S(r).result.limitations.includes("sources_unavailable"));

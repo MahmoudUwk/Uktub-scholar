@@ -1,0 +1,33 @@
+// src/types/documents.ts
+import type { TypstPdfOptions, TypstOutputFormat } from './typst';
+import type { LaTeXEngine, LaTeXOutputFormat } from './latex';
+import type { ProjectType, ProjectGroup } from './projects';
+
+export interface Document {
+	id: string;
+	content: string;
+	name: string;
+	createdAt?: number;
+}
+
+export interface DocumentList {
+	documents: Document[];
+	currentDocId: string;
+	cursors: unknown[];
+	projectMetadata?: {
+		name: string;
+		description: string;
+		type?: ProjectType;
+		group?: ProjectGroup;
+		compilerId?: string;
+		mainFile?: string;
+		latexEngine?: LaTeXEngine;
+		typstEngine?: string;
+		latexOutputFormat?: LaTeXOutputFormat;
+		typstOutputFormat?: TypstOutputFormat;
+		latexAutoCompileOnSave?: boolean;
+		typstAutoCompileOnSave?: boolean;
+		typstPdfOptions?: TypstPdfOptions;
+		trackedFiles?: string[];
+	};
+}

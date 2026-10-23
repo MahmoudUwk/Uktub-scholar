@@ -1,0 +1,30 @@
+{
+  "name": "write_section",
+  "label": "Write section from papers",
+  "description": "Write ONE manuscript section in LaTeX for `goal`, using only facts from passages of the listed papers. `papers` is ONE string of citekeys separated by spaces or commas (or an array of citekeys). Every factual sentence ends with \\cite{key}; anything the papers do not support is left out or marked explicitly unverified. The section is verified as written with `verify` document mode and failures get one repair round. Returns the LaTeX, a summary, and the unresolved units. It never writes files: paste the returned LaTeX into the manuscript verbatim (rewriting invalidates its verification) and resolve any listed unresolved units.",
+  "parameters": {
+    "type": "object",
+    "required": [
+      "goal",
+      "papers"
+    ],
+    "properties": {
+      "goal": {
+        "type": "string",
+        "description": "What this section must say"
+      },
+      "papers": {
+        "type": "string",
+        "description": "ONE string of citekeys separated by spaces or commas (never an array)"
+      },
+      "query": {
+        "type": "string",
+        "description": "Focus: which passages of the papers to build the section from"
+      },
+      "max_words": {
+        "type": "number",
+        "description": "Longest the section may be, in words"
+      }
+    }
+  }
+}

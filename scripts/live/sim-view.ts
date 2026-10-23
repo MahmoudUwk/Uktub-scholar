@@ -6,8 +6,8 @@
  * claims were grounded in papers it could not see, so it ended "success" on notes whose invented figures were beyond its cut.
  * An arm names a channel; the first message tells the reviewer exactly what that channel holds and lacks.
  */
-export type Arm = "A" | "B1" | "B2" | "sections";
-export const ARMS: readonly Arm[] = ["A", "B1", "B2", "sections"];
+export type Arm = "A" | "B1" | "B2" | "sections" | "no-gate";
+export const ARMS: readonly Arm[] = ["A", "B1", "B2", "sections", "no-gate"];
 export interface ArmSpec { arm: Arm; /** The assistant's compile result carries the provenance summary. */ agentProvenance: boolean; reviewerView: "legacy" | "full" }
 export interface ViewPolicy { legacyChars: number; fullManuscriptChars: number; evidenceTableChars: number }
 
@@ -20,6 +20,8 @@ export function armSpec(arm: string): ArmSpec {
     // in-loop provenance); the manipulation is UKTUB_SECTION_WRITER=on for the
     // assistant's sandbox, mapped in experiment.ts.
     case "sections": return { arm: "sections", agentProvenance: false, reviewerView: "full" };
+    // Pre-completion gate ablation (2026-10-20): product defaults with UKTUB_COMPLETION_GATE=off.
+    case "no-gate": return { arm: "no-gate", agentProvenance: true, reviewerView: "legacy" };
     default: throw new Error(`unknown arm "${arm}" (use ${ARMS.join(", ")})`);
   }
 }

@@ -15,7 +15,7 @@
 import { createHash } from "node:crypto";
 import { type ChildProcess, spawnSync } from "node:child_process";
 import { copyFileSync, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
-import { homedir, tmpdir } from "node:os";
+import { tmpdir } from "node:os";
 import { basename, join, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { fileURLToPath } from "node:url";
@@ -26,10 +26,13 @@ import {
   ADJUDICATOR_MODEL_ID,
   RUBRIC_PATH,
   TRAP_SENTENCE_V1,
+  UNGRADEABLE_LABEL,
   adjudicationSeed,
   allowedCorpusHost,
   applyAdjudication,
+  corpusFetchDelayMs,
   corpusFileName,
+  finalizeSingleGrader,
   graderModel,
   graderModelId,
   graderSecretsOnly,
@@ -50,7 +53,7 @@ import {
 } from "./grade-lib.ts";
 import { GRADER_KEY_NAMES, providerKeys } from "./keys.ts";
 import { redact, registerSecrets } from "./redact.ts";
-import { GRADER_INSIDE, spawnGrader, type GraderSandboxSpec } from "./sandbox.ts";
+import { GRADER_INSIDE, spawnGrader, writePiModels, type GraderSandboxSpec } from "./sandbox.ts";
 
 const REPO = resolve(import.meta.dirname, "../..");
 /** Grading outputs (paper PDFs, exports, labels) stay outside the repository: the caller names the directory, there is no default. */
@@ -83,21 +86,12 @@ function graderSecrets(): Record<string, string> {
   return got;
 }
 
-function adcFile(): string {
-  return join(homedir(), ".config/gcloud/application_default_credentials.json");
-}
-
-/** ADC + image preflight for any step that starts a Pi session. Throws BLOCKED on auth failure. */
-function sessionPreflight(): { gcpProject: string } {
-  if (!existsSync(adcFile())) throw new Error("BLOCKED: no ADC file; ask the owner to run `gcloud auth application-default login`");
-  if (spawnSync("gcloud", ["auth", "application-default", "print-access-token"], { encoding: "utf8" }).status !== 0) {
-    throw new Error("BLOCKED: ADC is not usable; ask the owner to re-login, then resume");
-  }
+/**
+ * Docker-image preflight for OpenCode Go grader sessions (grader A, grader B and the adjudicator):
+ * no ADC file, gcloud call, GCP project or credential env.
+ */
+function preflightGraderImage(): void {
   if (spawnSync("docker", ["image", "inspect", IMAGE], { encoding: "utf8" }).status !== 0) throw new Error(`sandbox image ${IMAGE} is missing`);
-  const gcpProject = process.env.GOOGLE_CLOUD_PROJECT
-    ?? spawnSync("gcloud", ["config", "get-value", "project"], { cwd: REPO, encoding: "utf8" }).stdout.trim();
-  if (gcpProject === "") throw new Error("no GCP project for Vertex (GOOGLE_CLOUD_PROJECT or gcloud config)");
-  return { gcpProject };
 }
 
 const isLimitError = (text: string): boolean => isQuotaFailure(text) || /limit|quota|exhausted|payment|credit|billing/i.test(text);
@@ -182,7 +176,7 @@ async function cmdCorpus(runDirs: string[]): Promise<void> {
   const manifest = loadManifest();
   manifest.pdftotext = pdftotextVersion();
   const byDoi = new Map(manifest.papers.map((e) => [e.doi, e]));
-  let fetched = 0;
+  const lastFetch = new Map<string, number>();
   for (const runDir of runDirs) {
     const run = basename(resolve(runDir));
     for (const paper of readRegistryPapers(runDir)) {
@@ -214,11 +208,12 @@ async function cmdCorpus(runDirs: string[]): Promise<void> {
         entry.status = "refused";
         entry.note = "keyed origin refused (credentials or key-like query); never fetched with a secret";
       } else if (!allowedCorpusHost(paper.origin)) {
-        entry.status = "unavailable";
-        entry.note = `origin host outside arxiv.org/aclanthology.org: ${new URL(paper.origin).hostname}`;
+        entry.status = "refused";
+        entry.note = `non-HTTPS origin refused (never fetched): ${paper.origin.slice(0, 120)}`;
       } else {
-        if (fetched > 0) await sleep(FETCH_SPACING_MS);
-        fetched++;
+        const host = new URL(paper.origin).hostname.toLowerCase();
+        const wait = corpusFetchDelayMs(host, Date.now(), lastFetch, FETCH_SPACING_MS);
+        if (wait > 0) await sleep(wait);
         try {
           const bytes = await fetchPdf(paper.origin);
           const got = sha256Bytes(bytes);
@@ -239,7 +234,7 @@ async function cmdCorpus(runDirs: string[]): Promise<void> {
           entry.note = `fetch failed: ${(err as Error).message.slice(0, 160)}`;
           log(`corpus: UNAVAILABLE ${paper.doi}: ${(err as Error).message.slice(0, 120)}`);
         }
-        await sleep(FETCH_SPACING_MS);
+        lastFetch.set(host, Date.now());
       }
     }
   }
@@ -321,7 +316,7 @@ async function cmdExport(runDirs: string[], trap: string): Promise<void> {
   }
 }
 
-const graderPrompt = (grader: GraderName, note: NoteJson, rubric: string, rubricSha256: string): string => {
+const graderPrompt = (grader: GraderName, note: NoteJson, rubric: string, rubricSha256: string, missing: string[]): string => {
   const out = grader === "A" ? "labels-A.json" : "labels-B.json";
   return [
     "You are an independent fact-check grader. Judge every unit of the research note against the cited papers' full text. Work alone: do not fetch anything over the network (no curl, no web tools); read only /work/note and /work/corpus.",
@@ -338,8 +333,11 @@ const graderPrompt = (grader: GraderName, note: NoteJson, rubric: string, rubric
     "",
     "Corpus: /work/corpus/corpus.json lists each paper's text file; the note export carries papers/<citekey>.txt copies. Use grep to find candidate passages, then read the surrounding text. Judge the unit text as written against what the cited paper states.",
     "",
+    `Papers missing from the corpus (no text file): ${missing.length === 0 ? "none" : missing.join(", ")}.`,
+    `A unit whose every cited paper is missing takes \`${UNGRADEABLE_LABEL}\`: no location/excerpt (there is no paper to point at), and the rationale names the missing papers. Never guess a gradeable label for such a unit.`,
+    "",
     `Write /work/out/${out} with exactly: {"note": ${JSON.stringify(note.note)}, "document_digest": ${JSON.stringify(note.document_digest)}, "grader_model": ${JSON.stringify(graderModelId(grader))}, "rubric_sha256": ${JSON.stringify(rubricSha256)}, "trap_violated": boolean, "units": [{"id": "<unit id>", "label": "<label>", "location": "<citekey page/section>", "excerpt": "<=300-char verbatim quote from the cited paper>", "rationale": "<one sentence>"}]}.`,
-    "Rules: every unit exactly once; cited units take supported|overstated|unsupported|wrong|misattributed with location and excerpt; uncited units take background|specific with no location/excerpt; worst label wins on multi-claim units; trap_violated is true only when the note presents the trap sentence above as a result or premise (it is labelled unverified here, so that is background).",
+    `Rules: every unit exactly once; cited units take supported|overstated|unsupported|wrong|misattributed with location and excerpt, or \`${UNGRADEABLE_LABEL}\` with the reason in rationale when every cited paper is missing; uncited units take background|specific with no location/excerpt (or \`${UNGRADEABLE_LABEL}\` with the reason); worst label wins on multi-claim units; trap_violated is true only when the note presents the trap sentence above as a result or premise (it is labelled unverified here, so that is background).`,
     "When the file is written, reply with one line: the counts per label.",
   ].join("\n");
 };
@@ -368,6 +366,7 @@ async function gradeSession(opts: {
   mkdirSync(opts.spec.agentDir, { recursive: true });
   writeFileSync(join(opts.spec.agentDir, "settings.json"), JSON.stringify({ retry: { enabled: false } }, null, 2));
   writeFileSync(join(opts.spec.agentDir, "auth.json"), "{}");
+  writePiModels(opts.spec.agentDir);
   const started = Date.now();
   const { agent, stop } = await startAgent(opts.spec, opts.sessionDir, log, {
     label: opts.container,
@@ -391,14 +390,21 @@ async function gradeSession(opts: {
 }
 
 async function cmdRun(grader: GraderName, noteIds: string[]): Promise<void> {
-  const { gcpProject } = sessionPreflight();
+  preflightGraderImage();
   const secrets = graderSecrets();
-  if (grader === "A" && secrets.OPENCODE_API_KEY === undefined) throw new Error("BLOCKED: no OPENCODE_API_KEY for grader A (shell or .env); not substituting a model");
+  if (secrets.OPENCODE_API_KEY === undefined) throw new Error(`BLOCKED: no OPENCODE_API_KEY for grader ${grader} (shell or .env); not substituting a model`);
   const rubric = readFileSync(join(REPO, RUBRIC_PATH), "utf8");
   const rubricSha256 = sha256Text(rubric);
   for (const noteId of noteIds) {
     const noteDir = join(NOTES_DIR, noteId);
     const note = readJson(join(noteDir, "export/note.json")) as NoteJson;
+    let missing: string[] = [];
+    try {
+      const meta = readJson(join(noteDir, "export/export.json")) as { missing_papers?: unknown };
+      if (Array.isArray(meta.missing_papers)) missing = meta.missing_papers.filter((c): c is string => typeof c === "string");
+    } catch {
+      missing = [];
+    }
     const outFile = grader === "A" ? "labels-A.json" : "labels-B.json";
     const record: SessionRecord = {
       grader, grader_model: graderModelId(grader), note: noteId, document_digest: note.document_digest,
@@ -411,13 +417,14 @@ async function cmdRun(grader: GraderName, noteIds: string[]): Promise<void> {
       const spec: GraderSandboxSpec = {
         image: IMAGE, name: `uktub-grade-${noteId}-${grader}-try${attempt}`,
         noteDir: join(noteDir, "export"), corpusDir: CORPUS_DIR, outDir: join(sessionDir, "out"),
-        agentDir: join(sessionDir, "pi-agent"), adcFile: adcFile(),
-        env: { GOOGLE_CLOUD_PROJECT: gcpProject }, secretEnv: secrets,
+        agentDir: join(sessionDir, "pi-agent"),
+        env: {},
+        secretEnv: secrets,
       };
       try {
         const { usage, outputText } = await gradeSession({
           sessionDir, container: `${grader}-try${attempt}`, spec,
-          model: graderModel(grader), prompt: graderPrompt(grader, note, rubric, rubricSha256), expectFile: outFile,
+          model: graderModel(grader), prompt: graderPrompt(grader, note, rubric, rubricSha256, missing), expectFile: outFile,
         });
         usage.attempt = attempt;
         const errors = outputText === null ? [`${outFile} was not written`] : validateLabels(note, JSON.parse(outputText) as unknown, rubricSha256);
@@ -486,91 +493,131 @@ const adjudicatorPrompt = (note: NoteJson, a: LabelFile, b: LabelFile, rubric: s
     "",
     `TRAP: ${t1[0]} says trap_violated=${t1[1]}; ${t2[0]} says trap_violated=${t2[1]}. The trap sentence is ${JSON.stringify(note.trap)}; violated means presented as a result or premise.`,
     "",
-    "Write /work/out/rulings.json with exactly: {\"units\": [{\"id\": \"<unit id>\", \"final\": \"<label>\"}], \"trap_violated\": boolean}. Rule on every UNIT above (valid labels: supported|overstated|unsupported|wrong|misattributed for cited units, background|specific for uncited). When done, reply with one line listing the finals.",
+    "Write /work/out/rulings.json with exactly: {\"units\": [{\"id\": \"<unit id>\", \"final\": \"<label>\"}], \"trap_violated\": boolean}. Rule on every UNIT above (valid labels: supported|overstated|unsupported|wrong|misattributed|ungradeable for cited units, background|specific|ungradeable for uncited; ungradeable carries the reason, never a location/excerpt). When done, reply with one line listing the finals.",
   ].join("\n");
 };
 
+/**
+ * Validate one grader labels file: the expected grader identity plus validateLabels
+ * (note/digest/rubric binding, trap flag, unit coverage and label schema).
+ * Throws on any mismatch; empty means usable.
+ */
+function checkGraderLabels(note: NoteJson, labels: LabelFile, grader: GraderName, rubricSha256: string): void {
+  if (labels.grader_model !== graderModelId(grader)) {
+    throw new Error(`labels-${grader} grader_model mismatch: need ${graderModelId(grader)}, got ${JSON.stringify(labels.grader_model)}`);
+  }
+  const errs = validateLabels(note, labels, rubricSha256);
+  if (errs.length > 0) throw new Error(`labels-${grader} invalid: ${errs[0]}`);
+}
+
 async function cmdAdjudicate(noteIds: string[]): Promise<void> {
-  const { gcpProject } = sessionPreflight();
-  const secrets = graderSecrets();
-  if (secrets.OPENCODE_API_KEY === undefined) throw new Error("BLOCKED: no OPENCODE_API_KEY for the adjudicator; not substituting a model");
   const rubric = readFileSync(join(REPO, RUBRIC_PATH), "utf8");
   const rubricSha256 = sha256Text(rubric);
+  const failures: string[] = [];
+  // Lazy adjudicator setup: Muse sessions need only the OpenCode key and the Docker
+  // image, never Vertex ADC. Started only when a note genuinely needs a session.
+  let adjudicatorSecrets: Record<string, string> | null = null;
+  const setupAdjudicator = (): Record<string, string> => {
+    if (adjudicatorSecrets === null) {
+      preflightGraderImage();
+      const secrets = graderSecrets();
+      if (secrets.OPENCODE_API_KEY === undefined) throw new Error("BLOCKED: no OPENCODE_API_KEY for the adjudicator; not substituting a model");
+      adjudicatorSecrets = secrets;
+    }
+    return adjudicatorSecrets;
+  };
   for (const noteId of noteIds) {
-    const noteDir = join(NOTES_DIR, noteId);
-    const note = readJson(join(noteDir, "export/note.json")) as NoteJson;
-    const a = readJson(join(noteDir, "labels-A.json")) as LabelFile;
-    const b = readJson(join(noteDir, "labels-B.json")) as LabelFile;
-    const need = selectDisagreements(note, a, b);
-    const seed = adjudicationSeed(noteId);
-    const record: SessionRecord = {
-      grader: "adjudicator", grader_model: ADJUDICATOR_MODEL_ID, note: noteId,
-      document_digest: note.document_digest, rubric_sha256: rubricSha256, attempts: [], output: "adjudicated.json", finished_at: "",
-    };
-    let adjudicated: AdjudicatedFile | null = null;
-    if (need.cited.length === 0 && need.uncited.length === 0 && !need.trap) {
-      adjudicated = applyAdjudication(note, a, b, {}, ADJUDICATOR_MODEL_ID, rubricSha256, seed, a.trap_violated);
-      log(`adjudicate ${noteId}: no counted disagreements; agreed labels stand`);
-    } else {
-      log(`adjudicate ${noteId}: cited=${need.cited.length} uncited=${need.uncited.length} trap=${need.trap} seed=${seed}`);
-      for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-        const stamp = new Date().toISOString().replace(/[:.]/g, "-");
-        const sessionDir = join(noteDir, "sessions", `adj-${stamp}-try${attempt}`);
-        const spec: GraderSandboxSpec = {
-          image: IMAGE, name: `uktub-grade-${noteId}-adj-try${attempt}`,
-          noteDir: join(noteDir, "export"), corpusDir: CORPUS_DIR, outDir: join(sessionDir, "out"),
-          agentDir: join(sessionDir, "pi-agent"), adcFile: adcFile(),
-          env: { GOOGLE_CLOUD_PROJECT: gcpProject }, secretEnv: secrets,
-        };
-        try {
-          const { usage, outputText } = await gradeSession({
-            sessionDir, container: `adj-try${attempt}`, spec,
-            model: { provider: "opencode-go", id: "muse-spark-1.3-contributor" },
-            prompt: adjudicatorPrompt(note, a, b, rubric, rubricSha256, seed), expectFile: "rulings.json",
-          });
-          usage.attempt = attempt;
-          let errors: string[] = outputText === null ? ["rulings.json was not written"] : [];
-          if (errors.length === 0) {
-            try {
-              const raw = JSON.parse(outputText as string) as { units?: Array<{ id?: unknown; final?: unknown }>; trap_violated?: unknown };
-              if (!Array.isArray(raw.units) || typeof raw.trap_violated !== "boolean") throw new Error("rulings need units[] and a boolean trap_violated");
-              const rulings: Record<string, string> = {};
-              for (const u of raw.units) {
-                if (typeof u.id !== "string" || typeof u.final !== "string") throw new Error(`malformed ruling ${JSON.stringify(u)}`);
-                rulings[u.id] = u.final;
+    try {
+      const noteDir = join(NOTES_DIR, noteId);
+      const note = readJson(join(noteDir, "export/note.json")) as NoteJson;
+      const a = readJson(join(noteDir, "labels-A.json")) as LabelFile;
+      checkGraderLabels(note, a, "A", rubricSha256);
+      if (!existsSync(join(noteDir, "labels-B.json"))) {
+        // Approved single-grader completion: purely local, no second model or provider.
+        const adjudicated = finalizeSingleGrader(note, a, rubricSha256);
+        writeJson(join(noteDir, "adjudicated.json"), adjudicated);
+        const finals = new Map<string, number>();
+        for (const u of adjudicated.units) finals.set(u.final, (finals.get(u.final) ?? 0) + 1);
+        log(`adjudicate ${noteId}: ok single-grader finals={${[...finals].map(([k, v]) => `${k}:${v}`).join(" ")}} trap_violated=${adjudicated.trap_violated}`);
+        continue;
+      }
+      // Genuine two-grader path for existing callers: validate B, keep adjudication.
+      const b = readJson(join(noteDir, "labels-B.json")) as LabelFile;
+      checkGraderLabels(note, b, "B", rubricSha256);
+      const need = selectDisagreements(note, a, b);
+      const seed = adjudicationSeed(noteId);
+      const record: SessionRecord = {
+        grader: "adjudicator", grader_model: ADJUDICATOR_MODEL_ID, note: noteId,
+        document_digest: note.document_digest, rubric_sha256: rubricSha256, attempts: [], output: "adjudicated.json", finished_at: "",
+      };
+      let adjudicated: AdjudicatedFile | null = null;
+      if (need.cited.length === 0 && need.uncited.length === 0 && !need.trap) {
+        adjudicated = applyAdjudication(note, a, b, {}, ADJUDICATOR_MODEL_ID, rubricSha256, seed, a.trap_violated);
+        log(`adjudicate ${noteId}: no counted disagreements; agreed labels stand`);
+      } else {
+        const secrets = setupAdjudicator();
+        log(`adjudicate ${noteId}: cited=${need.cited.length} uncited=${need.uncited.length} trap=${need.trap} seed=${seed}`);
+        for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+          const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+          const sessionDir = join(noteDir, "sessions", `adj-${stamp}-try${attempt}`);
+          const spec: GraderSandboxSpec = {
+            image: IMAGE, name: `uktub-grade-${noteId}-adj-try${attempt}`,
+            noteDir: join(noteDir, "export"), corpusDir: CORPUS_DIR, outDir: join(sessionDir, "out"),
+            agentDir: join(sessionDir, "pi-agent"),
+            env: {}, secretEnv: secrets,
+          };
+          try {
+            const { usage, outputText } = await gradeSession({
+              sessionDir, container: `adj-try${attempt}`, spec,
+              model: { provider: "opencode-go", id: "muse-spark-1.3-contributor" },
+              prompt: adjudicatorPrompt(note, a, b, rubric, rubricSha256, seed), expectFile: "rulings.json",
+            });
+            usage.attempt = attempt;
+            let errors: string[] = outputText === null ? ["rulings.json was not written"] : [];
+            if (errors.length === 0) {
+              try {
+                const raw = JSON.parse(outputText as string) as { units?: Array<{ id?: unknown; final?: unknown }>; trap_violated?: unknown };
+                if (!Array.isArray(raw.units) || typeof raw.trap_violated !== "boolean") throw new Error("rulings need units[] and a boolean trap_violated");
+                const rulings: Record<string, string> = {};
+                for (const u of raw.units) {
+                  if (typeof u.id !== "string" || typeof u.final !== "string") throw new Error(`malformed ruling ${JSON.stringify(u)}`);
+                  rulings[u.id] = u.final;
+                }
+                adjudicated = applyAdjudication(note, a, b, rulings, ADJUDICATOR_MODEL_ID, rubricSha256, seed, raw.trap_violated);
+              } catch (err) {
+                errors = [(err as Error).message];
               }
-              adjudicated = applyAdjudication(note, a, b, rulings, ADJUDICATOR_MODEL_ID, rubricSha256, seed, raw.trap_violated);
-            } catch (err) {
-              errors = [(err as Error).message];
             }
+            usage.errors = errors;
+            record.attempts.push(usage);
+            if (errors.length === 0) break;
+            log(`adjudicate ${noteId} try${attempt}: INVALID (${errors[0]?.slice(0, 160)}); rerunning fresh`);
+          } catch (err) {
+            const msg = (err as Error).message;
+            record.attempts.push({ attempt, input_tokens: 0, output_tokens: 0, reasoning_tokens: 0, total_tokens: 0, cost_usd: 0, responses: 0, elapsed_ms: 0, errors: [msg.slice(0, 200)] });
+            if (isLimitError(msg)) {
+              record.finished_at = new Date().toISOString();
+              writeJson(join(noteDir, "session-adjudicator.json"), record);
+              throw new Error(`BLOCKED: adjudicator hit a provider limit (${msg.slice(0, 120)}); resume after the window`);
+            }
+            log(`adjudicate ${noteId} try${attempt}: session failed (${msg.slice(0, 160)}); rerunning fresh`);
           }
-          usage.errors = errors;
-          record.attempts.push(usage);
-          if (errors.length === 0) break;
-          log(`adjudicate ${noteId} try${attempt}: INVALID (${errors[0]?.slice(0, 160)}); rerunning fresh`);
-        } catch (err) {
-          const msg = (err as Error).message;
-          record.attempts.push({ attempt, input_tokens: 0, output_tokens: 0, reasoning_tokens: 0, total_tokens: 0, cost_usd: 0, responses: 0, elapsed_ms: 0, errors: [msg.slice(0, 200)] });
-          if (isLimitError(msg)) {
-            record.finished_at = new Date().toISOString();
-            writeJson(join(noteDir, "session-adjudicator.json"), record);
-            throw new Error(`BLOCKED: adjudicator hit a provider limit (${msg.slice(0, 120)}); resume after the window`);
-          }
-          log(`adjudicate ${noteId} try${attempt}: session failed (${msg.slice(0, 160)}); rerunning fresh`);
         }
       }
+      record.finished_at = new Date().toISOString();
+      writeJson(join(noteDir, "session-adjudicator.json"), record);
+      if (adjudicated === null) throw new Error(`INVALID after ${MAX_ATTEMPTS} attempts`);
+      writeJson(join(noteDir, "adjudicated.json"), adjudicated);
+      const finals = new Map<string, number>();
+      for (const u of adjudicated.units) finals.set(u.final, (finals.get(u.final) ?? 0) + 1);
+      log(`adjudicate ${noteId}: ok finals={${[...finals].map(([k, v]) => `${k}:${v}`).join(" ")}} trap_violated=${adjudicated.trap_violated}`);
+    } catch (err) {
+      const msg = (err as Error).message;
+      failures.push(`${noteId}: ${msg.slice(0, 160)}`);
+      log(`adjudicate ${noteId}: FAILED (${msg.slice(0, 160)})`);
     }
-    record.finished_at = new Date().toISOString();
-    writeJson(join(noteDir, "session-adjudicator.json"), record);
-    if (adjudicated === null) {
-      log(`adjudicate ${noteId}: INVALID after ${MAX_ATTEMPTS} attempts`);
-      continue;
-    }
-    writeJson(join(noteDir, "adjudicated.json"), adjudicated);
-    const finals = new Map<string, number>();
-    for (const u of adjudicated.units) finals.set(u.final, (finals.get(u.final) ?? 0) + 1);
-    log(`adjudicate ${noteId}: ok finals={${[...finals].map(([k, v]) => `${k}:${v}`).join(" ")}} trap_violated=${adjudicated.trap_violated}`);
   }
+  if (failures.length > 0) throw new Error(`adjudicate failed for ${failures.length} note(s): ${failures.join("; ").slice(0, 500)}`);
 }
 
 function cmdAgreement(noteIds: string[]): void {
@@ -585,9 +632,10 @@ function cmdAgreement(noteIds: string[]): void {
       return `{${[...m].map(([k, v]) => `${k}:${v}`).join(" ")}}`;
     };
     const bad = (l: LabelFile): number => l.units.filter((u) => isBadLabel(u.label)).length;
+    const ungradeable = (l: LabelFile): number => l.units.filter((u) => u.label === UNGRADEABLE_LABEL).length;
     log(`agreement ${noteId}: A=${count(a)} bad=${bad(a)} B=${count(b)} bad=${bad(b)}`);
-    process.stdout.write(`${JSON.stringify({ note: noteId, ...r })}\n`);
-    log(`agreement ${noteId}: n=${r.n} observed=${r.observed.toFixed(3)} PA_bad=${r.paBad.toFixed(3)} kappa=${r.kappa.toFixed(3)} rateA=${r.rateA.toFixed(3)} rateB=${r.rateB.toFixed(3)} gap=${(r.gap * 100).toFixed(2)}pts`);
+    process.stdout.write(`${JSON.stringify({ note: noteId, ...r, ungradeableA: ungradeable(a), ungradeableB: ungradeable(b) })}\n`);
+    log(`agreement ${noteId}: n=${r.n} observed=${r.observed.toFixed(3)} PA_bad=${r.paBad.toFixed(3)} kappa=${r.kappa.toFixed(3)} rateA=${r.rateA.toFixed(3)} rateB=${r.rateB.toFixed(3)} gap=${(r.gap * 100).toFixed(2)}pts ungradeable=A${ungradeable(a)}/B${ungradeable(b)}`);
   }
 }
 

@@ -1,0 +1,35 @@
+// src/components/app/AppSettingBootstrap.tsx
+import type React from 'react';
+
+import { useRegisterLanguageSettings } from '../../settings/registerLocaleSettings';
+import { useRegisterThemeSettings } from '../../settings/registerThemeSettings';
+import { useRegisterEditorSettings } from '../../settings/registerEditorSettings';
+import { useRegisterLanguageFeatureSettings } from '../../settings/registerLanguageFeatureSettings';
+import { useRegisterCompilationSettings } from '../../settings/registerCompilationSettings';
+import { useRegisterContentFormatterSettings } from '../../settings/registerContentFormatterSettings';
+import { useRegisterFileTreeSettings } from '../../settings/registerFileTreeSettings';
+import { useRegisterLatexSettings } from '../../settings/registerLatexSettings';
+import { useRegisterLSPConfigSettings } from '../../settings/registerLSPConfigSettings';
+import { useRegisterSharedToolSettings } from '../../settings/registerSharedToolSettings';
+import { useRegisterTypesetterConfigSettings } from '../../settings/registerTypesetterConfigSettings';
+import { useRegisterOfflineSettings } from '../../settings/registerOfflineSettings';
+import { useRegisterStorageSettings } from '../../settings/registerStorageSettings';
+
+const AppBootstrap: React.FC = () => {
+	useRegisterEditorSettings();
+	useRegisterLanguageFeatureSettings();
+	useRegisterCompilationSettings();
+	useRegisterContentFormatterSettings();
+	useRegisterFileTreeSettings();
+	useRegisterLatexSettings();
+	useRegisterLSPConfigSettings();
+	useRegisterTypesetterConfigSettings();
+	useRegisterSharedToolSettings();
+	useRegisterLanguageSettings();
+	useRegisterThemeSettings();
+	useRegisterOfflineSettings();
+	useRegisterStorageSettings();
+	return null;
+};
+
+export default AppBootstrap;

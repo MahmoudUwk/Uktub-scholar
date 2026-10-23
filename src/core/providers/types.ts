@@ -102,6 +102,8 @@ export interface ProviderConfig {
   timeoutMs?: number;
   /** Injected for tests; defaults to a real sleep. */
   sleep?: (ms: number) => Promise<void>;
+  /** One caller's cancellation, set by callers that scope a request: aborts its attempts and backoff waits. */
+  signal?: AbortSignal;
 }
 
 export interface SearchFilters {
@@ -143,6 +145,7 @@ export interface FetchLike {
     ok?: boolean;
     headers: { get(name: string): string | null };
     text(): Promise<string>;
+    json?(): Promise<unknown>;
     /** Undici responses carry a cancelable stream; structural fakes omit it. */
     body?: { cancel(): Promise<void> } | null;
   }>;

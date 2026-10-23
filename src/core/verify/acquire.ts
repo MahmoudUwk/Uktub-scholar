@@ -3,10 +3,9 @@
  * and the registration hook. One acquisition per paper at a time (an in-flight map shared by every caller in this process), bounded
  * per call, and a recent negative answer is not repeated.
  */
-import type { DatabaseSync } from "node:sqlite";
-
 import { loadChunkConfig, type ChunkConfig } from "../config.ts";
-import { openRegistry, selectPapers } from "../registry.ts";
+import { untilAborted } from "../providers/http.ts";
+import { openRegistry, selectPapers, type DatabaseSync } from "../registry.ts";
 import { acquireSource } from "../source/prepare.ts";
 import type { SourceFailureCode } from "../source/extract.ts";
 import { providerConfigOf, type ToolContext } from "../tools/context.ts";
@@ -23,6 +22,10 @@ export const RETRY_UNAVAILABLE_AFTER_MS = 60 * 60 * 1000;
 /** Client policy: acquisitions (lookup + download + parse) attempted per call. Each can cost a download
  *  and seconds of parsing; the rest are reported as deferred and reached on the next call. */
 export const MAX_ACQUISITIONS_PER_CALL = 20;
+/** Client policy: how many cancelled owners one waiter takes over from before it reports the abort. */
+const MAX_TAKEOVERS = 3;
+
+const isAbortError = (err: unknown): boolean => typeof err === "object" && err !== null && (err as { name?: unknown }).name === "AbortError";
 
 export type SourceReport = { doi: string; citekey: string; status: string; code: string | null; detail: string | null }[];
 
@@ -70,12 +73,22 @@ export async function prepareSources(ctx: ToolContext, db: DatabaseSync, papers:
         continue;
       }
       const key = keyOf(ctx.root, p.doi);
-      let pending = inFlight.get(key);
-      if (pending === undefined) {
-        pending = acquireOne(p).finally(() => inFlight.delete(key));
-        inFlight.set(key, pending);
+      // A waiter whose owner was cancelled (not this caller) takes the paper over: the next pass starts a fresh acquisition
+      // with this caller's signal. Bounded: a cancelled owner is one abort, so a waiter takes over at most MAX_TAKEOVERS times.
+      for (let takeovers = 0; ; takeovers++) {
+        let pending = inFlight.get(key);
+        if (pending === undefined) {
+          pending = acquireOne(p).finally(() => inFlight.delete(key));
+          inFlight.set(key, pending);
+        }
+        try {
+          // Ends at this caller's own abort; the shared acquisition keeps running for its owner.
+          await untilAborted(pending, ctx.signal);
+          break;
+        } catch (err) {
+          if (!isAbortError(err) || ctx.signal?.aborted || takeovers >= MAX_TAKEOVERS) throw err;
+        }
       }
-      await pending;
       if (getSource(db, p.doi) === null) report.push({ doi: p.doi, citekey: p.citekey, status: "unavailable", code: "no_open_copy", detail: "the paper was removed while its source was prepared" });
     }
   };

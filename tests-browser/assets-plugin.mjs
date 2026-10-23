@@ -21,6 +21,12 @@ import path from "node:path";
 export const ASSET_VIRTUAL_PREFIX = "/__uktub__/";
 export const ASSET_MODULE = "uktub:assets";
 
+/** The shipped research skill Pi reads from disk: the worker serves the same file as a bundled read-only asset (no copy). */
+export const SKILL_VIRTUAL_PATH = `${ASSET_VIRTUAL_PREFIX}skills/uktub-research/SKILL.md`;
+export function skillDiskPath(root) {
+  return path.join(root, "skills", "uktub-research", "SKILL.md");
+}
+
 /** Files whose `import.meta.url` uses are bundle-stubbed away (see CORE_STUBS). */
 const STUBBED_FILES = new Set(["src/core/launch.ts"]);
 
@@ -73,6 +79,12 @@ export function virtualUrlForModule(rel) {
 
 export function assetPlugin(root) {
   const { assets } = collectAssetRefs(root);
+  // The same skill file Pi ships from disk: bundled read-only, never copied.
+  const skillDisk = skillDiskPath(root);
+  if (!fs.existsSync(skillDisk) || !fs.statSync(skillDisk).isFile()) {
+    throw new Error(`browser asset missing on disk: skills/uktub-research/SKILL.md (resolves to ${skillDisk})`);
+  }
+  assets.set(SKILL_VIRTUAL_PATH, skillDisk);
   const corePrefix = path.join(root, "src", "core") + path.sep;
   return {
     name: "uktub-assets",

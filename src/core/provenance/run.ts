@@ -6,12 +6,14 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { sep } from "node:path";
 import { resolveEntry } from "../compile/run.ts";
+import { loadChunkConfig, DEFAULTS } from "../config.ts";
 import { openRegistry } from "../registry.ts";
 import { expandSource, parsePaper } from "../review/latex.ts";
 import { resolveProjectFile } from "../tools/context.ts";
 import { DEFAULT_MIN_CONFIDENCE } from "../verify/claim.ts";
 import { auditProvenance, type ProvenanceAudit } from "./audit.ts";
 import { readProvenanceInputs } from "./read.ts";
+import { collectResultLines } from "./results.ts";
 
 /** Client policy: largest manuscript file read for the audit (the review command's limit). */
 const MAX_FILE_BYTES = 4_000_000;
@@ -22,6 +24,8 @@ export interface ProvenanceInput {
   now: () => Date;
   /** The confidence bar `verified` is read under; defaults to the verify default (client policy). */
   minConfidence?: number;
+  /** Injected environment for config resolution (a named chunk config); absent: the default path. */
+  env?: Record<string, string | undefined>;
 }
 export type ProvenanceOutcome = { ok: true; entry: string; digest: string; audit: ProvenanceAudit } | { ok: false; message: string };
 
@@ -47,7 +51,15 @@ export function runProvenance(i: ProvenanceInput): ProvenanceOutcome {
     if (db instanceof Error) return { ok: false, message: `no usable registry: ${db.message}` };
     try {
       const { papers, ledger } = readProvenanceInputs(db, i.minConfidence ?? DEFAULT_MIN_CONFIDENCE);
-      const audit = auditProvenance({ paper: parsePaper(lines), tex: expanded, papers, ledger });
+      // The computed-results search: figures no registered paper is cited for are looked up in the project's
+      // result files. An unreadable or invalid config keeps the default glob — the audit stays read-only and total.
+      let resultsGlob = DEFAULTS.provenance.results_glob;
+      try {
+        resultsGlob = loadChunkConfig(i.root, { env: i.env ?? {} }).provenance.results_glob;
+      } catch {
+        // keep the default
+      }
+      const audit = auditProvenance({ paper: parsePaper(lines), tex: expanded, papers, ledger, results: collectResultLines(i.root, resultsGlob) });
       return { ok: true, entry: entryRel, digest, audit };
     } finally {
       db.close();

@@ -1,0 +1,330 @@
+{
+ "adoptIfAll": {
+  "E1": "true supports >= A0's minus 2 points of recall (mercury: >= 175/269 vs the historical paid control Arm T 180/269)",
+  "E2": "recall@2%FP >= A0's minus 1 point (mercury >= 0.949 vs recorded paid r2 0.959)",
+  "E3": "d3-mini only, B2 vs B1 at claim level: 0 new false supports and <= 2 true-claim losses (pair drift reported, not gated)",
+  "E4": "d3-mini only: the localized pointer overlaps the claim's evidence_quote for >= A0's minus 5 points of supported TRUE claims",
+  "F1": "docs requests <= 1/5 of A0's AND claims requests <= A0's",
+  "S1": "false supports <= A0's + 1 AND <= 1/278 (each inspected)",
+  "S2": "docs: no unit promoted by B2 that A0 does not, except ones a human reading the passage accepts (listed verbatim with pointers; any doubt fails)"
+ },
+ "arms": {
+  "A0": "current product default per engine (hosted: top-10 512-token candidates, one question per request; openrouter: product openrouter path, one question per request)",
+  "B1": "section units cap 16k chars, one question per request",
+  "B2": "section units cap 16k chars, keyed bundles (<= 20 questions/request; hosted byte estimate <= 120,000) = the product path",
+  "B3": "B2 at cap 8k chars",
+  "mercuryB2": "on mercury:free only: B2 detection arm (full 547 claims), run later across UTC days at <= 900 requests/day",
+  "mercuryControl": "recorded paid 2026-10-22 Arm T top-10: 180/269 true, 0/278 false, r2 0.959; flagged if the response model echo differs",
+  "mercuryDocs": "B2 docs on 3 notes (later)",
+  "mercuryProbe": "<= 200-request near-bar singleton drift probe (later)"
+ },
+ "data": {
+  "claims": {
+   "claimsJsonSha256": "396330e267ca6c03ec42df9fbbb94ca70f7c6e19ec7ff25fbe9806a81f0c40b2",
+   "corpusJsonSha256": "b620b96cb3bb286401a052e9e23841022ba2ffca3c9c7b789bfbb5cefd06a8be",
+   "counts": {
+    "false": 278,
+    "total": 547,
+    "true": 269
+   },
+   "dataset": "claim-verification-v2",
+   "scope": "each claim scoped to its own paper"
+  },
+  "docs": {
+   "copies": "scratch copies under the run notes dir; claim_judgments, verify_runs, claim_evidence, claim_ledger wiped in the copies",
+   "notes": [
+    "01",
+    "02",
+    "03",
+    "04",
+    "06",
+    "07",
+    "08",
+    "09",
+    "10",
+    "11",
+    "12",
+    "13",
+    "14",
+    "15",
+    "17",
+    "18",
+    "19",
+    "20"
+   ],
+   "notesCount": 18,
+   "source": "the same 18 real notes used for docs on 2026-10-15/2026-10-22 (wording/work/ab-docs-v0-iter-*)"
+  }
+ },
+ "date": "2026-10-23",
+ "decisionRule": "adopt B2 for an engine iff ALL of S1, S2, E1, E2, (E3, E4 d3-mini only), F1 hold",
+ "docMetrics": {
+  "docs": "units per status, promoted units, B-only promotions listed verbatim with pointers, incomplete units",
+  "supportsOnReferences": "supports resting on a REFERENCES chunk in A0 (count, list)"
+ },
+ "engines": {
+  "hosted": {
+   "criteriaProtocol": "systemone-noul-criteria-v1 (today)",
+   "endpoint": "POST https://decision.vllm-sr.ai/v1/systemone",
+   "model": "vllm-sr/d3-mini"
+  },
+  "openrouter": {
+   "dailyCap": "1,000 requests per UTC day account-wide, 20/min; the B2 mercury arm runs later across UTC days at <= 900/day",
+   "model": "inception/mercury-decide:free (FREE model only, no paid API)"
+  }
+ },
+ "history": {
+  "2026-10-15-V1-top10": {
+   "bar099": {
+    "false": "0/278",
+    "true": "197/269"
+   },
+   "crossfitR2": 0.978,
+   "requests": 5470,
+   "wallS": 309
+  },
+  "mercuryPaidArmT-2026-10-22": {
+   "bar099": {
+    "false": "0/278",
+    "true": "180/269"
+   },
+   "crossfitR2": 0.959
+  }
+ },
+ "judging": {
+  "claimScore": "max over judged units/chunks; null = never supported",
+  "claimSupported": "supported iff ANY unit of its paper scores >= 0.99 (OR)",
+  "metrics": "false/true supports at 0.99, recall@1%/2%FP via crossFit (r1/r2, same definitions as 2026-10-15/22)",
+  "perArm": "requests, chars sent, wall, model echo"
+ },
+ "limitsLadder": {
+  "apiInfo": "GET /api/info limits recorded in the A0 run notes (ladder-2026-10-23.json)",
+  "byteEstimate": "per-question UTF-8 bytes of state + question, <= 131,072 per request (https://decision.vllm-sr.ai/docs)",
+  "probes": [
+   "states of 8,000 / 16,000 / 32,000 / 32,001 chars (real paper text)",
+   "on a 32,000-char state Q = 4 and Q = 5 (is the estimate exact?)",
+   "on a ~4,000-char state Q = 20 and Q = 64",
+   "one deliberately invalid question among valid ones on /v1/systemone (422 question_failed?)",
+   "the same on /v1/decisions (answered in place?)"
+  ],
+  "record": "exact status/error bodies and latency per probe"
+ },
+ "results": {
+  "ladder": {
+   "probes": 10,
+   "modelEcho": "vllm-sr/d3-mini every response",
+   "full": "notes dir ladder-2026-10-23.json",
+   "stateChars": {
+    "8000": "200",
+    "16000": "200",
+    "32000": "200",
+    "32001": "400 state_too_long"
+   },
+   "state32000": {
+    "Q4": "400 request_too_long (server estimate 131772 > 131072)",
+    "Q5": "400 request_too_long (est 164656)"
+   },
+   "state4000": {
+    "Q20": "200",
+    "Q64": "400 request_too_long (est 293594)"
+   },
+   "invalidQuestion": "200 on both /v1/systemone and /v1/decisions; valid answered, invalid answered in place as {type, error: invalid_question, message}; bit-identical scores; no 422"
+  },
+  "a0Claims": {
+   "bar099": {
+    "true": "197/269",
+    "false": "0/278"
+   },
+   "crossfit": {
+    "r1": 0.929,
+    "r1tf": [
+     250,
+     4
+    ],
+    "r2": 0.978,
+    "r2tf": [
+     260,
+     6
+    ]
+   },
+   "batch1": {
+    "requests": 5470,
+    "charsSent": 10031779,
+    "wallS": 220
+   },
+   "unjudged": [],
+   "refused": [],
+   "identity": {
+    "model": "hosted:vllm-sr/d3-turbo",
+    "protocol": "systemone-noul-criteria-v1"
+   },
+   "identityCaveat": "host now serves /v1/models headed by d3-turbo so the probe returns turbo; every judgment request routes model vllm-sr/d3-mini and every response echoes vllm-sr/d3-mini (ladder-verified, echo guard never fired). Fresh registry: no cross-model reuse; scores are d3-mini. 2026-10-15 recorded hosted:vllm-sr/d3-mini (no listing then).",
+   "vs2026-10-15-V1": "identical: 197/0, r1 0.929, r2 0.978, 5470 req",
+   "referencesOnlySupports": [
+    "v2-2610.00717v1-04",
+    "v2-2610.00717v1-06",
+    "v2-2609.39972v1-04",
+    "v2-2609.40129v1-02",
+    "v2-2609.40129v1-06",
+    "v2-2610.00683v2-05",
+    "v2-2610.00683v2-06",
+    "v2-2610.00524v1-02",
+    "v2-2609.36635v1-06",
+    "v2-2610.00524v1-03",
+    "v2-2610.00524v1-05",
+    "v2-2609.37733v1-02",
+    "v2-2609.37733v1-05"
+   ],
+   "referencesNote": "13 supported TRUE claims whose every reported evidence pointer sits in a References/REFERENCES section chunk; 0 false supports, so no false-support list. Max-score-chunk check agrees on 15 (the 13 plus 2 localized below the bar at chunk level).",
+   "E4overlap": {
+    "definition": "normalized evidence_quote tokens present in the union of reported evidence span texts (full span, not the 300ch record); threshold >=80%",
+    "value": "182/197 supported TRUE",
+    "secondarySubstring": "133/197"
+   },
+   "records": "notes dir a0-claims-2026-10-23.json (per-claim scores, pointers, bounded excerpts)"
+  },
+  "a0Docs": {
+   "notes": 18,
+   "units": 1155,
+   "cited": 345,
+   "supported": 184,
+   "requests": 10040,
+   "charsSent": 18314388,
+   "wallS": 419,
+   "outcomeMix": {
+    "unsourced": 718,
+    "supported": 184,
+    "cited-unsupported": 60,
+    "missing-citation": 27,
+    "table-row": 148,
+    "skipped": 18
+   },
+   "refused": "none; all 18 notes completed",
+   "vs2026-10-15-v1": "identical outcomes (1155 units, 184/345); fewer requests (10040 vs 11653) and wall (419s vs 505s) on the dirty tree",
+   "perNote": [
+    [
+     "01",
+     61,
+     13,
+     512
+    ],
+    [
+     "02",
+     71,
+     8,
+     653
+    ],
+    [
+     "03",
+     72,
+     10,
+     638
+    ],
+    [
+     "04",
+     45,
+     0,
+     356
+    ],
+    [
+     "06",
+     68,
+     11,
+     580
+    ],
+    [
+     "07",
+     73,
+     8,
+     600
+    ],
+    [
+     "08",
+     71,
+     13,
+     620
+    ],
+    [
+     "09",
+     64,
+     12,
+     560
+    ],
+    [
+     "10",
+     69,
+     12,
+     612
+    ],
+    [
+     "11",
+     46,
+     7,
+     382
+    ],
+    [
+     "12",
+     60,
+     15,
+     510
+    ],
+    [
+     "13",
+     74,
+     9,
+     650
+    ],
+    [
+     "14",
+     75,
+     15,
+     660
+    ],
+    [
+     "15",
+     70,
+     12,
+     620
+    ],
+    [
+     "17",
+     61,
+     10,
+     542
+    ],
+    [
+     "18",
+     68,
+     16,
+     610
+    ],
+    [
+     "19",
+     39,
+     0,
+     311
+    ],
+    [
+     "20",
+     68,
+     13,
+     624
+    ]
+   ],
+   "perNoteCols": [
+    "iter",
+    "units",
+    "supported",
+    "requests"
+   ],
+   "records": "notes dir a0-docs-2026-10-23.json (per-unit outcomes with pointers)"
+  }
+ },
+ "schema": "section-verify-ab/1",
+ "status": "A0 baselines recorded 2026-10-23 on hosted d3-mini (current dirty tree d5f21fa + 211 dirty paths); B1/B2/B3 and mercury arms pending the new code. No OpenRouter request has been made.",
+ "notes": [
+  "AMENDMENT 2026-10-23 (orchestrator, after A0 and before any B request): owner decision after the design was written \u2014 a claim citing several papers is verified only if EVERY cited paper supports it. claims-v2 claims each cite one paper, so claims arms are unaffected. For the docs arms, S2 and F1 compare A0 and B2 under the SAME rule as A0 (any cited paper supports; like-for-like, isolates the unit change); the every-cited-paper rule is reported separately as its own effect (units that change status, listed).",
+  "AMENDMENT 2026-10-23 (orchestrator): REFERENCES sections in this corpus often contain appendix text after the bibliography (the heading detector misses appendix headings). All 13 A0 TRUE supports listed in a0Claims.referencesOnlySupports were checked or sampled: the evidence is appendix content (tables, benchmark construction, experiment settings), not bibliography entries (sampled 5/13 verbatim: v2-2610.00717v1-04, v2-2609.40129v1-02, v2-2610.00524v1-02, v2-2609.37733v1-05, v2-2610.00683v2-05). The B arms must therefore exclude bibliography entries only, not whole REFERENCES sections; how V1 detects that is decided before any B request and recorded here.",
+  "IDENTITY CAVEAT (orchestrator-confirmed product defect, 2026-10-23): resolveEngineIdentity('hosted') takes data[0] of GET /v1/models (src/core/verify/engines.ts probeServedModel + case 'hosted'); the host now lists ['vllm-sr/d3-turbo','vllm-sr/d3','vllm-sr/d3-flash','vllm-sr/d3-mini',...], so A0 judgments were cached under 'hosted:vllm-sr/d3-turbo' while every request asked and every response echoed vllm-sr/d3-mini. Scores are d3-mini's. To be fixed test-first before the B arms; B arms record the corrected identity."
+ ]
+}

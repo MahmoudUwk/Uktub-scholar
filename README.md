@@ -3,13 +3,46 @@
 Free, open-source (AGPL-3.0-only) scholarly tools for paper search, registration, bibliography, LaTeX compilation, passage search
 and supporting-evidence retrieval. The top product priority is an easy static browser app for nontechnical researchers, with all
 Uktub logic and project persistence in the browser and direct provider requests using the researcher's credentials. Provider
-calls may receive the query or selected excerpts needed for the request. That app is not implemented yet. The current Node MCP
-server, Pi package and CLI remain supported for technical users; they use the same host-independent core. The planned browser
-app has no Uktub backend or local helper ([handoff](docs/handoff.md)).
+calls may receive the query or selected excerpts needed for the request. That app is an unreleased MVP in `web/` (see
+[Browser app](#browser-app-mvp-unreleased)). The Node MCP server, Pi package and CLI remain supported for technical users; they
+use the same host-independent core. The browser app has no Uktub backend or local helper ([handoff](docs/handoff.md)).
 
 [AGENTS.md](AGENTS.md) contributor rules · [CHANGELOG](CHANGELOG.md) · [VISION](docs/VISION.md) · [handoff](docs/handoff.md) (architecture,
 decisions, measurements, problems, work queue, how to test) · [benchmarks](benchmarks/README.md) ·
 [research skill](skills/uktub-research/SKILL.md)
+
+## Browser app (MVP, unreleased)
+
+`web/` is an Overleaf-like LaTeX workspace built on a fork of [TeXlyre](https://github.com/TeXlyre/texlyre) (AGPL-3.0-or-later;
+provenance in `web/FORK.md` and [NOTICE.md](NOTICE.md)). It is static files only: no Uktub server, no proxy.
+
+- **Writing and compiling:** CodeMirror editor and in-browser XeLaTeX to PDF (BusyTeX 1.4.1, TeX Live 2026 recommended
+  bundle, BibTeX; about 260 MB of TeX files served by the app itself). New projects get the fixed layout
+  `manuscript/main.tex`, `manuscript/sections/`, `results/` and the tool-owned, read-only `refs/references.bib`.
+- **Storage:** each project lives in the browser's private storage (OPFS) with its own registry; several projects side by
+  side; a project open in another tab is refused. Export/import from the Projects list is a zip that includes the
+  registry. There are no accounts, backups to disk or Git, or collaboration features.
+- **Assistant:** a chat panel on `@earendil-works/pi-agent-core`. You pick any API-key provider and model from Pi's catalog
+  (nothing hardcoded) and paste your key; a one-call key test reports `ok`, `rejected`, `blocked` (the provider refuses
+  browser calls, measured for OpenCode and MiniMax's Anthropic endpoint) or `error`. Keys stay in memory unless you tick
+  "Remember on this device" (this site's `localStorage`). The assistant has the six tools (`compile` runs the app's own
+  XeLaTeX), `read`/`write`/`edit`/`ls` on the project, `write_section`, the always-on writing workflow and the
+  pre-completion check (both as in the Pi package below, without the off switches); the editor is read-only while it runs.
+  Retryable provider errors (rate limits, overload) are retried as in Pi: up to 3 times, 2 s doubling, shown in the chat.
+  Each reply shows its token usage (input, cached, output, cost); a stable random session id per conversation lets
+  OpenRouter route repeat calls to the same cache.
+- **Research services and verification:** optional Semantic Scholar key (recommended: keyless Semantic Scholar is
+  rate-limited and its refusals are unreadable in a browser), OpenAlex key, Crossref contact. Verification runs on the
+  `openrouter` engine (your OpenRouter key, default model `inception/mercury-decide:free`): the `hosted` endpoint
+  refuses browser requests (no CORS) and the local `eos` engines are Node-only.
+
+Build and run locally: `pnpm build:browser` at the root (the Uktub worker), then in `web/`: `pnpm install`,
+`pnpm run build` (copies the worker in) and `pnpm run preview`. The built `dist/` is about 520 MB, mostly the TeX bundle.
+Status: the full-flow test (`web/e2e/full-flow.mjs`, see `web/e2e/README.md`) passes end to end with a real model in
+Chromium (2026-10-22: search, register, acquire, two `write_section` sections, compile, document verify, export/import,
+Stop; about US$0.05 per run on paid OpenRouter models). Verification on a free OpenRouter model needs thousands of
+requests per document, more than the free tier allows; choose the paid decision model (details in the
+[handoff](docs/handoff.md)).
 
 ## Install and host setup
 
@@ -34,12 +67,18 @@ pnpm exec uktub-scholar mcp [target-dir]             # or run the stdio server d
 ```
 
 **Pi package** (`pi install /path/to/Uktub-scholar`): registers the MCP server, loads the `uktub-research` skill, adds the agent
-rules to Pi's system prompt, and blocks the agent's `edit`/`write` on `refs/references.bib` and `.registry/` (agent read-only,
-human writable; a shell is not blocked, but a destructive shell command touching them asks the human first). With
-`UKTUB_SECTION_WRITER=on` it also registers a Pi-only `write_section` tool: a sub-session on the same model writes one
-section in LaTeX only from the listed papers' passages (tools restricted to `passages` and `verify`), the text is checked
-with `verify` document mode with one repair round, and the tool returns the LaTeX, a summary and the unresolved units
-without writing files. It appends a "Tool
+rules and the skill's document-writing workflow (always on, read from the shipped skill) to Pi's system prompt, checks before the
+agent finishes a document that every statement is verified as written or labelled "unverified" and that every cited key
+is registered (one bounded follow-up listing the rest, at most 2 per request; `UKTUB_COMPLETION_GATE=off` disables it), and blocks the agent's `edit`/`write` on `refs/references.bib` and `.registry/` (agent read-only,
+human writable; a shell is not blocked, but a destructive shell command touching them asks the human first). By default (disable with
+`UKTUB_SECTION_WRITER=off`) it also registers a `write_section` tool (also in the browser app, not in the MCP server): a sub-session on the same model writes one
+section in LaTeX only from the listed papers' passages (tools restricted to `passages` and `verify`). It checks every
+verification page, repairs at most once, then checks every page of the repaired text. The result contains the LaTeX,
+a summary, a counts line (first draft and final supported units, words) and unresolved units, including incomplete
+checks; its `details` carry the same counts plus the child session's turns, retries, tool calls, tokens and cost.
+Malformed or missing pages are refused. It writes no files.
+Host cancellation reaches the child and verification, and cleanup waits for the child to settle. Failed or truncated
+writer responses cannot reuse an earlier draft; provider errors expose only static categories. It appends a "Tool
 notices" footer with any refusal, warning, interruption or registry change the final answer left out, and the server sends
 progress heartbeats so a host's request timeout does not kill a long call. To try the package without touching your own Pi, use
 `pnpm sandbox` (below).
@@ -68,14 +107,20 @@ The server id is `uktub`. Legacy long tool names remain accepted but are not adv
 
 Caps are client policies unless a source is named. Provider failures in search become warnings; all providers failing refuses
 with `SEARCH_UNAVAILABLE`. Optional keys, read at call time: `OPENALEX_API_KEY`, `SEMANTIC_SCHOLAR_API_KEY` (without it Semantic
-Scholar's shared pool often answers 429), `CROSSREF_MAILTO`. DataCite resolves arXiv DOIs at registration. `compile`
+Scholar's shared pool often answers 429; a key that is rejected or rate-limited is retried once without the key in that
+shared pool), `CROSSREF_MAILTO`. DataCite resolves arXiv DOIs at registration. `compile`
 entry defaults to `manuscript/main.tex`, then `main.tex`, then a lone top-level `.tex`; ambiguity needs an explicit entry; a
 missing Tectonic refuses compilation only. After a successful compile with a registry present, the result carries a **provenance
 summary** of the manuscript (the same view as `uktub-scholar provenance`): per statement, row and caption whether `verify`
-supported that exact wording (the package's own verify ledger, kept 24 hours), only cites a registered paper, or cites nothing;
+supported that exact wording (the package's own durable verify ledger), only cites a registered paper, or cites nothing
+(every prose statement and caption is counted; one that is not verified is listed as `UNLABELLED` unless its text says
+"unverified");
 per figure (numbers with units, hardware names) whether the cited paper's captured text contains it (`OPEN`: absent, or in a table
 row that cites no registered paper; `CHECK`: a round number found without its unit); and the reader-visible word count. It
-describes and never refuses; `UKTUB_PROVENANCE=off` removes it.
+describes and never refuses; `UKTUB_PROVENANCE=off` removes it. A figure that cites no registered paper is also searched in the
+project's result files (client-policy default `results/**/*.{csv,json,txt,log}`, overridable by `provenance.results_glob`; at most
+1 MB per file and 100 files, never outside the project root): a strong match is `COMPUTED` with a `file:line` pointer (Tier 1 treats
+it like `ok`), a weak-only match is `CHECK`, no match leaves the figure `uncited`/`unsourced`.
 
 ### `registry`
 
@@ -101,13 +146,17 @@ them and returns only **supporting** passages, each with a verbatim excerpt and 
 text never reaches the agent.
 
 Four coverage reports stay apart, so success never implies the rest was checked: **sources** (which papers have a usable
-captured source, and why the rest do not), **candidates** (exhaustive, or query-limited: an optional `query` only narrows which
+captured source, and why the rest do not), **candidates** (the hosted engine checks the top-10 retrieval candidates per
+claim and says so — candidate-limited, never exhaustive; other engines check exhaustively; `UKTUB_VERIFY_STRATEGY=exhaustive`
+restores the exhaustive pass on hosted; query-limited: an optional `query` only narrows which
 passages are checked), **work** (passages judged, new or reused, and any interruption with the unchecked remainder) and
 **output** (supporting records available against shown, and any withheld excerpt text).
 
-A `continuation` token resumes unfinished checking and pages more evidence: repeat the same request with it. It names a stored
-run (papers at their revisions, candidates, model identity, bar), is refused when any of those changed, and expires after 24
-hours. Each evidence record is delivered once across pages; the first call's findings repeat on every page.
+A `continuation` token resumes unfinished checking and pages more evidence: repeat the same request with it. It preserves
+the run-start paper set and ranked candidates; newly added papers need a new request. A continuation is refused when a captured
+source or candidate becomes stale, or the applicable candidate strategy, engine, model identity, protocol or bar changes.
+Tokens expire after 24 hours. Older version-2 tokens must restart without a continuation; already released evidence is retained.
+Each evidence record is delivered once across pages; the first call's findings repeat on every page.
 
 **No support found is not a finding that the claim is false.** The package never reports refutation. Scores are engine outputs
 under a configured bar, not calibrated probabilities, and checking more passages can raise false supports.
@@ -130,10 +179,15 @@ Document mode (exclusive with the above): `{document: project-relative .tex path
 or `{text: LaTeX fragment}` checks the text as written. Each unit from the product's own extractor is verified verbatim:
 cited units against their own cited papers, uncited units against all registered papers. Per unit: `supported` (with
 pointers), `cited-unsupported`, `missing-citation` (support found in a registered paper the unit does not cite, with the
-suggested citekeys), `unsourced`, or `unregistered` (a citekey the registry does not know). Supported evidence is released
+suggested citekeys), `unsourced`, `unregistered` (a citekey the registry does not know; a unit that also cites registered
+papers is still checked, and its unknown keys are listed in its `unregistered` field), or `skipped` (too short to
+check, or too long — split it and check the parts; skipped units cost no engine checks). A LaTeX table row is never
+judged as a sentence: it is `table-row`, with its figures counted as found, missing or check in its cited papers by the
+same rules as the provenance audit, and its wording labelled not verified; a row with a missing figure is unresolved
+(no engine checks). Supported evidence is released
 through the existing path, so the ledger records the exact unit text and provenance later marks it verified while the
-wording is kept verbatim. At most 50 units per call (client policy); exhaustive per unit at the configured bar (default
-0.99), fast with the hosted engine and slow with local Eos.
+wording is kept verbatim. At most 50 units per call (client policy); checked per unit at the configured bar (default
+0.99) under the configured candidate strategy (hosted top10, candidate-limited; `UKTUB_VERIFY_STRATEGY=exhaustive` restores exhaustive), fast with the hosted engine and slow with local Eos.
 
 ### `passages`
 
@@ -218,7 +272,7 @@ nothing.
 | `provenance [entry.tex] [--json]` | The manuscript's provenance view (no model): verified, cited and uncited statements, figures no cited paper contains, word count; prints the full view |
 | `review [entry.tex] [--out <report.md>]` | Deterministic manuscript review (four structural measures, no model): full report with file:line evidence in `reviews/<date>-slop.md`, a few lines printed |
 | `verify <claim> [--papers all\|<handle>,...] [--query <words>] [--continuation <token>]` | Supporting passages for one claim |
-| `verify (--document <entry.tex> \| --text <fragment>)` | The text as written, one unit at a time (at most 50 units per call) |
+| `verify (--document <entry.tex> \| --text <fragment>) [--offset <n>]` | The text as written, one unit at a time (at most 50 units per call; when the result says NOT DONE, repeat with the offset it names) |
 | `search <query> [--papers all\|<handle>,...] [--limit <n>]` | Passage search |
 | `embed status` / `embed install --yes` | Managed embedding runtime |
 | `eos status` / `eos install --yes [--gpu]` | Eos without PyTorch: a pinned ONNX export (about 700 MB) and a small Python environment (about 150 MB) |
@@ -259,7 +313,7 @@ documented defaults otherwise, then environment overrides. Malformed or unknown 
   (owner decision 2026-10-15); without a key it refuses with that link and never switches engine. `uktub-scholar doctor`
   (the `doctor` tool) probes it with one minimal judgment and reports whether verification can run. On the same 547 claims it supported
   93 % of the true claims at about 1 % false supports, and at the 0.99 bar 198 of 269 true and 0 of 278 false
-  (`docs/benchmarks/claims-v2-d3-mini-api-2026-10-14.report.md`). The claim and passage text are sent to that service.
+  (`docs/benchmarks/claims-v2-d3-mini-api-2026-10-14.results.json`). The claim and passage text are sent to that service.
 - `openrouter`: `inception/mercury-decide:free` via the System One decisions API; needs `OPENROUTER_API_KEY`;
   `UKTUB_OPENROUTER_MODEL` picks another compatible model, `UKTUB_OPENROUTER_MIN_INTERVAL_MS` sets the throttle.
 - `llama-cpp`: a System One endpoint (`UKTUB_VERIFY_URL`, default `http://127.0.0.1:8080`); its served model id is
@@ -280,8 +334,8 @@ server enforces confinement on its own parameters; host file and terminal operat
 scholarly tools for papers, cite only citable registered keys, never hand-edit the rendered bibliography, compile user-owned
 LaTeX with `compile`.
 
-Registry schema version 5. Versions 1 to 4 migrate in place on open (papers and citekeys intact; version 2's unsourced rows are
-dropped after a `registry.db.v2.bak` copy). A foreign or newer schema is refused byte-for-byte unchanged.
+Registry schema version 6. Versions 1 to 5 migrate in place on open (papers and citekeys intact; version 2's unsourced rows are
+dropped after a `registry.db.v2.bak` copy; version 5 gains the empty claim_ledger). A foreign or newer schema is refused byte-for-byte unchanged.
 
 ## Checks and evidence
 
@@ -306,6 +360,7 @@ options. Measurements are summarized there and the raw data is in `docs/benchmar
 | `experiments/` | User-simulation scenarios and the self-improving loop (local run evidence is gitignored) |
 | `docs/` | `VISION.md` (scope); `handoff.md` (architecture, decisions, measurements, problems, work queue, how to test) |
 | `docker/` | The sandbox image behind `pnpm sandbox` and the live tiers |
+| `src/browser/`, `src/agent/`, `web/` | Browser worker host and shims; runtime-neutral agent rules shared with Pi; the browser app (TeXlyre fork) |
 | `.agents/skills/` | Skills for the coding agents that build this repository (not for the Uktub agent, marked `metadata.internal: true`; the product skills are in `skills/`) |
 | `reference_repos/`, `test_papers/`, `.sandbox/` | Local only, gitignored: studied clones and manuals, the benchmark PDFs, sandbox state |
 

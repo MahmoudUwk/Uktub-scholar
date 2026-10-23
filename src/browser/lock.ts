@@ -30,9 +30,11 @@ export function lockNameForProject(projectId: string): string {
 }
 
 interface LockManagerLike {
-  request<T>(name: string, options: { mode: "exclusive"; ifAvailable?: boolean }, callback: (lock: unknown) => Promise<T>): Promise<T | undefined>;
-  request<T>(name: string, callback: (lock: unknown) => Promise<T>): Promise<T>;
-  query(): Promise<{ held: Array<{ name: string; mode: string }>; pending: Array<{ name: string; mode: string }> }>;
+  request(
+    name: string,
+    options: { mode: "exclusive"; ifAvailable?: boolean; signal?: AbortSignal },
+    callback: (lock: unknown) => Promise<unknown>,
+  ): Promise<unknown>;
 }
 
 function locks(): LockManagerLike {
@@ -43,12 +45,11 @@ function locks(): LockManagerLike {
   return nav.locks;
 }
 
-const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
-
 /**
  * Acquire the exclusive project lock and hold it until `release()` runs.
  * With `{ ifAvailable: true }` this never blocks: a held lock resolves to
- * the typed "open in another tab" refusal.
+ * the typed "open in another tab" refusal. The outcome comes from the lock
+ * manager's callback (a `null` lock is the refusal), never from timing.
  */
 export async function acquireProjectLock(
   projectId: string,
@@ -59,57 +60,49 @@ export async function acquireProjectLock(
   }
   const name = lockNameForProject(projectId);
   const manager = locks();
-  let release!: () => void;
-  let released = false;
-  const gate = new Promise<void>((resolve) => {
-    release = () => { released = true; resolve(); };
+  let openGate!: () => void;
+  const gate = new Promise<void>((resolve) => { openGate = resolve; });
+  let settle!: (result: ProjectLockResult | null) => void;
+  let fail!: (error: unknown) => void;
+  const outcome = new Promise<ProjectLockResult | null>((resolve, reject) => {
+    settle = resolve;
+    fail = reject;
   });
+  // Blocking mode is bounded by client policy: a request not granted within
+  // 10 s is dropped by the lock manager (fail closed).
+  const request = options.ifAvailable
+    ? { mode: "exclusive" as const, ifAvailable: true }
+    : { mode: "exclusive" as const, signal: AbortSignal.timeout(10_000) };
   const TOKEN = "uktub-project-lock-held";
   // One request holds the callback until release(). With ifAvailable the lock
-  // manager invokes the callback with null when another tab holds the lock
-  // (it never queues), so there is no wait and no probe-then-take race.
-  const pending = manager.request(name, { mode: "exclusive", ...(options.ifAvailable ? { ifAvailable: true } : {}) }, async (lock: unknown) => {
-    if (options.ifAvailable && lock === null) return null;
+  // manager invokes the callback with null when another context holds the
+  // lock (it never queues), so the refusal is decided right here.
+  const pending = manager.request(name, request, async (lock: unknown) => {
+    if (lock === null) {
+      settle(null);
+      return TOKEN;
+    }
+    let done = false;
+    settle({
+      held: true,
+      release: async () => {
+        if (done) return;
+        done = true;
+        openGate();
+        await pending;
+      },
+    });
     await gate;
     return TOKEN;
   });
-  void pending.then(
-    () => {},
-    () => {},
-  );
-  let settled = false;
-  let value: unknown;
-  void pending.then(
-    (v) => { settled = true; value = v; },
-    () => { settled = true; value = undefined; },
-  );
-  if (options.ifAvailable) {
-    for (let i = 0; i < 40 && !settled; i++) await sleep(25);
-    // Refusal settles promptly to null (callback ran with a null lock).
-    if (settled && (value === null || value === undefined)) return { held: false, reason: "open-in-another-tab" };
-    // Unsettled after 1 s means our callback is running: we hold the lock.
-    // (A queued request with ifAvailable never waits, so pending implies held.)
-  } else {
-    // Blocking acquire: wait until our client holds the lock.
-    for (let i = 0; i < 400; i++) {
-      const state = await manager.query();
-      if (state.held.some((l) => l.name === name && l.mode === "exclusive")) break;
-      if (i === 399) {
-        release();
-        await pending;
-        throw new Error("project lock acquisition timed out (fail closed)");
-      }
-      await sleep(25);
-    }
+  // Rejects only when the blocking request is aborted before it is granted.
+  pending.catch(fail);
+  let result: ProjectLockResult | null;
+  try {
+    result = await outcome;
+  } catch {
+    throw new Error("project lock acquisition timed out (fail closed)");
   }
-  let done = false;
-  return {
-    held: true,
-    release: async () => {
-      if (done) return;
-      done = true;
-      if (!released) release();
-      await pending;
-    },
-  };
+  if (result === null) return { held: false, reason: "open-in-another-tab" };
+  return result;
 }

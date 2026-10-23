@@ -11,7 +11,7 @@ FROM node:26-slim
 ARG TECTONIC_VERSION=0.15.0
 # Python with matplotlib, poppler (pdftoppm, pdftotext) and pandoc stand in for the user's own plotting, PDF and document tools (product skills state them as prerequisites, they never bundle them).
 # Pi pinned to the version the live-acceptance evidence is recorded against.
-ARG PI_VERSION=1.1.0
+ARG PI_VERSION=1.3.0
 ADD --checksum=sha256:dfb82876f2986862996e564fa507a9e576e0c1e3bee63c2c1bd677c2543e6407 \
     https://github.com/tectonic-typesetting/tectonic/releases/download/tectonic%40${TECTONIC_VERSION}/tectonic-${TECTONIC_VERSION}-x86_64-unknown-linux-musl.tar.gz \
     /tmp/tectonic.tar.gz

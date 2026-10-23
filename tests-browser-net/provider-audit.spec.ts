@@ -2,7 +2,7 @@
  * Provider request audit: real provider modules against canned responses
  * (every outgoing request recorded) + live no-key page requests in the exact
  * shapes the product sends. Run:
- * `node --import ./tests-browser-net/stubs/register.mjs --test tests-browser-net/provider-audit.spec.ts`
+ * `node --test tests-browser-net/provider-audit.spec.ts`
  */
 import { describe, it, before, after } from "node:test";
 import assert from "node:assert/strict";
@@ -152,6 +152,7 @@ describe("provider request audit (canned)", () => {
     outRequests.length = 0;
     const oaLookup = JSON.stringify({ doi: "https://doi.org/10.7717/peerj.4375", locations: [], open_access: { is_oa: false } });
     const epmc = JSON.stringify({
+      hitCount: 1,
       resultList: { result: [{ doi: "10.7717/peerj.4375", pmcid: "PMC5815332", fullTextUrlList: { fullTextUrl: [] } }] },
     });
     const fetch = canned({
@@ -195,17 +196,77 @@ describe("provider request audit (canned)", () => {
     writeFileSync(join(here, "request-log.json"), JSON.stringify(outRequests, null, 2));
   });
 
-  it("createBrowserFetch drops x-api-key and passes simple GETs through", async () => {
-    const seen: { url: string; headers?: Record<string, string> }[] = [];
-    const inner: FetchLike = (async (url: string, init?: { headers?: Record<string, string> }) => {
-      seen.push({ url, headers: init?.headers });
-      return { status: 200, headers: { get: (): string | null => null }, text: async () => "{}" };
+  it("createBrowserFetch scopes x-api-key to Semantic Scholar and authorization to verifier origins, and refuses non-https or userinfo URLs", async () => {
+    const seen: { url: string; method?: string; body?: string; headers?: Record<string, string> }[] = [];
+    const inner: FetchLike = (async (url: string, init?: { method?: string; body?: string; headers?: Record<string, string> }) => {
+      seen.push({ url, method: init?.method, body: init?.body, headers: init?.headers });
+      return { status: 200, ok: true, headers: { get: (): string | null => null }, text: async () => "{}", json: async () => ({}) };
     }) as FetchLike;
     const wrapped = createBrowserFetch({ inner });
+    // Measured 2026-10-21 (curl with Origin): S2's preflight allows x-api-key and a keyed 200 carries
+    // access-control-allow-origin: *, so the key reaches S2 from a page; no other origin ever receives it.
     await wrapped("https://api.semanticscholar.org/x", { headers: { "x-api-key": "K" } });
-    assert.deepEqual(seen[0]?.headers, {});
+    assert.deepEqual(seen[0]?.headers, { "x-api-key": "K" });
     await wrapped("https://api.openalex.org/y", undefined);
     assert.equal(seen[1]?.url, "https://api.openalex.org/y");
+
+    // Verifier origins keep authorization + content-type + POST body; other origins drop authorization.
+    await wrapped("https://decision.vllm-sr.ai/v1/systemone", {
+      method: "POST",
+      headers: { authorization: "Bearer V_KEY", "content-type": "application/json" },
+      body: '{"model":"vllm-sr/d3-mini"}',
+    });
+    assert.equal(seen[2]?.method, "POST");
+    assert.equal(seen[2]?.body, '{"model":"vllm-sr/d3-mini"}');
+    assert.deepEqual(seen[2]?.headers, { authorization: "Bearer V_KEY", "content-type": "application/json" });
+
+    await wrapped("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: { Authorization: "Bearer OR_KEY", "Content-Type": "application/json" },
+      body: "{}",
+    });
+    assert.deepEqual(seen[3]?.headers, { Authorization: "Bearer OR_KEY", "Content-Type": "application/json" });
+
+    await wrapped("https://api.openalex.org/works", {
+      headers: { authorization: "Bearer SHOULD_DROP" },
+    });
+    assert.deepEqual(seen[4]?.headers, {}, "authorization must never be sent to non-verifier origins");
+
+    // Non-HTTPS and embedded userinfo are refused before calling inner.
+    const beforeCount = seen.length;
+    await assert.rejects(() => wrapped("http://api.openalex.org/works"), /only https/i);
+    await assert.rejects(() => wrapped("http://decision.vllm-sr.ai/v1/systemone"), /only https/i);
+    await assert.rejects(() => wrapped("https://user:pass@api.openalex.org/works"), /embedded credentials/i);
+    await assert.rejects(() => wrapped("https://api.openalex.org@evil.example/works"), /embedded credentials/i);
+    await assert.rejects(() => wrapped(new Request("https://decision.vllm-sr.ai/v1/systemone") as unknown as string), /string URL/i);
+    assert.equal(seen.length, beforeCount, "unsafe or non-string URLs must not reach inner fetch");
+
+    // Deceptive origins (suffix subdomain, non-standard port) and mixed-case headers drop authorization.
+    await wrapped("https://decision.vllm-sr.ai.evil.example/v1/systemone", {
+      headers: { AUTHORIZATION: "Bearer LEAK", "X-API-KEY": "S2_LEAK" },
+    });
+    assert.deepEqual(seen.at(-1)?.headers, {}, "suffix-spoofed origin must drop authorization and x-api-key");
+    await wrapped("https://api.semanticscholar.org.evil.example/x", { headers: { "X-API-KEY": "S2_LEAK" } });
+    assert.deepEqual(seen.at(-1)?.headers, {}, "a suffix-spoofed Semantic Scholar origin must not receive x-api-key");
+    await wrapped("https://api.openalex.org/works", { headers: { "x-api-key": "S2_LEAK" } });
+    assert.deepEqual(seen.at(-1)?.headers, {}, "x-api-key is never sent to another provider");
+
+    await wrapped("https://decision.vllm-sr.ai:8443/v1/systemone", {
+      headers: { Authorization: "Bearer LEAK_PORT" },
+    });
+    assert.deepEqual(seen.at(-1)?.headers, {}, "non-standard port on verifier host must drop authorization");
+
+    // Headers instance and tuple-array headers are normalized and filtered rather than silently mangled.
+    await wrapped("https://decision.vllm-sr.ai/v1/systemone", {
+      method: "POST",
+      headers: new Headers({ Authorization: "Bearer H_KEY", "X-Api-Key": "DROP_ME", "Content-Type": "application/json" }) as unknown as Record<string, string>,
+    });
+    assert.deepEqual(seen.at(-1)?.headers, { authorization: "Bearer H_KEY", "content-type": "application/json" });
+
+    await wrapped("https://api.openalex.org/works", {
+      headers: [["Authorization", "Bearer DROP_TUPLE"], ["Accept", "application/json"]] as unknown as Record<string, string>,
+    });
+    assert.deepEqual(seen.at(-1)?.headers, { Accept: "application/json" });
   });
 });
 
@@ -267,7 +328,8 @@ describe("provider audit: live page requests (no key, exact product shapes)", { 
         const r = await fetch("https://export.arxiv.org/api/query?id_list=1706.03762", { mode: "cors", credentials: "omit" });
         rows.push({ name: "arxiv-api", status: r.status, bytes: (await r.text()).length });
       } catch (e) { rows.push({ name: "arxiv-api", error: String(e) }); }
-      // Fake-key preflight probe (no real credential): does S2 accept x-api-key from a page?
+      // Fake-key probe (no real credential): S2 allows x-api-key in preflight, but its 403 for a bad key carries no
+      // access-control-allow-origin, so a page sees a TypeError here, not a preflight refusal (curl, 2026-10-21).
       try {
         const r = await fetch("https://api.semanticscholar.org/graph/v1/paper/DOI:10.1038/nature14539?fields=title", { headers: { "x-api-key": "test-invalid-key" }, mode: "cors", credentials: "omit" });
         rows.push({ name: "s2-fake-key", status: r.status, bytes: (await r.text()).length });

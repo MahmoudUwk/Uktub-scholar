@@ -1,0 +1,503 @@
+// src/contexts/SettingsContext.tsx
+import type React from 'react';
+import {
+	type ReactNode,
+	createContext,
+	useCallback,
+	useEffect,
+	useRef,
+	useState,
+} from 'react';
+
+import { createNamedLogger } from '@/logging';
+import { notifyUserDataChanged } from '../utils/userDataUtils';
+import { pluginRegistry } from '../plugins/PluginRegistry';
+
+const moduleLog = createNamedLogger('SettingsContext');
+
+export type SettingType =
+	| 'checkbox'
+	| 'select'
+	| 'text'
+	| 'codemirror'
+	| 'number'
+	| 'color'
+	| 'language-select'
+	| 'custom';
+
+export const DEFERRED_UPDATE_TYPES: SettingType[] = ['number', 'text'];
+
+const isEqual = (a: unknown, b: unknown): boolean =>
+	JSON.stringify(a) === JSON.stringify(b);
+
+export interface SettingOption {
+	label: string;
+	value: string | number | boolean | null;
+}
+
+export interface SettingCodeMirrorOptions {
+	language?: string;
+	height?: number;
+	lineNumbers?: boolean;
+	resizable?: boolean;
+	theme?: 'auto' | 'dark' | 'light';
+	readOnly?: boolean;
+	wordWrap?: boolean;
+}
+
+export interface SettingRenderProps {
+	setting: Setting;
+	value: unknown;
+	disabled: boolean;
+	onChange: (value: unknown) => void;
+}
+
+export interface SettingDependency {
+	id: string;
+	value?: unknown;
+	values?: unknown[];
+	invert?: boolean;
+	nest?: boolean;
+}
+
+export interface Setting {
+	id: string;
+	category: string;
+	subcategory?: string;
+	type: SettingType;
+	label: string;
+	description?: React.ReactNode;
+	defaultValue: unknown;
+	value?: unknown;
+	options?: SettingOption[];
+	min?: number;
+	max?: number;
+	step?: number;
+	validate?: (value: unknown) => boolean;
+	onChange?: (value: unknown) => void;
+	strictDefaultValue?: boolean;
+	liveUpdate?: boolean;
+	codeMirrorOptions?: SettingCodeMirrorOptions;
+	forceLTR?: boolean;
+	dependsOn?: SettingDependency;
+	disabledReason?: React.ReactNode;
+	disabled?: boolean;
+	hidden?: boolean;
+	render?: (props: SettingRenderProps) => React.ReactNode;
+}
+
+export interface SettingsContextType {
+	getSettings: () => Setting[];
+	getSetting: (id: string) => Setting | undefined;
+	batchGetSettings: (ids: string[]) => Record<string, unknown>;
+	updateSetting: (id: string, value: unknown) => void;
+	registerSetting: (setting: Setting) => void;
+	unregisterSetting: (id: string) => void;
+	getSettingsByCategory: (category: string, subcategory?: string) => Setting[];
+	getCategories: () => { category: string; subcategories: string[] }[];
+	searchSettings: (query: string) => {
+		categories: { category: string; subcategories: string[] }[];
+		allSettings: Setting[];
+	};
+	hasUnsavedChanges: boolean;
+	needsRefresh: boolean;
+}
+
+export const SettingsContext = createContext<SettingsContextType>({
+	getSettings: () => [],
+	getSetting: () => undefined,
+	batchGetSettings: () => ({}),
+	updateSetting: () => {},
+	registerSetting: () => {},
+	unregisterSetting: () => {},
+	getSettingsByCategory: () => [],
+	getCategories: () => [],
+	searchSettings: () => ({ categories: [], allSettings: [] }),
+	hasUnsavedChanges: false,
+	needsRefresh: false,
+});
+
+interface SettingsProviderProps {
+	children: ReactNode;
+}
+
+export const SettingsProvider: React.FC<SettingsProviderProps> = ({
+	children,
+}) => {
+	const [settings, setSettings] = useState<Setting[]>([]);
+	const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+	const [needsRefresh, setNeedsRefresh] = useState(false);
+	const localStorageSettingsRef = useRef<Record<string, unknown> | null>(null);
+	const pendingMutationsRef = useRef(new Map<string, unknown>());
+	const isApplyingRemoteRef = useRef(false);
+	const isLocalStorageLoaded = useRef(false);
+
+	const getCurrentUserId = useCallback((): string | null => {
+		return localStorage.getItem('texlyre-current-user');
+	}, []);
+
+	const getStorageKey = useCallback((): string => {
+		const userId = getCurrentUserId();
+		return userId ? `texlyre-user-${userId}-settings` : 'texlyre-settings';
+	}, [getCurrentUserId]);
+
+	const loadStoredValue = useCallback((setting: Setting): unknown => {
+		if (setting.strictDefaultValue) {
+			return setting.defaultValue;
+		}
+		if (
+			localStorageSettingsRef.current &&
+			localStorageSettingsRef.current[setting.id] !== undefined
+		) {
+			const storedValue = localStorageSettingsRef.current[setting.id];
+			if (
+				setting.type === 'select' &&
+				setting.id.endsWith('-notifications') &&
+				typeof storedValue === 'boolean'
+			)
+				return storedValue ? 'all' : 'off';
+			return storedValue;
+		}
+		return setting.defaultValue;
+	}, []);
+
+	const registerSetting = useCallback(
+		(setting: Setting) => {
+			setSettings((prev) => {
+				const idx = prev.findIndex((s) => s.id === setting.id);
+				let valueToUse: unknown;
+
+				if (idx >= 0) {
+					valueToUse = prev[idx].value;
+				} else {
+					valueToUse =
+						setting.value !== undefined
+							? setting.value
+							: loadStoredValue(setting);
+				}
+
+				if (setting.onChange) {
+					setTimeout(() => setting.onChange?.(valueToUse), 0);
+				}
+
+				const settingWithValue = { ...setting, value: valueToUse };
+
+				if (idx >= 0) {
+					const updated = [...prev];
+					updated[idx] = settingWithValue;
+					return updated;
+				}
+				return [...prev, settingWithValue];
+			});
+		},
+		[loadStoredValue],
+	);
+
+	useEffect(() => {
+		const userId = getCurrentUserId();
+		const userStorageKey = userId
+			? `texlyre-user-${userId}-settings`
+			: 'texlyre-settings';
+		const globalStorageKey = 'texlyre-settings';
+
+		try {
+			const globalSettings = localStorage.getItem(globalStorageKey);
+			const globalSettingsParsed = globalSettings
+				? JSON.parse(globalSettings)
+				: {};
+			const globalVersion = globalSettingsParsed._version;
+
+			const stored = localStorage.getItem(userStorageKey);
+			let storedParsed = stored ? JSON.parse(stored) : null;
+
+			if (
+				userId &&
+				(!storedParsed || storedParsed._version !== globalVersion)
+			) {
+				if (globalSettings) {
+					storedParsed = {
+						...globalSettingsParsed,
+						...storedParsed,
+						_version: globalVersion,
+					};
+					localStorage.setItem(userStorageKey, JSON.stringify(storedParsed));
+				}
+			}
+
+			if (storedParsed) {
+				const { _version, ...settingsWithoutVersion } = storedParsed;
+				localStorageSettingsRef.current = settingsWithoutVersion;
+			} else {
+				localStorageSettingsRef.current = {};
+			}
+		} catch (error) {
+			moduleLog.error(
+				'Error parsing settings from localStorage on initial load:',
+				error,
+			);
+			localStorage.removeItem(userStorageKey);
+			localStorageSettingsRef.current = {};
+		} finally {
+			isLocalStorageLoaded.current = true;
+			const freshPluginSettings = pluginRegistry.refreshPluginSettings();
+			freshPluginSettings.forEach((setting) => {
+				registerSetting(setting);
+			});
+		}
+	}, [getCurrentUserId, registerSetting]);
+
+	useEffect(() => {
+		if (settings.length === 0 || !isLocalStorageLoaded.current) return;
+		if (isApplyingRemoteRef.current) {
+			isApplyingRemoteRef.current = false;
+			pendingMutationsRef.current.clear();
+			return;
+		}
+
+		const registeredSettings = settings.reduce(
+			(acc, s) => {
+				acc[s.id] = s.value;
+				return acc;
+			},
+			{} as Record<string, unknown>,
+		);
+
+		try {
+			const storageKey = getStorageKey();
+			const currentStored = localStorage.getItem(storageKey);
+			const { _version, ...currentEntries } = currentStored
+				? JSON.parse(currentStored)
+				: {};
+
+			const toSave = { ...currentEntries, ...registeredSettings };
+			localStorage.setItem(storageKey, JSON.stringify({ ...toSave, _version }));
+			localStorageSettingsRef.current = toSave;
+			const userId = getCurrentUserId();
+			if (userId) {
+				for (const [key, value] of pendingMutationsRef.current) {
+					notifyUserDataChanged(userId, 'settings', { key, value });
+				}
+			}
+			pendingMutationsRef.current.clear();
+		} catch (error) {
+			moduleLog.error('Error saving settings to localStorage:', error);
+		}
+	}, [settings, getStorageKey, getCurrentUserId]);
+
+	useEffect(() => {
+		const handleLanguageChange = () => {
+			const freshPluginSettings = pluginRegistry.refreshPluginSettings();
+
+			freshPluginSettings.forEach((setting) => {
+				registerSetting(setting);
+			});
+		};
+
+		window.addEventListener('language-changed', handleLanguageChange);
+		return () =>
+			window.removeEventListener('language-changed', handleLanguageChange);
+	}, [registerSetting]);
+
+	useEffect(() => {
+		const handleStoreChanged = (event: Event) => {
+			const detail = (event as CustomEvent).detail;
+			if (detail && detail.store !== 'settings') return;
+
+			try {
+				const stored = localStorage.getItem(getStorageKey());
+				if (!stored) return;
+				const { _version, ...entries } = JSON.parse(stored);
+				localStorageSettingsRef.current = entries;
+
+				setSettings((prev) => {
+					let changed = false;
+					const next = prev.map((setting) => {
+						if (setting.strictDefaultValue) return setting;
+						const incoming = entries[setting.id];
+						if (incoming === undefined || isEqual(incoming, setting.value)) {
+							return setting;
+						}
+						if (setting.validate && !setting.validate(incoming)) {
+							return setting;
+						}
+						if (setting.onChange) {
+							setTimeout(() => setting.onChange?.(incoming), 0);
+						}
+						changed = true;
+						return { ...setting, value: incoming };
+					});
+					if (changed) isApplyingRemoteRef.current = true;
+					return changed ? next : prev;
+				});
+			} catch (error) {
+				moduleLog.error('Error applying synced settings:', error);
+			}
+		};
+
+		window.addEventListener('chelys-account-store-changed', handleStoreChanged);
+		return () =>
+			window.removeEventListener(
+				'chelys-account-store-changed',
+				handleStoreChanged,
+			);
+	}, [getStorageKey]);
+
+	const visibleSettings = settings.filter((s) => !s.hidden);
+
+	const getSettings = () => settings;
+
+	const getSetting = (id: string) => settings.find((s) => s.id === id);
+
+	const batchGetSettings = useCallback(
+		(ids: string[]): Record<string, unknown> => {
+			const userId = getCurrentUserId();
+			const storageKey = userId
+				? `texlyre-user-${userId}-settings`
+				: 'texlyre-settings';
+
+			try {
+				const stored = localStorage.getItem(storageKey);
+				const storedSettings = stored ? JSON.parse(stored) : {};
+
+				const result: Record<string, unknown> = {};
+				for (const id of ids) {
+					const existingSetting = settings.find((s) => s.id === id);
+					if (existingSetting?.value !== undefined) {
+						result[id] = existingSetting.value;
+					} else if (storedSettings[id] !== undefined) {
+						result[id] = storedSettings[id];
+					}
+				}
+				return result;
+			} catch {
+				return {};
+			}
+		},
+		[getCurrentUserId, settings],
+	);
+
+	const updateSetting = (id: string, value: unknown) => {
+		setSettings((prev) =>
+			prev.map((s) => {
+				if (s.id !== id) return s;
+
+				let validatedValue = value;
+
+				if (s.type === 'number' && typeof value === 'number') {
+					if (s.min !== undefined && value < s.min) {
+						validatedValue = s.min;
+					}
+					if (s.max !== undefined && value > s.max) {
+						validatedValue = s.max;
+					}
+				}
+
+				if (s.validate && !s.validate(validatedValue)) {
+					moduleLog.warn(`Invalid value for ${id}:`, validatedValue);
+					return s;
+				}
+
+				const updated = { ...s, value: validatedValue };
+				if (!isEqual(s.value, validatedValue)) {
+					pendingMutationsRef.current.set(id, validatedValue);
+				}
+
+				const needsLiveUpdate =
+					s.liveUpdate !== undefined
+						? s.liveUpdate
+						: !DEFERRED_UPDATE_TYPES.includes(s.type);
+
+				if (needsLiveUpdate && s.onChange) {
+					s.onChange(validatedValue);
+				}
+
+				if (!needsLiveUpdate) {
+					setNeedsRefresh(true);
+				}
+
+				return updated;
+			}),
+		);
+		setHasUnsavedChanges(true);
+		setTimeout(() => setHasUnsavedChanges(false), 2000);
+	};
+
+	const unregisterSetting = (id: string) => {
+		setSettings((prev) => prev.filter((s) => s.id !== id));
+	};
+
+	const getSettingsByCategory = (category: string, subcategory?: string) =>
+		visibleSettings.filter(
+			(s) =>
+				s.category === category &&
+				(subcategory === undefined || s.subcategory === subcategory),
+		);
+
+	const getCategories = () => {
+		const map = visibleSettings.reduce(
+			(acc, s) => {
+				if (!acc[s.category]) acc[s.category] = new Set<string>();
+				if (s.subcategory) acc[s.category].add(s.subcategory);
+				return acc;
+			},
+			{} as Record<string, Set<string>>,
+		);
+		return Object.entries(map).map(([category, subs]) => ({
+			category,
+			subcategories: Array.from(subs),
+		}));
+	};
+
+	const searchSettings = (query: string) => {
+		if (!query.trim())
+			return { categories: getCategories(), allSettings: visibleSettings };
+
+		const lowerQuery = query.toLowerCase();
+		const matchingSettings = visibleSettings.filter(
+			(s) =>
+				s.category.toLowerCase().includes(lowerQuery) ||
+				s.subcategory?.toLowerCase().includes(lowerQuery) ||
+				s.label.toLowerCase().includes(lowerQuery) ||
+				(typeof s.description === 'string' &&
+					s.description.toLowerCase().includes(lowerQuery)),
+		);
+
+		const categoriesMap = matchingSettings.reduce(
+			(acc, s) => {
+				if (!acc[s.category]) acc[s.category] = new Set<string>();
+				if (s.subcategory) acc[s.category].add(s.subcategory);
+				return acc;
+			},
+			{} as Record<string, Set<string>>,
+		);
+
+		const filteredCategories = Object.entries(categoriesMap).map(
+			([category, subs]) => ({
+				category,
+				subcategories: Array.from(subs),
+			}),
+		);
+
+		return { categories: filteredCategories, allSettings: matchingSettings };
+	};
+
+	return (
+		<SettingsContext.Provider
+			value={{
+				getSettings,
+				getSetting,
+				batchGetSettings,
+				updateSetting,
+				registerSetting,
+				unregisterSetting,
+				getSettingsByCategory,
+				getCategories,
+				searchSettings,
+				hasUnsavedChanges,
+				needsRefresh,
+			}}
+		>
+			{children}
+		</SettingsContext.Provider>
+	);
+};

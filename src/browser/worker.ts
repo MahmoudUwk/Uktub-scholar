@@ -4,18 +4,38 @@
  *
  * Protocol: `{ id, op, args }` -> `{ id, ok: true, result }` or
  * `{ id, ok: false, error }`. On startup the worker boots SQLite
- * (async WASM load + `opfs-sahpool` install) and posts `{ boot: true, ok }`.
+ * (async WASM load) and posts `{ boot: true, ok }`; pools install later —
+ * the open project's pool at `init`, the scratch pool lazily for the
+ * init-less scenario ops below.
  */
-import { ensureBooted, DatabaseSync, sahpoolFileBytes } from "./shims/sqlite.ts";
-import { mkdirSync, openProjectFiles, writeFileSync } from "./shims/fs.ts";
-import { dirname } from "./shims/path.ts";
+import { ensureBooted, ensurePoolInstalled, hasActivePool, DatabaseSync, sahpoolFileBytes } from "./shims/sqlite.ts";
+import { SCRATCH_POOL_DIR, SCRATCH_VFS_NAME } from "./projects.ts";
+import { openProjectFiles } from "./shims/fs.ts";
 import {
   PROJECT_ROOT,
+  hostAgentSurface,
   hostCallTool,
+  hostCancelTool,
   hostClose,
+  hostCompileFinish,
+  hostCompilePrepare,
+  hostDeleteFile,
+  hostDeleteProjectStorage,
   hostExportProject,
+  hostGateSettle,
+  hostGateStartUserPrompt,
+  hostGateToolEnded,
+  hostImportProject,
+  hostImportSource,
   hostInit,
+  hostListFiles,
   hostReadAsset,
+  hostReadFile,
+  hostRunProvenance,
+  hostSetEnv,
+  hostWriteFile,
+  type ImportProjectArgs,
+  type ImportSourceArgs,
   type InitArgs,
   type ToolName,
 } from "./host.ts";
@@ -39,6 +59,17 @@ const scope = self as unknown as {
   postMessage(msg: unknown): void;
 };
 
+/**
+ * The init-less scenario ops (`sqlite`, `fs`, …) run without an open
+ * project, so they use a scratch pool clearly separated from every
+ * project's directory. Skipped when a project pool is already active
+ * (an init'd worker), so scenario probes never steal the active pool.
+ */
+async function ensureScenarioPool(): Promise<void> {
+  if (hasActivePool()) return;
+  await ensurePoolInstalled({ poolDirectory: SCRATCH_POOL_DIR, vfsName: SCRATCH_VFS_NAME });
+}
+
 scope.onmessage = (ev: MessageEvent) => {
   const msg = ev.data as { id: string; op: string; args: Record<string, never> };
   const reply = (payload: unknown): void => scope.postMessage(payload);
@@ -50,6 +81,7 @@ scope.onmessage = (ev: MessageEvent) => {
           result = { pong: true };
           break;
         case "sqlite":
+          await ensureScenarioPool();
           result = runSqliteScenario(
             (msg.args as unknown as { dbPath: string }).dbPath,
             (msg.args as unknown as { schemaSql: string }).schemaSql,
@@ -96,38 +128,63 @@ scope.onmessage = (ev: MessageEvent) => {
           result = runPathScenario();
           break;
         case "fs":
+          await ensureScenarioPool();
           openProjectFiles((msg.args as unknown as { root: string }).root);
           result = runFsScenario((msg.args as unknown as { root: string }).root);
           break;
         case "fscore":
+          await ensureScenarioPool();
           openProjectFiles((msg.args as unknown as { root: string }).root);
           result = runFscoreScenario((msg.args as unknown as { root: string }).root);
           break;
         case "fsregistry":
+          await ensureScenarioPool();
           result = runFsRegistryScenario((msg.args as unknown as { root: string }).root);
           break;
         case "fswrite":
+          await ensureScenarioPool();
           result = durabilityWrite((msg.args as unknown as { root: string }).root);
           break;
         case "fsread":
+          await ensureScenarioPool();
           result = durabilityRead((msg.args as unknown as { root: string }).root);
           break;
         case "fsperf":
+          await ensureScenarioPool();
           result = runFsPerfScenario((msg.args as unknown as { root: string }).root);
           break;
         case "init":
           result = await hostInit((msg.args ?? {}) as unknown as InitArgs);
           break;
         case "callTool": {
-          const { name, toolArgs } = msg.args as unknown as { name: ToolName; toolArgs: Record<string, unknown> };
-          result = await hostCallTool(name, toolArgs ?? {});
+          const { name, toolArgs, callId } = msg.args as unknown as { name: ToolName; toolArgs: Record<string, unknown>; callId?: string };
+          result = await hostCallTool(name, toolArgs ?? {}, callId ?? msg.id);
           break;
         }
+        case "cancelTool": {
+          const { callId } = msg.args as unknown as { callId: string };
+          result = hostCancelTool(callId);
+          break;
+        }
+        case "provenance":
+          result = hostRunProvenance((msg.args ?? {}) as unknown as { entry?: string });
+          break;
         case "exportProject":
           result = await hostExportProject();
           break;
+        case "importSource":
+          result = await hostImportSource((msg.args ?? {}) as unknown as ImportSourceArgs);
+          break;
+        case "importProject":
+          result = await hostImportProject((msg.args ?? {}) as unknown as ImportProjectArgs);
+          break;
         case "close":
           result = await hostClose();
+          break;
+        case "deleteProjectStorage":
+          result = await hostDeleteProjectStorage(
+            (msg.args ?? {}) as unknown as { projectId: string },
+          );
           break;
         case "readAsset":
           result = hostReadAsset((msg.args as unknown as { path: string }).path);
@@ -151,20 +208,50 @@ scope.onmessage = (ev: MessageEvent) => {
           result = bytes === null ? null : Array.from(bytes);
           break;
         }
-        case "writeFile": {
-          // Test seam: place a project file (e.g. a TEI source) into the
-          // worker's file store from bytes ferried across postMessage.
-          const { rel, base64 } = msg.args as unknown as { rel: string; base64: string };
-          const abs = `${PROJECT_ROOT}/${rel}`;
-          const bin = atob(base64);
-          const bytes = new Uint8Array(bin.length);
-          for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-          const parent = dirname(abs);
-          if (parent !== PROJECT_ROOT) mkdirSync(parent, { recursive: true });
-          writeFileSync(abs, bytes);
-          result = { path: rel, bytes: bytes.length };
+        case "writeFile":
+          result = hostWriteFile(msg.args as unknown as { rel: string; base64?: string; text?: string; bytes?: Uint8Array });
           break;
-        }
+        case "readFile":
+          result = hostReadFile(msg.args as unknown as { rel: string; encoding?: "utf8" | "base64" });
+          break;
+        case "listFiles":
+          result = hostListFiles();
+          break;
+        case "agentSurface":
+          result = hostAgentSurface();
+          break;
+        case "gateStartUserPrompt":
+          result = hostGateStartUserPrompt();
+          break;
+        case "gateToolEnded":
+          result = hostGateToolEnded(
+            (msg.args ?? {}) as unknown as { toolName: string; args?: unknown; isError?: boolean },
+          );
+          break;
+        case "gateSettle":
+          result = hostGateSettle();
+          break;
+        case "compilePrepare":
+          result = hostCompilePrepare((msg.args ?? {}) as unknown as { entry?: string });
+          break;
+        case "compileFinish":
+          result = await hostCompileFinish(
+            (msg.args ?? {}) as unknown as {
+              entry: string;
+              engineLabel: string;
+              code: number;
+              timedOut: boolean;
+              log: string;
+              pdf?: Uint8Array | null;
+            },
+          );
+          break;
+        case "setEnv":
+          result = hostSetEnv((msg.args ?? {}) as unknown as { env?: Record<string, string | undefined> });
+          break;
+        case "deleteFile":
+          result = hostDeleteFile(msg.args as unknown as { rel: string });
+          break;
         default:
           throw new Error(`unknown worker op: ${String(msg.op)}`);
       }

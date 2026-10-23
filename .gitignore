@@ -5,6 +5,7 @@ node_modules/
 .mcp.json
 opencode.json
 dist/
+dist-browser/
 __pycache__/
 
 # third-party repos cloned for study (read-only, untrusted data; never committed)

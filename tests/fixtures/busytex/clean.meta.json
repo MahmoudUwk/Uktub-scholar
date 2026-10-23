@@ -1,0 +1,9 @@
+{
+  "variant": "clean",
+  "status": 0,
+  "hasPdf": true,
+  "logChars": 17635,
+  "files": [
+    "manuscript/main.tex"
+  ]
+}

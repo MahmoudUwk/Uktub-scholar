@@ -12,7 +12,7 @@ import { dirname, isAbsolute, relative, resolve, sep } from "node:path";
 
 import type { FetchLike, ProviderConfig } from "../providers/types.ts";
 import type { DownloadLike } from "../source/download.ts";
-import { renderRefusal, type RefusalCode, type WarningCode } from "../refusals.ts";
+import { renderRefusal, type RefusalCode, type RefusalNextOverrides, type WarningCode } from "../refusals.ts";
 
 /** The context a host hands each tool call — injected, never global (KTD6). */
 export interface ToolContext {
@@ -35,6 +35,11 @@ export interface ToolContext {
   afterRegister?: (dois: string[]) => void;
   /** Cancellation from the host; checked between units of work. */
   signal?: AbortSignal;
+  /** Host-specific `next` wording per refusal code (Phase 9a): the host
+   *  whose remedies differ from the Node CLI's sets its own `next` per code;
+   *  the core's refusal rendering prefers it over the Node table. Absent:
+   *  Node table text (Node behavior unchanged). */
+  refusalNext?: RefusalNextOverrides;
 }
 
 /** Provider config assembled from the injected context — no env reads here. */
@@ -131,10 +136,21 @@ export function busyRefusal(err: unknown): ToolResult<never> | null {
     : null;
 }
 
-/** A `content`-only failure result carrying the rendered refusal text (R7). */
-export function refusalResult(refused: { code: RefusalCode; message: string }): ToolResult<never> {
+/** A `content`-only failure result carrying the rendered refusal text (R7).
+ *  The caller passes the host's per-code `next` overrides (or the context
+ *  carrying them); absent, the Node table renders (Node output unchanged). */
+export function refusalResult(
+  refused: { code: RefusalCode; message: string },
+  nextOverrides?: RefusalNextOverrides | Pick<ToolContext, "refusalNext">,
+): ToolResult<never> {
+  const overrides: RefusalNextOverrides | undefined =
+    nextOverrides === undefined
+      ? undefined
+      : "refusalNext" in nextOverrides
+        ? (nextOverrides as Pick<ToolContext, "refusalNext">).refusalNext
+        : (nextOverrides as RefusalNextOverrides);
   return {
-    content: [{ type: "text", text: renderRefusal(refused) }],
+    content: [{ type: "text", text: renderRefusal(refused, overrides) }],
     structuredContent: null,
     details: { refused },
   };

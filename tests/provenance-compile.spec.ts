@@ -36,7 +36,8 @@ describe("provenanceBlock", () => {
   it("returns the summary lines and a structured summary with the open items", () => {
     const b = provenanceBlock(ctx(), "manuscript/main.tex");
     assert.ok(b !== null);
-    assert.match(b!.lines.join("\n"), /^provenance: 1 statements/m);
+    assert.match(b!.lines.join("\n"), /^provenance: 2 statements/m, "the uncited sentence is audited too (D1)");
+    assert.match(b!.lines.join("\n"), /^UNLABELLED L\d+ \[sentence\]/m, "and it is listed as unlabelled and not verified");
     assert.match(b!.lines.join("\n"), /OPEN L\d+ \[sentence\] A100 — not found in /);
     assert.equal(b!.structured.figures.open, 1);
     assert.deepEqual(b!.structured.items.map((i) => i.token), ["A100"]);

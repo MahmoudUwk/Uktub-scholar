@@ -55,35 +55,49 @@ function createBrowserDownloader(deps = {}) {
       timeoutState.timedOut = true;
       ctrl.abort(new Error("download timeout"));
     }, timeoutMs);
-    let res;
     try {
-      res = await doFetch(requestUrl.href, {
-        method: "GET",
-        redirect: "follow",
-        credentials: "omit",
-        signal: ctrl.signal
-      });
-    } catch (err) {
-      if (init.signal?.aborted) throw err;
-      if (timeoutState.timedOut) throw new BrowserSourceError("download_failed", "the download exceeded the time limit");
-      throw new BrowserSourceError("download_failed", MANUAL_IMPORT);
-    }
-    try {
+      let res;
+      try {
+        res = await doFetch(requestUrl.href, {
+          method: "GET",
+          redirect: "follow",
+          credentials: "omit",
+          signal: ctrl.signal
+        });
+      } catch (err) {
+        if (init.signal?.aborted) throw err;
+        if (timeoutState.timedOut) throw new BrowserSourceError("download_failed", "the download exceeded the time limit");
+        throw new BrowserSourceError("download_failed", MANUAL_IMPORT);
+      }
       return await readBody(res, init, timeoutState);
     } finally {
       clearTimer(timer);
-      init.signal?.removeEventListener("abort", onCallerAbort);
+      if (init.signal !== void 0) init.signal.removeEventListener("abort", onCallerAbort);
     }
   };
   async function readBody(res, init, timeout) {
-    if (init.signal?.aborted) init.signal.throwIfAborted();
-    const finalUrl = parseUrl(res.url, "unsafe_redirect", allowLoopbackHttp);
+    const discard = async () => {
+      await res.body?.cancel().catch(() => void 0);
+    };
+    if (init.signal?.aborted) {
+      await discard();
+      init.signal.throwIfAborted();
+    }
+    let finalUrl;
+    try {
+      finalUrl = parseUrl(res.url, "unsafe_redirect", allowLoopbackHttp);
+    } catch (err) {
+      await discard();
+      throw err;
+    }
     if (res.status !== 200) {
+      await discard();
       throw new BrowserSourceError("download_failed", `the host answered HTTP ${res.status}`);
     }
     const rawLength = res.headers.get("content-length");
     const declared = rawLength !== null ? Number(rawLength) : null;
     if (declared !== null && Number.isFinite(declared) && declared > init.maxBytes) {
+      await discard();
       throw new BrowserSourceError("too_large", `the document is larger than ${init.maxBytes} bytes`);
     }
     const chunks = [];

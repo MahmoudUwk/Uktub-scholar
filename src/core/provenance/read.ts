@@ -5,7 +5,7 @@
  * long as their paper and revision and never expire by time. `bar` is the currently configured confidence bar
  * (client policy, the same bar `verify` judges under): only rows at or above it verify.
  */
-import type { DatabaseSync } from "node:sqlite";
+import type { DatabaseSync } from "../registry.ts";
 import type { Ledger, LedgerHit, PaperInput } from "./audit.ts";
 import { DEFAULT_MIN_CONFIDENCE } from "../verify/claim.ts";
 import { claimHashOf, formatPointer } from "../verify/store.ts";

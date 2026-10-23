@@ -20,6 +20,7 @@ import { chmodSync, copyFileSync, existsSync, mkdirSync, readdirSync, readFileSy
 import { dirname, join, parse, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import type { SQLInputValue, StatementSync } from "node:sqlite";
+export type { DatabaseSync };
 
 import type { RefusalCode, WarningCode } from "./refusals.ts";
 import { firstFreeCitekey, generateCitekey } from "./citekey.ts";

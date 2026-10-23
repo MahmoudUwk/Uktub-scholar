@@ -41,7 +41,7 @@ export const AGENT_POLICY = {
 };
 
 export interface ToolCall { id: string; name: string; args: any; parent?: string; /** receive time (ms epoch) */ t: number }
-export interface ToolEnd { toolCallId: string; name: string; isError: boolean; text: string; structured: any; parent?: string; t: number }
+export interface ToolEnd { toolCallId: string; name: string; isError: boolean; text: string; structured: any; /** Pi's `result.details` (a write_section end carries its child's figures here). */ details?: any; parent?: string; t: number }
 export interface Turn {
   id: string;
   prompt: string;
@@ -266,7 +266,7 @@ export async function startAgent(spec: SandboxSpec | GraderSandboxSpec, outDir: 
           total: sum(messages, (m) => m.usage?.totalTokens), costUsd: sum(messages, (m) => m.usage?.cost?.total), responses: messages.length,
         },
         calls: slice.filter((e) => e.type === "tool_execution_start").map((e) => ({ id: e.toolCallId, name: e.toolName, args: e.args, parent: e.parentToolCallId, t: e._t })),
-        ends: slice.filter((e) => e.type === "tool_execution_end").map((e) => ({ toolCallId: e.toolCallId, name: e.toolName, isError: !!e.isError, text: textOf(e.result), structured: e.result?.structuredContent?.structuredContent ?? e.result?.structuredContent, parent: e.parentToolCallId, t: e._t })),
+        ends: slice.filter((e) => e.type === "tool_execution_end").map((e) => ({ toolCallId: e.toolCallId, name: e.toolName, isError: !!e.isError, text: textOf(e.result), structured: e.result?.structuredContent?.structuredContent ?? e.result?.structuredContent, details: e.result?.details, parent: e.parentToolCallId, t: e._t })),
         final: messages.at(-1)?.content?.filter((c: any) => c.type === "text").map((c: any) => c.text).join("\n") ?? "",
       };
       // Judge the turn by its FINAL response: when Pi retried a transient failure and the retry succeeded, the earlier errored attempt is not a failure (it is in `retries`).

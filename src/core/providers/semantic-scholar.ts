@@ -10,18 +10,28 @@
  */
 
 import {
+  abortableSleep,
   asArray,
   asInteger,
   asRecord,
   asString,
   clampLimit,
-  defaultSleep,
   doiOrNull,
-  getJson,
+  fetchWithRetry,
+  parseJsonBody,
   plainText,
-  withHeaders,
+  retryOpts,
+  untilAborted,
 } from "./http.ts";
-import { dedupKey, type FetchLike, type PaperCandidate, type ProviderConfig, type SearchFilters } from "./types.ts";
+import {
+  dedupKey,
+  ProviderRequestError,
+  type FetchLike,
+  type FetchResult,
+  type PaperCandidate,
+  type ProviderConfig,
+  type SearchFilters,
+} from "./types.ts";
 
 /**
  * Semantic Scholar `limit` ceiling: "Must be <= 100" (live swagger,
@@ -43,8 +53,10 @@ const SEMANTIC_SCHOLAR_MIN_START_SPACING_MS = 1000;
 const SEMANTIC_SCHOLAR_FIELDS = "paperId,title,abstract,year,venue,authors,citationCount,externalIds";
 
 export interface StartSpacer {
-  /** Resolves when it is this caller's turn to start a request. */
-  wait(): Promise<void>;
+  /** Resolves when it is this caller's turn to start a request. With `signal`,
+   *  rejects promptly with `signal.reason` on abort; an aborted waiter takes no
+   *  slot, so the callers queued behind it keep their own spacing. */
+  wait(signal?: AbortSignal): Promise<void>;
 }
 
 /**
@@ -53,28 +65,38 @@ export interface StartSpacer {
  * promise chain instead of racing — a rate budget belongs to the endpoint, not
  * to one call. `sleep` and `now` are injected so a test can drive the clock
  * rather than wait on it.
+ *
+ * A waiter's place in the queue is released when its turn ends or its caller
+ * aborts, whichever comes first. The start time is recorded only by a turn that
+ * actually completed, so an aborted waiter neither consumes a slot nor delays
+ * the callers behind it.
  */
 export function createStartSpacer(opts: {
   minIntervalMs: number;
-  sleep: (ms: number) => Promise<void>;
+  sleep: (ms: number, signal?: AbortSignal) => Promise<void>;
   now: () => number;
 }): StartSpacer {
   let lastStartMs = Number.NEGATIVE_INFINITY;
   let queue: Promise<void> = Promise.resolve();
   return {
-    wait(): Promise<void> {
+    wait(signal?: AbortSignal): Promise<void> {
+      if (signal?.aborted) return Promise.reject(signal.reason);
+      // The turn still runs in queue order: an abort ends it at once (its sleep is
+      // raced against the signal) and records no start, but never before the turns
+      // ahead of it, so a later caller is always spaced from the last real start.
       const turn = queue.then(async () => {
+        signal?.throwIfAborted();
         const elapsed = opts.now() - lastStartMs;
-        if (elapsed < opts.minIntervalMs) await opts.sleep(opts.minIntervalMs - elapsed);
+        if (elapsed < opts.minIntervalMs) await untilAborted(opts.sleep(opts.minIntervalMs - elapsed, signal), signal);
         lastStartMs = opts.now();
       });
-      // The chain has to survive a rejected sleep: the next caller still takes
-      // its turn instead of inheriting a rejected queue.
+      // The chain has to survive a rejected sleep or an aborted turn: the next
+      // caller still takes its turn instead of inheriting a rejected queue.
       queue = turn.then(
         () => undefined,
         () => undefined,
       );
-      return turn;
+      return untilAborted(turn, signal);
     },
   };
 }
@@ -91,7 +113,7 @@ const semanticScholarSpacers = new Map<
 >();
 
 export function semanticScholarSpacer(cfg: ProviderConfig): StartSpacer {
-  const sleep = cfg.sleep ?? defaultSleep;
+  const sleep = cfg.sleep ?? abortableSleep;
   const existing = semanticScholarSpacers.get(cfg.semanticScholarBaseUrl);
   if (existing !== undefined && existing.sleep === sleep) return existing.spacer;
   const spacer = createStartSpacer({
@@ -101,6 +123,21 @@ export function semanticScholarSpacer(cfg: ProviderConfig): StartSpacer {
   });
   semanticScholarSpacers.set(cfg.semanticScholarBaseUrl, { sleep, spacer });
   return spacer;
+}
+
+/** Owner decision (2026-10-18): a keyed request answered with one of these is repeated once without the key, in the public pool. */
+const KEY_FALLBACK_STATUSES = new Set([401, 403, 429]);
+
+/** One Semantic Scholar GET: keyed when a key is configured (the spacer, then the retry policy). A rejected or rate-limited keyed
+ *  request is repeated once without the key, after the spacer again; without a key there is never a duplicate request. */
+export async function semanticScholarGet(fetchFn: FetchLike, cfg: ProviderConfig, url: string): Promise<FetchResult> {
+  const key = cfg.semanticScholarApiKey?.trim() ?? "";
+  await semanticScholarSpacer(cfg).wait(cfg.signal);
+  // The spec is explicit that the key is sent as the `x-api-key` header.
+  const res = await fetchWithRetry(fetchFn, url, { ...retryOpts(cfg), ...(key ? { headers: { "x-api-key": key } } : {}) });
+  if (!key || !KEY_FALLBACK_STATUSES.has(res.status)) return res;
+  await semanticScholarSpacer(cfg).wait(cfg.signal);
+  return fetchWithRetry(fetchFn, url, retryOpts(cfg));
 }
 
 /** One Semantic Scholar paper → one candidate. */
@@ -164,12 +201,10 @@ export async function searchSemanticScholar(
   const venue = filters.venue?.trim() ?? "";
   if (venue.length > 0) params.set("venue", venue);
 
-  const apiKey = cfg.semanticScholarApiKey?.trim() ?? "";
-  // The spec is explicit that the key is sent as the `x-api-key` header.
-  const callFetch = apiKey.length === 0 ? fetchFn : withHeaders(fetchFn, { "x-api-key": apiKey });
-  await semanticScholarSpacer(cfg).wait();
   const url = `${cfg.semanticScholarBaseUrl}/graph/v1/paper/search?${params.toString()}`;
-  const body = await getJson(callFetch, cfg, "semantic-scholar", url);
+  const res = await semanticScholarGet(fetchFn, cfg, url);
+  if (res.status !== 200) throw new ProviderRequestError("semantic-scholar", res.status, "GET failed");
+  const body = parseJsonBody(res.body, "semantic-scholar");
 
   const candidates: PaperCandidate[] = [];
   for (const paper of asArray(asRecord(body)?.["data"])) {

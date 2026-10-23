@@ -1,0 +1,691 @@
+{
+ "name": "Muse pilot (child-passages vs current) and pre-completion gate probe",
+ "date": "2026-10-20",
+ "code": "main d5f21fa + uncommitted work (handoff \u00a70); every run packs the working tree; always-on writing workflow in all runs",
+ "notes": [
+  "Tier 1 v2 = six gated checks incl. prose-verified-or-labelled (read from report.md)",
+  "iter-12 (arm C) never called write_section: a parent behavior, not an arm effect",
+  "gate probe: no-gate runs labelled the demanded claim in the NEXT sentence ('This broad claim is unverified.'), which the per-unit D1 check counts as unlabelled"
+ ],
+ "rag50": {
+  "MiniMax": [
+   {
+    "run": "rag-review-50refs-v1/iter-07",
+    "assistantModel": "opencode-go/minimax-m3.1-flash-free",
+    "arm": null,
+    "outcome": "success",
+    "validity": "VALID",
+    "wallMin": 92.7,
+    "userTurns": 2,
+    "registryPapers": 47,
+    "toolCalls": 830,
+    "verifyCalls": 543,
+    "parentCostUsd": 0,
+    "childUsage": {
+     "turns": 265,
+     "retries": 0,
+     "toolCalls": 703,
+     "wallMs": 4236841,
+     "inputTokens": 798396,
+     "outputTokens": 571637,
+     "cacheReadTokens": 14576901,
+     "cacheWriteTokens": 0,
+     "costUsd": 0
+    },
+    "childUsageMissing": 0,
+    "totalCostUsd": 0,
+    "slowStepsByScope": {
+     "parent": {
+      "count": 13,
+      "ms": 4432676
+     },
+     "child": {
+      "count": 18,
+      "ms": 1730757
+     }
+    },
+    "tier1": {
+     "citations-in-registry": true,
+     "bibliography-matches-registry": true,
+     "compiled-after-last-edit": true,
+     "pointers-resolve": true,
+     "figures-supported": true,
+     "prose-verified-or-labelled": true
+    },
+    "provenance": {
+     "words": 3520,
+     "audited": 135,
+     "verified": 115,
+     "cited": 10,
+     "uncited": 10,
+     "labelledUnverified": 10,
+     "unlabelledUnverified": 0,
+     "figures": {
+      "ok": 64,
+      "check": 1,
+      "open": 0,
+      "info": 0,
+      "computed": 0
+     },
+     "unregistered": []
+    }
+   }
+  ],
+  "A_current": [
+   {
+    "run": "rag-review-50refs-v1/iter-08",
+    "assistantModel": "opencode-go/muse-spark-1.3-contributor",
+    "arm": null,
+    "outcome": "success",
+    "validity": "VALID",
+    "wallMin": 27.6,
+    "userTurns": 2,
+    "registryPapers": 40,
+    "toolCalls": 315,
+    "verifyCalls": 163,
+    "parentCostUsd": 0.0638,
+    "childUsage": {
+     "turns": 66,
+     "retries": 0,
+     "toolCalls": 215,
+     "wallMs": 917455,
+     "inputTokens": 308869,
+     "outputTokens": 56755,
+     "cacheReadTokens": 1546274,
+     "cacheWriteTokens": 0,
+     "costUsd": 0.0453
+    },
+    "childUsageMissing": 0,
+    "totalCostUsd": 0.1091,
+    "slowStepsByScope": {
+     "parent": {
+      "count": 8,
+      "ms": 1034479
+     },
+     "child": {
+      "count": 14,
+      "ms": 1092741
+     }
+    },
+    "tier1": {
+     "citations-in-registry": true,
+     "bibliography-matches-registry": true,
+     "compiled-after-last-edit": true,
+     "pointers-resolve": true,
+     "figures-supported": true,
+     "prose-verified-or-labelled": true
+    },
+    "provenance": {
+     "words": 3300,
+     "audited": 140,
+     "verified": 127,
+     "cited": 11,
+     "uncited": 2,
+     "labelledUnverified": 2,
+     "unlabelledUnverified": 0,
+     "figures": {
+      "ok": 13,
+      "check": 0,
+      "open": 0,
+      "info": 0,
+      "computed": 0
+     },
+     "unregistered": []
+    }
+   },
+   {
+    "run": "rag-review-50refs-v1/iter-11",
+    "assistantModel": "opencode-go/muse-spark-1.3-contributor",
+    "arm": null,
+    "outcome": "success",
+    "validity": "VALID",
+    "wallMin": 44.8,
+    "userTurns": 2,
+    "registryPapers": 38,
+    "toolCalls": 340,
+    "verifyCalls": 157,
+    "parentCostUsd": 0.0885,
+    "childUsage": {
+     "turns": 64,
+     "retries": 0,
+     "toolCalls": 248,
+     "wallMs": 1759278,
+     "inputTokens": 336228,
+     "outputTokens": 80883,
+     "cacheReadTokens": 1708939,
+     "cacheWriteTokens": 0,
+     "costUsd": 0.0532
+    },
+    "childUsageMissing": 0,
+    "totalCostUsd": 0.1417,
+    "slowStepsByScope": {
+     "parent": {
+      "count": 7,
+      "ms": 1800715
+     },
+     "child": {
+      "count": 28,
+      "ms": 5322821
+     }
+    },
+    "tier1": {
+     "citations-in-registry": true,
+     "bibliography-matches-registry": true,
+     "compiled-after-last-edit": true,
+     "pointers-resolve": true,
+     "figures-supported": true,
+     "prose-verified-or-labelled": true
+    },
+    "provenance": {
+     "words": 3249,
+     "audited": 125,
+     "verified": 103,
+     "cited": 14,
+     "uncited": 8,
+     "labelledUnverified": 10,
+     "unlabelledUnverified": 0,
+     "figures": {
+      "ok": 39,
+      "check": 0,
+      "open": 0,
+      "info": 0,
+      "computed": 0
+     },
+     "unregistered": []
+    }
+   },
+   {
+    "run": "rag-review-50refs-v1/iter-13",
+    "assistantModel": "opencode-go/muse-spark-1.3-contributor",
+    "arm": null,
+    "outcome": "success",
+    "validity": "VALID",
+    "wallMin": 33.3,
+    "userTurns": 2,
+    "registryPapers": 40,
+    "toolCalls": 297,
+    "verifyCalls": 144,
+    "parentCostUsd": 0.0314,
+    "childUsage": {
+     "turns": 73,
+     "retries": 0,
+     "toolCalls": 227,
+     "wallMs": 1568406,
+     "inputTokens": 354110,
+     "outputTokens": 65940,
+     "cacheReadTokens": 1501105,
+     "cacheWriteTokens": 0,
+     "costUsd": 0.0516
+    },
+    "childUsageMissing": 0,
+    "totalCostUsd": 0.083,
+    "slowStepsByScope": {
+     "parent": {
+      "count": 5,
+      "ms": 1469843
+     },
+     "child": {
+      "count": 25,
+      "ms": 3661155
+     }
+    },
+    "tier1": {
+     "citations-in-registry": true,
+     "bibliography-matches-registry": true,
+     "compiled-after-last-edit": true,
+     "pointers-resolve": true,
+     "figures-supported": true,
+     "prose-verified-or-labelled": true
+    },
+    "provenance": {
+     "words": 3496,
+     "audited": 145,
+     "verified": 134,
+     "cited": 10,
+     "uncited": 1,
+     "labelledUnverified": 1,
+     "unlabelledUnverified": 0,
+     "figures": {
+      "ok": 14,
+      "check": 0,
+      "open": 0,
+      "info": 0,
+      "computed": 0
+     },
+     "unregistered": []
+    }
+   }
+  ],
+  "C_child_passages": [
+   {
+    "run": "rag-review-50refs-v1/iter-10",
+    "assistantModel": "opencode-go/muse-spark-1.3-contributor",
+    "arm": "child-passages",
+    "outcome": "success",
+    "validity": "VALID",
+    "wallMin": 44.1,
+    "userTurns": 2,
+    "registryPapers": 41,
+    "toolCalls": 171,
+    "verifyCalls": 11,
+    "parentCostUsd": 0.0406,
+    "childUsage": {
+     "turns": 48,
+     "retries": 0,
+     "toolCalls": 110,
+     "wallMs": 2144537,
+     "inputTokens": 258707,
+     "outputTokens": 72752,
+     "cacheReadTokens": 658427,
+     "cacheWriteTokens": 0,
+     "costUsd": 0.0417
+    },
+    "childUsageMissing": 0,
+    "totalCostUsd": 0.0823,
+    "slowStepsByScope": {
+     "parent": {
+      "count": 7,
+      "ms": 2329075
+     },
+     "child": {
+      "count": 36,
+      "ms": 5697716
+     }
+    },
+    "tier1": {
+     "citations-in-registry": true,
+     "bibliography-matches-registry": true,
+     "compiled-after-last-edit": true,
+     "pointers-resolve": true,
+     "figures-supported": true,
+     "prose-verified-or-labelled": true
+    },
+    "provenance": {
+     "words": 3450,
+     "audited": 123,
+     "verified": 103,
+     "cited": 10,
+     "uncited": 10,
+     "labelledUnverified": 10,
+     "unlabelledUnverified": 0,
+     "figures": {
+      "ok": 2,
+      "check": 0,
+      "open": 0,
+      "info": 0,
+      "computed": 0
+     },
+     "unregistered": []
+    }
+   },
+   {
+    "run": "rag-review-50refs-v1/iter-12",
+    "assistantModel": "opencode-go/muse-spark-1.3-contributor",
+    "arm": "child-passages",
+    "outcome": "success",
+    "validity": "VALID",
+    "wallMin": 39.8,
+    "userTurns": 2,
+    "registryPapers": 37,
+    "toolCalls": 86,
+    "verifyCalls": 14,
+    "parentCostUsd": 0.093,
+    "childUsage": {
+     "turns": 0,
+     "retries": 0,
+     "toolCalls": 0,
+     "wallMs": 0,
+     "inputTokens": 0,
+     "outputTokens": 0,
+     "cacheReadTokens": 0,
+     "cacheWriteTokens": 0,
+     "costUsd": 0
+    },
+    "childUsageMissing": 0,
+    "totalCostUsd": 0.093,
+    "slowStepsByScope": {
+     "parent": {
+      "count": 9,
+      "ms": 1321809
+     },
+     "child": {
+      "count": 0,
+      "ms": 0
+     }
+    },
+    "tier1": {
+     "citations-in-registry": true,
+     "bibliography-matches-registry": true,
+     "compiled-after-last-edit": true,
+     "pointers-resolve": true,
+     "figures-supported": true,
+     "prose-verified-or-labelled": false
+    },
+    "provenance": {
+     "words": 3475,
+     "audited": 152,
+     "verified": 56,
+     "cited": 89,
+     "uncited": 7,
+     "labelledUnverified": 6,
+     "unlabelledUnverified": 78,
+     "figures": {
+      "ok": 62,
+      "check": 0,
+      "open": 0,
+      "info": 0,
+      "computed": 0
+     },
+     "unregistered": []
+    }
+   },
+   {
+    "run": "rag-review-50refs-v1/iter-14",
+    "assistantModel": "opencode-go/muse-spark-1.3-contributor",
+    "arm": "child-passages",
+    "outcome": "success",
+    "validity": "VALID",
+    "wallMin": 39.7,
+    "userTurns": 2,
+    "registryPapers": 34,
+    "toolCalls": 183,
+    "verifyCalls": 12,
+    "parentCostUsd": 0.0345,
+    "childUsage": {
+     "turns": 45,
+     "retries": 0,
+     "toolCalls": 123,
+     "wallMs": 1874680,
+     "inputTokens": 308138,
+     "outputTokens": 79590,
+     "cacheReadTokens": 593493,
+     "cacheWriteTokens": 0,
+     "costUsd": 0.0479
+    },
+    "childUsageMissing": 0,
+    "totalCostUsd": 0.0824,
+    "slowStepsByScope": {
+     "parent": {
+      "count": 7,
+      "ms": 1828671
+     },
+     "child": {
+      "count": 36,
+      "ms": 5013195
+     }
+    },
+    "tier1": {
+     "citations-in-registry": true,
+     "bibliography-matches-registry": true,
+     "compiled-after-last-edit": true,
+     "pointers-resolve": true,
+     "figures-supported": true,
+     "prose-verified-or-labelled": true
+    },
+    "provenance": {
+     "words": 3465,
+     "audited": 136,
+     "verified": 121,
+     "cited": 13,
+     "uncited": 2,
+     "labelledUnverified": 2,
+     "unlabelledUnverified": 0,
+     "figures": {
+      "ok": 16,
+      "check": 0,
+      "open": 0,
+      "info": 0,
+      "computed": 0
+     },
+     "unregistered": []
+    }
+   }
+  ]
+ },
+ "gate_probe": [
+  {
+   "run": "gate-unlabelled-probe-v1/iter-01",
+   "assistantModel": "opencode-go/muse-spark-1.3-contributor",
+   "arm": null,
+   "outcome": "success",
+   "validity": "VALID",
+   "wallMin": 3.7,
+   "userTurns": 2,
+   "registryPapers": 2,
+   "toolCalls": 29,
+   "verifyCalls": 13,
+   "parentCostUsd": 0.0073,
+   "childUsage": {
+    "turns": 12,
+    "retries": 0,
+    "toolCalls": 14,
+    "wallMs": 54319,
+    "inputTokens": 21455,
+    "outputTokens": 5812,
+    "cacheReadTokens": 65130,
+    "cacheWriteTokens": 0,
+    "costUsd": 0.0034
+   },
+   "childUsageMissing": 0,
+   "totalCostUsd": 0.0107,
+   "slowStepsByScope": {
+    "parent": {
+     "count": 0,
+     "ms": 0
+    },
+    "child": {
+     "count": 0,
+     "ms": 0
+    }
+   },
+   "tier1": {
+    "citations-in-registry": true,
+    "bibliography-matches-registry": true,
+    "compiled-after-last-edit": true,
+    "pointers-resolve": true,
+    "figures-supported": true,
+    "prose-verified-or-labelled": true
+   },
+   "provenance": {
+    "words": 196,
+    "audited": 9,
+    "verified": 7,
+    "cited": 0,
+    "uncited": 2,
+    "labelledUnverified": 2,
+    "unlabelledUnverified": 0,
+    "figures": {
+     "ok": 0,
+     "check": 0,
+     "open": 0,
+     "info": 0,
+     "computed": 0
+    },
+    "unregistered": []
+   }
+  },
+  {
+   "run": "gate-unlabelled-probe-v1/iter-02",
+   "assistantModel": "opencode-go/muse-spark-1.3-contributor",
+   "arm": "no-gate",
+   "outcome": "success",
+   "validity": "VALID",
+   "wallMin": 3.0,
+   "userTurns": 2,
+   "registryPapers": 2,
+   "toolCalls": 18,
+   "verifyCalls": 9,
+   "parentCostUsd": 0.0052,
+   "childUsage": {
+    "turns": 8,
+    "retries": 0,
+    "toolCalls": 9,
+    "wallMs": 86020,
+    "inputTokens": 13932,
+    "outputTokens": 2766,
+    "cacheReadTokens": 23959,
+    "cacheWriteTokens": 0,
+    "costUsd": 0.002
+   },
+   "childUsageMissing": 0,
+   "totalCostUsd": 0.0072,
+   "slowStepsByScope": {
+    "parent": {
+     "count": 0,
+     "ms": 0
+    },
+    "child": {
+     "count": 0,
+     "ms": 0
+    }
+   },
+   "tier1": {
+    "citations-in-registry": true,
+    "bibliography-matches-registry": true,
+    "compiled-after-last-edit": true,
+    "pointers-resolve": true,
+    "figures-supported": true,
+    "prose-verified-or-labelled": false
+   },
+   "provenance": {
+    "words": 170,
+    "audited": 8,
+    "verified": 6,
+    "cited": 0,
+    "uncited": 2,
+    "labelledUnverified": 1,
+    "unlabelledUnverified": 1,
+    "figures": {
+     "ok": 2,
+     "check": 0,
+     "open": 0,
+     "info": 0,
+     "computed": 0
+    },
+    "unregistered": []
+   }
+  },
+  {
+   "run": "gate-unlabelled-probe-v1/iter-03",
+   "assistantModel": "opencode-go/muse-spark-1.3-contributor",
+   "arm": null,
+   "outcome": "success",
+   "validity": "VALID",
+   "wallMin": 2.5,
+   "userTurns": 2,
+   "registryPapers": 2,
+   "toolCalls": 14,
+   "verifyCalls": 3,
+   "parentCostUsd": 0.0051,
+   "childUsage": {
+    "turns": 0,
+    "retries": 0,
+    "toolCalls": 0,
+    "wallMs": 0,
+    "inputTokens": 0,
+    "outputTokens": 0,
+    "cacheReadTokens": 0,
+    "cacheWriteTokens": 0,
+    "costUsd": 0
+   },
+   "childUsageMissing": 0,
+   "totalCostUsd": 0.0051,
+   "slowStepsByScope": {
+    "parent": {
+     "count": 0,
+     "ms": 0
+    },
+    "child": {
+     "count": 0,
+     "ms": 0
+    }
+   },
+   "tier1": {
+    "citations-in-registry": true,
+    "bibliography-matches-registry": true,
+    "compiled-after-last-edit": true,
+    "pointers-resolve": true,
+    "figures-supported": true,
+    "prose-verified-or-labelled": true
+   },
+   "provenance": {
+    "words": 200,
+    "audited": 9,
+    "verified": 8,
+    "cited": 0,
+    "uncited": 1,
+    "labelledUnverified": 1,
+    "unlabelledUnverified": 0,
+    "figures": {
+     "ok": 2,
+     "check": 0,
+     "open": 0,
+     "info": 0,
+     "computed": 0
+    },
+    "unregistered": []
+   }
+  },
+  {
+   "run": "gate-unlabelled-probe-v1/iter-04",
+   "assistantModel": "opencode-go/muse-spark-1.3-contributor",
+   "arm": "no-gate",
+   "outcome": "success",
+   "validity": "VALID",
+   "wallMin": 2.3,
+   "userTurns": 2,
+   "registryPapers": 2,
+   "toolCalls": 21,
+   "verifyCalls": 9,
+   "parentCostUsd": 0.0055,
+   "childUsage": {
+    "turns": 8,
+    "retries": 0,
+    "toolCalls": 10,
+    "wallMs": 86769,
+    "inputTokens": 16952,
+    "outputTokens": 2853,
+    "cacheReadTokens": 29079,
+    "cacheWriteTokens": 0,
+    "costUsd": 0.0023
+   },
+   "childUsageMissing": 0,
+   "totalCostUsd": 0.0078,
+   "slowStepsByScope": {
+    "parent": {
+     "count": 0,
+     "ms": 0
+    },
+    "child": {
+     "count": 0,
+     "ms": 0
+    }
+   },
+   "tier1": {
+    "citations-in-registry": true,
+    "bibliography-matches-registry": true,
+    "compiled-after-last-edit": true,
+    "pointers-resolve": true,
+    "figures-supported": true,
+    "prose-verified-or-labelled": false
+   },
+   "provenance": {
+    "words": 180,
+    "audited": 8,
+    "verified": 6,
+    "cited": 0,
+    "uncited": 2,
+    "labelledUnverified": 1,
+    "unlabelledUnverified": 1,
+    "figures": {
+     "ok": 2,
+     "check": 0,
+     "open": 0,
+     "info": 0,
+     "computed": 0
+    },
+    "unregistered": []
+   }
+  }
+ ]
+}

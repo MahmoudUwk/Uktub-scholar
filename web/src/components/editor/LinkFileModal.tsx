@@ -1,0 +1,196 @@
+// src/components/editor/LinkFileModal.tsx
+import type React from 'react';
+import { useState } from 'react';
+
+import { t } from '@/i18n';
+import { createNamedLogger } from '@/logging';
+import { useFileTree } from '../../hooks/useFileTree';
+import { fileStoreService } from '../../services/FileStoreService';
+import type { FileNode } from '../../types/files';
+import type { ProjectType } from '../../types/projects';
+import { isTemporaryFile } from '../../utils/fileUtils';
+import { FolderIcon } from '../common/Icons';
+import Modal from '../common/Modal';
+
+const moduleLog = createNamedLogger('LinkFileModal');
+
+interface LinkFileModalProps {
+	isOpen: boolean;
+	onClose: () => void;
+	documentId: string;
+	documentName: string;
+	onLinked: () => void;
+	projectType?: ProjectType;
+}
+
+const LinkFileModal: React.FC<LinkFileModalProps> = ({
+	isOpen,
+	onClose,
+	documentId,
+	documentName,
+	onLinked,
+	projectType = 'latex',
+}) => {
+	const { fileTree, refreshFileTree } = useFileTree();
+	const [selectedDirectory, setSelectedDirectory] = useState<string>('/');
+	const [fileName, setFileName] = useState(() => {
+		const baseName = documentName.replace(/[^a-zA-Z0-9_-]/g, '_');
+		const extension = projectType === 'typst' ? '.typ' : '.tex';
+		return baseName.endsWith(extension) ? baseName : `${baseName}${extension}`;
+	});
+	const [isCreating, setIsCreating] = useState(false);
+
+	const getDirectoryOptions = (): FileNode[] => {
+		const collectDirectories = (nodes: FileNode[]): FileNode[] => {
+			let directories: FileNode[] = [];
+
+			for (const node of nodes) {
+				if (node.type === 'directory' && !isTemporaryFile(node.path)) {
+					directories.push(node);
+					if (node.children) {
+						directories = directories.concat(collectDirectories(node.children));
+					}
+				}
+			}
+
+			return directories;
+		};
+
+		return collectDirectories(fileTree);
+	};
+
+	const handleCreate = async () => {
+		if (!fileName.trim()) return;
+
+		setIsCreating(true);
+		try {
+			const filePath =
+				selectedDirectory === '/'
+					? `/${fileName.trim()}`
+					: `${selectedDirectory}/${fileName.trim()}`;
+
+			await fileStoreService.createDirectoryPath(filePath);
+
+			const fileNode: FileNode = {
+				id: crypto.randomUUID(),
+				name: fileName.trim(),
+				path: filePath,
+				type: 'file',
+				content: new ArrayBuffer(0),
+				lastModified: Date.now(),
+				size: 0,
+				mimeType: 'text/plain',
+				isBinary: false,
+				documentId: documentId,
+			};
+
+			await fileStoreService.storeFile(fileNode);
+			await refreshFileTree();
+			onLinked();
+		} catch (error) {
+			if (
+				error instanceof Error &&
+				error.message === 'File operation cancelled by user'
+			) {
+				// User cancelled due to conflict
+				return;
+			}
+			moduleLog.error('Error creating linked file:', error);
+		} finally {
+			setIsCreating(false);
+		}
+	};
+
+	return (
+		<Modal
+			isOpen={isOpen}
+			onClose={onClose}
+			title={t('Link Document to New File')}
+			size='medium'
+		>
+			<div className='ui-stack' data-gap='md'>
+				<p>
+					{t('Create a new file and link it to the document "')}
+					{documentName}
+					{t('".')}
+				</p>
+
+				<div className='ui-field' data-spacing='section'>
+					<label htmlFor='fileName'>{t('File name')}</label>
+					<input
+						type='text'
+						id='fileName'
+						value={fileName}
+						onChange={(e) => setFileName(e.target.value)}
+						disabled={isCreating}
+						placeholder={t('Enter file name')}
+					/>
+				</div>
+
+				<div className='ui-field' data-spacing='section'>
+					<label>{t('Select destination folder')}</label>
+					<div className='ui-list ui-card' data-scroll='medium'>
+						<div
+							className='ui-list-item'
+							data-align='center'
+							data-gap='sm'
+							data-padding='sm'
+							data-appearance='flat'
+							data-interactive='true'
+							data-selected={selectedDirectory === '/' ? 'true' : undefined}
+							onClick={() => setSelectedDirectory('/')}
+						>
+							<FolderIcon />
+							<span>/</span>
+						</div>
+
+						{getDirectoryOptions().map((dir) => (
+							<div
+								key={dir.path}
+								className='ui-list-item'
+								data-align='center'
+								data-gap='sm'
+								data-padding='sm'
+								data-appearance='flat'
+								data-interactive='true'
+								data-selected={
+									selectedDirectory === dir.path ? 'true' : undefined
+								}
+								onClick={() => setSelectedDirectory(dir.path)}
+							>
+								<FolderIcon />
+								<span>{dir.path}</span>
+							</div>
+						))}
+					</div>
+				</div>
+
+				<div
+					className='ui-actions'
+					data-variant='modal'
+					data-align='end'
+					data-cross='stretch'
+				>
+					<button
+						type='button'
+						className='button secondary'
+						onClick={onClose}
+						disabled={isCreating}
+					>
+						{t('Cancel')}
+					</button>
+					<button
+						type='button'
+						className='button primary'
+						onClick={handleCreate}
+						disabled={isCreating || !fileName.trim()}
+					>
+						{isCreating ? t('Creating...') : t('Create & Link')}
+					</button>
+				</div>
+			</div>
+		</Modal>
+	);
+};
+
+export default LinkFileModal;

@@ -1,0 +1,395 @@
+.sidebar-container {
+	display: flex;
+	flex-shrink: 0;
+	flex-direction: column;
+	background-color: var(--pico-secondary-background);
+	border-radius: var(--radius-lg);
+}
+
+.explorer-container {
+	flex-shrink: 0;
+}
+
+.ui-panel[data-role="explorer"] {
+	width: 100%;
+	background-color: var(
+		--ui-explorer-background,
+		var(--pico-secondary-background)
+	);
+	border-radius: var(--ui-explorer-radius, var(--radius-lg));
+	border: var(--ui-explorer-border, 1px solid transparent);
+	color: var(--text-color);
+	font-size: var(--ui-explorer-font-size, inherit);
+	flex: 1;
+	min-height: 0;
+}
+
+.ui-panel[data-role="explorer"]:hover {
+	border-color: var(--ui-explorer-hover-border-color, var(--accent-border));
+}
+
+.ui-panel-header[data-role="explorer"],
+.ui-section-header.ui-explorer-heading {
+	--ui-panel-header-min-height: var(--ui-explorer-header-min-height, auto);
+	--ui-panel-header-padding: var(--ui-explorer-header-padding, var(--space-sm));
+	--ui-panel-header-background: var(
+		--ui-explorer-header-background,
+		transparent
+	);
+	--ui-panel-header-border-color: var(
+		--ui-explorer-header-border-color,
+		var(--accent-border)
+	);
+	--ui-section-header-min-height: var(--ui-explorer-header-min-height, auto);
+	--ui-section-header-padding: var(
+		--ui-explorer-header-padding,
+		var(--space-sm)
+	);
+	--ui-section-header-background: var(
+		--ui-explorer-header-background,
+		transparent
+	);
+	--ui-section-header-border-color: var(
+		--ui-explorer-header-border-color,
+		var(--accent-border)
+	);
+}
+
+.ui-panel-header[data-role="explorer"] > .ui-panel-title,
+.ui-section-header.ui-explorer-heading
+	> :is(.ui-panel-title, .ui-section-title) {
+	font-size: var(
+		--ui-explorer-title-font-size,
+		var(--ui-panel-title-font-size, var(--font-size-small))
+	);
+	font-weight: var(--ui-explorer-title-font-weight, inherit);
+	text-transform: uppercase;
+	letter-spacing: var(--ui-outline-letter-spacing, 0.05em);
+}
+
+.ui-panel-header[data-role="explorer"] > .ui-toolbar-actions {
+	gap: var(--ui-explorer-actions-gap, var(--space-sm));
+}
+
+.file-toolbar-dropdown {
+	min-width: 200px;
+	padding: var(--space-sm);
+}
+
+.ui-panel[data-role="explorer"].dragging {
+	background-color: var(--pico-primary-focus);
+	outline: 2px dashed var(--pico-primary);
+}
+
+.action-separator {
+	width: 1px;
+	height: 16px;
+	background-image: linear-gradient(
+		to bottom,
+		var(--border-color) 50%,
+		transparent 50%
+	);
+	background-size: 1px 4px;
+	background-repeat: repeat-y;
+	margin: 0 4px;
+	align-self: center;
+}
+
+.action-menu {
+	position: relative;
+	display: none;
+}
+
+.file-node:hover .action-menu {
+	display: block;
+}
+
+.file-tree {
+	flex: 1;
+	overflow-y: auto;
+	padding: var(--ui-file-tree-padding, var(--space-sm) 0);
+	min-height: 0;
+}
+
+.file-tree > .file-node {
+	padding: var(--ui-file-root-node-padding, var(--space-xs) var(--space-sm));
+	margin-left: var(--ui-file-root-node-margin-left, 0);
+}
+
+.file-node {
+	display: flex;
+	align-items: flex-start;
+	cursor: pointer;
+	min-height: var(--ui-file-node-min-height, 0);
+	border-radius: var(--ui-file-node-radius, var(--radius-sm));
+	transition: var(
+		--ui-file-node-transition,
+		background-color var(--transition-normal)
+	);
+	position: relative;
+	color: var(--text-color);
+	padding: var(--ui-file-node-padding, var(--space-xs) var(--space-sm));
+	margin: var(--ui-file-node-margin, 0 0 0 var(--space-md));
+	gap: var(--ui-file-node-gap, var(--space-sm));
+}
+
+.file-node:hover {
+	background-color: var(
+		--ui-file-node-hover-background,
+		var(--pico-primary-focus)
+	);
+}
+
+.file-node.selected {
+	background-color: var(
+		--ui-file-node-selected-background,
+		var(--pico-primary-focus)
+	);
+	font-weight: var(--ui-file-node-selected-font-weight, 500);
+	box-shadow: var(--ui-file-node-selected-shadow, none);
+}
+
+.file-node.drag-over {
+	background-color: var(
+		--ui-file-node-drag-background,
+		var(--pico-primary-focus)
+	);
+	outline: var(--ui-file-node-drag-outline, 1px dashed var(--pico-primary));
+}
+
+.file-node.creating-new-item {
+	background-color: var(--pico-primary-focus);
+	border: 1px solid var(--pico-primary);
+}
+
+.file-node.has-viewer::after {
+	content: "";
+	position: absolute;
+	top: 0;
+	right: 0;
+	width: 4px;
+	height: 100%;
+	background-color: var(--pico-primary);
+	border-top-right-radius: var(--radius-sm);
+	border-bottom-right-radius: var(--radius-sm);
+}
+
+.file-node .collab-avatars {
+	flex-shrink: 0;
+	margin-left: var(--space-xs);
+}
+
+.file-node .collab-avatar {
+	width: 16px;
+	height: 16px;
+	font-size: var(--font-size-nano);
+	border-width: 1px;
+}
+
+.file-node.selected .file-icon {
+	color: var(
+		--ui-file-icon-selected-color,
+		var(--ui-file-icon-color, var(--pico-secondary))
+	);
+}
+
+.directory-children {
+	margin-left: var(--ui-directory-indent, 0);
+}
+
+.file-name {
+	flex: 1;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	font-size: var(--ui-file-name-font-size, var(--font-size-small));
+	color: var(--text-color);
+	align-self: center;
+}
+
+.file-icon {
+	align-items: center;
+	color: var(--ui-file-icon-color, var(--pico-secondary));
+	padding-top: var(--ui-file-icon-padding-top, var(--space-xs));
+	margin-top: var(--ui-file-icon-margin-top, var(--space-xs));
+	position: relative;
+	display: inline-flex;
+	justify-content: center;
+	width: 0.8rem;
+	height: 0.8rem;
+	flex: 0 0 0.8rem;
+	line-height: 1;
+}
+
+.file-icon > svg {
+	width: 0.8rem;
+	height: 0.8rem;
+	max-width: 0.8rem;
+	max-height: 0.8rem;
+	flex-shrink: 0;
+}
+
+.file-icon .file-linked-indicator {
+	position: absolute;
+	top: -0.18rem;
+	right: -0.18rem;
+	display: block;
+	width: 0.4rem;
+	height: 0.4rem;
+	margin: 0;
+	border-radius: 999px;
+	background-color: var(--pico-primary);
+	box-shadow: 0 0 0 1px var(--pico-background);
+	color: transparent;
+	font-size: 0;
+	line-height: 0;
+	pointer-events: none;
+}
+
+.file-name-input-container {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	align-items: stretch;
+	position: relative;
+	min-width: 0;
+}
+
+.file-name-input-row {
+	position: relative;
+	display: flex;
+	align-items: center;
+	width: 100%;
+}
+
+.file-name-input {
+	flex: 1;
+	min-width: 0;
+}
+
+.file-name-input.invalid {
+	border-color: var(--pico-del-color, var(--color-error));
+	box-shadow: 0 0 0 2px
+		color-mix(
+			in srgb,
+			var(--pico-del-color, var(--color-error)) 20%,
+			transparent
+		);
+}
+
+.file-name-error {
+	display: block;
+	margin-top: 3px;
+	font-size: var(--font-size-caption);
+	font-weight: 400;
+	line-height: 1.2;
+	color: var(--pico-del-color, var(--color-error));
+	white-space: normal;
+	word-break: break-word;
+}
+
+.file-actions {
+	display: none;
+	gap: var(--space-xs);
+	align-self: center;
+}
+
+.file-actions .ui-icon-button {
+	--ui-icon-button-size: var(
+		--ui-file-action-size,
+		var(--ui-icon-button-sm-size, 24px)
+	);
+	--ui-icon-button-padding: var(--ui-file-action-padding, var(--space-xs));
+}
+
+.file-node:hover .file-actions {
+	display: flex;
+}
+
+.file-linked-indicator,
+.file-viewer-indicator {
+	margin-left: var(--space-sm);
+	line-height: 0;
+	color: var(--pico-primary);
+}
+
+.file-linked-indicator {
+	font-size: 1.2em;
+}
+
+.file-viewer-indicator {
+	font-size: 0.8em;
+}
+
+.ui-tab-list[data-role="explorer-view"] {
+	display: flex;
+	height: var(--ui-explorer-tabs-height, auto);
+	min-height: var(--ui-explorer-tabs-min-height, 0);
+	background: var(--ui-explorer-tabs-background, transparent);
+	border-bottom: var(--ui-explorer-tabs-border, 1px solid var(--accent-border));
+}
+
+.ui-tab-list[data-role="explorer-view"] > .ui-tab {
+	flex: 1;
+	min-width: min-content;
+	height: var(--ui-explorer-tab-height, auto);
+	min-height: var(--ui-explorer-tab-min-height, 0);
+	white-space: nowrap;
+	padding: var(--ui-explorer-tab-padding, var(--space-sm));
+	background: var(--ui-explorer-tab-background, none);
+	border: none;
+	cursor: pointer;
+	text-align: center;
+	font-size: var(--ui-explorer-tab-font-size, var(--font-size-ui));
+	font-weight: var(--ui-explorer-tab-font-weight, inherit);
+	color: var(--text-color);
+	opacity: var(--ui-explorer-tab-opacity, 0.7);
+	transition: var(
+		--ui-explorer-tab-transition,
+		opacity var(--transition-normal),
+		background-color var(--transition-normal)
+	);
+	margin: 0;
+	border-radius: var(--ui-explorer-tab-radius, 0);
+}
+
+.ui-tab-list[data-role="explorer-view"] > .ui-tab svg {
+	width: var(--ui-explorer-tab-icon-size, 16px);
+	height: var(--ui-explorer-tab-icon-size, 16px);
+}
+
+.ui-tab-list[data-role="explorer-view"] > .ui-tab:hover {
+	opacity: 1;
+	background-color: var(
+		--ui-explorer-tab-hover-background,
+		var(--pico-primary-focus)
+	);
+}
+
+.ui-tab-list[data-role="explorer-view"] > .ui-tab.active {
+	opacity: 1;
+	background-color: var(
+		--ui-explorer-tab-active-background,
+		var(--pico-primary-focus)
+	);
+	border-bottom: var(
+		--ui-explorer-tab-active-border,
+		2px solid var(--pico-primary)
+	);
+	font-weight: var(--ui-explorer-tab-active-font-weight, inherit);
+}
+
+.file-comparison {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: var(--space-md);
+}
+
+.file-node[draggable="true"] {
+	cursor: grab;
+}
+
+.file-node[draggable="true"]:active {
+	cursor: grabbing;
+}

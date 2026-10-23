@@ -1,0 +1,381 @@
+// src/components/editor/FileOperationsModal.tsx
+import type React from 'react';
+
+import { t } from '@/i18n';
+import type { FileNode, FilePropertiesInfo } from '../../types/files';
+import { formatDate } from '../../utils/dateUtils';
+import { formatFileSize, isTemporaryFile } from '../../utils/fileUtils';
+import { FolderIcon, TempFileIcon } from '../common/Icons';
+import Modal from '../common/Modal';
+
+interface FileOperationsModalProps {
+	showPropertiesModal: boolean;
+	onClosePropertiesModal: () => void;
+	propertiesInfo: FilePropertiesInfo | null;
+	showMoveDialog: boolean;
+	onCloseMoveDialog: () => void;
+	fileToMove: FileNode | null;
+	moveSelection?: FileNode[];
+	selectedTargetPath: string;
+	onSetSelectedTargetPath: (path: string) => void;
+	onConfirmMove: () => void;
+	getDirectoryOptions: (currentNode: FileNode | null) => FileNode[];
+	showDragDropDialog: boolean;
+	onCloseDragDropDialog: () => void;
+	dragDropFile: FileNode | null;
+	dragDropTargetPath: string;
+	onConfirmDragDrop: () => void;
+}
+
+const FileOperationsModal: React.FC<FileOperationsModalProps> = ({
+	showPropertiesModal,
+	onClosePropertiesModal,
+	propertiesInfo,
+	showMoveDialog,
+	onCloseMoveDialog,
+	fileToMove,
+	moveSelection,
+	selectedTargetPath,
+	onSetSelectedTargetPath,
+	onConfirmMove,
+	getDirectoryOptions,
+	showDragDropDialog,
+	onCloseDragDropDialog,
+	dragDropFile,
+	dragDropTargetPath,
+	onConfirmDragDrop,
+}) => {
+	const moveNodes = fileToMove ? [fileToMove] : (moveSelection ?? []);
+	const moveDirectoryOptions = getDirectoryOptions(fileToMove).filter(
+		(dir) =>
+			!moveNodes.some(
+				(node) =>
+					node.type === 'directory' &&
+					(dir.path === node.path || dir.path.startsWith(`${node.path}/`)),
+			),
+	);
+	const isMoveDisabled = moveNodes.every(
+		(node) =>
+			(node.path.substring(0, node.path.lastIndexOf('/')) || '/') ===
+			selectedTargetPath,
+	);
+
+	const getTemporaryFileWarning = (
+		operation: string,
+		targetPath?: string,
+	): string | null => {
+		if (moveNodes.length === 0) return null;
+
+		const isSourceTemporary = moveNodes.some((node) =>
+			isTemporaryFile(node.path),
+		);
+		const isTargetTemporary = targetPath ? isTemporaryFile(targetPath) : false;
+
+		if (operation === 'move') {
+			if (isSourceTemporary && isTargetTemporary) {
+				return t(
+					'Moving between temporary locations may cause system instability.',
+				);
+			}
+			if (isSourceTemporary) {
+				return t(
+					'Moving temporary files may break caching or cause system issues.',
+				);
+			}
+			if (isTargetTemporary) {
+				return t(
+					"Moving files to temporary locations means they won't be synced with collaborators. Additionally, temporary locations may be cleared automatically.",
+				);
+			}
+		}
+
+		return null;
+	};
+
+	const getDragDropWarning = (): string | null => {
+		if (!dragDropFile) return null;
+
+		const isSourceTemporary = isTemporaryFile(dragDropFile.path);
+		const isTargetTemporary = isTemporaryFile(dragDropTargetPath);
+
+		if (isSourceTemporary && isTargetTemporary) {
+			return t(
+				'Moving between temporary locations may cause system instability.',
+			);
+		}
+		if (isSourceTemporary) {
+			return t(
+				'Moving temporary files may break caching or cause system issues.',
+			);
+		}
+		if (isTargetTemporary) {
+			return t(
+				"Moving files to temporary locations means they won't be synced with collaborators. Additionally, temporary locations may be cleared automatically.",
+			);
+		}
+
+		return null;
+	};
+
+	const moveWarning = getTemporaryFileWarning('move', selectedTargetPath);
+	const dragDropWarning = getDragDropWarning();
+
+	return (
+		<>
+			{showPropertiesModal && propertiesInfo && (
+				<Modal
+					isOpen={showPropertiesModal}
+					onClose={onClosePropertiesModal}
+					title={t('Properties')}
+					size='medium'
+				>
+					<div className='file-properties'>
+						<div className='property-item'>
+							<strong>{t('Name')}:</strong> {propertiesInfo.name}
+						</div>
+						<div className='property-item'>
+							<strong>{t('Path')}:</strong> {propertiesInfo.path}
+						</div>
+						<div className='property-item'>
+							<strong>{t('Type')}:</strong> {propertiesInfo.type}
+						</div>
+						{propertiesInfo.size !== undefined && (
+							<div className='property-item'>
+								<strong>{t('Size')}:</strong>{' '}
+								{formatFileSize(propertiesInfo.size)}
+							</div>
+						)}
+						{propertiesInfo.directorySummary && (
+							<>
+								<div className='property-item'>
+									<strong>{t('Contents')}:</strong>{' '}
+									{t('{files} files, {directories} folders', {
+										files: propertiesInfo.directorySummary.files,
+										directories: propertiesInfo.directorySummary.directories,
+									})}
+								</div>
+								{propertiesInfo.directorySummary.size > 0 && (
+									<div className='property-item'>
+										<strong>{t('Total Size')}:</strong>{' '}
+										{formatFileSize(propertiesInfo.directorySummary.size)}
+									</div>
+								)}
+							</>
+						)}
+						{propertiesInfo.mimeType && (
+							<div className='property-item'>
+								<strong>{t('MIME Type')}:</strong> {propertiesInfo.mimeType}
+							</div>
+						)}
+						{propertiesInfo.createdAt !== undefined && (
+							<div className='property-item'>
+								<strong>{t('Created')}:</strong>{' '}
+								{formatDate(propertiesInfo.createdAt)}
+							</div>
+						)}
+						{propertiesInfo.lastModified !== undefined && (
+							<div className='property-item'>
+								<strong>{t('Modified')}:</strong>{' '}
+								{formatDate(propertiesInfo.lastModified)}
+							</div>
+						)}
+						{propertiesInfo.lineCount !== undefined && (
+							<div className='property-item'>
+								<strong>{t('Lines')}:</strong> {propertiesInfo.lineCount} (
+								{propertiesInfo.characterCount} {t('characters')})
+							</div>
+						)}
+						<div className='property-item'>
+							<strong>{t('Binary')}:</strong>{' '}
+							{propertiesInfo.isBinary ? t('Yes') : t('No')}
+						</div>
+						{propertiesInfo.documentId && (
+							<div className='property-item'>
+								<strong>{t('Linked Document')}:</strong> {t('Yes')} ({t('ID')}:{' '}
+								{propertiesInfo.documentId})
+							</div>
+						)}
+						{isTemporaryFile(propertiesInfo.path) && (
+							<div className='property-item'>
+								<strong>{t('Temporary')}:</strong> {t('Yes')} (
+								{t('System/Cache file')})
+							</div>
+						)}
+					</div>
+				</Modal>
+			)}
+
+			{showMoveDialog && moveNodes.length > 0 && (
+				<Modal
+					isOpen={showMoveDialog}
+					onClose={onCloseMoveDialog}
+					title={
+						fileToMove
+							? t('Move {name}', { name: fileToMove.name })
+							: t('Move {count} items', { count: moveNodes.length })
+					}
+					size='medium'
+				>
+					<div className='ui-stack' data-gap='md'>
+						<p>{t('Select destination folder')}:</p>
+
+						<div className='ui-list ui-card' data-scroll='medium'>
+							<div
+								className='ui-list-item'
+								data-align='center'
+								data-gap='sm'
+								data-padding='sm'
+								data-appearance='flat'
+								data-interactive='true'
+								data-selected={selectedTargetPath === '/' ? 'true' : undefined}
+								onClick={() => onSetSelectedTargetPath('/')}
+							>
+								<FolderIcon />
+								<span>/</span>
+							</div>
+
+							{moveDirectoryOptions.map((dir) => (
+								<div
+									key={dir.path}
+									className='ui-list-item'
+									data-align='center'
+									data-gap='sm'
+									data-padding='sm'
+									data-appearance='flat'
+									data-interactive='true'
+									data-selected={
+										selectedTargetPath === dir.path ? 'true' : undefined
+									}
+									onClick={() => onSetSelectedTargetPath(dir.path)}
+								>
+									<FolderIcon />
+									<span>{dir.path}</span>
+									{isTemporaryFile(dir.path) && (
+										<span
+											className='ui-badge'
+											data-variant='label'
+											data-tone='accent'
+											title={t('Temporary folder')}
+										>
+											<TempFileIcon />
+										</span>
+									)}
+								</div>
+							))}
+						</div>
+
+						{moveWarning && (
+							<div className='ui-message' data-tone='warning'>
+								{moveWarning}
+							</div>
+						)}
+
+						<div
+							className='ui-actions'
+							data-variant='modal'
+							data-align='end'
+							data-cross='stretch'
+						>
+							<button
+								type='button'
+								className='button secondary'
+								onClick={onCloseMoveDialog}
+							>
+								{t('Cancel')}
+							</button>
+							<button
+								type='button'
+								className='button primary'
+								onClick={onConfirmMove}
+								disabled={isMoveDisabled}
+							>
+								{t('Move Here')}
+							</button>
+						</div>
+					</div>
+				</Modal>
+			)}
+
+			{showDragDropDialog && dragDropFile && (
+				<Modal
+					isOpen={showDragDropDialog}
+					onClose={onCloseDragDropDialog}
+					title={t('Confirm Move')}
+					size='medium'
+				>
+					<div className='drag-drop-confirm-content'>
+						<p>
+							{t('Move "{name}" to {target}?', {
+								name: dragDropFile.name,
+								target:
+									dragDropTargetPath === '/'
+										? t('root folder')
+										: dragDropTargetPath,
+							})}
+						</p>
+
+						<div className='move-info'>
+							<div className='move-source'>
+								<strong>{t('From')}:</strong> {dragDropFile.path}
+								{isTemporaryFile(dragDropFile.path) && (
+									<span
+										className='ui-badge'
+										data-variant='label'
+										data-tone='accent'
+									>
+										{' '}
+										<TempFileIcon /> {t('Temporary')}
+									</span>
+								)}
+							</div>
+							<div className='move-target'>
+								<strong>{t('To')}:</strong>{' '}
+								{dragDropTargetPath === '/' ? '/' : dragDropTargetPath}
+								{isTemporaryFile(dragDropTargetPath) && (
+									<span
+										className='ui-badge'
+										data-variant='label'
+										data-tone='accent'
+									>
+										{' '}
+										<TempFileIcon /> {t('Temporary')}
+									</span>
+								)}
+							</div>
+						</div>
+
+						{dragDropWarning && (
+							<div className='ui-message' data-tone='warning'>
+								{dragDropWarning}
+							</div>
+						)}
+
+						<div
+							className='ui-actions'
+							data-variant='modal'
+							data-align='end'
+							data-cross='stretch'
+						>
+							<button
+								type='button'
+								className='button secondary'
+								onClick={onCloseDragDropDialog}
+							>
+								{t('Cancel')}
+							</button>
+							<button
+								type='button'
+								className='button primary'
+								onClick={onConfirmDragDrop}
+							>
+								{t('Move')}
+							</button>
+						</div>
+					</div>
+				</Modal>
+			)}
+		</>
+	);
+};
+
+export default FileOperationsModal;

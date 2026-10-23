@@ -1,0 +1,49 @@
+/* extras/viewers/pdf/styles.css */
+.page-input {
+	text-align: center;
+}
+
+.zoom-dropdown option {
+	background-color: var(--pico-background);
+	color: var(--text-color);
+}
+
+.zoom-dropdown option.custom-zoom-option {
+	font-weight: bold;
+}
+
+.pdf-container {
+	display: flex;
+	justify-content: flex-start;
+	align-items: flex-start;
+	height: 100%;
+	width: 100%;
+	overflow: auto;
+	padding: var(--space-xl);
+	box-sizing: border-box;
+}
+
+.pdf-page-container {
+	position: relative;
+	display: inline-block;
+	transition: transform 0.2s ease;
+	min-width: fit-content;
+	min-height: fit-content;
+}
+
+.pdf-page-canvas {
+	display: block;
+	margin: 0;
+	border: 1px solid var(--accent-border, #555);
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+	max-width: none;
+	max-height: none;
+	width: auto;
+	height: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.pdf-page-container {
+		transition: none;
+	}
+}

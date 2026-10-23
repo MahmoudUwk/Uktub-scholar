@@ -5,7 +5,7 @@
  * when the embedder fails, results are BM25 only and any failure is stated, never hidden. Ranking
  * scores are used for ordering and never exposed.
  */
-import type { DatabaseSync } from "node:sqlite";
+import type { DatabaseSync } from "../registry.ts";
 
 import { EmbedError, type Embedder } from "../embed/embedder.ts";
 import { VectorSpaceError, dropVectorsOfOtherDimension, ensureVectors, rankByVector } from "../embed/vectors.ts";

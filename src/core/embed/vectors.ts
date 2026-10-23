@@ -5,7 +5,7 @@
  * a few hundred passages), so ranking is an exact scan; an index is added only if measurement shows
  * it is needed.
  */
-import type { DatabaseSync } from "node:sqlite";
+import type { DatabaseSync } from "../registry.ts";
 
 import type { Embedder } from "./embedder.ts";
 import { inTransaction } from "../verify/store.ts";

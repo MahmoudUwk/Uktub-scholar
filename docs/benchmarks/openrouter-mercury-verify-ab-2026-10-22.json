@@ -1,0 +1,226 @@
+{
+ "armE": {
+  "bar": 0.99,
+  "batch": "batch1 (one question per HTTPS request; the product openrouter engine sends one `questions: {c}` per request)",
+  "candidates": "exhaustive (every chunk of the claim's paper; what the strategy gate selects for engine `openrouter`)",
+  "claims": 547,
+  "configEngine": "openrouter",
+  "engine": "product `openrouter` decisions engine code path (`openrouterDecisionsEngine`), injected via `hooks.createEngine` exactly as `scripts/bench-claims-v2.ts` does for remote specs",
+  "identity": "`openrouter:inception/mercury-decide` (product identity, no override)",
+  "model": "inception/mercury-decide (paid)",
+  "path": "`verifyClaimTool` per claim scoped to its own paper, `max_judgments` raised to 100000 (same deviation as 2026-10-15), workers 8"
+ },
+ "armT": {
+  "bar": 0.99,
+  "batch": "batch1",
+  "candidates": "top-10 by the product's own lexical retrieval: the REAL product gate (`verifySwitchFromEnv` + `narrowCandidates`: `lexicalRank` + `topCandidates`, TOP_K=10)",
+  "claims": 547,
+  "configEngine": "hosted (selects the product top10 gate; engine construction overridden by the injected openrouter engine, so no hosted key is used or needed)",
+  "engine": "same injected `openrouterDecisionsEngine` (paid model); the ONLY difference between arms is the strategy gate",
+  "identity": "`declared:openrouter:inception/mercury-decide` via the product's own `UKTUB_VERIFY_MODEL_ID` seam (true assertion: these weights answer), so no stale hosted-identity cache is ever reused",
+  "path": "`verifyClaimTool`, identical harness code to Arm E"
+ },
+ "batchingProbe": {
+  "compare": "pair-by-pair vs Arm T batch1: max/mean drift, verdict flips at 0.99, requests saved",
+  "grouping": "Arm T (claim, passage) pairs sharing the same passage `state`, up to 8 keyed questions per request (`questions: {c1..ck}` with the product `criteriaQuestion` wording)",
+  "pretest": "one 2-question request first; if the endpoint rejects multi-question requests, record the exact error and STOP the probe",
+  "recommendRule": "max drift <= 0.05 AND 0 verdict flips at 0.99 AND requests drop >= 3x"
+ },
+ "catalogCheck": {
+  "attempt": "2026-10-22 GET https://openrouter.ai/api/v1/models (468 entries, no key): `inception/mercury-decide` and `:free` are BOTH absent (decisions-endpoint ids are not in the chat catalog)",
+  "result": "UNCONFIRMED: the `:free`-same-weights claim cannot be checked from the catalog; the paid id is used as briefed"
+ },
+ "cost": {
+  "capUSD": 5.0,
+  "keyStart": {
+   "limit": 10,
+   "limit_remaining": 9.589846331,
+   "usage": 0.410153669
+  },
+  "lanes": 8,
+  "note": "free tier exhausted at run start (free_model_daily_requests used 1025/1000), so the paid model is required regardless; stop if the next step could cross usage 5.410153669",
+  "retry": "product shared 429 retry (bounded maxRetries/totalCap, respects retry headers); refusals recorded, never looped"
+ },
+ "date": "2026-10-22",
+ "decisionRule": {
+  "batching": "RECOMMEND cross-claim batching iff max drift <= 0.05, 0 verdict flips at 0.99, requests drop >= 3x.",
+  "strategy": "RECOMMEND top-10 for the `openrouter` engine iff (a) Arm T false supports at 0.99 <= Arm E's, (b) Arm T true supports at 0.99 >= Arm E's minus 2 points of recall, (c) Arm T recall@2%FP >= Arm E's minus 1 point, (d) on the 6-note docs Arm T promotes no unit Arm E does not, except ones a human reading the passage would accept (listed verbatim; any doubtful one fails the rule)."
+ },
+ "docs": {
+  "armE": "first 6 of the 18 notes in dataset order (iter-01,02,03,04,06,07) to bound cost/time; project roots copied from the 2026-10-15 v0 dirs (512-token section chunks = product default), judgment tables wiped in the copies. MAY cut to the first 3 notes if projected wall exceeds ~2h; any cut recorded here BEFORE running.",
+  "armT": "all 18 notes (iter-01,02,03,04,06,07,08,09,10,11,12,13,14,15,17,18,19,20); the same 6 as Arm E give the like-for-like comparison",
+  "freshState": "each note root is a scratch copy (`cp -a`); `claim_judgments`, `verify_runs`, `claim_evidence`, `claim_ledger` wiped in the copy; manuscripts byte-identical across 2026-10-15 variants (verified iter-01 v0 vs v1)",
+  "mode": "product document mode (`verifyClaimTool` document, paged 50 units/call) with the per-arm engine setup above",
+  "record": "units, judgments, requests, wall, promoted counts per note; outcome distribution; any T-only promotion listed verbatim with pointers for the rule-(d) human read"
+ },
+ "engine": "openrouter",
+ "fixedChoices": {
+  "bar": 0.99,
+  "model": "inception/mercury-decide (paid, $0.02/M input)",
+  "protocol": "systemone-noul-criteria-v1 (criteria wording; the engine sends `criteriaQuestion`)",
+  "supportBarNote": "DEFAULT_MIN_CONFIDENCE 0.99 for all engines"
+ },
+ "honestyFinding": "REPORT SEPARATELY: Arm E false supports at 0.99 out of 278 false claims (vs d3-mini 0/278, Eos 7/278 from the handoff). This stands even if no strategy changes.",
+ "metrics": {
+  "bar099": "true/false supports at 0.99 (isSupported, score = max judged chunk, unchecked claim = null = never supported)",
+  "crossfit": "recall at 2% FP via `crossFit(items, 0.02)` (`scripts/bench-claims-v2-metrics.ts`), r1 = recall at 1%, r2 = recall at 2%, tf = [tp, fp] \u2014 same definitions as 2026-10-15",
+  "perArm": "requests (counted HTTPS POSTs), chars sent (request body bytes), wall seconds"
+ },
+ "notes": [
+  "V1 docs 2026-10-15 was interrupted by hosted daily-quota 429 (poisoned iter-06 removed); this run uses the paid model, no daily cap expected.",
+  "No `src/**`, `web/**`, `skills/**`, `config/**` edits; no git. Strategy implemented via the product gate, not a copy.",
+  "Pre-registration recorded 2026-10-22 before any mercury-decide request; results appended after the runs.",
+  "INTERRUPTION 2026-10-22 ~12:47 local (machine restart): Arm E claims killed at 179/547 (armE-claims.log); checkpoint claims-armE-2026-10-22.partial.jsonl intact (179 records, last line whole); judgment cache in notes claims-registry; resumed from checkpoint by a second worker (script resumes via done-map, bench-claims lines 154-155). Key at resume: usage 0.577400897 / limit 10 (cap line 5.410153669). No other arm had run.",
+  "UNJUDGED DIAGNOSIS (12/179 records, score null): product behavior, not a bench defect; no script change, no rerun. Cause: one judge lane EngineError (src/core/verify/judge.ts catch lines 141-147 sets stop=engine_failure; remaining batches become unchecked, line 153). Engine throws after bounded 429 retries (src/core/verify/claim.ts RETRY_429_MAX_RETRIES=3 lines 428-435,573-576) or immediately on non-429/network errors (lines 580-584); exact status unrecoverable post-hoc (interruption detail not logged). Ruled out: identity/protocol mismatch (script queries cachedJudgments with the identity from structuredContent, script lines 185-186) and chunk-set mismatch (hashes from product selectCandidates line 137; fresh+unjudged=chunks with normal wallMs = transient tail failure). Scoring unchanged from pre-registration and identical to 2026-10-15: chunkScore null when unjudged>0 (bench-claims-v2-score.ts; unchecked never a low score), null counts as not-supported, crossFit fits on judged only (bench-claims-v2-metrics.ts). Of the 12, 5 TRUE claims show supportFound=true with score=null (conservative at bar); 0 show false support.",
+  "BENCH-SCRIPT FIX 2026-10-22 (script only, src untouched): Arm T claims were scored over every chunk (chunkScore unjudged>0 => score null for all 547). Rescored over the product top-10 candidate set (lexicalRank+topCandidates TOP_K=10, same functions the product gate uses; no-searchable-words claims fall back to exhaustive per narrowCandidates). Effect: Arm T bar099 0/269,true 0/278,false => T 180/269 F 0/278; r2 0 => 0.959; 1 claim left genuinely unjudged (2/10 chunks, support false). Fix recorded in script header comment + summary.rescored; no rerun needed (judgments were already cached, rescore is offline).",
+  "DOCS CUT 2026-10-22 (pre-registered ~2h rule): Arm E docs started on all 6 notes but iter-01 had not finished after 43 min (vs 2.8 min for Arm T iter-01), projecting 6 notes to ~4h. Killed the run (own PIDs only) and restarted with --notes 01,02,03. Partial iter-01 judgments persist in its scratch registry copy and are reused as cache on resume; no claims-registry data affected.",
+  "PROBE FIX 2026-10-22 (script only): first full probe run died at 1150/2152 groups on a single transient HTTP 502 (product code path not involved; probe POSTs directly). Added bounded retry (4 attempts, exp backoff) on 5xx/network errors only; non-2xx non-5xx still fails fast. Reran from scratch; first run spend (~1150 groups) is included in total usage below.",
+  "DOCS Arm E outcome: only iter-01 completed (61 units, 3534 req, 18.4 min; cached rerun +376 req for unit outcomes). Iters 02,03 never finished (each projecting ~40+ min uncached); E-docs process killed to stop spend when the worker time budget expired. Rule-(d) like-for-like therefore covers 1 of the 3 cut notes (passes: identical 12 supported units); iters 02,03 unevaluated.",
+  "tsc --noEmit and pnpm test NOT run (worker time budget expired before verification); script-only changes are: Arm T rescoring set, probe bounded retry, rescore phase. Flagged for the orchestrator.",
+  "STOPPED 2026-10-23 ~09:50 local at owner request (verification redesign: section-level judging, annotated claims after write_section). Docs Arm E rerun (notes 01,02,03; orchestrator, PID 18567) had finished iter-02 (71 units, 3456 req incl. cached reuse; unit outcomes were held in memory and not written) and was inside iter-03 when killed. Rule clause (d) stays evaluated on iter-01 only (identical 12 supported units, orchestrator-checked); the strategy decision is therefore NOT RECOMMEND (incomplete). Claims (a)(b)(c) and the batching verdict stand. Sensitivity (orchestrator, not part of the rule): on the 242 TRUE claims Arm E judged completely, Arm E 166 vs Arm T 161 supported; 19 of Arm T's 20 extra supports are claims where Arm E stopped on an engine failure (43/547 Arm E claims vs 1/547 Arm T)."
+ ],
+ "results": {
+  "armE_claims": {
+   "bar099": {
+    "true": "166/269",
+    "false": "0/278"
+   },
+   "crossfit": {
+    "r1": 0.8364312267657993,
+    "r1tf": [
+     225,
+     2
+    ],
+    "r2": 0.8475836431226765,
+    "r2tf": [
+     228,
+     6
+    ],
+    "thresholds1": {
+     "0": 0.46879062662624377,
+     "1": 0.6791786926816161,
+     "2": 0.46879062662624377,
+     "3": 0.6791786926816161
+    },
+    "thresholds2": {
+     "0": 0.13296422989056964,
+     "1": 0.29421497216298875,
+     "2": 0.37754066879814546,
+     "3": 0.37754066879814546
+    }
+   },
+   "refused": [
+    {
+     "id": "v2-2609.10053v1-08",
+     "refused": "VERIFY_ENGINE_MISSING: openrouter decisions (inception/mercury-decide): fetch failed"
+    }
+   ],
+   "batch1": {
+    "requests": 24671,
+    "charsSent": 45173673,
+    "wallS": 7369
+   },
+   "keyAfter": {
+    "usage": 0.813252177,
+    "limit_remaining": 9.186747823
+   },
+   "unjudgedClaims": 43,
+   "preRestart": "179 claims, 10662 req (armE-claims.log) precede the resumed-process counters above"
+  },
+  "armT_claims": {
+   "bar099": {
+    "true": "180/269",
+    "false": "0/278"
+   },
+   "crossfit": {
+    "r1": 0.9442379182156134,
+    "r1tf": [
+     254,
+     3
+    ],
+    "r2": 0.9591078066914498,
+    "r2tf": [
+     258,
+     7
+    ],
+    "thresholds1": {
+     "0": 0.10669059749614017,
+     "1": 0.1329642436335826,
+     "2": 0.26894141551050293,
+     "3": 0.26894141551050293
+    },
+    "thresholds2": {
+     "0": 0.060086648490884395,
+     "1": 0.10669058826486906,
+     "2": 0.10669058826486906,
+     "3": 0.05340332678672523
+    }
+   },
+   "refused": [],
+   "rescored": "2026-10-22 FIX: scores recomputed over the product top-10 candidate set (was: every chunk); batch1/keyAfter preserved from the original run",
+   "batch1": {
+    "requests": 5469,
+    "charsSent": 10079656,
+    "wallS": 1601
+   },
+   "keyAfter": {
+    "usage": 0.862802417,
+    "limit_remaining": 9.137197583
+   }
+  },
+  "probe": {
+   "pairs": 5468,
+   "requests": 2152,
+   "savedVsBatch1": 3316,
+   "wallS": 692,
+   "drift": {
+    "n": 5468,
+    "max": 0.24609049811878408,
+    "mean": 0.0011971771235891457
+   },
+   "flips": 6,
+   "pretest": "ok: {\"c1\":0.8175744673038221,\"c2\":0.00024536957284131404}",
+   "keyAfter": {
+    "usage": 0.908257237,
+    "limit_remaining": 9.091742763
+   },
+   "savingX": 2.54
+  },
+  "docsT": {
+   "notes": 18,
+   "requests": 10058,
+   "charsSent": 18442151,
+   "wallS": 2991,
+   "keyAfter": {
+    "usage": 1.003903997,
+    "limit_remaining": 8.996096003
+   }
+  },
+  "docsE": {
+   "notes": [
+    {
+     "iter": "01",
+     "units": 61,
+     "requests": 376
+    }
+   ],
+   "requests": 376,
+   "wallS": 121,
+   "keyAfter": {
+    "usage": 1.242658037,
+    "limit_remaining": 8.757341963
+   },
+   "iter01_supported_match_T": true
+  },
+  "keyUSD": {
+   "start": 0.410153669,
+   "end": 1.242658037,
+   "spent": 0.833
+  },
+  "decision": {
+   "strategy": "DO NOT RECOMMEND (incomplete): clauses (a) 0<=0, (b) 180/269 vs 166/269, (c) r2 0.959 vs 0.848 all PASS and favor top-10, but clause (d) covers only 1 of 3 cut notes (identical promotions on iter-01) with iters 02,03 unevaluated \u2014 the iff is not satisfied. Evidence directionally favors top-10; rerun E docs iters 02,03 to close (d).",
+   "batching": "DO NOT RECOMMEND: max drift 0.246 > 0.05, 6 flips at 0.99, savings 2.54x < 3x. All three clauses fail."
+  }
+ },
+ "schema": "openrouter-mercury-verify-ab/1"
+}

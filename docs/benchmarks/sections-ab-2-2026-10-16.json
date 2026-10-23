@@ -1,0 +1,975 @@
+{
+  "seed": 20261016,
+  "order": [
+    "1. C1 adapter-literature-workflow-v2",
+    "2. C1 rf-llm-review-v2",
+    "3. C1 rf-llm-review-v2",
+    "4. C0 rf-llm-review-v2",
+    "5. C0 adapter-literature-workflow-v2",
+    "6. C0 adapter-literature-workflow-v2",
+    "7. C0 rf-llm-review-v2",
+    "8. C0 rf-llm-review-v2",
+    "9. C1 adapter-literature-workflow-v2",
+    "10. C1 rf-llm-review-v2",
+    "11. C1 adapter-literature-workflow-v2",
+    "12. C0 adapter-literature-workflow-v2"
+  ],
+  "slotIter": {
+    "1": {
+      "arm": "C1",
+      "scenario": "adapter-literature-workflow-v2",
+      "iter": "iter-10"
+    },
+    "2": {
+      "arm": "C1",
+      "scenario": "rf-llm-review-v2",
+      "iter": "iter-10"
+    },
+    "3": {
+      "arm": "C1",
+      "scenario": "rf-llm-review-v2",
+      "iter": "iter-11"
+    },
+    "4": {
+      "arm": "C0",
+      "scenario": "rf-llm-review-v2",
+      "iter": "iter-12"
+    },
+    "5": {
+      "arm": "C0",
+      "scenario": "adapter-literature-workflow-v2",
+      "iter": "iter-11"
+    },
+    "6": {
+      "arm": "C0",
+      "scenario": "adapter-literature-workflow-v2",
+      "iter": "iter-12"
+    },
+    "7": {
+      "arm": "C0",
+      "scenario": "rf-llm-review-v2",
+      "iter": "iter-13"
+    },
+    "8": {
+      "arm": "C0",
+      "scenario": "rf-llm-review-v2",
+      "iter": "iter-14"
+    },
+    "9": {
+      "arm": "C1",
+      "scenario": "adapter-literature-workflow-v2",
+      "iter": "iter-13"
+    },
+    "10": {
+      "arm": "C1",
+      "scenario": "rf-llm-review-v2",
+      "iter": "iter-15"
+    },
+    "11": {
+      "arm": "C1",
+      "scenario": "adapter-literature-workflow-v2",
+      "iter": "iter-14"
+    },
+    "12": {
+      "arm": "C0",
+      "scenario": "adapter-literature-workflow-v2",
+      "iter": "iter-15"
+    }
+  },
+  "arms": {
+    "C0": "default (no --arm)",
+    "C1": "--arm sections"
+  },
+  "base": "pnpm experiment <scenario> --assistant-model opencode-go/muse-spark-1.3-contributor --verify-engine hosted",
+  "treeHash": "ef086b5311da0acd2eb838a839f698d51ba4b181",
+  "treeMatchAll12": true,
+  "validity": {
+    "valid": 12,
+    "blocked": 0,
+    "invalid": 0
+  },
+  "hosted429": {
+    "in_run_turns": 0,
+    "measure_backoffs": 0,
+    "lost_write_section_to_429": 0,
+    "lost_final_check_to_429": 0
+  },
+  "runs": [
+    {
+      "slot": 1,
+      "scenario": "adapter-literature-workflow-v2",
+      "iter": "iter-10",
+      "arm": "C1",
+      "validity": "VALID",
+      "treeHash": "ef086b5311da0acd2eb838a839f698d51ba4b181",
+      "outcome": "success",
+      "tier1": {
+        "pass": 5,
+        "total": 5
+      },
+      "provenanceFinal": {
+        "words": 1006,
+        "verified": 14,
+        "cited": 16,
+        "uncited": 1,
+        "units": 31
+      },
+      "words": 1006,
+      "costUsd": 0.0257,
+      "wallMs": 778861,
+      "toolCalls": 129,
+      "writeSection": {
+        "calls": 4,
+        "succeeded": 4,
+        "failed": 0,
+        "detail": [
+          {
+            "ok": true,
+            "supported": 10,
+            "units": 10,
+            "incomplete": 10,
+            "unresolved": 0,
+            "unresolved_excerpt": ". | Unresolved: none."
+          },
+          {
+            "ok": true,
+            "supported": 14,
+            "units": 14,
+            "incomplete": 14,
+            "unresolved": 0,
+            "unresolved_excerpt": ". | Unresolved: none."
+          },
+          {
+            "ok": true,
+            "supported": 10,
+            "units": 10,
+            "incomplete": 10,
+            "unresolved": 0,
+            "unresolved_excerpt": ". | Unresolved: none."
+          },
+          {
+            "ok": true,
+            "supported": 10,
+            "units": 14,
+            "incomplete": 14,
+            "unresolved": 4,
+            "unresolved_excerpt": ". | [u9] unsourced: \"Unverified proposal, not a paper claim: single-GPU experiment with one fixed model and dataset comparing LoRA, QLoRA an\u2026\" | [u10] unsourced: \"Unverified scope, not a paper claim: no transfer to other hardware, models, or datasets.\" | [u11] unsourced: \"Lab pilot halving memory is explicitly unverified, not a paper claim, and not used as premise.\" | [u12] unsourced: \"Limitations, explicitly unverified, not paper claims: single-GPU scope only, no new measurements.\" | Unresolved"
+          }
+        ]
+      },
+      "writerDocCheck": {
+        "calls": 4,
+        "documentPages": 4
+      },
+      "n429_in_turns": 0,
+      "docVerify": {
+        "entry": "manuscript/main.tex",
+        "complete": true,
+        "units": 51,
+        "counts": {
+          "supported": 14,
+          "missing-citation": 0,
+          "cited-unsupported": 16,
+          "unsourced": 21,
+          "unregistered": 0
+        },
+        "incomplete": 51
+      },
+      "gradeA": {
+        "note": "ef84b85b",
+        "n": 51,
+        "cited_bad": 0,
+        "uncited_specific": 0,
+        "ungradeable": 0,
+        "trap_violated": false
+      }
+    },
+    {
+      "slot": 2,
+      "scenario": "rf-llm-review-v2",
+      "iter": "iter-10",
+      "arm": "C1",
+      "validity": "VALID",
+      "treeHash": "ef086b5311da0acd2eb838a839f698d51ba4b181",
+      "outcome": "success",
+      "tier1": {
+        "pass": 4,
+        "total": 5
+      },
+      "provenanceFinal": {
+        "words": 2835,
+        "verified": 37,
+        "cited": 72,
+        "uncited": 1,
+        "units": 110
+      },
+      "words": 2835,
+      "costUsd": 0.0366,
+      "wallMs": 1169840,
+      "toolCalls": 158,
+      "writeSection": {
+        "calls": 5,
+        "succeeded": 5,
+        "failed": 0,
+        "detail": [
+          {
+            "ok": true,
+            "supported": 5,
+            "units": 9,
+            "incomplete": 9,
+            "unresolved": 4,
+            "unresolved_excerpt": ". | [u3] cited-unsupported: \"IQFM introduces a self-supervised framework designed specifically for unprocessed multi-channel multiple-input multiple\u2026\" | [u5] cited-unsupported: \"RadioLLM integrates hybrid prompt and token reprogramming for combining radio signal features with expert knowledge, re\u2026\" | [u8] cited-unsupported: \"Lightweight edge models prioritize latency and parameter efficiency, using patch-independent perceptron encoders for wi\u2026\" | [u9] unsourced: \"Scope covers IQFM, WirelessJEPA,"
+          },
+          {
+            "ok": true,
+            "supported": 16,
+            "units": 16,
+            "incomplete": 16,
+            "unresolved": 0,
+            "unresolved_excerpt": ". | Unresolved: none."
+          },
+          {
+            "ok": true,
+            "supported": 12,
+            "units": 12,
+            "incomplete": 12,
+            "unresolved": 0,
+            "unresolved_excerpt": ". | Unresolved: none."
+          },
+          {
+            "ok": true,
+            "supported": 0,
+            "units": 1,
+            "incomplete": 0,
+            "unresolved": 1,
+            "unresolved_excerpt": ". | [u1] skipped: \"By applying MCAKD to WiFo, the authors constructed the lightweight channel prediction model Tiny-WiFo, and experimental\u2026\" | Unresolved: | - [u1] skipped: \"By applying MCAKD to WiFo, the authors constructed the lightweight channel prediction model Tiny-WiFo, and experimental\u2026\""
+          },
+          {
+            "ok": true,
+            "supported": 10,
+            "units": 10,
+            "incomplete": 10,
+            "unresolved": 0,
+            "unresolved_excerpt": ". | Unresolved: none."
+          }
+        ]
+      },
+      "writerDocCheck": {
+        "calls": 5,
+        "documentPages": 5
+      },
+      "n429_in_turns": 0,
+      "docVerify": {
+        "entry": "manuscript/main.tex",
+        "complete": true,
+        "units": 118,
+        "counts": {
+          "supported": 37,
+          "missing-citation": 1,
+          "cited-unsupported": 71,
+          "unsourced": 8,
+          "unregistered": 0,
+          "skipped": 1
+        },
+        "incomplete": 117
+      },
+      "gradeA": {
+        "note": "ef84b85b",
+        "n": 118,
+        "cited_bad": 0,
+        "uncited_specific": 0,
+        "ungradeable": 1,
+        "trap_violated": false
+      }
+    },
+    {
+      "slot": 3,
+      "scenario": "rf-llm-review-v2",
+      "iter": "iter-11",
+      "arm": "C1",
+      "validity": "VALID",
+      "treeHash": "ef086b5311da0acd2eb838a839f698d51ba4b181",
+      "outcome": "success",
+      "tier1": {
+        "pass": 5,
+        "total": 5
+      },
+      "provenanceFinal": {
+        "words": 3429,
+        "verified": 65,
+        "cited": 30,
+        "uncited": 8,
+        "units": 103
+      },
+      "words": 3429,
+      "costUsd": 0.0555,
+      "wallMs": 869757,
+      "toolCalls": 164,
+      "writeSection": {
+        "calls": 5,
+        "succeeded": 5,
+        "failed": 0,
+        "detail": [
+          {
+            "ok": true,
+            "supported": 7,
+            "units": 7,
+            "incomplete": 7,
+            "unresolved": 0,
+            "unresolved_excerpt": ". | Unresolved: none."
+          },
+          {
+            "ok": true,
+            "supported": 13,
+            "units": 13,
+            "incomplete": 13,
+            "unresolved": 0,
+            "unresolved_excerpt": ". | Unresolved: none."
+          },
+          {
+            "ok": true,
+            "supported": 13,
+            "units": 13,
+            "incomplete": 13,
+            "unresolved": 0,
+            "unresolved_excerpt": ". | Unresolved: none."
+          },
+          {
+            "ok": true,
+            "supported": 17,
+            "units": 17,
+            "incomplete": 17,
+            "unresolved": 0,
+            "unresolved_excerpt": ". | Unresolved: none."
+          },
+          {
+            "ok": true,
+            "supported": 15,
+            "units": 15,
+            "incomplete": 15,
+            "unresolved": 0,
+            "unresolved_excerpt": ". | Unresolved: none."
+          }
+        ]
+      },
+      "writerDocCheck": {
+        "calls": 6,
+        "documentPages": 6
+      },
+      "n429_in_turns": 0,
+      "docVerify": {
+        "entry": "manuscript/main.tex",
+        "complete": true,
+        "units": 136,
+        "counts": {
+          "supported": 65,
+          "missing-citation": 0,
+          "cited-unsupported": 30,
+          "unsourced": 41,
+          "unregistered": 0
+        },
+        "incomplete": 136
+      },
+      "gradeA": {
+        "note": "3d54780b",
+        "n": 136,
+        "cited_bad": 1,
+        "uncited_specific": 4,
+        "ungradeable": 0,
+        "trap_violated": false
+      }
+    },
+    {
+      "slot": 4,
+      "scenario": "rf-llm-review-v2",
+      "iter": "iter-12",
+      "arm": "C0",
+      "validity": "VALID",
+      "treeHash": "ef086b5311da0acd2eb838a839f698d51ba4b181",
+      "outcome": "success",
+      "tier1": {
+        "pass": 5,
+        "total": 5
+      },
+      "provenanceFinal": {
+        "words": 2499,
+        "verified": 116,
+        "cited": 77,
+        "uncited": 1,
+        "units": 194
+      },
+      "words": 2499,
+      "costUsd": 0.0663,
+      "wallMs": 863115,
+      "toolCalls": 54,
+      "writeSection": {
+        "calls": 0,
+        "succeeded": 0,
+        "failed": 0,
+        "detail": []
+      },
+      "writerDocCheck": {
+        "calls": 10,
+        "documentPages": 9
+      },
+      "n429_in_turns": 0,
+      "docVerify": {
+        "entry": "manuscript/main.tex",
+        "complete": true,
+        "units": 242,
+        "counts": {
+          "supported": 118,
+          "missing-citation": 1,
+          "cited-unsupported": 74,
+          "unsourced": 48,
+          "unregistered": 0,
+          "skipped": 1
+        },
+        "incomplete": 241
+      },
+      "gradeA": {
+        "note": "508ecec5",
+        "n": 242,
+        "cited_bad": 0,
+        "uncited_specific": 0,
+        "ungradeable": 0,
+        "trap_violated": false
+      }
+    },
+    {
+      "slot": 5,
+      "scenario": "adapter-literature-workflow-v2",
+      "iter": "iter-11",
+      "arm": "C0",
+      "validity": "VALID",
+      "treeHash": "ef086b5311da0acd2eb838a839f698d51ba4b181",
+      "outcome": "success",
+      "tier1": {
+        "pass": 5,
+        "total": 5
+      },
+      "provenanceFinal": {
+        "words": 1191,
+        "verified": 11,
+        "cited": 26,
+        "uncited": 1,
+        "units": 38
+      },
+      "words": 1191,
+      "costUsd": 0.0159,
+      "wallMs": 374417,
+      "toolCalls": 30,
+      "writeSection": {
+        "calls": 0,
+        "succeeded": 0,
+        "failed": 0,
+        "detail": []
+      },
+      "writerDocCheck": {
+        "calls": 4,
+        "documentPages": 4
+      },
+      "n429_in_turns": 0,
+      "docVerify": {
+        "entry": "manuscript/main.tex",
+        "complete": true,
+        "units": 60,
+        "counts": {
+          "supported": 11,
+          "missing-citation": 0,
+          "cited-unsupported": 26,
+          "unsourced": 22,
+          "unregistered": 0,
+          "skipped": 1
+        },
+        "incomplete": 59
+      },
+      "gradeA": {
+        "note": "3d54780b",
+        "n": 60,
+        "cited_bad": 0,
+        "uncited_specific": 0,
+        "ungradeable": 0,
+        "trap_violated": false
+      }
+    },
+    {
+      "slot": 6,
+      "scenario": "adapter-literature-workflow-v2",
+      "iter": "iter-12",
+      "arm": "C0",
+      "validity": "VALID",
+      "treeHash": "ef086b5311da0acd2eb838a839f698d51ba4b181",
+      "outcome": "success",
+      "tier1": {
+        "pass": 5,
+        "total": 5
+      },
+      "provenanceFinal": {
+        "words": 1200,
+        "verified": 5,
+        "cited": 23,
+        "uncited": 0,
+        "units": 28
+      },
+      "words": 1200,
+      "costUsd": 0.0179,
+      "wallMs": 403578,
+      "toolCalls": 33,
+      "writeSection": {
+        "calls": 0,
+        "succeeded": 0,
+        "failed": 0,
+        "detail": []
+      },
+      "writerDocCheck": {
+        "calls": 4,
+        "documentPages": 4
+      },
+      "n429_in_turns": 0,
+      "docVerify": {
+        "entry": "manuscript/main.tex",
+        "complete": true,
+        "units": 60,
+        "counts": {
+          "supported": 5,
+          "missing-citation": 1,
+          "cited-unsupported": 22,
+          "unsourced": 32,
+          "unregistered": 0
+        },
+        "incomplete": 60
+      },
+      "gradeA": {
+        "note": "508ecec5",
+        "n": 60,
+        "cited_bad": 0,
+        "uncited_specific": 2,
+        "ungradeable": 0,
+        "trap_violated": false
+      }
+    },
+    {
+      "slot": 7,
+      "scenario": "rf-llm-review-v2",
+      "iter": "iter-13",
+      "arm": "C0",
+      "validity": "VALID",
+      "treeHash": "ef086b5311da0acd2eb838a839f698d51ba4b181",
+      "outcome": "success",
+      "tier1": {
+        "pass": 4,
+        "total": 5
+      },
+      "provenanceFinal": {
+        "words": 2084,
+        "verified": 17,
+        "cited": 61,
+        "uncited": 4,
+        "units": 82
+      },
+      "words": 2084,
+      "costUsd": 0.0289,
+      "wallMs": 560034,
+      "toolCalls": 37,
+      "writeSection": {
+        "calls": 0,
+        "succeeded": 0,
+        "failed": 0,
+        "detail": []
+      },
+      "writerDocCheck": {
+        "calls": 8,
+        "documentPages": 8
+      },
+      "n429_in_turns": 0,
+      "docVerify": {
+        "entry": "manuscript/main.tex",
+        "complete": true,
+        "units": 108,
+        "counts": {
+          "supported": 17,
+          "missing-citation": 0,
+          "cited-unsupported": 61,
+          "unsourced": 30,
+          "unregistered": 0
+        },
+        "incomplete": 108
+      },
+      "gradeA": {
+        "note": "9928803b",
+        "n": 108,
+        "cited_bad": 0,
+        "uncited_specific": 2,
+        "ungradeable": 0,
+        "trap_violated": false
+      }
+    },
+    {
+      "slot": 8,
+      "scenario": "rf-llm-review-v2",
+      "iter": "iter-14",
+      "arm": "C0",
+      "validity": "VALID",
+      "treeHash": "ef086b5311da0acd2eb838a839f698d51ba4b181",
+      "outcome": "success",
+      "tier1": {
+        "pass": 4,
+        "total": 5
+      },
+      "provenanceFinal": {
+        "words": 3537,
+        "verified": 7,
+        "cited": 85,
+        "uncited": 6,
+        "units": 98
+      },
+      "words": 3537,
+      "costUsd": 0.0262,
+      "wallMs": 593800,
+      "toolCalls": 29,
+      "writeSection": {
+        "calls": 0,
+        "succeeded": 0,
+        "failed": 0,
+        "detail": []
+      },
+      "writerDocCheck": {
+        "calls": 3,
+        "documentPages": 3
+      },
+      "n429_in_turns": 0,
+      "docVerify": {
+        "entry": "manuscript/main.tex",
+        "complete": true,
+        "units": 132,
+        "counts": {
+          "supported": 7,
+          "missing-citation": 0,
+          "cited-unsupported": 85,
+          "unsourced": 40,
+          "unregistered": 0
+        },
+        "incomplete": 132
+      },
+      "gradeA": {
+        "note": "d7dcb564",
+        "n": 132,
+        "cited_bad": 1,
+        "uncited_specific": 0,
+        "ungradeable": 2,
+        "trap_violated": false
+      }
+    },
+    {
+      "slot": 9,
+      "scenario": "adapter-literature-workflow-v2",
+      "iter": "iter-13",
+      "arm": "C1",
+      "validity": "VALID",
+      "treeHash": "ef086b5311da0acd2eb838a839f698d51ba4b181",
+      "outcome": "success",
+      "tier1": {
+        "pass": 5,
+        "total": 5
+      },
+      "provenanceFinal": {
+        "words": 1061,
+        "verified": 11,
+        "cited": 23,
+        "uncited": 0,
+        "units": 34
+      },
+      "words": 1061,
+      "costUsd": 0.0214,
+      "wallMs": 419556,
+      "toolCalls": 29,
+      "writeSection": {
+        "calls": 0,
+        "succeeded": 0,
+        "failed": 0,
+        "detail": []
+      },
+      "writerDocCheck": {
+        "calls": 6,
+        "documentPages": 6
+      },
+      "n429_in_turns": 0,
+      "docVerify": {
+        "entry": "manuscript/main.tex",
+        "complete": true,
+        "units": 51,
+        "counts": {
+          "supported": 11,
+          "missing-citation": 0,
+          "cited-unsupported": 23,
+          "unsourced": 16,
+          "unregistered": 0,
+          "skipped": 1
+        },
+        "incomplete": 50
+      },
+      "gradeA": {
+        "note": "9928803b",
+        "n": 51,
+        "cited_bad": 0,
+        "uncited_specific": 0,
+        "ungradeable": 0,
+        "trap_violated": false
+      }
+    },
+    {
+      "slot": 10,
+      "scenario": "rf-llm-review-v2",
+      "iter": "iter-15",
+      "arm": "C1",
+      "validity": "VALID",
+      "treeHash": "ef086b5311da0acd2eb838a839f698d51ba4b181",
+      "outcome": "success",
+      "tier1": {
+        "pass": 4,
+        "total": 5
+      },
+      "provenanceFinal": {
+        "words": 1776,
+        "verified": 6,
+        "cited": 69,
+        "uncited": 6,
+        "units": 81
+      },
+      "words": 1776,
+      "costUsd": 0.0459,
+      "wallMs": 876258,
+      "toolCalls": 42,
+      "writeSection": {
+        "calls": 0,
+        "succeeded": 0,
+        "failed": 0,
+        "detail": []
+      },
+      "writerDocCheck": {
+        "calls": 4,
+        "documentPages": 4
+      },
+      "n429_in_turns": 0,
+      "docVerify": {
+        "entry": "manuscript/main.tex",
+        "complete": true,
+        "units": 100,
+        "counts": {
+          "supported": 7,
+          "missing-citation": 0,
+          "cited-unsupported": 68,
+          "unsourced": 24,
+          "unregistered": 0,
+          "skipped": 1
+        },
+        "incomplete": 99
+      },
+      "gradeA": {
+        "note": "a8e0505a",
+        "n": 100,
+        "cited_bad": 0,
+        "uncited_specific": 0,
+        "ungradeable": 1,
+        "trap_violated": false
+      }
+    },
+    {
+      "slot": 11,
+      "scenario": "adapter-literature-workflow-v2",
+      "iter": "iter-14",
+      "arm": "C1",
+      "validity": "VALID",
+      "treeHash": "ef086b5311da0acd2eb838a839f698d51ba4b181",
+      "outcome": "success",
+      "tier1": {
+        "pass": 5,
+        "total": 5
+      },
+      "provenanceFinal": {
+        "words": 1356,
+        "verified": 12,
+        "cited": 23,
+        "uncited": 1,
+        "units": 36
+      },
+      "words": 1356,
+      "costUsd": 0.0365,
+      "wallMs": 999137,
+      "toolCalls": 113,
+      "writeSection": {
+        "calls": 4,
+        "succeeded": 4,
+        "failed": 0,
+        "detail": [
+          {
+            "ok": true,
+            "supported": 11,
+            "units": 12,
+            "incomplete": 12,
+            "unresolved": 1,
+            "unresolved_excerpt": ". | [u7] cited-unsupported: \"We then scale W x by /r, where is a constant in r.\" | Unresolved: | - [u7] cited-unsupported: \"We then scale W x by /r, where is a constant in r.\""
+          },
+          {
+            "ok": true,
+            "supported": 11,
+            "units": 11,
+            "incomplete": 11,
+            "unresolved": 0,
+            "unresolved_excerpt": ". | Unresolved: none."
+          },
+          {
+            "ok": true,
+            "supported": 13,
+            "units": 13,
+            "incomplete": 13,
+            "unresolved": 0,
+            "unresolved_excerpt": ". | Unresolved: none."
+          },
+          {
+            "ok": true,
+            "supported": 9,
+            "units": 9,
+            "incomplete": 9,
+            "unresolved": 0,
+            "unresolved_excerpt": ". | Unresolved: none."
+          }
+        ]
+      },
+      "writerDocCheck": {
+        "calls": 4,
+        "documentPages": 4
+      },
+      "n429_in_turns": 0,
+      "docVerify": {
+        "entry": "manuscript/main.tex",
+        "complete": true,
+        "units": 61,
+        "counts": {
+          "supported": 12,
+          "missing-citation": 0,
+          "cited-unsupported": 23,
+          "unsourced": 26,
+          "unregistered": 0
+        },
+        "incomplete": 61
+      },
+      "gradeA": {
+        "note": "d7dcb564",
+        "n": 61,
+        "cited_bad": 0,
+        "uncited_specific": 0,
+        "ungradeable": 0,
+        "trap_violated": false
+      }
+    },
+    {
+      "slot": 12,
+      "scenario": "adapter-literature-workflow-v2",
+      "iter": "iter-15",
+      "arm": "C0",
+      "validity": "VALID",
+      "treeHash": "ef086b5311da0acd2eb838a839f698d51ba4b181",
+      "outcome": "success",
+      "tier1": {
+        "pass": 5,
+        "total": 5
+      },
+      "provenanceFinal": {
+        "words": 1177,
+        "verified": 6,
+        "cited": 23,
+        "uncited": 4,
+        "units": 33
+      },
+      "words": 1177,
+      "costUsd": 0.0164,
+      "wallMs": 512622,
+      "toolCalls": 38,
+      "writeSection": {
+        "calls": 0,
+        "succeeded": 0,
+        "failed": 0,
+        "detail": []
+      },
+      "writerDocCheck": {
+        "calls": 4,
+        "documentPages": 4
+      },
+      "n429_in_turns": 0,
+      "docVerify": {
+        "entry": "manuscript/main.tex",
+        "complete": true,
+        "units": 55,
+        "counts": {
+          "supported": 6,
+          "missing-citation": 0,
+          "cited-unsupported": 23,
+          "unsourced": 25,
+          "unregistered": 0,
+          "skipped": 1
+        },
+        "incomplete": 54
+      },
+      "gradeA": {
+        "note": "a8e0505a",
+        "n": 55,
+        "cited_bad": 0,
+        "uncited_specific": 0,
+        "ungradeable": 0,
+        "trap_violated": false
+      }
+    }
+  ],
+  "grading": {
+    "unavailable_papers": [
+      {
+        "doi": "10.1109/tccn.2026.3724175",
+        "citekey": "li2026radiollm",
+        "runs": [
+          "iter-10",
+          "iter-11",
+          "iter-13",
+          "iter-14",
+          "iter-15"
+        ]
+      },
+      {
+        "doi": "10.1109/ojcoms.2026.3661435",
+        "citekey": "mashaal2026iqfm",
+        "runs": [
+          "iter-10",
+          "iter-11",
+          "iter-13",
+          "iter-15"
+        ]
+      },
+      {
+        "doi": "10.1109/milcom64451.2025.11310378",
+        "citekey": "crump2025semanticrf",
+        "runs": [
+          "iter-11"
+        ]
+      },
+      {
+        "doi": "10.1109/jiot.2026.3672036",
+        "citekey": "sun2026enabling",
+        "runs": [
+          "iter-11"
+        ]
+      },
+      {
+        "doi": "10.1016/j.inffus.2025.104104",
+        "citekey": "manukyan2026bridging",
+        "runs": [
+          "iter-14"
+        ]
+      }
+    ],
+    "note": "no recorded lawful origin; affected citekeys absent from corpus, units ungradeable; no non-arXiv/ACL refusal occurred",
+    "grader_incidents": [
+      "rf note ef84b85b grader session hit opencode-go 503 once, rerun fresh, ok"
+    ]
+  }
+}

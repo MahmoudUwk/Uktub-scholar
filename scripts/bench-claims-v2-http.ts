@@ -9,23 +9,12 @@
 import { spawn, type ChildProcess } from "node:child_process";
 
 import { EngineError, type ClaimEngine } from "../src/core/verify/claim.ts";
+import { criteriaQuestion, type SystemOneWording } from "../src/core/verify/wording.ts";
 
-export type Wording = "criteria" | "native";
+export type Wording = SystemOneWording;
 
-/** The `noul` question for a claim: the shared Decision 2.0 wording with its yes and no criteria, or the claim alone. */
-export function criteriaQuestion(claim: string, wording: Wording): Record<string, unknown> {
-  if (wording === "native") return { type: "noul", instructions: claim };
-  return {
-    type: "noul",
-    instructions:
-      `Claim under test: "${claim}" Decide whether the state passage explicitly supports this claim. ` +
-      "Answer true only if the passage itself states or directly entails the claim; answer false when the passage contradicts it or says nothing about it.",
-    criteria: {
-      false: "The passage contradicts the claim or says nothing about it.",
-      true: "The passage explicitly states or directly entails the claim.",
-    },
-  };
-}
+/** The `noul` question for a claim (shared product/benchmark wording; re-exported for existing importers). */
+export { criteriaQuestion };
 
 /** Client policy: one row on a long passage must not stall a run for ever (the CPU path of a 0.8B model takes seconds). */
 const REQUEST_TIMEOUT_MS = 120_000;

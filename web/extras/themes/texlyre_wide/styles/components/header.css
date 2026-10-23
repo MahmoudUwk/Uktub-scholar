@@ -1,0 +1,82 @@
+/* extras/themes/texlyre_wide/styles/components/header.css */
+[data-layout="texlyre-wide"] header .logo {
+	height: calc(var(--texlyre-header-height) * 0.55);
+	transition: all var(--texlyre-transition-normal);
+}
+
+[data-layout="texlyre-wide"] header .logo:hover {
+	filter: drop-shadow(0 0 2px var(--pico-primary));
+	transform: scale(1.05);
+}
+
+[data-layout="texlyre-wide"] header h1 {
+	font-size: var(--font-size-display);
+	margin: 0;
+	font-weight: 600;
+	color: var(--pico-primary);
+}
+
+[data-layout="texlyre-wide"] :where(.header-left) {
+	display: flex;
+	align-items: center;
+	gap: var(--space-lg);
+}
+
+[data-layout="texlyre-wide"] .header-center {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	flex: 1;
+	max-width: 600px;
+	gap: var(--space-us);
+}
+
+[data-layout="texlyre-wide"] :where(.project-title-header) {
+	display: flex;
+	align-items: center;
+	gap: var(--space-sm);
+	max-width: var(--project-title-width, 100%);
+}
+
+[data-layout="texlyre-wide"] :where(.project-title-container) {
+	display: flex;
+	align-items: center;
+	gap: 0;
+	cursor: pointer;
+	transition: opacity var(--texlyre-transition-normal);
+}
+
+[data-layout="texlyre-wide"] :where(.project-title) {
+	margin: 0;
+	font-size: var(--font-size-small);
+	color: var(--text-color);
+	font-weight: 600;
+	padding-top: 0;
+}
+
+[data-layout="texlyre-wide"] :where(.project-description) {
+	margin: 0;
+	padding: 0;
+	color: var(--pico-secondary);
+	font-size: var(--font-size-caption);
+	text-align: center;
+	border: none;
+	max-width: var(--project-title-width, 450px);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+[data-layout="texlyre-wide"] :where(.project-description p) {
+	margin: 0 var(--space-sm);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	padding: 0 var(--space-sm);
+}
+
+[data-layout="texlyre-wide"] :where(.header-right) {
+	display: flex;
+	align-items: center;
+	gap: var(--ui-header-actions-gap, var(--space-sm));
+}

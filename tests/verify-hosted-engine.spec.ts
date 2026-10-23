@@ -22,7 +22,7 @@ describe("hosted verification engine", () => {
       return new Response("not found", { status: 404 });
     }) as typeof fetch;
     const id = await resolveEngineIdentity({ UKTUB_VERIFY_API_KEY: "k-test" }, "hosted", { fetchImpl });
-    assert.deepEqual(id, { model: "hosted:vllm-sr/d3-mini", protocol: "systemone-noul-v1" });
+    assert.deepEqual(id, { model: "hosted:vllm-sr/d3-mini", protocol: "systemone-noul-criteria-v1" });
     assert.equal(seen[0]?.url, "https://decision.vllm-sr.ai/v1/models");
     assert.equal(seen[0]?.auth, "Bearer k-test");
   });

@@ -1,0 +1,44 @@
+{
+    "extends": "./tsconfig.json",
+    "compilerOptions": {
+        "types": [
+            "jest",
+            "@testing-library/jest-dom"
+        ],
+        "ignoreDeprecations": "6.0",
+        "esModuleInterop": true,
+        "allowSyntheticDefaultImports": true,
+        "moduleResolution": "node16",
+        "allowImportingTsExtensions": false,
+        "paths": {
+            "@/*": [
+                "./src/*"
+            ],
+            "@src/*": [
+                "./src/*"
+            ],
+            "@uktub-root/*": [
+                "../*"
+            ],
+            "@chelys/*": [
+                "./src/chelys/*"
+            ],
+            "@extras/*": [
+                "./extras/*"
+            ],
+            "@tests/*": [
+                "./tests/*"
+            ]
+        }
+    },
+    "include": [
+        "extras/**/*",
+        "tests/**/*",
+        "src/**/*",
+    ],
+    "exclude": [
+        "node_modules",
+        "dist",
+        "build"
+    ]
+}

@@ -16,13 +16,12 @@
  */
 
 import { createHash } from "node:crypto";
-import type { DatabaseSync } from "node:sqlite";
 
 import type { ChunkTextConfig } from "../chunk.ts";
 import { chunkDocument } from "../chunk-document.ts";
 import type { SectionMark } from "../sections.ts";
 import { detectHeadings } from "../source/headings.ts";
-import { bumpGeneration } from "../registry.ts";
+import { bumpGeneration, type DatabaseSync } from "../registry.ts";
 import type { PreparedSource } from "../source/prepare.ts";
 
 const sha256 = (s: string): string => createHash("sha256").update(s, "utf8").digest("hex");
@@ -334,12 +333,15 @@ export interface RunSnapshot {
   requested: "all" | "ids";
   /** Ready papers the run checks, in citekey order, at the revision and chunk policy captured. */
   papers: { doi: string; revision: string; policy: string }[];
-  /** Identity of the requested selection: "all", or a digest of the resolved ids and unresolved handles. */
+  /** Opaque identity of the requested selection (all, or resolved ids and unresolved handles),
+   *  including the candidate strategy when no locator query overrides it. */
   scopeKey: string;
   /** Papers selected (ready or not) when the run began. */
   selected: number;
-  /** Query mode: the exact candidate chunks (in judging order) captured at the start; BM25 is
-   *  not stable when other papers are registered, so a continuation never recomputes it. */
+  /** The exact candidate chunks (in judging order) frozen at the run's start:
+   *  query mode captures its BM25 list, the limited strategy its narrowed top-K
+   *  order, and exhaustive stays null. BM25 is not stable when other papers are
+   *  registered, so a continuation replays this list and never recomputes it. */
   candidateIds: string[] | null;
   /** Per-paper candidate accounting captured at the start. */
   selection: { doi: string; chunksTotal: number; matched: number; selected: number }[];

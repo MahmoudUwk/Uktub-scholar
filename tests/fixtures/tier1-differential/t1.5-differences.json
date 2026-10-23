@@ -1,1 +1,25 @@
-{"meaning":"T1.5 (figures-supported) asks whether each figure occurs in the cited paper's current text; sourced-numerics asked whether each token occurred in text the agent saw (tool results plus user messages plus prompt). Only verdict differences are listed.","differs":{"iter-10":{"oldSourcedNumerics":false,"newT15":true,"why":"Old failed on 8k (table row 6), unseen in any tool or user text; T1.5 passes: 8k is not a figure token and every figure resolves in its cited paper."},"iter-12":{"oldSourcedNumerics":false,"newT15":true,"why":"Old failed on 0.01% and 0.2%, unseen in any tool or user text; T1.5 passes: both occur in the cited hu2021lora and dettmers2023qlora."},"iter-14":{"oldSourcedNumerics":false,"newT15":true,"why":"Old failed on eight small percent tokens, unseen in any tool or user text; T1.5 passes: all occur in the cited hu2021lora, zhang2023adalora, liu2024dora, dettmers2023qlora and li2023loftq."},"iter-20":{"oldSourcedNumerics":false,"newT15":true,"why":"Old failed on 37.3 GB and 28.2 GB, unseen in any tool or user text; T1.5 passes: both numbers occur in the cited liu2024dora."}}}
+{
+  "meaning": "T1.5 (figures-supported) asks whether each figure occurs in the cited paper's current text; sourced-numerics asked whether each token occurred in text the agent saw (tool results plus user messages plus prompt). Only verdict differences are listed.",
+  "differs": {
+    "iter-12": {
+      "oldSourcedNumerics": false,
+      "newT15": true,
+      "why": "Old failed on 0.01% and 0.2%, unseen in any tool or user text; T1.5 passes: both occur in the cited hu2021lora and dettmers2023qlora."
+    },
+    "iter-14": {
+      "oldSourcedNumerics": false,
+      "newT15": true,
+      "why": "Old failed on eight small percent tokens, unseen in any tool or user text; T1.5 passes: all occur in the cited hu2021lora, zhang2023adalora, liu2024dora, dettmers2023qlora and li2023loftq."
+    },
+    "iter-20": {
+      "oldSourcedNumerics": false,
+      "newT15": true,
+      "why": "Old failed on 37.3 GB and 28.2 GB, unseen in any tool or user text; T1.5 passes: both numbers occur in the cited liu2024dora."
+    },
+    "iter-04": {
+      "oldSourcedNumerics": true,
+      "newT15": false,
+      "why": "Since 2026-10-15 magnitude tokens (8k, 7B) are figures: \"7B\" is attributed to hu2021lora, whose text never states it; the old check passed because the token appeared in text the agent saw."
+    }
+  }
+}

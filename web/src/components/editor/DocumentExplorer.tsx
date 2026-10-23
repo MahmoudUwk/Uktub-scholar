@@ -1,0 +1,422 @@
+// src/components/editor/DocumentExplorer.tsx
+import type React from 'react';
+import { useRef, useState } from 'react';
+
+import { t } from '@/i18n';
+import { createNamedLogger } from '@/logging';
+import { pluginRegistry } from '../../plugins/PluginRegistry';
+import { filePathCacheService } from '../../services/FilePathCacheService';
+import { useCollab } from '../../hooks/useCollab';
+import { useWheelScroll } from '../../hooks/useWheelScroll';
+import CollaboratorAvatars from '../common/CollaboratorAvatars';
+import type { Document } from '../../types/documents';
+import type { YjsDocUrl } from '../../types/yjs';
+import {
+	DownloadIcon,
+	EditIcon,
+	FileTextIcon,
+	InfoIcon,
+	MoreVerticalIcon,
+	PlusIcon,
+	SyncIcon,
+} from '../common/Icons';
+import Modal from '../common/Modal';
+import DropdownMenu from '../common/DropdownMenu';
+import { formatDate } from '../../utils/dateUtils';
+
+const moduleLog = createNamedLogger('DocumentExplorer');
+
+interface FileViewerProps {
+	documents: Document[];
+	selectedDocId: string | null;
+	onSelectDocument: (id: string) => void;
+	onCreateDocument: () => void;
+	onRenameDocument: (id: string, newName: string) => void;
+	onUpdateContent: (content: string) => void;
+	content: string;
+	docUrl: YjsDocUrl;
+	collabProjectId?: string;
+	docsWithPeers?: Set<string>;
+}
+
+interface DocumentPropertiesInfo {
+	name: string;
+	contentLength: number;
+	lineCount: number;
+	createdAt?: number;
+	linkedFilePath?: string;
+	lastModified?: number;
+}
+
+const DocumentExplorer: React.FC<FileViewerProps> = ({
+	documents,
+	selectedDocId,
+	onSelectDocument,
+	onCreateDocument,
+	onRenameDocument,
+	onUpdateContent,
+	content,
+	docUrl,
+	collabProjectId,
+	docsWithPeers,
+}) => {
+	const { collabService, getAwareness } = useCollab();
+
+	const [editingDocId, setEditingDocId] = useState<string | null>(null);
+	const [editName, setEditName] = useState('');
+	const [activeMenu, setActiveMenu] = useState<string | null>(null);
+	const menuRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+	const headerActionsRef = useWheelScroll<HTMLDivElement>();
+	const [showPropertiesModal, setShowPropertiesModal] = useState(false);
+	const [propertiesInfo, setPropertiesInfo] =
+		useState<DocumentPropertiesInfo | null>(null);
+
+	const [syncSession, setSyncSession] = useState<string | null>(null);
+	const [syncProgress, setSyncProgress] = useState({ current: 0, total: 0 });
+
+	const getDocumentIcon = (docName: string): React.ComponentType =>
+		pluginRegistry.getViewerForFile(docName)?.icon ?? FileTextIcon;
+
+	const renderDocumentIcon = (docName: string) => {
+		const DocumentIcon = getDocumentIcon(docName);
+		return (
+			<>
+				<DocumentIcon />
+				<span className='file-linked-indicator'>•</span>
+			</>
+		);
+	};
+
+	const handleStartRename = (docId: string) => {
+		setEditingDocId(docId);
+		const doc = documents.find((d) => d.id === docId);
+		setEditName(doc?.name || '');
+		setActiveMenu(null);
+	};
+
+	const handleSaveRename = () => {
+		if (editingDocId !== null && editName.trim()) {
+			onRenameDocument(editingDocId, editName);
+			setEditingDocId(null);
+		}
+	};
+
+	const handleKeyDown = (e: React.KeyboardEvent) => {
+		if (e.key === 'Enter') {
+			handleSaveRename();
+		} else if (e.key === 'Escape') {
+			setEditingDocId(null);
+		}
+	};
+
+	const handleExportDocument = async (docId: string) => {
+		const doc = documents.find((d) => d.id === docId);
+		if (!doc) return;
+
+		const exportContent = await collabService.getDocumentContent(docUrl, docId);
+
+		const blob = new Blob([exportContent], { type: 'text/plain' });
+		const url = URL.createObjectURL(blob);
+		const a = document.createElement('a');
+		a.href = url;
+		a.download = `${doc.name}.txt`;
+		document.body.appendChild(a);
+		a.click();
+		document.body.removeChild(a);
+		URL.revokeObjectURL(url);
+		setActiveMenu(null);
+	};
+
+	const handleShowProperties = async (docId: string) => {
+		const doc = documents.find((d) => d.id === docId);
+		if (!doc) return;
+
+		const docContent = await collabService.getDocumentContent(docUrl, docId);
+		const linkedFile = await filePathCacheService.getLinkedFile(docId);
+
+		const info: DocumentPropertiesInfo = {
+			name: doc.name,
+			contentLength: docContent.length,
+			lineCount: docContent.split('\n').length,
+			createdAt: doc.createdAt,
+			linkedFilePath: linkedFile?.path,
+			lastModified: linkedFile?.lastModified,
+		};
+
+		setPropertiesInfo(info);
+		setShowPropertiesModal(true);
+		setActiveMenu(null);
+	};
+
+	const handleDocumentSelect = (docId: string) => {
+		onSelectDocument(docId);
+	};
+
+	const handleSyncAll = async () => {
+		if (syncSession || documents.length === 0 || !collabProjectId) return;
+
+		try {
+			setSyncProgress({ current: 0, total: 0 });
+
+			const sessionId = await collabService.syncAllDocuments(
+				collabProjectId,
+				(current, total) => {
+					setSyncProgress({ current, total });
+				},
+			);
+
+			setSyncSession(sessionId);
+		} catch (error) {
+			moduleLog.error('Error starting document sync:', error);
+		}
+	};
+
+	const handleStopSync = () => {
+		if (!syncSession) return;
+
+		try {
+			collabService.stopSyncAllDocuments(syncSession);
+			setSyncSession(null);
+			setSyncProgress({ current: 0, total: 0 });
+		} catch (error) {
+			moduleLog.error('Error stopping document sync:', error);
+		}
+	};
+
+	const getSyncButtonText = () => {
+		if (!syncSession) return t('Sync All');
+		if (syncProgress.total === 0) return t('Connecting...');
+		return ` (${syncProgress.current}/${syncProgress.total})`;
+	};
+
+	return (
+		<>
+			<div className='file-explorer'>
+				<div
+					className='ui-panel-header'
+					data-role='explorer'
+					data-position='top'
+				>
+					<h3 className='ui-panel-title' data-size='body' data-shrink='true'>
+						{t('Documents')}
+					</h3>
+					<div
+						className='ui-toolbar-actions scroll-x'
+						data-gap='sm'
+						data-active-style='filled'
+						ref={headerActionsRef}
+					>
+						{syncSession ? (
+							<button
+								type='button'
+								className='ui-icon-button'
+								data-variant='subtle'
+								title={t('Stop Sync')}
+								onClick={handleStopSync}
+								style={{ backgroundColor: 'var(--accent-color)' }}
+							>
+								<SyncIcon />
+							</button>
+						) : (
+							<button
+								type='button'
+								className='ui-icon-button'
+								data-variant='subtle'
+								title={t('Sync All Documents')}
+								onClick={handleSyncAll}
+								disabled={documents.length === 0}
+							>
+								<SyncIcon />
+							</button>
+						)}
+						<button
+							type='button'
+							className='ui-icon-button'
+							data-variant='subtle'
+							title={t('New Document')}
+							onClick={onCreateDocument}
+						>
+							<PlusIcon />
+						</button>
+					</div>
+				</div>
+
+				{syncSession && syncProgress.total > 0 && (
+					<div className='ui-message' data-tone='info' data-density='compact'>
+						{t('🔄')}
+						{getSyncButtonText()} {t('- Real-time sync active')}
+					</div>
+				)}
+
+				<div className='file-tree'>
+					{documents.map((doc) => (
+						<div
+							key={doc.id}
+							className={`file-node ${selectedDocId === doc.id ? 'selected' : ''}`}
+							onClick={() => handleDocumentSelect(doc.id)}
+						>
+							<span className='file-icon'>{renderDocumentIcon(doc.name)}</span>
+							{editingDocId === doc.id ? (
+								<div
+									className='file-name-input-row ui-field-with-action'
+									onClick={(e) => e.stopPropagation()}
+								>
+									<input
+										type='text'
+										value={editName}
+										onChange={(e) => setEditName(e.target.value)}
+										onBlur={handleSaveRename}
+										onKeyDown={handleKeyDown}
+										className='file-name-input ui-field-control'
+									/>
+									<button
+										type='button'
+										aria-label={t('Cancel renaming')}
+										className='ui-field-clear'
+										onMouseDown={(e) => {
+											e.preventDefault();
+											e.stopPropagation();
+											setEditingDocId(null);
+										}}
+										title={t('Cancel renaming')}
+									>
+										<span aria-hidden='true'>×</span>
+									</button>
+								</div>
+							) : (
+								<>
+									<span className='file-name'>{doc.name}</span>
+									{(() => {
+										if (!docsWithPeers?.has(doc.id)) return null;
+										const awareness = getAwareness(`yjs_${doc.id}`);
+										if (!awareness) return null;
+										return (
+											<CollaboratorAvatars
+												awareness={awareness}
+												excludeLocal
+												maxVisible={3}
+											/>
+										);
+									})()}
+								</>
+							)}
+
+							<div className='file-actions'>
+								<div
+									className='action-menu'
+									ref={(el) => {
+										if (el) {
+											menuRefs.current.set(doc.id, el);
+										} else {
+											menuRefs.current.delete(doc.id);
+										}
+									}}
+								>
+									<button
+										type='button'
+										className='ui-icon-button'
+										data-variant='subtle'
+										title={t('Options')}
+										onClick={(e) => {
+											e.stopPropagation();
+											setActiveMenu(activeMenu === doc.id ? null : doc.id);
+										}}
+									>
+										<MoreVerticalIcon />
+									</button>
+									<DropdownMenu
+										targetRef={
+											menuRefs.current.get(doc.id)
+												? { current: menuRefs.current.get(doc.id)! }
+												: { current: null }
+										}
+										isOpen={activeMenu === doc.id}
+										onClose={() => setActiveMenu(null)}
+									>
+										<button
+											type='button'
+											className='ui-menu-item'
+											onClick={() => {
+												handleStartRename(doc.id);
+												setActiveMenu(null);
+											}}
+										>
+											<EditIcon />
+											<span>{t('Rename')}</span>
+										</button>
+
+										<button
+											type='button'
+											className='ui-menu-item'
+											onClick={() => {
+												handleExportDocument(doc.id);
+												setActiveMenu(null);
+											}}
+										>
+											<DownloadIcon />
+											<span>{t('Download')}</span>
+										</button>
+
+										<button
+											type='button'
+											className='ui-menu-item'
+											onClick={() => {
+												handleShowProperties(doc.id);
+												setActiveMenu(null);
+											}}
+										>
+											<InfoIcon />
+											<span>{t('Properties')}</span>
+										</button>
+									</DropdownMenu>
+								</div>
+							</div>
+						</div>
+					))}
+				</div>
+			</div>
+
+			{showPropertiesModal && propertiesInfo && (
+				<Modal
+					isOpen={showPropertiesModal}
+					onClose={() => setShowPropertiesModal(false)}
+					title={t('Document Properties')}
+					size='medium'
+				>
+					<div className='document-properties'>
+						<div className='property-item'>
+							<strong>{t('Name: ')}</strong> {propertiesInfo.name}
+						</div>
+						<div className='property-item'>
+							<strong>{t('Content Length:')}</strong>{' '}
+							{propertiesInfo.contentLength} {t('characters')}
+						</div>
+						<div className='property-item'>
+							<strong>{t('Lines')}:</strong> {propertiesInfo.lineCount}
+						</div>
+						{propertiesInfo.createdAt !== undefined && (
+							<div className='property-item'>
+								<strong>{t('Created')}:</strong>{' '}
+								{formatDate(propertiesInfo.createdAt)}
+							</div>
+						)}
+						{propertiesInfo.lastModified !== undefined && (
+							<div className='property-item'>
+								<strong>{t('Modified')}:</strong>{' '}
+								{formatDate(propertiesInfo.lastModified)}
+							</div>
+						)}
+						{propertiesInfo.linkedFilePath && (
+							<div className='property-item'>
+								<strong>{t('Linked File')}:</strong>{' '}
+								{propertiesInfo.linkedFilePath}
+							</div>
+						)}
+					</div>
+				</Modal>
+			)}
+		</>
+	);
+};
+
+export default DocumentExplorer;

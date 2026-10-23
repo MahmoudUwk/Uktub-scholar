@@ -1,0 +1,443 @@
+// extras/themes/texlyre_mobile/TeXlyreMobileTheme.ts
+import { t } from '@/i18n';
+import { renderToStaticMarkup } from 'react-dom/server';
+import { createElement } from 'react';
+
+import type {
+	ThemeLayout,
+	ThemePlugin,
+	ThemeVariant,
+	ThemeView,
+} from '@/plugins/PluginInterface';
+import {
+	ProjectsIcon,
+	ProjectsPlusIcon,
+	FolderIcon,
+	EditFileIcon,
+	OutputIcon,
+	ChatIcon,
+} from '@/components/common/Icons';
+import {
+	applyDesktopViewport,
+	applyMobileViewport,
+} from '@/utils/viewportUtils';
+import { isThemeColorId, themes } from '../shared/colors';
+import './styles/index.css';
+
+const renderIcon = (IconComponent: React.FC<any>, props = {}) => {
+	return renderToStaticMarkup(createElement(IconComponent, props));
+};
+
+const createTeXlyreMobileTheme = (): ThemePlugin => {
+	let currentThemeId = 'dark';
+	let currentView: ThemeView = 'editor';
+	const nav = document.createElement('div');
+	nav.className = 'mobile-bottom-nav texlyre-mobile-nav';
+	let mobileClickHandler: ((e: Event) => void) | null = null;
+	let mobileViewRequestHandler: ((e: Event) => void) | null = null;
+	let hashChangeHandler: (() => void) | null = null;
+	let languageChangeHandler: (() => void) | null = null;
+	let loginCheckInterval: NodeJS.Timeout | null = null;
+
+	const layout: ThemeLayout = {
+		id: 'texlyre-mobile',
+		name: 'TeXlyre Mobile Theme',
+		containerClass: 'texlyre-mobile',
+		defaultFileExplorerWidth: 100,
+		minFileExplorerWidth: 100,
+		maxFileExplorerWidth: 100,
+		stylesheetPath: './styles/layout.css',
+		outlineControls: {
+			preview: true,
+			maximize: true,
+			returnToEditorOnNavigate: true,
+		},
+	};
+
+	const applyThemeColors = (themeId: string) => {
+		if (!isThemeColorId(themeId)) return;
+		const colors = themes[themeId];
+
+		Object.entries(colors).forEach(([key, value]) => {
+			document.documentElement.style.setProperty(
+				`--pico-${key}`,
+				value as string,
+			);
+		});
+		document.documentElement.style.setProperty('color', colors.color);
+		document.documentElement.style.setProperty('--text-color', colors.color);
+	};
+
+	const isProjectsView = () => {
+		const hash = window.location.hash;
+		return hash === '' || hash === '#';
+	};
+
+	const isLoggedIn = (): boolean => {
+		return localStorage.getItem('texlyre-current-user') !== null;
+	};
+
+	const cleanupMobileNavigation = () => {
+		const existingNav = document.querySelector('.mobile-bottom-nav');
+		if (existingNav) {
+			existingNav.remove();
+		}
+
+		document.body.className = document.body.className.replace(
+			/mobile-view-\w+/g,
+			'',
+		);
+
+		if (mobileClickHandler) {
+			document.removeEventListener('click', mobileClickHandler);
+			mobileClickHandler = null;
+		}
+
+		if (mobileViewRequestHandler) {
+			document.removeEventListener(
+				'texlyre-mobile-view-request',
+				mobileViewRequestHandler,
+			);
+			mobileViewRequestHandler = null;
+		}
+
+		if (hashChangeHandler) {
+			window.removeEventListener('hashchange', hashChangeHandler);
+			window.removeEventListener('popstate', hashChangeHandler);
+			hashChangeHandler = null;
+		}
+
+		if (languageChangeHandler) {
+			window.removeEventListener('language-changed', languageChangeHandler);
+			languageChangeHandler = null;
+		}
+	};
+
+	const handleMobileNavigation = () => {
+		if (!isLoggedIn()) {
+			cleanupMobileNavigation();
+			return;
+		}
+
+		const setupNav = () => {
+			const existingNav = document.querySelector('.mobile-bottom-nav');
+			if (existingNav) {
+				existingNav.remove();
+			}
+			setupMobileNavigation();
+		};
+
+		if (document.readyState === 'loading') {
+			document.addEventListener('DOMContentLoaded', setupNav);
+		} else {
+			setupNav();
+		}
+
+		if (hashChangeHandler) {
+			window.removeEventListener('hashchange', hashChangeHandler);
+			window.removeEventListener('popstate', hashChangeHandler);
+			hashChangeHandler = null;
+		}
+
+		hashChangeHandler = () => {
+			const existingNav = document.querySelector('.mobile-bottom-nav');
+			if (existingNav) {
+				existingNav.remove();
+			}
+			if (!isLoggedIn()) return;
+			createMobileNavigation();
+
+			if (isProjectsView()) {
+				currentView = 'editor';
+				updateMobileView('editor');
+			} else {
+				const savedView =
+					localStorage.getItem('texlyre-mobile-view') || 'editor';
+				currentView = savedView as typeof currentView;
+				updateMobileView(currentView);
+			}
+		};
+
+		window.addEventListener('hashchange', hashChangeHandler);
+		window.addEventListener('popstate', hashChangeHandler);
+
+		if (languageChangeHandler) {
+			window.removeEventListener('language-changed', languageChangeHandler);
+		}
+
+		languageChangeHandler = () => {
+			const existingNav = document.querySelector('.mobile-bottom-nav');
+			if (existingNav) {
+				existingNav.remove();
+			}
+			if (!isLoggedIn()) return;
+			createMobileNavigation();
+			updateMobileView(currentView);
+		};
+
+		window.addEventListener('language-changed', languageChangeHandler);
+
+		if (mobileViewRequestHandler) {
+			document.removeEventListener(
+				'texlyre-mobile-view-request',
+				mobileViewRequestHandler,
+			);
+		}
+
+		mobileViewRequestHandler = (event: Event) => {
+			const requestedView = (event as CustomEvent<{ view?: string }>).detail
+				?.view;
+			if (
+				!['explorer', 'editor', 'output', 'chat'].includes(requestedView ?? '')
+			)
+				return;
+
+			currentView = requestedView as typeof currentView;
+			updateMobileView(currentView);
+		};
+		document.addEventListener(
+			'texlyre-mobile-view-request',
+			mobileViewRequestHandler,
+		);
+	};
+
+	const setupMobileNavigation = () => {
+		if (!document.querySelector('.mobile-bottom-nav')) {
+			createMobileNavigation();
+		}
+
+		const handleViewChange = (view: string) => {
+			currentView = view as typeof currentView;
+			updateMobileView(view);
+
+			setTimeout(() => {
+				if (view === 'output') {
+					const embed = document.querySelector('.pdf-viewer embed');
+					if (embed) {
+						(embed as HTMLElement).style.display = 'block';
+						(embed as HTMLElement).style.width = '100%';
+						(embed as HTMLElement).style.height = '100%';
+					}
+				}
+			}, 50);
+		};
+
+		if (mobileClickHandler) {
+			document.removeEventListener('click', mobileClickHandler);
+		}
+
+		mobileClickHandler = (e: Event) => {
+			const target = e.target as HTMLElement;
+			const navButton = target.closest('.mobile-nav-button');
+			if (navButton) {
+				const view = navButton.getAttribute('data-view');
+				if (view) {
+					handleViewChange(view);
+				}
+			}
+		};
+
+		document.addEventListener('click', mobileClickHandler);
+	};
+
+	const createMobileNavigation = () => {
+		const existingNav = document.querySelector('.mobile-bottom-nav');
+		if (existingNav) return;
+
+		const nav = document.createElement('div');
+		nav.className = 'mobile-bottom-nav';
+
+		if (isProjectsView()) {
+			nav.innerHTML = `
+        <button class="mobile-nav-button ${currentView === 'explorer' ? 'active' : ''}" data-view="explorer">
+            ${renderIcon(ProjectsPlusIcon)}
+            <span>${t('Create Project')}</span>
+        </button>
+        <button class="mobile-nav-button ${currentView === 'editor' ? 'active' : ''}" data-view="editor">
+            ${renderIcon(ProjectsIcon)}
+            <span>${t('Projects')}</span>
+        </button>
+    `;
+		} else {
+			nav.innerHTML = `
+        <button class="mobile-nav-button ${currentView === 'explorer' ? 'active' : ''}" data-view="explorer">
+            ${renderIcon(FolderIcon)}
+            <span>${t('Explorer')}</span>
+        </button>
+        <button class="mobile-nav-button ${currentView === 'editor' ? 'active' : ''}" data-view="editor">
+            ${renderIcon(EditFileIcon)}
+            <span>${t('Editor')}</span>
+        </button>
+        <button class="mobile-nav-button ${currentView === 'output' ? 'active' : ''}" data-view="output">
+            ${renderIcon(OutputIcon)}
+            <span>${t('Output')}</span>
+        </button>
+        <button class="mobile-nav-button ${currentView === 'chat' ? 'active' : ''}" data-view="chat">
+            ${renderIcon(ChatIcon)}
+            <span>${t('Chat')}</span>
+        </button>
+    `;
+		}
+
+		document.body.appendChild(nav);
+	};
+
+	const updateMobileView = (view: string) => {
+		document.querySelectorAll('.mobile-nav-button').forEach((btn) => {
+			btn.classList.toggle('active', btn.getAttribute('data-view') === view);
+		});
+
+		document.body.className = document.body.className.replace(
+			/mobile-view-\w+/g,
+			'',
+		);
+		document.body.classList.add(`mobile-view-${view}`);
+
+		if (view === 'chat') {
+			setTimeout(() => {
+				const chatHeader = document.querySelector(
+					'.ui-panel-header[data-role="chat"]',
+				) as HTMLElement;
+				if (chatHeader) {
+					const chatPanel = chatHeader.closest('.ui-panel[data-role="chat"]');
+					if (chatPanel?.classList.contains('collapsed')) {
+						chatHeader.click();
+					}
+				}
+			}, 50);
+		}
+
+		localStorage.setItem('texlyre-mobile-view', view);
+	};
+
+	return {
+		id: 'texlyre-mobile-theme',
+		name: 'TeXlyre Mobile Theme',
+		version: '1.0.0',
+		type: 'theme',
+		themes: [
+			{ id: 'light', name: 'Light', isDark: false },
+			{ id: 'dark', name: 'Dark', isDark: true },
+			{ id: 'system', name: 'System', isDark: false },
+			{ id: 'monokai', name: 'Monokai', isDark: true },
+			{
+				id: 'tomorrow_night_blue',
+				name: 'Tomorrow Night Blue',
+				isDark: true,
+			},
+			{ id: 'nord', name: 'Nord', isDark: true },
+			{ id: 'deuteranopia', name: 'Deuteranopia', isDark: true },
+			{ id: 'protanopia', name: 'Protanopia', isDark: false },
+			{ id: 'tritanopia', name: 'Tritanopia', isDark: false },
+			{ id: 'solarized_light', name: 'Solarized Light', isDark: false },
+			{ id: 'atom_light', name: 'Atom Light', isDark: false },
+		],
+
+		applyTheme(variantId: string): boolean {
+			const theme = this.themes.find((t) => t.id === variantId);
+			if (!theme || variantId === 'system') return false;
+
+			currentThemeId = variantId;
+			applyThemeColors(variantId);
+			document.documentElement.setAttribute('data-theme', variantId);
+			document.documentElement.setAttribute(
+				'data-theme-plugin',
+				'texlyre-mobile',
+			);
+			document.documentElement.setAttribute(
+				'data-theme-mode',
+				theme.isDark ? 'dark' : 'light',
+			);
+
+			if (isLoggedIn()) {
+				handleMobileNavigation();
+
+				if (isProjectsView()) {
+					currentView = 'editor';
+					updateMobileView('editor');
+				} else {
+					const savedView = localStorage.getItem('texlyre-mobile-view');
+					if (savedView) {
+						currentView = savedView as typeof currentView;
+						updateMobileView(savedView);
+					}
+				}
+			} else {
+				cleanupMobileNavigation();
+				if (loginCheckInterval) {
+					clearInterval(loginCheckInterval);
+				}
+				loginCheckInterval = setInterval(() => {
+					if (isLoggedIn()) {
+						if (loginCheckInterval) {
+							clearInterval(loginCheckInterval);
+							loginCheckInterval = null;
+						}
+						handleMobileNavigation();
+					}
+				}, 500);
+			}
+
+			applyMobileViewport();
+
+			return true;
+		},
+
+		getThemeVariants(): ThemeVariant[] {
+			return this.themes;
+		},
+
+		getCurrentTheme(): ThemeVariant {
+			return this.themes.find((t) => t.id === currentThemeId) || this.themes[0];
+		},
+
+		getLayout(): ThemeLayout {
+			return layout;
+		},
+
+		applyLayout(): void {
+			document.documentElement.setAttribute('data-layout', layout.id);
+			if (isLoggedIn()) {
+				handleMobileNavigation();
+			}
+		},
+
+		requestView(view: ThemeView): void {
+			currentView = view;
+			updateMobileView(view);
+		},
+
+		cleanup(): void {
+			cleanupMobileNavigation();
+			applyDesktopViewport();
+			if (loginCheckInterval) {
+				clearInterval(loginCheckInterval);
+				loginCheckInterval = null;
+			}
+		},
+	};
+};
+
+const teXlyreMobileTheme = createTeXlyreMobileTheme();
+
+const observer = new MutationObserver((mutations) => {
+	mutations.forEach((mutation) => {
+		if (
+			mutation.type === 'attributes' &&
+			mutation.attributeName === 'data-theme-plugin'
+		) {
+			const currentPlugin =
+				document.documentElement.getAttribute('data-theme-plugin');
+			if (currentPlugin !== 'texlyre-mobile' && teXlyreMobileTheme.cleanup) {
+				teXlyreMobileTheme.cleanup();
+			}
+		}
+	});
+});
+
+observer.observe(document.documentElement, {
+	attributes: true,
+	attributeFilter: ['data-theme-plugin'],
+});
+
+export default teXlyreMobileTheme;

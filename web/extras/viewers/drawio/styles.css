@@ -1,0 +1,93 @@
+/* extras/viewers/drawio/styles.css */
+.drawio-iframe {
+	width: 100%;
+	height: 100%;
+	border: none;
+	flex: 1;
+}
+
+.export-button.exporting {
+	opacity: 0.6;
+	cursor: wait;
+}
+
+.drawio-png-dropdown,
+.drawio-svg-dropdown {
+	min-width: 260px;
+	padding: var(--space-sm);
+}
+
+.drawio-splash-screen {
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	background: var(--pico-background);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	z-index: 10;
+	animation: drawio-splash-fade-in 0.3s ease-out;
+}
+
+.drawio-splash-content {
+	text-align: center;
+}
+
+.drawio-splash-content .loading-spinner {
+	margin: 0 auto var(--space-md) auto;
+}
+
+.drawio-splash-title {
+	margin: 0 0 var(--space-md);
+	font-size: var(--ui-modal-title-font-size, var(--font-size-heading));
+	line-height: 1.2;
+}
+
+.drawio-splash-content p {
+	color: var(--pico-secondary);
+	font-size: var(--ui-field-control-font-size, var(--font-size-small));
+	line-height: var(--ui-field-control-line-height, 1.35);
+	margin: 0;
+}
+
+.drawio-warning-message {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: var(--space-md);
+	padding: var(--space-sm) var(--space-md);
+	margin-bottom: var(--space-sm);
+	animation: slideDown 0.3s ease-out;
+}
+
+.drawio-warning-message span {
+	flex: 1;
+}
+
+.drawio-warning-message button {
+	flex-shrink: 0;
+}
+
+@keyframes drawio-splash-fade-in {
+	from {
+		opacity: 0;
+	}
+
+	to {
+		opacity: 1;
+	}
+}
+
+@keyframes fadeIn {
+	from {
+		opacity: 0;
+		transform: translateY(10px);
+	}
+
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}

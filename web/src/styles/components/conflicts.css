@@ -1,0 +1,115 @@
+.conflict-resolution {
+	display: flex;
+	height: 100%;
+	min-height: 0;
+}
+
+.conflict-sidebar-panel {
+	flex-shrink: 0;
+}
+
+.conflict-resolution > .resizable-panel {
+	min-height: 0;
+}
+
+.conflict-main {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-md);
+	min-width: 0;
+	min-height: 0;
+	overflow: hidden;
+}
+
+.conflict-file-name {
+	display: flex;
+	align-items: center;
+	gap: var(--space-xs);
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	font-size: var(--font-size-small);
+}
+
+.conflict-file-dir,
+.conflict-summary-path {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	direction: rtl;
+	text-align: left;
+}
+
+.conflict-file-dir {
+	font-size: var(--font-size-caption);
+}
+
+.conflict-path {
+	flex-shrink: 0;
+	padding: var(--space-xs) var(--space-sm);
+	border: 1px solid var(--accent-border);
+	border-radius: var(--radius-sm);
+	background: var(--accent-background);
+	color: var(--text-color);
+	font: var(--font-size-small) / 1.35 var(--editor-font-family, monospace);
+	word-break: break-all;
+}
+
+.merge-editor-container {
+	flex: 1;
+	min-height: 0;
+	overflow: auto;
+	border: 1px solid var(--accent-border);
+	border-radius: var(--radius-sm);
+}
+
+.merge-editor-container .cm-mergeView:has(.cm-search) {
+	overflow: visible;
+}
+
+.merge-editor-container .cm-mergeViewEditor:has(.cm-search) {
+	overflow: clip;
+}
+
+.merge-editor-container
+	.cm-editor
+	> :is(.cm-panels-top, .cm-panels-bottom):has(> .cm-search) {
+	position: sticky;
+	top: 0;
+	order: -1;
+	height: 0;
+	flex: none;
+}
+
+.conflict-complete {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: flex-start;
+	gap: var(--space-sm);
+	overflow-y: auto;
+	padding: var(--space-lg) var(--space-md) 0;
+}
+
+.conflict-complete-icon {
+	color: var(--pico-primary);
+	font-size: var(--font-size-display-xl);
+	line-height: 1;
+}
+
+.conflict-complete-summary {
+	width: 100%;
+	max-width: 560px;
+	margin-top: var(--space-sd);
+	overflow: hidden;
+	border: 1px solid var(--accent-border);
+	border-radius: var(--radius-sm);
+}
+
+.conflict-summary-path {
+	flex: 1;
+	font: var(--font-size-small) / 1.35 var(--editor-font-family, monospace);
+}

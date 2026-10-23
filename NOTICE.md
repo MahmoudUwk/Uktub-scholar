@@ -47,6 +47,20 @@ This package is licensed under AGPL-3.0-only. Third-party provenance is recorded
   (Apache-2.0, https://github.com/genspark-ai/genoffice) are recommended
   host-side companions; nothing from either is included in this package.
 
+## TeXlyre app fork (AGPL-3.0-or-later, Copyright the TeXlyre contributors; 2026-10-20)
+
+- `web/` is a fork of https://github.com/TeXlyre/texlyre (licence AGPL-3.0-or-later,
+  base commit `ccbe092`, 2026-10-16, version 0.13.3; upstream `LICENSE` kept at
+  `web/LICENSE`, all AGPL headers kept). Used as the standalone starting point for
+  Uktub Scholar's browser MVP; Uktub changes are made on top and stay diffable
+  against the base commit (see `web/FORK.md`).
+- Engine dependency `texlyre-busytex` 1.4.1 (https://github.com/TeXlyre/texlyre-busytex,
+  commit `61b83cd`): TeX/LaTeX WASM assets downloaded at build time from its pinned
+  GitHub release into `web/public/core/busytex/` (see `web/scripts/download-core-assets.cjs`).
+  TeXlyre grammar/font/editor-embed assets are likewise downloaded at build time from
+  pinned `github.com/TeXlyre/*` releases, not vendored here.
+- No TeXlyre code is copied outside `web/` in this version.
+
 ## Product skills (ideas adapted; our own text and code, nothing copied)
 
 - `skills/uktub-figures`: the rules and process derive from OpenScience `core/figures` (MIT, itself adapted from alphaXiv

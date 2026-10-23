@@ -5,7 +5,7 @@
  * registration and never recomputed or re-keyed — these functions only mint
  * fresh keys; registry.ts owns the pinning.
  */
-import type { DatabaseSync } from "node:sqlite";
+import type { DatabaseSync } from "./registry.ts";
 
 /** Small static stopword lookup for the title part. */
 const TITLE_STOPWORDS: Record<string, true> = {

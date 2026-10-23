@@ -3,7 +3,7 @@
  * DOI carries (DataCite DOIs `10.48550/arXiv.<id>`, an `arxiv.org/abs/<id>` location, Semantic Scholar's `externalIds.ArXiv`), never
  * from a title or a guess.
  */
-import { defaultSleep } from "../providers/http.ts";
+import { abortableSleep, defaultSleep } from "../providers/http.ts";
 import { createStartSpacer, type StartSpacer } from "../providers/semantic-scholar.ts";
 
 const MODERN_ID = /^\d{4}\.\d{4,5}(?:v\d+)?$/;
@@ -84,7 +84,8 @@ export function arxivSpacer(sleep: ((ms: number) => Promise<void>) | undefined):
   const clock = sleep ?? defaultSleep;
   let spacer = spacers.get(clock);
   if (spacer === undefined) {
-    spacer = createStartSpacer({ minIntervalMs: ARXIV_MIN_SPACING_MS, sleep: clock, now: () => Date.now() });
+    // Production waits on an abortable sleep, so a cancelled acquisition does not sit out the spacing interval.
+    spacer = createStartSpacer({ minIntervalMs: ARXIV_MIN_SPACING_MS, sleep: sleep ?? abortableSleep, now: () => Date.now() });
     spacers.set(clock, spacer);
   }
   return spacer;

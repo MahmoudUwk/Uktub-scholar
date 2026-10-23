@@ -1,0 +1,123 @@
+/* extras/renderers/pdf/styles.css */
+@import "../shared/toolbar.css";
+@import "../shared/layout.css";
+
+.pdf-renderer-container,
+.pdf-renderer-container *,
+.pdf-renderer-container *::before,
+.pdf-renderer-container *::after {
+	box-sizing: border-box;
+}
+
+.pdf-full-viewer-container,
+.pdf-full-viewer-container *,
+.pdf-full-viewer-container *::before,
+.pdf-full-viewer-container *::after {
+	box-sizing: revert;
+}
+
+.pdf-latex-ocg-enabled {
+	position: relative;
+}
+
+.pdf-latex-ocg-notice {
+	position: sticky;
+	top: 0;
+	z-index: 20;
+	margin: 0 auto var(--space-sm);
+	padding: 0.35rem 0.65rem;
+	width: fit-content;
+	max-width: min(90%, 720px);
+	font-size: var(--ui-note-font-size, var(--font-size-meta));
+	line-height: var(--ui-note-line-height, 1.25);
+	color: var(--text-color);
+	background: var(--pico-secondary-background);
+	border: 1px solid var(--accent-border, #444);
+	border-radius: var(--radius-sm);
+	box-shadow: 0 2px 8px var(--color-shadow);
+}
+
+.pdf-latex-ocg-panel {
+	position: sticky;
+	top: 2.4rem;
+	z-index: 19;
+	margin: 0 auto var(--space-sm);
+	padding: var(--space-sm);
+	width: fit-content;
+	max-width: min(90%, 720px);
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--space-sm);
+	font-size: var(--ui-note-font-size, var(--font-size-meta));
+	line-height: var(--ui-note-line-height, 1.25);
+	color: var(--text-color);
+	background: var(--pico-background);
+	border: 1px solid var(--accent-border, #444);
+	border-radius: var(--radius-sm);
+	box-shadow: 0 2px 8px var(--color-shadow);
+}
+
+.pdf-latex-ocg-title {
+	font-weight: 600;
+	margin-right: var(--space-xs);
+}
+
+.pdf-latex-ocg-toggle {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--space-xs);
+	margin: 0;
+	cursor: pointer;
+}
+
+.pdf-latex-ocg-toggle input {
+	margin: 0;
+}
+
+.pdf-full-viewer-container {
+	position: absolute;
+	inset: 0;
+	display: block;
+	width: 100%;
+	height: 100%;
+	overflow: auto;
+	background-color: var(--pico-background);
+}
+
+.pdf-full-viewer-container .pdfViewer {
+	position: relative;
+}
+
+.pdf-full-viewer-container .pdfViewer .page {
+	margin: 10px auto;
+	box-shadow: 0 2px 8px var(--color-shadow);
+}
+
+.pdf-full-viewer-container .page,
+.pdf-full-viewer-container .canvasWrapper,
+.pdf-full-viewer-container canvas,
+.pdf-full-viewer-container .textLayer,
+.pdf-full-viewer-container .annotationLayer {
+	box-sizing: content-box;
+}
+
+.pdf-full-viewer-container .textLayer,
+.pdf-full-viewer-container .annotationLayer {
+	margin: 0 !important;
+	padding: 0 !important;
+	border: 0 !important;
+	transform-origin: 0 0;
+}
+
+.pdf-full-viewer-container .annotationLayer section,
+.pdf-full-viewer-container .textLayer span {
+	box-sizing: content-box;
+}
+
+.pdf-full-viewer-container .annotationLayer .buttonWidgetAnnotation,
+.pdf-full-viewer-container .annotationLayer .buttonWidgetAnnotation *,
+.pdf-full-viewer-container .annotationLayer .linkAnnotation,
+.pdf-full-viewer-container .annotationLayer .linkAnnotation * {
+	cursor: pointer;
+}

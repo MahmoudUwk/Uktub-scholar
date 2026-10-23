@@ -26,6 +26,10 @@ export interface CannedRoute {
   status?: number;
   body: string;
   headers?: Record<string, string>;
+  /** Optional simulated delay (ms) so in-flight cancellation can be tested deterministically. */
+  delayMs?: number;
+  /** With `delayMs`: keep waiting even after the caller aborts (a fetch that ignores its signal). */
+  ignoreAbort?: boolean;
 }
 
 /** One canned download (serializable across postMessage). */
@@ -39,9 +43,26 @@ export interface CannedDownload {
 
 /** `FetchLike` from serializable routes: first substring match wins, else throw. */
 export function buildCannedFetch(routes: CannedRoute[]): FetchLike {
-  return (async (url: string) => {
+  return (async (url: string, init?: { signal?: AbortSignal }) => {
+    init?.signal?.throwIfAborted();
     const route = routes.find((r) => url.includes(r.match));
     if (route === undefined) throw new Error(`NO_CANNED_ROUTE: ${url}`);
+    if (route.delayMs !== undefined && route.delayMs > 0 && route.ignoreAbort === true) {
+      await new Promise<void>((resolve) => setTimeout(resolve, route.delayMs));
+    } else if (route.delayMs !== undefined && route.delayMs > 0) {
+      await new Promise<void>((resolve, reject) => {
+        const timer = setTimeout(resolve, route.delayMs);
+        init?.signal?.addEventListener(
+          "abort",
+          () => {
+            clearTimeout(timer);
+            reject(init.signal!.reason ?? new DOMException("The operation was aborted.", "AbortError"));
+          },
+          { once: true },
+        );
+      });
+    }
+    init?.signal?.throwIfAborted();
     return new Response(route.body, { status: route.status ?? 200, headers: route.headers ?? {} });
   }) as FetchLike;
 }

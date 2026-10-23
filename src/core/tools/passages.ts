@@ -18,7 +18,7 @@ import { RegistryError, openRegistry } from "../registry.ts";
 import { clipLabel } from "../sections.ts";
 import { containEvidence, type SupportedPassage } from "../verify/evidence.ts";
 import { locatorTokens } from "../verify/retrieve.ts";
-import { resolveScope } from "../verify/scope.ts";
+import { normalizePapersScope, resolveScope } from "../verify/scope.ts";
 import { ensureChunks, formatPointer, getSource } from "../verify/store.ts";
 import { busyRefusal, refusalResult, type ToolContext, type ToolResult } from "./context.ts";
 import { MAX_QUERY_CHARS, MAX_SCOPE_IDS } from "./verify.ts";
@@ -30,7 +30,7 @@ export const DEFAULT_SEARCH_HITS = 5;
 export const SearchPassagesParams = Type.Object({
   query: Type.String({ minLength: 1, maxLength: MAX_QUERY_CHARS, description: "What to look for: a topic, question or phrase. Natural language is fine; this is retrieval, not verification" }),
   papers: Type.Optional(
-    Type.Union([Type.Literal("all"), Type.Array(Type.String(), { minItems: 1, maxItems: MAX_SCOPE_IDS })], {
+    Type.Union([Type.String({ minLength: 1 }), Type.Array(Type.String(), { minItems: 1, maxItems: MAX_SCOPE_IDS })], {
       description: `Scope: "all" registered papers (default), or a list of DOIs/citekeys (at most ${MAX_SCOPE_IDS}); an empty list is refused, never read as all`,
     }),
   ),
@@ -79,12 +79,11 @@ export async function searchPassagesTool(ctx: ToolContext, args: SearchPassagesA
   const query = typeof args.query === "string" ? args.query.trim() : "";
   if (query.length === 0 || query.length > MAX_QUERY_CHARS) return invalid(`query must be 1–${MAX_QUERY_CHARS} characters`);
   if (locatorTokens(query).length === 0) return invalid("the query has no searchable words; use words or numbers");
-  if (args.papers !== undefined && args.papers !== "all") {
-    if (!Array.isArray(args.papers) || args.papers.length === 0 || args.papers.some((h) => typeof h !== "string")) {
-      return invalid('papers must be "all" or a non-empty list of DOIs/citekeys; an empty list is never read as all');
-    }
-    if (args.papers.length > MAX_SCOPE_IDS) return refusalResult({ code: "BATCH_TOO_LARGE", message: `${args.papers.length} papers exceed the ${MAX_SCOPE_IDS}-paper scope cap (client policy); use "all" or split` });
+  const papers = args.papers === undefined ? "all" : normalizePapersScope(args.papers);
+  if (papers === null) {
+    return invalid('papers must be "all" or a non-empty list of DOIs/citekeys; an empty list is never read as all');
   }
+  if (papers !== "all" && papers.length > MAX_SCOPE_IDS) return refusalResult({ code: "BATCH_TOO_LARGE", message: `${papers.length} papers exceed the ${MAX_SCOPE_IDS}-paper scope cap (client policy); use "all" or split` });
   const limit = args.limit ?? DEFAULT_SEARCH_HITS;
   if (!Number.isInteger(limit) || limit < 1 || limit > MAX_SEARCH_HITS) return invalid(`limit must be an integer from 1 to ${MAX_SEARCH_HITS}`);
 
@@ -114,7 +113,7 @@ export async function searchPassagesTool(ctx: ToolContext, args: SearchPassagesA
     throw err;
   }
   try {
-    const { selected, unresolved } = resolveScope(db, args.papers ?? "all");
+    const { selected, unresolved } = resolveScope(db, papers);
     const searchable: string[] = [];
     const notSearchable: { doi: string; citekey: string; reason: string }[] = [];
     for (const p of selected) {

@@ -2,11 +2,11 @@
  * Tier 1 deliverable evaluator for live experiments (see scripts/live/experiment.ts).
  *
  * Pure or temp-fs-driven checks over deterministic fixtures; no product
- * imports. Tier 1 is exactly five gated checks, read from the machine-readable
+ * imports. Tier 1 is exactly six gated checks, read from the machine-readable
  * provenance JSON (`uktub-scholar provenance --json`: entry, summary, items,
  * document_digest, units), the registry and file mtimes:
  *
- * - T1.1 `citations-in-registry`: every citation in the provenance units
+ * - T1.1 `citations-in-registry`: every citation in the document (the audit's `citeKeys`, plus unit cites)
  *   resolves to a registry entry with `citable === true`.
  * - T1.2 `bibliography-matches-registry`: the bibliography covers every cited
  *   key and holds only registered keys.
@@ -17,6 +17,8 @@
  *   span inside the ready text).
  * - T1.5 `figures-supported`: no figure with status `open` or `unsourced`
  *   ("in the cited paper", not "in text the agent saw").
+ * - T1.6 `prose-verified-or-labelled` (D1): every prose statement that is not
+ *   verified carries the word "unverified" (table rows are outside the gate).
  *
  * Reported, never gated: word count (the provenance count only),
  * verified/cited/uncited counts, figures that are `uncited`, `check` or
@@ -295,8 +297,12 @@ export interface TierProvenanceSummary {
   verified: number;
   cited: number;
   uncited: number;
-  figures: { ok: number; check: number; open: number; info: number };
+  figures: { ok: number; check: number; open: number; info: number; computed: number };
   unregistered: string[];
+  labelledUnverified: number;
+  unlabelledUnverified: number;
+  /** Every cite key in the document (audits since 2026-10-21; older provenance documents lack it). */
+  citeKeys?: string[];
 }
 
 /** The machine-readable audit Tier 1 reads: entry, summary, items, document_digest, units. */
@@ -319,6 +325,7 @@ export interface TierPaperText {
 export function provenanceCitedKeys(doc: TierProvenanceDoc): string[] {
   const out = new Set<string>();
   for (const u of doc.units) for (const k of u.cites ?? []) if (typeof k === "string" && k !== "") out.add(k);
+  for (const k of doc.summary.citeKeys ?? []) if (typeof k === "string" && k !== "") out.add(k);
   return [...out].sort();
 }
 
@@ -385,8 +392,8 @@ export function checkTierPointers(doc: TierProvenanceDoc, papers: TierPaperText[
 /**
  * T1.5: no figure is `open` or `unsourced` — the figure does not occur in
  * the cited paper's text, or the unit cites no registered paper. Figures
- * that are `uncited`, `check` or `unavailable` are reported, not gated
- * (see `tierReport`).
+ * that are `uncited`, `check`, `unavailable` or `computed` (found in the
+ * project's result files) are reported, not gated (see `tierReport`).
  */
 export function checkTierFigures(doc: TierProvenanceDoc): Check {
   const bad = doc.items.filter((i) => i.status === "open" || i.status === "unsourced");
@@ -396,6 +403,22 @@ export function checkTierFigures(doc: TierProvenanceDoc): Check {
     detail: bad.length === 0
       ? `no open or unsourced figure(s) among ${doc.items.length} flagged item(s)`
       : `${bad.length} figure(s) with status open or unsourced: ${bad.slice(0, 5).map((i) => `${i.token} (${i.status}, ${i.file}:${i.line})`).join("; ")}${bad.length > 5 ? ` (+${bad.length - 5} more)` : ""}`,
+  };
+}
+
+/**
+ * T1.6 `prose-verified-or-labelled` (D1 "label or fail"): every prose statement that is not verified carries the word
+ * "unverified" (the audit's label convention). Table rows are outside this gate. Fails closed without the count.
+ */
+export function checkTierProseVerifiedOrLabelled(doc: TierProvenanceDoc): Check {
+  const n = doc.summary.unlabelledUnverified;
+  if (typeof n !== "number") return { id: "prose-verified-or-labelled", ok: false, detail: "the provenance audit has no unlabelled-prose count (fail closed)" };
+  return {
+    id: "prose-verified-or-labelled",
+    ok: n === 0,
+    detail: n === 0
+      ? "every non-verified prose statement is labelled unverified"
+      : `${n} non-verified prose statement(s) are neither verified nor labelled unverified (see UNLABELLED lines in the provenance view)`,
   };
 }
 

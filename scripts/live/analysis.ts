@@ -11,13 +11,35 @@
  *
  *   node scripts/live/analysis.ts simulate --counts <file.json> [--reps N] [--seed S]
  *   node scripts/live/analysis.ts agreement --a <labels.json> --b <labels.json>
+ *   node scripts/live/analysis.ts --grading-dir <path>
+ *
+ * The --grading-dir verdict reads every note directory under <path>/notes, validates each
+ * final labels file (export binding, rubric, model provenance, unit coverage) and reports
+ * one machine-readable JSON summary with the Tier 2 PASS/FAIL verdict. It fails closed:
+ * any incomplete note, stale/invalid final, zero denominator or fewer than 2 usable notes
+ * is a FAIL (non-zero exit), never a silent subset.
  *
  * Numerics (incomplete beta, Student t, Clopper-Pearson) are implemented here from
  * standard references (Numerical Recipes betacf/betai); no new dependencies.
  */
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { resolve } from "node:path";
+import { join, resolve } from "node:path";
+
+import {
+  ADJUDICATOR_MODEL_ID,
+  RUBRIC_PATH,
+  SINGLE_GRADER_MODEL,
+  classOf,
+  finalizeSingleGrader,
+  sha256Text,
+  tier2Counts,
+  type AdjudicatedFile,
+  type LabelFile,
+  type NoteJson,
+} from "./grade-lib.ts";
+
+const REPO = resolve(import.meta.dirname, "../..");
 
 export interface NoteCount {
   id: string;
@@ -550,14 +572,197 @@ const usage = [
   "usage:",
   "  node scripts/live/analysis.ts simulate --counts <file.json> [--reps N] [--seed S]",
   "  node scripts/live/analysis.ts agreement --a <labels.json> --b <labels.json>",
+  "  node scripts/live/analysis.ts --grading-dir <dir>",
 ].join("\n");
+
+// Tier 2 verdict over a finished grading directory.
+
+export interface GradingNoteSummary {
+  id: string;
+  complete: boolean;
+  reason?: string;
+  units?: number;
+  cited?: number;
+  bad?: number;
+  rows?: number;
+  ungradeable?: number;
+  trap_violated?: boolean;
+  basis?: string;
+}
+
+export interface GradingSummary {
+  grading_dir: string;
+  rubric_sha256: string;
+  notes: GradingNoteSummary[];
+  totals: { notes: number; complete: number; usable: number; bad: number; rows: number; ungradeable: number };
+  pooled: number | null;
+  ci: { lower: number; upper: number; se: number; level: number; method: string } | null;
+  traps: number;
+  trap_notes: string[];
+  thresholds: { max_bad: number; max_upper: number; max_traps: number };
+  verdict: "PASS" | "FAIL";
+  reasons: string[];
+}
+
+const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null;
+
+/** Semantic comparison of single-grader finals against the expected finals recomputed
+ * from the current source labels: order-independent, by unit id and field value. */
+function compareSingleGraderFinals(expected: AdjudicatedFile, fin: AdjudicatedFile): void {
+  if (fin.trap_violated !== expected.trap_violated) throw new Error("trap_violated does not match the source labels");
+  if (fin.adjudicator_model !== expected.adjudicator_model) throw new Error("adjudicator_model does not match the source labels");
+  if (fin.seed !== expected.seed) throw new Error("seed does not match the source labels");
+  const byExp = new Map(expected.units.map((u) => [u.id, u]));
+  for (const u of fin.units) {
+    if (!isRecord(u) || typeof u.id !== "string") throw new Error(`malformed final ${JSON.stringify(u)}`);
+    const e = byExp.get(u.id);
+    if (e === undefined) throw new Error(`final for unknown unit ${u.id}`);
+    if (u.final !== e.final || u.basis !== e.basis || u.a !== e.a || u.b !== e.b) {
+      throw new Error(`final for unit ${u.id} does not match the source labels`);
+    }
+  }
+}
+
+/** Validate one note's finals against its export: binding, rubric, provenance, unit coverage. */
+function checkFinals(note: NoteJson, fin: AdjudicatedFile, noteId: string, rubricSha256: string, notesRoot: string): void {
+  if (note.note !== noteId) throw new Error(`export note id ${JSON.stringify(note.note)} does not match folder ${noteId}`);
+  if (fin.note !== noteId) throw new Error(`final note mismatch: file says ${JSON.stringify(fin.note)}`);
+  if (fin.document_digest !== note.document_digest) throw new Error("stale document_digest: finals do not bind to this export");
+  if (fin.rubric_sha256 !== rubricSha256) throw new Error("stale rubric_sha256: finals were not graded under this rubric");
+  if (typeof fin.trap_violated !== "boolean") throw new Error("trap_violated must be a boolean");
+  if (!Array.isArray(fin.units)) throw new Error("finals have no units array");
+  const byId = new Map(note.units.map((u) => [u.id, u]));
+  if (fin.units.length !== note.units.length) {
+    throw new Error(`finals cover ${fin.units.length} of ${note.units.length} export units`);
+  }
+  const seen = new Set<string>();
+  for (const u of fin.units) {
+    if (!isRecord(u) || typeof u.id !== "string" || typeof u.final !== "string") {
+      throw new Error(`malformed final ${JSON.stringify(u)}`);
+    }
+    if (seen.has(u.id)) throw new Error(`duplicate final for unit ${u.id}`);
+    seen.add(u.id);
+    const unit = byId.get(u.id);
+    if (unit === undefined) throw new Error(`final for unknown unit ${u.id}`);
+    try {
+      classOf(u.final, unit.cited);
+    } catch (err) {
+      throw new Error(`unit ${u.id}: ${(err as Error).message}`);
+    }
+  }
+  const bases = new Set(fin.units.map((u) => (isRecord(u) ? String(u.basis) : "")));
+  if (bases.has("single-grader")) {
+    if (fin.adjudicator_model !== SINGLE_GRADER_MODEL || bases.size !== 1) {
+      throw new Error("mixed or mislabelled single-grader provenance");
+    }
+    // Bind to the exact finalized inputs: the note export (trap/units metadata via
+    // input_sha256) and the current source labels, recomputed and compared by value.
+    if (fin.input_sha256 === undefined || fin.input_sha256 !== sha256Text(JSON.stringify(note))) {
+      throw new Error("stale input_sha256: the note export changed after finalization");
+    }
+    let labelsA: LabelFile;
+    try {
+      labelsA = readJson(join(notesRoot, noteId, "labels-A.json")) as LabelFile;
+    } catch {
+      throw new Error("labels-A.json is missing: single-grader finals cannot be verified without their source labels");
+    }
+    const expected = finalizeSingleGrader(note, labelsA, rubricSha256);
+    compareSingleGraderFinals(expected, fin);
+  } else {
+    if (fin.adjudicator_model !== ADJUDICATOR_MODEL_ID) {
+      throw new Error(`wrong adjudicator model: need ${ADJUDICATOR_MODEL_ID}, got ${JSON.stringify(fin.adjudicator_model)}`);
+    }
+    for (const u of fin.units) {
+      const b = isRecord(u) ? String(u.basis) : "";
+      if (b !== "agreed" && b !== "adjudicated") throw new Error(`unit ${(isRecord(u) ? u.id : "?") as string}: unknown basis ${JSON.stringify(b)}`);
+    }
+  }
+}
+
+/**
+ * Summarize a finished grading directory: every note directory under <dir>/notes is
+ * counted. Unusable notes (no gradeable cited rows) are excluded from the interval
+ * math but still listed; ungradeable cited units never enter the denominator.
+ */
+export function summarizeGradingDir(dir: string): GradingSummary {
+  const notesRoot = join(dir, "notes");
+  if (!existsSync(notesRoot)) throw new Error(`no notes directory under ${dir}`);
+  const ids = readdirSync(notesRoot, { withFileTypes: true })
+    .filter((d) => d.isDirectory()).map((d) => d.name).sort();
+  if (ids.length === 0) throw new Error(`no note directories under ${notesRoot}`);
+  const rubricSha256 = sha256Text(readFileSync(join(REPO, RUBRIC_PATH), "utf8"));
+  const notes: GradingNoteSummary[] = [];
+  const reasons: string[] = [];
+  const usableCounts: NoteCount[] = [];
+  let bad = 0;
+  let rows = 0;
+  let ungradeable = 0;
+  let traps = 0;
+  const trapNotes: string[] = [];
+  for (const id of ids) {
+    try {
+      const note = readJson(join(notesRoot, id, "export/note.json")) as NoteJson;
+      const fin = readJson(join(notesRoot, id, "adjudicated.json")) as AdjudicatedFile;
+      checkFinals(note, fin, id, rubricSha256, notesRoot);
+      const c = tier2Counts(note, fin);
+      bad += c.bad;
+      rows += c.rows;
+      ungradeable += c.ungradeable;
+      if (c.rows > 0) usableCounts.push({ id, bad: c.bad, rows: c.rows });
+      if (fin.trap_violated) {
+        traps++;
+        trapNotes.push(id);
+      }
+      const bases = new Set(fin.units.map((u) => u.basis));
+      notes.push({
+        id, complete: true, units: note.units.length,
+        cited: note.units.filter((u) => u.cited).length,
+        bad: c.bad, rows: c.rows, ungradeable: c.ungradeable,
+        trap_violated: fin.trap_violated, basis: [...bases].join("+"),
+      });
+    } catch (err) {
+      const reason = (err as Error).message;
+      notes.push({ id, complete: false, reason });
+      reasons.push(`${id}: ${reason}`);
+    }
+  }
+  const complete = notes.every((n) => n.complete);
+  const pooled = rows > 0 ? bad / rows : null;
+  const ci = usableCounts.length >= 2 && rows > 0
+    ? (() => {
+      const c = linearizedCI(usableCounts);
+      return { lower: c.lower, upper: c.upper, se: c.se, level: 0.95, method: "linearized-t" };
+    })()
+    : null;
+  if (!complete) reasons.push(`incomplete: ${notes.filter((n) => !n.complete).length}/${notes.length} notes lack valid finals`);
+  if (usableCounts.length < 2) reasons.push(`only ${usableCounts.length} usable note(s), need >= 2`);
+  if (rows === 0) reasons.push("zero gradeable cited denominator");
+  if (traps > 0) reasons.push(`${traps} trap violation(s): ${trapNotes.join(",")}`);
+  if (pooled !== null && pooled > 0.05) reasons.push(`pooled bad rate ${pooled.toFixed(4)} above 0.05`);
+  if (ci !== null && ci.upper > 0.1) reasons.push(`95% CI upper ${ci.upper.toFixed(4)} above 0.10`);
+  const pass = complete && usableCounts.length >= 2 && rows > 0 && traps === 0
+    && pooled !== null && ci !== null && passesOD1(pooled, ci.upper);
+  return {
+    grading_dir: dir, rubric_sha256: rubricSha256, notes,
+    totals: { notes: notes.length, complete: notes.filter((n) => n.complete).length, usable: usableCounts.length, bad, rows, ungradeable },
+    pooled, ci, traps, trap_notes: trapNotes,
+    thresholds: { max_bad: 0.05, max_upper: 0.1, max_traps: 0 },
+    verdict: pass ? "PASS" : "FAIL", reasons,
+  };
+}
 
 const argv = process.argv.slice(2);
 const cmd = argv[0];
 // The CLI dispatches only when this module is the entry point: importers (e.g. grade.ts,
 // which has its own `agreement` subcommand) share process.argv and must not trigger it.
 const isMain = process.argv[1] !== undefined && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
-if (isMain && (cmd === "simulate" || cmd === "agreement")) {
+if (isMain && cmd === "--grading-dir") {
+  const dir = argv[1];
+  if (dir === undefined || argv.length !== 2) throw new Error(`${usage}\nmissing --grading-dir <path>`);
+  const summary = summarizeGradingDir(resolve(dir));
+  process.stdout.write(`${JSON.stringify(summary)}\n`);
+  if (summary.verdict !== "PASS") process.exitCode = 1;
+} else if (isMain && (cmd === "simulate" || cmd === "agreement")) {
   const flag = (name: string): string | undefined => {
     const i = argv.indexOf(name);
     return i >= 0 && i + 1 < argv.length ? argv[i + 1] : undefined;

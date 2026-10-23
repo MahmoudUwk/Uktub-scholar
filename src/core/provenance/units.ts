@@ -35,6 +35,12 @@ function citesOf(text: string): string[] {
   return [...new Set(keys)];
 }
 
+/** Every key of every cite command in the document (comments are already removed), sorted; never the `\nocite{*}` wildcard.
+ *  Wider than the units' cites: a cite after the full stop (`Sentence. \cite{k}`) belongs to no unit but is still a citation. */
+export function documentCiteKeys(paper: Paper): string[] {
+  return citesOf(paper.text).filter((k) => k !== "*").sort();
+}
+
 function mathText(inner: string): string {
   let s = inner;
   for (const [re, to] of MATH_SYMBOLS) s = s.replace(re, to);

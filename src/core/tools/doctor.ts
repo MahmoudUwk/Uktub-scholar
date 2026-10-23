@@ -18,6 +18,7 @@ import { managedTectonicPath, readTectonicLock } from "../compile/managed.ts";
 import { managedCacheDir } from "../embed/config.ts";
 import { platformKey } from "../embed/runtime.ts";
 import { listPapers, openRegistry, REGISTRY_SCHEMA_VERSION, RegistryError } from "../registry.ts";
+import { runProvenance } from "../provenance/run.ts";
 import { HOSTED_KEY_URL, HOSTED_MODEL, HOSTED_URL, VERIFY_API_KEY_ENV } from "../verify/engines.ts";
 import { withManagedEosOnnx } from "../verify/eos-onnx.ts";
 import type { ToolContext, ToolResult } from "./context.ts";
@@ -51,6 +52,9 @@ export const DoctorOutput = Type.Object({
   checks: Type.Array(DoctorCheckOutput),
 });
 
+/** Optional research-service provider keys (higher rate limits; searches run without them). */
+export const RESEARCH_SERVICE_KEY_NAMES = ["SEMANTIC_SCHOLAR_API_KEY", "OPENALEX_API_KEY", "CROSSREF_MAILTO"] as const;
+
 /** Test seams (KTD6): the host injects nothing new — fs and exec probes only. */
 export interface DoctorDeps {
   fs?: EngineFs;
@@ -68,8 +72,6 @@ const realFs: EngineFs = {
     }
   },
 };
-
-const execFileAsync = promisify(execFile);
 
 /** Client policy: the hosted probe must not stall a diagnosis. */
 const HOSTED_PROBE_TIMEOUT_MS = 10_000;
@@ -223,7 +225,15 @@ function registryCheck(ctx: ToolContext): DoctorCheck {
     if (version !== REGISTRY_SCHEMA_VERSION) {
       return { name, status: "error", detail: `registry schema version ${version} is not version ${REGISTRY_SCHEMA_VERSION}`, fix: "see the detail — a foreign or newer registry is never migrated" };
     }
-    return { name, status: "ok", detail: `registry present (schema version ${version} supported); ${papers} paper(s), ${ready} with a ready source`, fix: "" };
+    // Figures the manuscript states without a paper citation but the project's result files contain: reported, never an error.
+    let computed = 0;
+    try {
+      const prov = runProvenance({ root: ctx.root, now: ctx.now, env: ctx.env });
+      if (prov.ok) computed = prov.audit.summary.figures.computed;
+    } catch {
+      // keep the registry counts: the audit is best effort here, as in compile.
+    }
+    return { name, status: "ok", detail: `registry present (schema version ${version} supported); ${papers} paper(s), ${ready} with a ready source${computed > 0 ? `; ${computed} computed figure(s) from project result files` : ""}`, fix: "" };
   } finally {
     db.close();
   }
@@ -233,7 +243,7 @@ async function compileCheck(ctx: ToolContext, deps: DoctorDeps): Promise<DoctorC
   const name = "compile" as const;
   const fs = deps.fs ?? realFs;
   const execProbe = deps.execProbe ?? (async (file: string, args: string[]) => {
-    const r = await execFileAsync(file, args, { timeout: HOSTED_PROBE_TIMEOUT_MS });
+    const r = await promisify(execFile)(file, args, { timeout: HOSTED_PROBE_TIMEOUT_MS });
     return { stdout: r.stdout, stderr: r.stderr };
   });
   const managed = managedTectonicPath(readTectonicLock(), managedCacheDir(ctx.env), platformKey());
@@ -247,7 +257,7 @@ async function compileCheck(ctx: ToolContext, deps: DoctorDeps): Promise<DoctorC
 function providersCheck(ctx: ToolContext): DoctorCheck {
   const name = "providers" as const;
   const present = (v: string | undefined): boolean => v !== undefined && v.trim() !== "";
-  const keys = ["SEMANTIC_SCHOLAR_API_KEY", "OPENALEX_API_KEY", "CROSSREF_MAILTO"] as const;
+  const keys = RESEARCH_SERVICE_KEY_NAMES;
   const missing = keys.filter((k) => !present(ctx.env[k]));
   if (missing.length === 0) {
     return { name, status: "ok", detail: "all optional provider keys set (SEMANTIC_SCHOLAR_API_KEY, OPENALEX_API_KEY, CROSSREF_MAILTO)", fix: "" };

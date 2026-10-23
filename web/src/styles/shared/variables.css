@@ -1,0 +1,147 @@
+:root {
+	/* Component Dimensions */
+	--sidebar-width: 230px;
+	--dropdown-width: 330px;
+	--chat-panel-width: 380px;
+	--latex-output-width: 350px;
+	--comment-panel-width: 340px;
+	--project-title-width: 250px;
+	--statistics-panel-width: 250px;
+
+	/* Spacing Scale */
+	--space-us: 0.125rem;
+	--space-xs: 0.25rem;
+	--space-ss: 0.4rem;
+	--space-sm: 0.5rem;
+	--space-sd: 0.75rem;
+	--space-md: 1rem;
+	--space-lg: 1.5rem;
+	--space-xl: 2rem;
+
+	/* UI Typography */
+	--font-size-xxs: 0.5rem;
+	--font-size-nano: 0.55rem;
+	--font-size-micro: 0.6rem;
+	--font-size-tiny: 0.65rem;
+	--font-size-caption: 0.7rem;
+	--font-size-meta: 0.75rem;
+	--font-size-small: 0.8rem;
+	--font-size-secondary: 0.85rem;
+	--font-size-control: 0.875rem;
+	--font-size-ui: 0.9rem;
+	--font-size-body: 1rem;
+	--font-size-title: 1.1rem;
+	--font-size-heading: 1.2rem;
+	--font-size-heading-lg: 1.25rem;
+	--font-size-heading-xl: 1.5rem;
+	--font-size-display: 1.6rem;
+	--font-size-display-xl: 2.5rem;
+
+	/* Control Dimensions */
+	--control-height-compact: 28px;
+	--control-gap: 5px;
+
+	/* Control / Button Heights */
+	--button-height-sm: 32px;
+	--button-height-md: 40px;
+	--button-height-lg: 48px;
+
+	/* Border Radius */
+	--radius-sm: 4px;
+	--radius-md: 6px;
+	--radius-lg: 8px;
+
+	--ui-field-control-height: var(--button-height-md);
+	--ui-field-control-min-height: var(--ui-field-control-height);
+	--ui-field-control-font-size: var(--font-size-ui);
+	--ui-field-control-line-height: 1.35;
+	--ui-field-control-radius: var(--radius-sm);
+	--ui-action-control-height: var(--control-height-compact);
+	--ui-action-control-font-size: var(--font-size-ui);
+	--ui-action-control-line-height: 1.2;
+	--ui-action-control-radius: var(--radius-sm);
+	--ui-action-control-padding: 0 var(--space-sm);
+
+	--ui-button-height: var(--button-height-md);
+	--ui-button-min-height: var(--ui-button-height);
+	--ui-button-font-size: var(--font-size-ui);
+	--ui-button-line-height: 1.2;
+	--ui-button-radius: var(--radius-sm);
+	--ui-icon-button-size: var(--control-height-compact);
+	--ui-icon-button-radius: var(--radius-sm);
+	--ui-joined-control-height: var(--ui-action-control-height);
+
+	/* Scrollbar geometry */
+	--ui-scrollbar-size: 4px;
+	--ui-scrollbar-gutter: stable;
+	--ui-scrollbar-renderer-size: 8px;
+
+	/* Transitions */
+	--transition-fast: 0.15s;
+	--transition-normal: 0.25s;
+	--transition-slow: 0.4s;
+
+	/* Z-Index Scale */
+	--z-banner-above-user: 200;
+	--z-banner-below-user: 100;
+	--z-focus: 1000;
+	--z-sticky: 1010;
+	--z-dropdown: 1020;
+	--z-modal: 1030;
+	--z-tooltip: 1050;
+	--z-above-all: 1100;
+}
+
+[data-theme-mode="light"] {
+	/* Accent Colors */
+	--accent-color: #e9ecef;
+
+	/* Shadows */
+	--color-shadow: rgb(0 0 0 / 0.18);
+	--shadow-sm: 0 2px 4px rgb(0 0 0 / 0.1);
+	--shadow-md: 0 4px 8px rgb(0 0 0 / 0.15);
+	--shadow-lg: 0 8px 24px rgb(0 0 0 / 0.2);
+
+	/* Common Colors */
+	--color-error: #dc3545;
+	--color-success: #28a745;
+	--color-warning: #ffc107;
+	--color-info: #007bff;
+	--color-secondary: #6c757d;
+
+	/* Storage Colors */
+	--color-storage-projects: #2563eb;
+	--color-storage-typesetter: #d97706;
+	--color-storage-leftover: #dc2626;
+	--color-storage-app: #7c3aed;
+	--color-storage-offline: #0891b2;
+	--color-storage-overhead: #64748b;
+	--color-storage-other: #94a3b8;
+}
+
+[data-theme-mode="dark"] {
+	/* Accent Colors */
+	--accent-color: #2f3337;
+
+	/* Shadows */
+	--color-shadow: rgb(0 0 0 / 0.45);
+	--shadow-sm: 0 2px 4px rgb(0 0 0 / 0.3);
+	--shadow-md: 0 4px 8px rgb(0 0 0 / 0.4);
+	--shadow-lg: 0 8px 24px rgb(0 0 0 / 0.5);
+
+	/* Common Colors */
+	--color-error: #ff6b6b;
+	--color-success: #51cf66;
+	--color-warning: #ffd43b;
+	--color-info: #4dabf7;
+	--color-secondary: #adb5bd;
+
+	/* Storage Colors */
+	--color-storage-projects: #60a5fa;
+	--color-storage-typesetter: #fbbf24;
+	--color-storage-leftover: #f87171;
+	--color-storage-app: #a78bfa;
+	--color-storage-offline: #22d3ee;
+	--color-storage-overhead: #94a3b8;
+	--color-storage-other: #64748b;
+}

@@ -1,0 +1,249 @@
+{
+ "schema": "verify-wording-and-strategy/1",
+ "date": "2026-10-15",
+ "model": "vllm-sr/d3-mini",
+ "protocol": "systemone-noul-criteria-v1",
+ "bar": 0.99,
+ "step1": {
+  "a1-bench-criteria": {
+   "false": "0/60",
+   "true": "39/50",
+   "driftVsA1": 0
+  },
+  "a2-bench-criteria": {
+   "false": "0/60",
+   "true": "39/50",
+   "driftVsA1": 0
+  },
+  "b-bench-bare": {
+   "false": "10/60",
+   "true": "39/50",
+   "driftVsA1": 0.9889
+  },
+  "c-product-bare": {
+   "false": "10/60",
+   "true": "39/50",
+   "driftVsA1": 0.9889
+  },
+  "d-product-criteria-text": {
+   "false": "0/60",
+   "true": "14/50",
+   "driftVsA1": 0.1816
+  }
+ },
+ "step3bench": {
+  "v0": {
+   "strategy": "exhaustive",
+   "claims": 547,
+   "bar099": {
+    "true": "172/269",
+    "false": "0/278"
+   },
+   "batch1": {
+    "requests": 32349,
+    "charsSent": 58411175,
+    "wallS": 3331
+   },
+   "batch8": {
+    "requests": 5696,
+    "chars": 24510421,
+    "wallS": 549,
+    "pairs": 31305,
+    "drift": {
+     "n": 31305,
+     "max": 0.03099706579226158,
+     "mean": 0.00017333269029287852,
+     "flips": 0
+    }
+   },
+   "crossfit": {
+    "r1": 0.862,
+    "r1tf": [
+     232,
+     4
+    ],
+    "r2": 0.888,
+    "r2tf": [
+     239,
+     6
+    ]
+   }
+  },
+  "v1": {
+   "strategy": "top10",
+   "claims": 547,
+   "bar099": {
+    "true": "197/269",
+    "false": "0/278"
+   },
+   "batch1": {
+    "requests": 5470,
+    "charsSent": 9973760,
+    "wallS": 309
+   },
+   "batch8": {
+    "requests": 2152,
+    "chars": 5753969,
+    "wallS": 142,
+    "pairs": 5470,
+    "drift": {
+     "n": 5470,
+     "max": 0.026844051347550857,
+     "mean": 0.0004508144080675334,
+     "flips": 1
+    }
+   },
+   "crossfit": {
+    "r1": 0.929,
+    "r1tf": [
+     250,
+     4
+    ],
+    "r2": 0.978,
+    "r2tf": [
+     263,
+     6
+    ]
+   }
+  },
+  "v2": {
+   "strategy": "window",
+   "claims": 547,
+   "bar099": {
+    "true": "225/269",
+    "false": "0/278"
+   },
+   "batch1": {
+    "requests": 6177,
+    "charsSent": 23681233,
+    "wallS": 410
+   },
+   "batch8": {
+    "requests": 1870,
+    "chars": 8497131,
+    "wallS": 219,
+    "pairs": 6177,
+    "drift": {
+     "n": 6177,
+     "max": 0.041312395295131366,
+     "mean": 0.0004607854021312971,
+     "flips": 0
+    }
+   },
+   "crossfit": {
+    "r1": 0.967,
+    "r1tf": [
+     260,
+     3
+    ],
+    "r2": 0.989,
+    "r2tf": [
+     266,
+     5
+    ]
+   }
+  },
+  "v3": {
+   "strategy": "chunk2048",
+   "claims": 547,
+   "bar099": {
+    "true": "225/269",
+    "false": "0/278"
+   },
+   "batch1": {
+    "requests": 6551,
+    "charsSent": 26652912,
+    "wallS": 442
+   },
+   "batch8": {
+    "requests": 2048,
+    "chars": 9219353,
+    "wallS": 237,
+    "pairs": 6551,
+    "drift": {
+     "n": 6551,
+     "max": 0.024329581027467406,
+     "mean": 0.0004885486496557113,
+     "flips": 1
+    }
+   },
+   "crossfit": {
+    "r1": 0.963,
+    "r1tf": [
+     259,
+     3
+    ],
+    "r2": 0.985,
+    "r2tf": [
+     265,
+     5
+    ]
+   }
+  }
+ },
+ "batch8verdicts": {
+  "v1": {
+   "true": "197/269",
+   "false": "0/278",
+   "note": "1 sub-max pair flip, no claim verdict change"
+  },
+  "v3": {
+   "true": "226/269",
+   "false": "0/278",
+   "note": "2 pair flips, +1 true verdict (225->226); false still 0"
+  }
+ },
+ "step3docs": {
+  "v0": {
+   "notes": 18,
+   "units": 1155,
+   "judgments": 146885,
+   "requests": 147126,
+   "wallS": 7396,
+   "promoted": "184/345",
+   "museBad": 0
+  },
+  "v1": {
+   "notes": 18,
+   "units": 1155,
+   "judgments": 11653,
+   "requests": 11653,
+   "wallS": 505,
+   "promoted": "184/345",
+   "museBad": 0
+  },
+  "v2": {
+   "notes": 18,
+   "units": 1155,
+   "judgments": 12482,
+   "requests": 12482,
+   "wallS": 676,
+   "promoted": "193/345",
+   "museBad": 0
+  },
+  "v3": {
+   "notes": 18,
+   "units": 1155,
+   "judgments": 12799,
+   "requests": 12799,
+   "wallS": 727,
+   "promoted": "193/345",
+   "museBad": 0
+  }
+ },
+ "decision": {
+  "rule": "fastest docs wall with recall@2 within 1pt of V0 (0.888), 0 bar-0.99 FP, 0 Muse-bad; ties within 10% prefer no chunking change",
+  "eligible": [
+   "v0",
+   "v1",
+   "v2",
+   "v3"
+  ],
+  "winner": "v1",
+  "residualBarFP": "none in any variant",
+  "batching": "score-equivalent (max drift 0.041, no FP change); grouping never triggers on the product path (one claim per call, distinct states), so no request savings there"
+ },
+ "notes": [
+  "V1 docs interrupted once by hosted daily-quota 429 (reset 00:00 UTC); poisoned iter-06 rec removed, pair-log lines for iter-06 removed, rerun fresh after reset. V0 bench/docs and all bench runs on criteria protocol systemone-noul-criteria-v1."
+ ]
+}

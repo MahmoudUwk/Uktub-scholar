@@ -77,14 +77,14 @@ describe("provenance command", () => {
     });
     assert.equal(units[0]!.cites.length, 1, "the sentence cites the registered paper");
   });
-  it("--json units lists every extracted unit, unaudited ones as uncited, while the summary still counts audited units only", async () => {
+  it("--json units lists every extracted unit; the summary counts all prose statements and the cited or figure-bearing rows", async () => {
     const file = join(root, "manuscript/main.tex");
     writeFileSync(file, readFileSync(file, "utf8").replace(String.raw`\end{document}`, String.raw` Fine-tuning strictly requires a GPU.\end{document}`));
     const j = JSON.parse((await provenance(["--json"])).out.join("\n")) as { summary: { audited: number }; units: { text: string; status: string; cites: string[]; pointers: string[] }[] };
     assert.equal(j.units.length, 2, "the uncited sentence without a figure is a unit graders must label");
     const plain = j.units.find((u) => /strictly requires/.test(u.text));
     assert.deepEqual({ status: plain?.status, cites: plain?.cites, pointers: plain?.pointers }, { status: "uncited", cites: [], pointers: [] });
-    assert.equal(j.summary.audited, 1, "the summary is unchanged: it counts statements that cite a paper or state a figure");
+    assert.equal(j.summary.audited, 2, "the summary counts every prose statement (D1), so the uncited sentence is audited as uncited");
   });
   it("the digest is stable across runs and changes on a one-byte edit", async () => {
     const first = JSON.parse((await provenance(["--json"])).out.join("\n")) as { document_digest: string };

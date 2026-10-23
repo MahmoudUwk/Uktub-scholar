@@ -18,6 +18,20 @@
 
 export const MAX_DIAGNOSTICS = 50; // client policy: bounds a single tool result
 
+/**
+ * Bound a parsed diagnostic list to MAX_DIAGNOSTICS (client policy), keeping
+ * errors first: a real manuscript prints dozens of warnings that must never
+ * crowd out the one error. Order within each severity keeps engine order.
+ * Shared by the Tectonic and the TeX-log parsers so both engines cap alike.
+ */
+export function capDiagnostics(all: CompileDiagnostic[]): { diagnostics: CompileDiagnostic[]; truncated: boolean } {
+  if (all.length <= MAX_DIAGNOSTICS) return { diagnostics: all, truncated: false };
+  const keep = new Set<number>();
+  all.forEach((d, i) => { if (d.severity === "error" && keep.size < MAX_DIAGNOSTICS) keep.add(i); });
+  all.forEach((_, i) => { if (keep.size < MAX_DIAGNOSTICS) keep.add(i); });
+  return { diagnostics: all.filter((_, i) => keep.has(i)), truncated: true };
+}
+
 export interface CompileDiagnostic {
   severity: "error" | "warning";
   /** Engine-attributed source file, relative as tectonic printed it; engine-level lines omit it. */
@@ -39,7 +53,6 @@ const DIAG_LINE = /^(error|warning):\s+(?:(.+?):(\d+):\s+)?(.+)$/;
 export function parseTectonicStreams(stdout: string, stderr: string): ParsedStreams {
   const all: CompileDiagnostic[] = [];
   const seen = new Set<string>();
-  let truncated = false;
   let wrotePdf: string | null = null;
 
   for (const line of `${stdout}\n${stderr}`.split("\n")) {
@@ -69,13 +82,5 @@ export function parseTectonicStreams(stdout: string, stderr: string): ParsedStre
   }
   // The cap bounds the result, but never lets warnings crowd out errors (many Overfull \hbox warnings can precede the one error):
   // errors are kept first, warnings fill what is left, and the kept diagnostics stay in the order the engine printed them.
-  let diagnostics = all;
-  if (all.length > MAX_DIAGNOSTICS) {
-    truncated = true;
-    const keep = new Set<number>();
-    all.forEach((d, i) => { if (d.severity === "error" && keep.size < MAX_DIAGNOSTICS) keep.add(i); });
-    all.forEach((_, i) => { if (keep.size < MAX_DIAGNOSTICS) keep.add(i); });
-    diagnostics = all.filter((_, i) => keep.has(i));
-  }
-  return { diagnostics, truncated, wrotePdf };
+  return { ...capDiagnostics(all), wrotePdf };
 }

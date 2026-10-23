@@ -52,6 +52,8 @@ export interface SearchPapersArgs {
   query: string;
   filters?: SearchFilters;
   limit?: number;
+  /** The caller's cancellation: reaches every provider request and aborts the search with the caller's reason. */
+  signal?: AbortSignal;
 }
 
 export interface SearchPapersResult {
@@ -142,11 +144,14 @@ export async function searchPapers(
   if (query.length === 0) throw new Error("QUERY_REQUIRED");
   const limit = clampSearchLimit(args.limit);
   const perProvider = limit * OVERFETCH_FACTOR;
+  const scoped: ProviderConfig = { ...cfg, signal: args.signal };
   const results = await Promise.allSettled([
-    searchOpenAlex(fetchFn, cfg, query, args.filters, perProvider),
-    searchCrossref(fetchFn, cfg, query, args.filters, perProvider),
-    searchSemanticScholar(fetchFn, cfg, query, args.filters, perProvider),
+    searchOpenAlex(fetchFn, scoped, query, args.filters, perProvider),
+    searchCrossref(fetchFn, scoped, query, args.filters, perProvider),
+    searchSemanticScholar(fetchFn, scoped, query, args.filters, perProvider),
   ]);
+  // A cancelled call is not a set of provider failures: it ends with the caller's reason, not a SEARCH_UNAVAILABLE refusal.
+  args.signal?.throwIfAborted();
   const names = ["openalex", "crossref", "semantic-scholar"] as const;
   const lists: PaperCandidate[][] = [];
   const warnings: ProviderWarning[] = [];

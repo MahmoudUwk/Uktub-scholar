@@ -1,0 +1,208 @@
+.template-import-modal {
+	max-height: 70vh;
+	background-color: var(--pico-background);
+}
+
+.template-search-controls {
+	border-bottom: 1px solid var(--accent-border);
+	padding: var(--space-md) var(--space-xs);
+}
+
+.template-search-row {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto auto;
+	gap: var(--space-md);
+	align-items: center;
+}
+
+.template-search-row > .ui-field-control {
+	min-width: 0;
+}
+
+.template-import-modal
+	:is(
+		.template-category-select,
+		.template-type-select,
+		.template-version-select
+	).ui-field-control {
+	width: auto;
+	text-align: start;
+	padding-inline-start: var(--space-sm);
+	padding-inline-end: calc(
+		var(--ui-field-select-padding-inline-end, var(--space-xl)) +
+		var(--space-lg)
+	);
+}
+
+.template-category-select {
+	white-space: nowrap;
+	min-width: 200px;
+}
+
+.template-type-select {
+	white-space: nowrap;
+	min-width: 120px;
+}
+
+@media (max-width: 768px) {
+	.template-search-row {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+
+	.template-search-input {
+		grid-column: 1 / -1;
+	}
+
+	.template-category-select,
+	.template-type-select {
+		min-width: 0;
+	}
+}
+
+.template-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+	gap: var(--space-md);
+	padding: var(--space-sm);
+}
+
+.template-preview {
+	width: 100%;
+	height: 200px;
+	overflow: hidden;
+	background-color: var(--pico-secondary-background);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border-bottom: 1px solid var(--accent-border);
+	position: relative;
+}
+
+.template-preview img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+}
+
+.template-import-modal .template-type-info {
+	position: absolute;
+	top: var(--space-xs);
+	right: var(--space-xs);
+	z-index: 1;
+}
+
+.template-import-modal .template-preview,
+.template-import-modal .template-detail-preview > div {
+	position: relative;
+}
+
+.template-action {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: var(--space-sm);
+	padding: var(--space-md);
+	background-color: var(--pico-primary-focus);
+	color: var(--text-color);
+	font-size: var(--ui-button-font-size, var(--font-size-small));
+	font-weight: 500;
+	transition: background-color var(--transition-normal);
+	border-top: 1px solid var(--accent-border);
+}
+
+.ui-card[data-hover="lift"]:hover .template-action {
+	background-color: var(--pico-primary);
+	color: var(--pico-primary-inverse);
+}
+
+.template-detail-header {
+	display: flex;
+	align-items: center;
+	gap: var(--space-md);
+	padding-bottom: var(--space-md);
+	border-bottom: 1px solid var(--accent-border);
+}
+
+.template-import-modal .template-detail-header h3 {
+	margin: 0;
+	font-size: var(--ui-panel-title-font-size, var(--font-size-title));
+	line-height: 1.25;
+	color: var(--text-color);
+}
+
+.template-detail-content {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: var(--space-xl);
+	align-items: start;
+}
+
+.template-detail-preview {
+	position: sticky;
+	top: 0;
+}
+
+.template-detail-preview img {
+	width: 100%;
+	height: auto;
+	border-radius: var(--radius-lg);
+	border: 1px solid var(--accent-border);
+}
+
+.template-version-select {
+	width: auto;
+	min-width: calc(
+		5ch +
+		var(--ui-field-select-padding-inline-end, var(--space-xl)) +
+		var(--space-lg)
+	);
+}
+
+.template-detail-description {
+	font-size: var(
+		--ui-modal-font-size,
+		var(--ui-field-control-font-size, var(--font-size-ui))
+	);
+	line-height: 1.5;
+	color: var(--text-color);
+	margin: 0;
+}
+
+@media (max-width: 768px) {
+	.template-detail-content {
+		grid-template-columns: 1fr;
+		gap: var(--space-md);
+	}
+
+	.template-detail-preview {
+		position: static;
+	}
+}
+
+.template-preview-loading {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	padding: var(--space-lg);
+	background-color: var(--pico-secondary-background);
+	border-radius: var(--radius-lg);
+	border: 1px solid var(--accent-border);
+	color: var(--pico-secondary);
+	min-height: 200px;
+	gap: var(--space-sm);
+}
+
+.template-preview .template-preview-loading {
+	width: 100%;
+	height: 100%;
+	min-height: 100px;
+	padding: var(--space-md);
+	border-radius: 0;
+	border: none;
+}
+
+.template-preview .template-preview-loading .loading-spinner {
+	width: 20px;
+	height: 20px;
+}

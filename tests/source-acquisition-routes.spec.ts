@@ -24,6 +24,11 @@ const otherPdf = makePdf([["Federated learning for wireless foundation models. W
 const html = new TextEncoder().encode("<html><body>Please enable JavaScript</body></html>");
 const KEY = "S2-SECRET-KEY";
 const noSleep = async () => {};
+/** Europe PMC answers, with no record, for any test that does not script its own answer (first matching route wins). */
+const EUROPE_PMC_NO_RECORD = {
+  match: (u: string) => u.startsWith("https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=DOI"),
+  body: JSON.stringify({ hitCount: 0, resultList: { result: [] } }),
+};
 
 type Work = Record<string, unknown>;
 const openalex = (paper: { doi: string }, work: Work) => ({
@@ -54,7 +59,7 @@ async function run(
   files: Record<string, Uint8Array | SourceError>,
   config: Record<string, unknown> = {},
 ) {
-  const { fetchFn, requests } = createFakeFetch(routes);
+  const { fetchFn, requests } = createFakeFetch([...routes, EUROPE_PMC_NO_RECORD]);
   const dl = fakeDownload(files);
   // A no-op clock by default: the real spacings (arXiv 3 s, Semantic Scholar 1 s) are asserted in the one test that records them.
   const result = await acquireSource({ fetch: fetchFn, download: dl.download, cfg: cfg({ sleep: noSleep, ...config }) }, paper);
@@ -243,14 +248,14 @@ describe("Semantic Scholar tier (asked only when the OpenAlex tier gives nothing
     assert.equal(s2Requests(requests).length, 0);
   });
 
-  it("is asked when the OpenAlex candidates all failed, and a rate limit or outage there never changes the outcome", async () => {
+  it("is asked when the OpenAlex candidates all failed, and a rate limit there never changes the outcome (an outage is a failure, see below)", async () => {
     const files = { "https://repo.example/a.pdf": otherPdf };
     const work = [openalex(JOURNAL_PAPER, { locations: [{ is_oa: true, pdf_url: "https://repo.example/a.pdf" }] })];
     const limited = await run(JOURNAL_PAPER, [...work, s2Route({}, 429)], files, { sleep: async () => {} });
     assert.equal(failed(limited.result).code, "identity_mismatch");
     assert.ok(s2Requests(limited.requests).length >= 1);
     const down = await run(JOURNAL_PAPER, [openalex(JOURNAL_PAPER, { locations: [] }), s2Route({}, 500)], {}, { sleep: async () => {} });
-    assert.deepEqual(((f) => [f.status, f.code])(failed(down.result)), ["unavailable", "no_open_copy"]);
+    assert.deepEqual(((f) => [f.status, f.code])(failed(down.result)), ["failed", "download_failed"]);
   });
 
   it("a Semantic Scholar answer for a different DOI is never used", async () => {
@@ -271,6 +276,23 @@ describe("Semantic Scholar tier (asked only when the OpenAlex tier gives nothing
     );
     assert.equal(failed(result).code, "no_open_copy");
     assert.equal(calls.length, 0);
+  });
+
+  it("a Semantic Scholar outage (HTTP 429 or 500 after retries, or an unreadable body) is failed/download_failed, not no_open_copy", async () => {
+    const unreadable = { match: (u: string) => u.startsWith("https://api.semanticscholar.test/graph/v1/paper/DOI:"), status: 200, body: "<html>maintenance</html>" };
+    for (const route of [s2Route({}, 429), s2Route({}, 500), unreadable]) {
+      const down = await run(JOURNAL_PAPER, [noOpenAlex(JOURNAL_PAPER), route], {}, { sleep: async () => {} });
+      assert.deepEqual(((f) => [f.status, f.code])(failed(down.result)), ["failed", "download_failed"], String(route.status ?? 200));
+      assert.equal(down.calls.length, 0);
+    }
+  });
+
+  it("the documented unknown-paper answer (HTTP 404) and a 200 without an open copy are genuine no-copy answers", async () => {
+    const unknown = await run(JOURNAL_PAPER, [noOpenAlex(JOURNAL_PAPER), s2Route({ error: `Paper with id DOI:${JOURNAL_PAPER.doi} not found` }, 404)], {});
+    assert.deepEqual(((f) => [f.status, f.code])(failed(unknown.result)), ["unavailable", "no_open_copy"]);
+    const noCopy = await run(JOURNAL_PAPER, [noOpenAlex(JOURNAL_PAPER), s2Route({ externalIds: { DOI: JOURNAL_PAPER.doi }, openAccessPdf: null })], {});
+    assert.deepEqual(((f) => [f.status, f.code])(failed(noCopy.result)), ["unavailable", "no_open_copy"]);
+    assert.equal(unknown.calls.length + noCopy.calls.length, 0);
   });
 });
 
@@ -339,14 +361,31 @@ describe("Europe PMC / PubMed Central tier (keyless)", () => {
     assert.equal(failed(none.result).code, "no_open_copy");
   });
 
-  it("an answer for a different DOI, an empty hit list or a provider error yields nothing and never changes the outcome", async () => {
+  it("an answer for a different DOI or an empty hit list yields nothing and never changes the outcome", async () => {
     const other = await run(JOURNAL_PAPER, [noOpenAlex(JOURNAL_PAPER), s2Route({}, 404), epmcRoute(epmcRecord("10.9999/other", [renderPdf]))], {});
     assert.equal(failed(other.result).code, "no_open_copy");
     assert.equal(other.calls.length, 0);
     const empty = await run(JOURNAL_PAPER, [noOpenAlex(JOURNAL_PAPER), s2Route({}, 404), epmcRoute({ hitCount: 0, resultList: { result: [] } })], {});
-    assert.equal(failed(empty.result).code, "no_open_copy");
+    assert.deepEqual(((f) => [f.status, f.code])(failed(empty.result)), ["unavailable", "no_open_copy"]);
+  });
+
+  it("a Europe PMC outage (HTTP 500 after retries, or a body that is not a search answer) is failed/download_failed, not no_open_copy", async () => {
     const down = await run(JOURNAL_PAPER, [noOpenAlex(JOURNAL_PAPER), s2Route({}, 404), epmcRoute({}, 500)], {});
-    assert.deepEqual(((f) => [f.status, f.code])(failed(down.result)), ["unavailable", "no_open_copy"]);
+    assert.deepEqual(((f) => [f.status, f.code])(failed(down.result)), ["failed", "download_failed"]);
+    const garbled = { match: (u: string) => u.startsWith("https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=DOI"), status: 200, body: "<html>maintenance</html>" };
+    const notJson = await run(JOURNAL_PAPER, [noOpenAlex(JOURNAL_PAPER), s2Route({}, 404), garbled], {});
+    assert.deepEqual(((f) => [f.status, f.code])(failed(notJson.result)), ["failed", "download_failed"]);
+  });
+
+  it("a PubMed Central open-data outage is failed/download_failed; a bucket listing with no matching prefix is unavailable/no_open_copy", async () => {
+    const listing = (status: number) => ({ match: (u: string) => u.startsWith(`${PMC}/?list-type=2&prefix=PMC7759461.`), status, body: "<Error><Code>SlowDown</Code></Error>" });
+    const listDown = await run(JOURNAL_PAPER, [noOpenAlex(JOURNAL_PAPER), s2Route({}, 404), epmcRoute(epmcRecord(JOURNAL_PAPER.doi)), listing(503)], {});
+    assert.deepEqual(((f) => [f.status, f.code])(failed(listDown.result)), ["failed", "download_failed"]);
+    const metaDown = { match: (u: string) => u === `${PMC}/PMC7759461.1/PMC7759461.1.json`, status: 503, body: "{}" };
+    const metaDownRun = await run(JOURNAL_PAPER, [noOpenAlex(JOURNAL_PAPER), s2Route({}, 404), epmcRoute(epmcRecord(JOURNAL_PAPER.doi)), pmcList(1), metaDown], {});
+    assert.deepEqual(((f) => [f.status, f.code])(failed(metaDownRun.result)), ["failed", "download_failed"]);
+    const noPrefix = await run(JOURNAL_PAPER, [noOpenAlex(JOURNAL_PAPER), s2Route({}, 404), epmcRoute(epmcRecord(JOURNAL_PAPER.doi)), pmcList()], {});
+    assert.deepEqual(((f) => [f.status, f.code])(failed(noPrefix.result)), ["unavailable", "no_open_copy"]);
   });
 
   it("is asked only when the OpenAlex tier gave no source, and before the Semantic Scholar preprint", async () => {

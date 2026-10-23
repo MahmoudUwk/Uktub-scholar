@@ -15,19 +15,19 @@
  */
 
 import { createHash, randomBytes } from "node:crypto";
-import type { DatabaseSync } from "node:sqlite";
 
 import { ConfigError, loadChunkConfig, type ChunkConfig } from "../config.ts";
-import { selectPapers } from "../registry.ts";
+import { selectPapers, type DatabaseSync } from "../registry.ts";
 import type { RefusalCode } from "../refusals.ts";
 import type { ToolContext } from "../tools/context.ts";
 import { MAX_ACQUISITIONS_PER_CALL, RETRY_FAILED_AFTER_MS, SOURCE_PREP_CONCURRENCY, prepareSources } from "./acquire.ts";
 export { MAX_ACQUISITIONS_PER_CALL, RETRY_FAILED_AFTER_MS, SOURCE_PREP_CONCURRENCY };
 import type { ClaimEngine } from "./claim.ts";
-import { createConfiguredEngine, resolveEngineIdentity, type EngineIdentity } from "./engines.ts";
+import { createConfiguredEngine, resolveEngineIdentityCached, type EngineIdentity } from "./engines.ts";
 import { EXCERPT_MAX_CHARS, containEvidence, localizePassages, type ContainedEvidence, type PriorDelivery, type SupportedPassage } from "./evidence.ts";
 import { isSupported, judgePassages, type JudgeResult } from "./judge.ts";
-import { locatorTokens, selectCandidates, type Candidate } from "./retrieve.ts";
+import { locatorTokens, selectCandidates, lexicalRank, type Candidate } from "./retrieve.ts";
+import { TOP_K, topCandidates, verifySwitchFromEnv, type VerifyStrategy } from "./strategy.ts";
 import { resolveScope, type ScopePaper } from "./scope.ts";
 import {
   chunkPolicyOf,
@@ -79,13 +79,14 @@ const refuse = (code: RefusalCode, message: string): WorkflowOutcome => ({ kind:
 
 // ── continuation tokens ─────────────────────────────────────────────────────
 
-/** The token only names the run; everything else (what was delivered, where the work stopped) lives with the run. */
-const encodeToken = (runId: string): string => Buffer.from(JSON.stringify({ v: 2, r: runId })).toString("base64url");
+/** The token only names the run; everything else (what was delivered, where the work stopped) lives with the run.
+ *  v3: runs freeze their candidate order at creation, so older tokens (whose top-10 order was never captured) are refused. */
+const encodeToken = (runId: string): string => Buffer.from(JSON.stringify({ v: 3, r: runId })).toString("base64url");
 
 function decodeToken(token: string): { runId: string } | null {
   try {
     const t = JSON.parse(Buffer.from(token, "base64url").toString("utf8")) as { v?: number; r?: unknown };
-    return t.v === 2 && typeof t.r === "string" ? { runId: t.r } : null;
+    return t.v === 3 && typeof t.r === "string" ? { runId: t.r } : null;
   } catch {
     return null;
   }
@@ -116,8 +117,9 @@ export async function verifyWorkflow(ctx: ToolContext, db: DatabaseSync, req: Ve
     throw err;
   }
   const engineName = cfg.verification.engine;
-  const getEngine = once(() => (hooks.createEngine ? hooks.createEngine(engineName) : createConfiguredEngine(ctx.env, engineName)));
-  const identityOf = async (): Promise<EngineIdentity | null> => resolveEngineIdentity(ctx.env, engineName, { fetchImpl: hooks.fetchImpl });
+  const fetchImpl = hooks.fetchImpl ?? (ctx.fetch as unknown as typeof fetch);
+  const getEngine = once(() => (hooks.createEngine ? hooks.createEngine(engineName) : createConfiguredEngine(ctx.env, engineName, { fetchImpl })));
+  const identityOf = async (): Promise<EngineIdentity | null> => resolveEngineIdentityCached(ctx.env, engineName, { fetchImpl });
   const judge = (identity: EngineIdentity | null, passages: { text: string; hash: string }[]): Promise<JudgeResult> =>
     judgePassages(
       {
@@ -141,6 +143,35 @@ export async function verifyWorkflow(ctx: ToolContext, db: DatabaseSync, req: Ve
 
 type Judge = (identity: EngineIdentity | null, passages: { text: string; hash: string }[]) => Promise<JudgeResult>;
 
+// ── adopted strategy: narrow the exhaustive candidate list ────────────────
+
+interface Narrowed {
+  units: Candidate[];
+  stats: RunSnapshot["selection"];
+}
+
+/**
+ * Narrow `all` (the exhaustive candidates) to the strategy's top-K judge
+ * units. A claim with no searchable words cannot be pre-filtered: null falls
+ * back to exhaustive (checked, never skipped). Ranking is deterministic, but
+ * a continuation never re-narrows: the first call freezes the narrowed order
+ * in the run, and later calls replay it.
+ */
+function narrowCandidates(db: DatabaseSync, all: Candidate[], claim: string, strategy: VerifyStrategy): Narrowed | null {
+  if (locatorTokens(claim).length === 0) return null;
+  if (strategy !== "top10") return null;
+  const dois = [...new Set(all.map((c) => c.doi))].sort();
+  const ranked = lexicalRank(db, dois, claim, TOP_K);
+  const units = topCandidates(all, ranked.map((r) => r.chunkId));
+  const totals = new Map<string, number>();
+  for (const c of all) totals.set(c.doi, (totals.get(c.doi) ?? 0) + 1);
+  const matched = new Map<string, number>();
+  for (const r of ranked) matched.set(r.doi, (matched.get(r.doi) ?? 0) + 1);
+  const selected = new Map<string, number>();
+  for (const u of units) selected.set(u.doi, (selected.get(u.doi) ?? 0) + 1);
+  return { units, stats: dois.map((doi) => ({ doi, chunksTotal: totals.get(doi) ?? 0, matched: matched.get(doi) ?? 0, selected: selected.get(doi) ?? 0 })) };
+}
+
 // ── registry (all / ids, with or without a locator query) ───────────────────
 
 type SourceReport = RunCarry["unavailable"];
@@ -163,8 +194,14 @@ async function registryWorkflow(
   const requested: "all" | "ids" = req.papers === "all" ? "all" : "ids";
 
   // The requested selection, resolved NOW: used to key a new run and to check a continuation against it.
+  // The applicable candidate strategy is part of that identity: switching
+  // top10/exhaustive between calls would judge a different list, so the
+  // continuation is refused before any judgment. Query mode never applies
+  // the strategy, so its key ignores the override.
   const { selected, unresolved } = resolveScope(db, req.papers);
-  const scopeKey = requested === "all" ? "all" : digest12(`${selected.map((p) => p.doi).sort().join(",")}|${unresolved.map((u) => u.handle).sort().join(",")}`);
+  const strategy = verifySwitchFromEnv(ctx.env, engineName);
+  const baseKey = requested === "all" ? "all" : digest12(`${selected.map((p) => p.doi).sort().join(",")}|${unresolved.map((u) => u.handle).sort().join(",")}`);
+  const scopeKey = query === null ? `${baseKey}|strategy:${strategy}` : baseKey;
 
   const detailsOf = (dois: string[]): Map<string, ScopePaper> =>
     new Map(selectPapers(db, { dois, limit: Math.max(1, dois.length) }).map((p) => [p.doi, { doi: p.doi, citekey: p.citekey, title: p.title, citable: p.citable }]));
@@ -176,7 +213,8 @@ async function registryWorkflow(
   let scopePapers: ScopePaper[] = [];
   const continuing = req.continuation !== undefined;
   let candidateStats: RunSnapshot["selection"];
-  let all: Candidate[];
+  let candidateLimited: boolean;
+  let units: Candidate[];
 
   const effectiveOf = (snap: RunSnapshot): EngineIdentity | null => (snap.model === null ? null : { model: snap.model, protocol: snap.protocol });
 
@@ -186,7 +224,7 @@ async function registryWorkflow(
     if (token === null || run === null) return refuse("CONTINUATION_INVALID", "the continuation is not a live token this tool issued (it may have expired)");
     const snap = run.snapshot;
     if (run.claimHash !== claimHashOf(req.claim) || snap.mode === "direct" || snap.requested !== requested || snap.query !== query || snap.scopeKey !== scopeKey) {
-      return refuse("CONTINUATION_INVALID", "the continuation was issued for a different claim, scope or locator query");
+      return refuse("CONTINUATION_INVALID", "the continuation was issued for a different claim, scope, locator query or candidate strategy");
     }
     for (const p of snap.papers) {
       const src = getSource(db, p.doi);
@@ -197,6 +235,7 @@ async function registryWorkflow(
     if (snap.minConfidence !== bar || snap.engine !== engineName) return refuse("CONTINUATION_INVALID", "the verification engine or confidence bar changed since the run began");
     const identity = await identityOf();
     if ((identity?.model ?? null) !== snap.model) return refuse("CONTINUATION_INVALID", "the model identity changed since the run began");
+    if ((identity?.protocol ?? "unidentified") !== snap.protocol) return refuse("CONTINUATION_INVALID", "the decision protocol changed since the run began");
     runId = run.runId;
     snapshot = snap;
     carry = run.carry;
@@ -204,15 +243,30 @@ async function registryWorkflow(
     const details = detailsOf(snap.papers.map((p) => p.doi));
     scopePapers = snap.papers.map((p) => details.get(p.doi)).filter((p): p is ScopePaper => p !== undefined);
     candidateStats = snap.selection;
-    if (snap.candidateIds !== null) {
-      // Query mode: the candidates captured at the start, never a recomputed (corpus-dependent) BM25 list.
+    const savedIds: unknown = snap.candidateIds;
+    if (savedIds !== null) {
+      // The run froze its candidates at creation: replay them in saved order,
+      // never recompute them. A missing or unreadable entry is refused, not
+      // skipped: skipping would silently shift every later work index.
+      if (!Array.isArray(savedIds) || savedIds.some((id) => typeof id !== "string" || id.length === 0)) {
+        return refuse("CONTINUATION_INVALID", "the run's saved candidates are unreadable; repeat the request without a continuation");
+      }
       const sel = db.prepare("SELECT doi, chunk_index, chunk_id, revision, char_start, char_end, content_hash, text FROM chunks WHERE chunk_id = ?");
-      all = snap.candidateIds.flatMap((id) => {
+      const frozen: Candidate[] = [];
+      for (const id of savedIds) {
         const r = sel.get(id) as { doi: string; chunk_index: number; chunk_id: string; revision: string; char_start: number; char_end: number; content_hash: string; text: string } | undefined;
-        return r === undefined ? [] : [{ doi: r.doi, chunkIndex: r.chunk_index, chunkId: r.chunk_id, revision: r.revision, start: r.char_start, end: r.char_end, text: r.text, hash: r.content_hash }];
-      });
+        if (r === undefined) {
+          return refuse("CONTINUATION_INVALID", "a passage saved with the run is no longer in the registry; repeat the request without a continuation");
+        }
+        frozen.push({ doi: r.doi, chunkIndex: r.chunk_index, chunkId: r.chunk_id, revision: r.revision, start: r.char_start, end: r.char_end, text: r.text, hash: r.content_hash });
+      }
+      // A frozen non-query list is the limited strategy's capture; a frozen
+      // query list stays query-limited (the strategy never applies to it).
+      candidateLimited = query === null;
+      units = frozen;
     } else {
-      all = selectCandidates(db, snap.papers.map((p) => p.doi), null).flatMap((p) => p.candidates);
+      candidateLimited = false;
+      units = selectCandidates(db, snap.papers.map((p) => p.doi), query).flatMap((p) => p.candidates);
     }
   } else {
     const sourceReport: SourceReport = [];
@@ -232,8 +286,16 @@ async function registryWorkflow(
     scopePapers = ready;
     const identity = ready.length > 0 ? await identityOf() : null;
     const perPaper = selectCandidates(db, ready.map((p) => p.doi), query);
-    all = perPaper.flatMap((p) => p.candidates);
+    const all = perPaper.flatMap((p) => p.candidates);
     candidateStats = perPaper.map((p) => ({ doi: p.doi, chunksTotal: p.chunksTotal, matched: p.matched, selected: p.candidates.length }));
+    // Freeze the strategy's narrowed order with the run: continuations replay
+    // these ids in this order and never re-rank. Exhaustive stays null (with
+    // its source revision and policy guard); a narrowing that cannot rank
+    // falls back to exhaustive and still reports exhaustive honestly.
+    const narrowed = strategy !== "exhaustive" && query === null ? narrowCandidates(db, all, req.claim, strategy) : null;
+    candidateLimited = narrowed !== null;
+    units = narrowed === null ? all : narrowed.units;
+    if (narrowed !== null) candidateStats = narrowed.stats;
     snapshot = {
       mode: query === null ? "registry" : "query",
       query,
@@ -244,7 +306,7 @@ async function registryWorkflow(
       }),
       scopeKey,
       selected: selected.length,
-      candidateIds: query === null ? null : all.map((c) => c.chunkId),
+      candidateIds: query === null ? (narrowed === null ? null : narrowed.units.map((c) => c.chunkId)) : all.map((c) => c.chunkId),
       selection: candidateStats,
       engine: engineName,
       model: identity?.model ?? null,
@@ -257,11 +319,16 @@ async function registryWorkflow(
     await ctx.queue.runExclusive(() => createRun(db, created.runId, req.claim, created.snapshot, created.carry, ctx.now()));
   }
   const byDoi = new Map(scopePapers.map((p) => [p.doi, p]));
+  // Adopted strategy (hosted only): the hosted engine judges the top-10
+  // retrieval candidates per claim; a locator query already limits
+  // candidates, so the strategy only narrows the otherwise-exhaustive path.
+  // `units` and `candidateLimited` come from the run above: a new run narrows
+  // then freezes, a continuation replays the freeze.
   const effective = effectiveOf(snapshot);
   const evidenceIdentity = effective ?? { model: `unidentified:${engineName}`, protocol: snapshot.protocol };
   const citekeyOf = (doi: string): string => byDoi.get(doi)?.citekey ?? doi;
 
-  // ── stage 1: judge candidate chunks ──────────────────────────────────────
+  // ── stage 1: judge candidate chunks ─────────────────────────────────────
   let interruption: JudgeResult["interruption"] = null;
   let checked = 0;
   let fresh = 0;
@@ -271,8 +338,8 @@ async function registryWorkflow(
   const evidenceRows: EvidenceRow[] = [];
   let localizationFresh = 0;
 
-  if (startWork !== -1 && all.length > startWork) {
-    const slice = all.slice(startWork);
+  if (startWork !== -1 && units.length > startWork) {
+    const slice = units.slice(startWork);
     const s1 = await judge(effective, slice.map((c) => ({ text: c.text, hash: c.hash })));
     if (s1.interruption?.reason === "engine_failure" && s1.scores.size === 0) {
       return refuse("VERIFY_ENGINE_MISSING", `${s1.interruption.detail}`);
@@ -286,8 +353,8 @@ async function registryWorkflow(
     nextWork = firstUnchecked === -1 ? null : startWork + firstUnchecked;
 
     // ── stage 2: localize supported chunks to excerpt-sized passages ───────
-    const supportedChunks = slice.filter((c) => {
-      const p = s1.scores.get(c.hash);
+    const supportedChunks = slice.filter((u) => {
+      const p = s1.scores.get(u.hash);
       return p !== undefined && isSupported(p, bar);
     });
     const sub = new Map<string, { text: string; hash: string }>();
@@ -301,7 +368,7 @@ async function registryWorkflow(
     let s2: JudgeResult | null = null;
     if (sub.size > 0) {
       s2 = await judge(effective, [...sub.values()]);
-      localizationFresh = s2.fresh;
+      localizationFresh += s2.fresh;
       interruption ??= s2.interruption === null ? null : { reason: s2.interruption.reason, detail: `while localizing supported passages: ${s2.interruption.detail}` };
     }
     const sources = new Map<string, ReturnType<typeof getSourceText>>();
@@ -321,7 +388,7 @@ async function registryWorkflow(
       // Unfinished localization is unfinished WORK, not evidence: the chunk is re-checked on continuation
       // (its completed judgments are free) instead of being reported as a misleading chunk-scale pointer.
       if (items.some((it) => s2?.scores.get(it.hash) === undefined)) {
-        const idx = startWork + slice.indexOf(chunk);
+        const idx = startWork + slice.findIndex((u) => u.hash === chunk.hash);
         nextWork = nextWork === null ? idx : Math.min(nextWork, idx);
         continue;
       }
@@ -338,13 +405,13 @@ async function registryWorkflow(
     }
   } else if (startWork === -1) {
     // a run whose work is already complete: only output remains
-    checked = all.length;
+    checked = units.length;
   }
 
   // ── persist (freshness-checked), then deliver exactly once ───────────────
   const staleDropped = evidenceRows.length === 0 ? 0 : await ctx.queue.runExclusive(() => saveEvidence(db, runId, evidenceRows, ctx.now()));
   carry = { ...carry, staleDropped: carry.staleDropped + staleDropped };
-  if (continuing || all.length > 0 || staleDropped > 0) await ctx.queue.runExclusive(() => setRunState(db, runId, nextWork, carry));
+  if (continuing || units.length > 0 || staleDropped > 0) await ctx.queue.runExclusive(() => setRunState(db, runId, nextWork, carry));
 
   const stored = evidenceOfRun(db, runId);
   const delivered = stored.filter((e) => e.releasedChars !== null);
@@ -406,24 +473,27 @@ async function registryWorkflow(
   if (carry.unavailable.some((u) => u.code === "deferred")) limitations.push("sources_deferred");
   if (carry.unresolved.length > 0) limitations.push("unresolved_scope");
   if (query !== null) limitations.push("query_limited");
-  if (query !== null && (all.length === 0 || noCandidates.length > 0)) limitations.push("no_candidates");
+  // A limited strategy checks retrieval-selected candidates, never exhaustively: said plainly, always.
+  if (candidateLimited) limitations.push("candidate_limited");
+  if (query !== null && (units.length === 0 || noCandidates.length > 0)) limitations.push("no_candidates");
+  if (candidateLimited && units.length === 0) limitations.push("no_candidates");
   if (interruption !== null) limitations.push("interrupted");
   if (carry.staleDropped > 0) limitations.push("source_changed");
   if (outputRemaining > 0) limitations.push("output_paged");
   const workComplete = interruption === null && nextWork === null;
-  const complete = workComplete && query === null && carry.unavailable.length === 0 && carry.unresolved.length === 0 && carry.staleDropped === 0;
+  const complete = workComplete && !candidateLimited && query === null && carry.unavailable.length === 0 && carry.unresolved.length === 0 && carry.staleDropped === 0;
 
   return {
     kind: "ok",
     result: {
       claim: req.claim,
       mode: query === null ? "registry" : "query",
-      result: { supportFound: available > 0, searched: query === null ? "exhaustive" : "query_limited", complete, limitations },
+      result: { supportFound: available > 0, searched: query === null ? (candidateLimited ? "candidate_limited" : "exhaustive") : "query_limited", complete, limitations },
       engine: { name: engineName, model: effective?.model ?? null, protocol: snapshot.protocol, minConfidence: bar, cache: effective !== null },
       coverage: {
         sources: { selected: snapshot.selected, ready: snapshot.papers.length, unavailable: carry.unavailable, unresolved: carry.unresolved, preprint: snapshot.papers.filter((p) => getSource(db, p.doi)?.kind === "arxiv-preprint-pdf").map((p) => citekeyOf(p.doi)) },
         candidates: {
-          total: all.length,
+          total: units.length,
           perPaper: candidateStats.map((p) => ({ doi: p.doi, citekey: citekeyOf(p.doi), chunks: p.chunksTotal, matched: p.matched, selected: p.selected })),
         },
         work: { checked, fresh, cached, unchecked, localizationFresh, complete: workComplete, interruption },

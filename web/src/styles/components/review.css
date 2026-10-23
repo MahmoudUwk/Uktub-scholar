@@ -1,0 +1,49 @@
+.cm-review-inserted {
+	background-color: color-mix(in srgb, var(--color-success) 18%, transparent);
+	text-decoration: underline;
+	text-decoration-color: var(--color-success);
+}
+
+.cm-review-deleted {
+	background-color: color-mix(in srgb, var(--color-error) 15%, transparent);
+	color: var(--pico-secondary);
+	text-decoration: line-through;
+}
+
+.review-panel {
+	order: 2;
+}
+
+.editor-review-panel {
+	height: 100%;
+	box-shadow: var(--shadow-md);
+}
+
+.review-panel-track {
+	position: relative;
+}
+
+.review-item {
+	position: absolute;
+	left: var(--space-sm);
+	right: var(--space-sm);
+}
+
+.review-diff {
+	width: 100%;
+	margin: 0 0 var(--space-sd);
+	padding: 0;
+	border: 0;
+	background: none;
+	color: var(--text-color);
+	font: var(--font-size-meta) var(--pico-font-family-monospace, monospace);
+	text-align: left;
+	white-space: pre-wrap;
+	word-break: break-word;
+	cursor: pointer;
+}
+
+.tracking-dropdown {
+	min-width: 240px;
+	padding: var(--space-sm);
+}

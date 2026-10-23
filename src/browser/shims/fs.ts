@@ -32,8 +32,7 @@
  * fs (`readFileSync`/`writeFileSync`/`rmSync`/`copyFileSync`/`renameSync`
  * from or to it, `chmodSync` of it) with EPERM and a clear message. The core
  * never does those (registry bytes move through the sqlite seam); the one
- * exception is `migrateLegacy`'s v2 backup `copyFileSync`, noted in
- * CORE-CHANGES-NEEDED.md. `<root>/.registry/project-files.db` itself (this
+ * exception is `migrateLegacy`'s v2 backup `copyFileSync`. `<root>/.registry/project-files.db` itself (this
  * layer's own store) is NOT visible through fs.
  *
  * Permissions are emulated, owner-bits only: a cleared 0o200 bit means
@@ -188,11 +187,6 @@ export function closeProjectFiles(): void {
   }
 }
 
-/** True while a project-files store is open in this worker. */
-export function isProjectFilesOpen(): boolean {
-  return filesDb !== null;
-}
-
 /** `PRAGMA integrity_check` of the open project-files database. */
 export function projectFilesIntegrityCheck(): string {
   const db = requireDb();
@@ -205,11 +199,6 @@ export function projectFilesDbBytes(): number {
   const bytes = sahpoolFileBytes(dbPath);
   if (bytes === null) throw new Error(`project-files database missing from the pool at ${dbPath}`);
   return bytes.length;
-}
-
-/** Live byte size of the standalone registry database file in the pool. */
-export function registryDbBytes(): number | null {
-  return sahpoolFileBytes(registryAbs)?.length ?? null;
 }
 
 // ---------------------------------------------------------------------------

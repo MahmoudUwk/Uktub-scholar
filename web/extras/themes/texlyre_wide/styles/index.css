@@ -1,0 +1,7 @@
+/* extras/themes/texlyre_wide/styles/index.css */
+@import "../../shared/styles/desktop-base.css";
+@import "./layout.css";
+
+@import "./components/header.css";
+@import "./components/footer.css";
+@import "../../shared/styles/variants/index.css";

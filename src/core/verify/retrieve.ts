@@ -13,7 +13,7 @@
  * Ranking scores are used for ordering only and are never exposed.
  */
 
-import type { DatabaseSync } from "node:sqlite";
+import type { DatabaseSync } from "../registry.ts";
 
 /** Client policy: bounds the FTS expression a caller can build (a sentence-scale locator is far below it). */
 export const QUERY_MAX_TOKENS = 32;

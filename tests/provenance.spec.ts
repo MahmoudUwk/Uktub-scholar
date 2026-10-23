@@ -88,6 +88,19 @@ describe("figuresOf", () => {
     const hu = normalizePaperText(PAPERS[0]!.text!);
     assert.equal(matchFigure(figuresOf("10,000×")[0]!, hu), "exact");
   });
+  it("extracts magnitude-suffix tokens (8k, 16K, 1.5M, 3B) as figures", () => {
+    const f = (s: string) => figuresOf(s).map((x) => x.token);
+    assert.deepEqual(f("an 8k context window"), ["8k"]);
+    assert.deepEqual(f("16K tokens and 1.5M parameters in a 3B model"), ["16K", "1.5M", "3B"]);
+  });
+  it("matches magnitudes by written form only: same number with the same suffix, never a bare number", () => {
+    const k8 = figuresOf("8k context")[0]!;
+    assert.equal(matchFigure(k8, normalizePaperText("The model supports an 8K context window.")), "exact", "the suffix matches case-insensitively");
+    assert.equal(matchFigure(k8, normalizePaperText("Tuned with 8 experts on 4 GPUs.")), "absent", "a bare 8 is not the same magnitude");
+    assert.equal(matchFigure(figuresOf("8K context")[0]!, normalizePaperText("The model supports an 8M context window.")), "absent", "a different suffix is a different magnitude");
+    assert.equal(matchFigure(figuresOf("3B model")[0]!, normalizePaperText("a 3 billion parameter model")), "exact");
+    assert.equal(matchFigure(figuresOf("1.5M parameters")[0]!, normalizePaperText("1.5M parameters, 12 layers")), "exact");
+  });
 });
 
 describe("auditProvenance", () => {

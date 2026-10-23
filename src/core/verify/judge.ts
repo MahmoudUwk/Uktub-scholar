@@ -18,9 +18,10 @@
  */
 
 import { agentSafeDetail } from "../safe-detail.ts";
-import type { DatabaseSync } from "node:sqlite";
+import type { DatabaseSync } from "../registry.ts";
 
 import type { ClaimEngine } from "./claim.ts";
+import { CancelledError } from "./claim.ts";
 import { cachedJudgments, saveJudgments, type JudgmentIdentity } from "./store.ts";
 
 export interface JudgeOptions {
@@ -82,6 +83,14 @@ export async function judgePassages(
   const budget = misses.slice(0, o.maxFresh);
   const overBudget = misses.slice(o.maxFresh);
   const result: JudgeResult = { scores, cached, fresh: 0, unchecked: [], interruption: null };
+  // An already-aborted call reports cancellation before touching an engine
+  // (creation can fail and must not masquerade as the cause), even when every
+  // judgment is cached: valid cached scores stay, but the abort is disclosed.
+  if (o.signal?.aborted === true) {
+    result.interruption = { reason: "cancelled", detail: "the request was cancelled" };
+    result.unchecked = misses.map((p) => p.hash);
+    return result;
+  }
   if (misses.length === 0) return result;
 
   let engine: ClaimEngine;
@@ -107,18 +116,34 @@ export async function judgePassages(
       }
       const batch = batches[next++];
       try {
-        const out = validateScores(await engine.run(batch.map((p) => ({ state: p.text, instructions: claim }))), batch.length);
+        const out = await engine.run(
+          batch.map((p) => ({ state: p.text, instructions: claim })),
+          { signal: o.signal },
+        );
+        const valid = validateScores(out, batch.length);
         batch.forEach((p, i) => {
-          scores.set(p.hash, out[i]);
+          scores.set(p.hash, valid[i]);
           judged.add(p.hash);
         });
         result.fresh += batch.length;
         const identity = o.identity;
         if (identity !== null) {
-          await o.queue.runExclusive(() => saveJudgments(o.db, claim, identity, batch.map((p, i) => ({ passageHash: p.hash, pTrue: out[i] })), o.now()));
+          await o.queue.runExclusive(() => saveJudgments(o.db, claim, identity, batch.map((p, i) => ({ passageHash: p.hash, pTrue: valid[i] })), o.now()));
+        }
+        // A batch that resolved completely before the abort was noticed is
+        // valid completed work: it stays validated, recorded and cached. A
+        // rejected or incomplete batch is never cached, and no NEW batch
+        // dispatches after abort.
+        if (o.signal?.aborted === true) {
+          stop = { reason: "cancelled", detail: "the request was cancelled" };
+          return;
         }
       } catch (err) {
-        stop ??= { reason: "engine_failure", detail: agentSafeDetail(err, batch.map((p) => p.text)) };
+        // Cancellation is reported as cancelled, never as an engine failure —
+        // otherwise a zero-score abort would masquerade as VERIFY_ENGINE_MISSING.
+        stop ??= o.signal?.aborted === true || err instanceof CancelledError
+          ? { reason: "cancelled", detail: "the request was cancelled" }
+          : { reason: "engine_failure", detail: agentSafeDetail(err, batch.map((p) => p.text)) };
         return;
       }
     }

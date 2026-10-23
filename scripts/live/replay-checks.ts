@@ -5,7 +5,7 @@
  *
  * It reads the same files the experiment reads — the recorded project copy
  * (`evidence/project`), the deliverable registry and bibliography — reruns
- * the five Tier 1 checks plus the reported provenance counts, and prints the
+ * the six Tier 1 checks plus the reported provenance counts, and prints the
  * verdicts as JSON. It never writes to the run dir: the provenance audit
  * runs on a copy under the OS temp dir (opening a registry migrates and
  * sweeps it), and the run dir itself is only read (mtimes included). No
@@ -22,6 +22,7 @@ import {
   checkTierFigures,
   checkTierPdfCurrent,
   checkTierPointers,
+  checkTierProseVerifiedOrLabelled,
   readTierPaperTexts,
   resolveExpectedEntry,
   tierReport,
@@ -114,7 +115,7 @@ try {
 const papers = readTierPaperTexts(projectDir) ?? [];
 
 const failClosed = (detail: string): { id: string; ok: boolean; detail: string }[] =>
-  (["citations-in-registry", "bibliography-matches-registry", "compiled-after-last-edit", "pointers-resolve", "figures-supported"] as const)
+  (["citations-in-registry", "bibliography-matches-registry", "compiled-after-last-edit", "pointers-resolve", "figures-supported", "prose-verified-or-labelled"] as const)
     .map((id) => ({ id, ok: false, detail }));
 
 const tierChecks = doc === null
@@ -125,6 +126,7 @@ const tierChecks = doc === null
     checkTierPdfCurrent(projectDir, resolveExpectedEntry(null, projectFiles)),
     checkTierPointers(doc, papers),
     checkTierFigures(doc),
+    checkTierProseVerifiedOrLabelled(doc),
   ];
 
 console.log(JSON.stringify({

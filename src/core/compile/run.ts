@@ -16,24 +16,37 @@ import { platformKey } from "../embed/runtime.ts";
 import { resolveEngine } from "./engine.ts";
 import { managedTectonicPath, readTectonicLock } from "./managed.ts";
 import { parseTectonicStreams, type CompileDiagnostic } from "./diagnostics.ts";
+import {
+  BUILD_DIR,
+  ENGINE_OUTPUT_CAP_BYTES,
+  finishCompile,
+  timeoutMsFromEnv,
+} from "./finish.ts";
 
-/** Default single-compile budget — client policy (labelled; not a provider limit). */
-export const DEFAULT_COMPILE_TIMEOUT_MS = 120_000;
-/** Env override for the budget, in seconds — client policy (labelled). */
-export const COMPILE_TIMEOUT_ENV = "UKTUB_COMPILE_TIMEOUT_S";
-export const BUILD_DIR = "build";
+export {
+  BUILD_DIR,
+  COMPILE_TIMEOUT_ENV,
+  DEFAULT_COMPILE_TIMEOUT_MS,
+  ENGINE_OUTPUT_CAP_BYTES,
+  projectPathOf,
+  timeoutMsFromEnv,
+} from "./finish.ts";
 
-/** The spawn seam: prod wires child_process, tests fake it. */
+/** Default single-compile budget — client policy (labelled; not a provider limit). Moved to finish.ts; re-exported here so existing imports keep working. */
+
+/** The spawn seam: prod wires child_process, tests fake it. An abort on `signal` kills the child and rejects with the abort reason. */
 export type EngineSpawn = (
   file: string,
   args: string[],
-  opts: { cwd: string; timeoutMs: number },
-) => Promise<{ stdout: string; stderr: string; code: number; timedOut: boolean }>;
+  opts: { cwd: string; timeoutMs: number; signal?: AbortSignal },
+) => Promise<{ stdout: string; stderr: string; code: number; timedOut: boolean; outputOverflow?: boolean }>;
 
 export interface CompileInput {
   root: string;
   env: Record<string, string | undefined>;
   spawn: EngineSpawn;
+  /** Host cancellation: reaches the engine child; an abort rejects the compile with the abort reason. */
+  signal?: AbortSignal;
   /** Engine-location fs seam (KTD6); prod default is the real filesystem. */
   fs?: Parameters<typeof resolveEngine>[2];
 }
@@ -48,7 +61,7 @@ export type CompileOutcome =
       diagnostics: CompileDiagnostic[];
       truncated: boolean;
     }
-  | { kind: "errors"; engineVersion: string; entry: string; diagnostics: CompileDiagnostic[]; truncated: boolean }
+  | { kind: "errors"; engineVersion: string; entry: string; diagnostics: CompileDiagnostic[]; truncated: boolean; wrotePdf?: string | null }
   | { kind: "refusal"; code: "COMPILE_ENGINE_MISSING" | "COMPILE_NO_ENTRY" | "COMPILE_TIMEOUT"; message: string };
 
 /** Deterministic human text the tool/CLI both render from an outcome. Refusals
@@ -70,14 +83,14 @@ const HINTS: { test: RegExp; text: string }[] = [
 const TECTONIC_015_BBL_WARNINGS = [/internal consistency problem when checking if main\.bbl changed/i, /TeX rerun seems needed, but stopping at \d+ passes/i];
 const KNOWN_BBL_NOTE = "note: the main.bbl / TeX rerun warnings above are Tectonic 0.15.0 behavior on every bibliography build (0.17.0 does not print them); they are not caused by the document, so editing it or changing the bibliography style will not clear them.";
 
-export function describeOutcome(outcome: Exclude<CompileOutcome, { kind: "refusal" }>): string {
+export function describeOutcome(outcome: Exclude<CompileOutcome, { kind: "refusal" }>, engineNoun = "tectonic"): string {
   const d = outcome.diagnostics;
   const errors = d.filter((x) => x.severity === "error");
   const warnings = d.filter((x) => x.severity === "warning");
   const head =
     outcome.kind === "compiled"
-      ? `Compiled ${outcome.entry} with tectonic ${outcome.engineVersion} → ${outcome.pdfPath} (${outcome.pdfSizeBytes} bytes). ${errors.length} error(s), ${warnings.length} warning(s).`
-      : `Compile failed: ${outcome.entry} — ${errors.length} error(s), ${warnings.length} warning(s) from tectonic ${outcome.engineVersion}.`;
+      ? `Compiled ${outcome.entry} with ${engineNoun} ${outcome.engineVersion} → ${outcome.pdfPath} (${outcome.pdfSizeBytes} bytes). ${errors.length} error(s), ${warnings.length} warning(s).`
+      : `Compile failed: ${outcome.entry} — ${errors.length} error(s), ${warnings.length} warning(s) from ${engineNoun} ${outcome.engineVersion}.`;
   // Errors first: a real manuscript prints dozens of warnings, and the cause of a failure must be the first line read (each group keeps engine order).
   const lines = [...errors, ...warnings].map((x) => {
     const at = [x.file, x.line].filter((v) => v !== undefined).join(":");
@@ -137,26 +150,10 @@ export function resolveEntry(root: string, entryParam?: string): { ok: true; abs
   };
 }
 
-/** A diagnostic's file as a project-relative path with its extension, when it resolves to a file inside the project; otherwise as printed. */
-export function projectPathOf(root: string, entryDir: string, printed: string): string {
-  for (const name of [printed, `${printed}.tex`]) {
-    const abs = resolve(entryDir, name);
-    if (abs.startsWith(root + sep) && existsSync(abs) && statSync(abs).isFile()) return relative(root, abs);
-  }
-  return printed;
-}
-
-/** Timeout budget: env override (seconds) wins, else the client-policy default. */
-export function timeoutMsFromEnv(env: Record<string, string | undefined>): number {
-  const raw = env[COMPILE_TIMEOUT_ENV];
-  if (raw === undefined || raw === "") return DEFAULT_COMPILE_TIMEOUT_MS;
-  const seconds = Number(raw);
-  if (!Number.isFinite(seconds) || seconds < 5) return DEFAULT_COMPILE_TIMEOUT_MS;
-  return Math.round(seconds * 1000);
-}
-
-/** Prod spawn: child_process.execFile with a hard timeout; a kill surfaces as
- * timedOut, a nonzero exit as code — the engine's failure text still travels. */
+/** Prod spawn: child_process.execFile with a hard timeout and the caller's signal. Outcomes are told apart in this order:
+ * an abort rejects with the abort reason (Node also kills the child; it is never a timeout); a maxBuffer overflow is
+ * ERR_CHILD_PROCESS_STDIO_MAXBUFFER (outputOverflow); the timeout kills with killSignal, which sets `killed` and `signal`
+ * (timedOut); anything else is a nonzero exit as code, and the engine's failure text still travels. */
 export const prodSpawn: EngineSpawn = async (file, args, opts) => {
   const { execFile } = await import("node:child_process");
   const execFileAsync = promisify(execFile);
@@ -165,12 +162,17 @@ export const prodSpawn: EngineSpawn = async (file, args, opts) => {
       cwd: opts.cwd,
       timeout: opts.timeoutMs,
       killSignal: "SIGKILL",
-      maxBuffer: 16 * 1024 * 1024,
+      maxBuffer: ENGINE_OUTPUT_CAP_BYTES,
+      signal: opts.signal,
     });
     return { stdout: r.stdout, stderr: r.stderr, code: 0, timedOut: false };
   } catch (err) {
     const e = err as { code?: number | string; killed?: boolean; signal?: string; stdout?: string; stderr?: string };
-    if (e.killed || e.signal === "SIGKILL") {
+    if (opts.signal?.aborted === true) throw opts.signal.reason ?? err;
+    if (e.code === "ERR_CHILD_PROCESS_STDIO_MAXBUFFER") {
+      return { stdout: e.stdout ?? "", stderr: e.stderr ?? "", code: 1, timedOut: false, outputOverflow: true };
+    }
+    if (e.killed === true && e.signal === "SIGKILL") {
       return { stdout: e.stdout ?? "", stderr: e.stderr ?? "", code: 1, timedOut: true };
     }
     return {
@@ -183,6 +185,8 @@ export const prodSpawn: EngineSpawn = async (file, args, opts) => {
 };
 
 export async function compileDocument(input: CompileInput, entryParam?: string): Promise<CompileOutcome> {
+  // A cancelled call ends with the caller's reason (the convention scholarly.ts follows), never a refusal or an engine failure.
+  input.signal?.throwIfAborted();
   const managed = managedTectonicPath(readTectonicLock(), managedCacheDir(input.env), platformKey());
   const engine = await resolveEngine(input.env, spawnVersionProbe(input.spawn), input.fs, managed);
   if (!engine.ok) {
@@ -204,39 +208,27 @@ export async function compileDocument(input: CompileInput, entryParam?: string):
   const run = await input.spawn(engine.engine.path, ["-X", "compile", entry.abs, "--outdir", outdir], {
     cwd: dirname(entry.abs),
     timeoutMs,
+    signal: input.signal,
   });
-  if (run.timedOut) {
-    return {
-      kind: "refusal",
-      code: "COMPILE_TIMEOUT",
-      message: `tectonic exceeded the ${Math.round(timeoutMs / 1000)}s budget (${COMPILE_TIMEOUT_ENV} overrides it in seconds)`,
-    };
-  }
 
   const parsed = parseTectonicStreams(run.stdout, run.stderr);
-  // The engine names files as written in the source (`sections/intro`, relative to the entry's folder, no extension): give the agent a
-  // path it can open, relative to the project root, whenever that file exists.
-  for (const d of parsed.diagnostics) if (d.file !== undefined) d.file = projectPathOf(input.root, dirname(entry.abs), d.file);
-  const hasErrors = parsed.diagnostics.some((x) => x.severity === "error") || run.code !== 0;
-  if (hasErrors) {
-    // A failure must say why: a non-zero exit with no parsed error line gets one synthetic error instead of a bare "0 error(s)".
-    if (!parsed.diagnostics.some((x) => x.severity === "error")) {
-      parsed.diagnostics.push({ severity: "error", message: `tectonic exited with code ${run.code} without printing an error line (see the warnings above, if any)` });
-    }
-    return { kind: "errors", engineVersion: engine.engine.version, entry: entry.rel, ...parsed };
-  }
-  const pdfAbs = parsed.wrotePdf ? resolve(dirname(entry.abs), parsed.wrotePdf) : null;
-  const pdfRel = pdfAbs && pdfAbs.startsWith(input.root + sep) ? relative(input.root, pdfAbs) : null;
-  const size = pdfAbs && existsSync(pdfAbs) ? statSync(pdfAbs).size : null;
-  return {
-    kind: "compiled",
+  // Engine-neutral finish: timeout refusal, file mapping, cap/synthetic
+  // errors, errors-vs-compiled, and the `build/` PDF write. Node passes the
+  // "tectonic" noun so every message stays byte-identical (pinned).
+  return finishCompile({
+    root: input.root,
+    entryRel: entry.rel,
+    engineNoun: "tectonic",
     engineVersion: engine.engine.version,
-    entry: entry.rel,
-    pdfPath: pdfRel,
-    pdfSizeBytes: size,
+    code: run.code,
+    timedOut: run.timedOut,
+    timeoutMs,
+    outputCapBytes: ENGINE_OUTPUT_CAP_BYTES,
+    ...(run.outputOverflow === true ? { outputOverflow: true as const } : {}),
+    wrotePdf: parsed.wrotePdf,
     diagnostics: parsed.diagnostics,
     truncated: parsed.truncated,
-  };
+  });
 }
 
 /** Adapt the EngineSpawn seam into the version-probe shape resolveEngine takes. */

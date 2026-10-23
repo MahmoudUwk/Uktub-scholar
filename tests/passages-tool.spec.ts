@@ -17,7 +17,7 @@ import { createRegistry, registerPaper } from "../src/core/registry.ts";
 import type { ChunkTextConfig } from "../src/core/chunk.ts";
 import { EmbedError, type Embedder } from "../src/core/embed/embedder.ts";
 import type { ToolContext } from "../src/core/tools/context.ts";
-import { MAX_SEARCH_HITS, SearchPassagesOutput, searchPassagesTool, type SearchPassagesArgs } from "../src/core/tools/passages.ts";
+import { MAX_SEARCH_HITS, SearchPassagesOutput, SearchPassagesParams, searchPassagesTool, type SearchPassagesArgs } from "../src/core/tools/passages.ts";
 import { chunksOf, publishSource, resolvePointer } from "../src/core/verify/store.ts";
 
 const NOW = () => new Date("2026-10-04T12:00:00Z");
@@ -80,6 +80,9 @@ describe("passages — refusals", () => {
       [{ query: "!!! ??? ***" }, /searchable words/],
       [{ query: "x".repeat(501) }, /query/],
       [{ query: "alpha", papers: [] }, /papers/],
+      [{ query: "alpha", papers: "" as never }, /papers/],
+      [{ query: "alpha", papers: "[]" as never }, /papers/],
+      [{ query: "alpha", papers: '["unclosed' as never }, /papers/],
       [{ query: "alpha", limit: 0 }, /limit/],
       [{ query: "alpha", limit: MAX_SEARCH_HITS + 1 }, /limit/],
       [{ query: "alpha", limit: 2.5 }, /limit/],
@@ -146,7 +149,7 @@ describe("passages — results", () => {
     assert.ok(out.hits.every((h: any) => typeof h.section === "string" && h.section.length > 0), "hits carry the section labels of the new policy");
   });
 
-  it("scopes by handle, reports unresolved handles and papers without a usable source, and bounds the hits", async () => {
+  it("scopes by handle (array, JSON-string array, or string), reports unresolved handles and papers without a usable source, and bounds the hits", async () => {
     writeConfig();
     const a = sectioned("battery", 5);
     const b = sectioned("battery", 5);
@@ -157,9 +160,12 @@ describe("passages — results", () => {
     const all = (await run({ query: "battery", limit: 4 })).structuredContent as any;
     assert.equal(all.hits.length, 4);
     assert.deepEqual(all.coverage.papers.notSearchable.map((p: any) => p.doi), ["10.1234/ccc"]);
-    const onlyB = (await run({ query: "battery", papers: ["10.1234/bbb", "no-such-handle"] })).structuredContent as any;
-    assert.ok(onlyB.hits.every((h: any) => h.doi === "10.1234/bbb"));
-    assert.deepEqual(onlyB.coverage.papers.unresolved, ["no-such-handle"]);
+    for (const raw of [["10.1234/bbb", "no-such-handle"], '["10.1234/bbb", "no-such-handle"]', "10.1234/bbb, no-such-handle"]) {
+      assert.ok(Value.Check(SearchPassagesParams, { query: "battery", papers: raw }), `schema accepts ${JSON.stringify(raw)}`);
+      const onlyB = (await run({ query: "battery", papers: raw as never })).structuredContent as any;
+      assert.ok(onlyB.hits.every((h: any) => h.doi === "10.1234/bbb"));
+      assert.deepEqual(onlyB.coverage.papers.unresolved, ["no-such-handle"]);
+    }
     assert.equal((await run({ query: "battery" })).structuredContent && ((await run({ query: "battery" })).structuredContent as any).hits.length, 5, "the default limit is 5");
   });
 

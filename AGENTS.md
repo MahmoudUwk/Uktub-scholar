@@ -24,6 +24,16 @@ in `docs/benchmarks/*.json`; `benchmarks/` owns datasets/protocols.
 
 ## Working and delegation
 
+- For harness design, evaluation or runtime changes, read and follow
+  [self-improving-harness](.agents/skills/harness_skill/SKILL.md), plus the installed `harness-expert` skill when available.
+  Diagnose real traces, make small attributable changes, preserve evaluation integrity, and prune unnecessary machinery.
+- Never fabricate results, citations, versions, tool outcomes or completion. Model recall is not evidence for package APIs
+  or factual claims: use official versioned upstream documentation and the installed source/types, then verify behavior.
+  Use Hermes for research; check its sources and outputs independently. Label hypotheses and missing evidence explicitly.
+  Worker prose, process exit zero and partial runs do not establish acceptance.
+- For an authorized dependency upgrade, check the official registry's latest stable release and upstream changelog,
+  update the scoped dependency and lockfile, and rerun compatibility checks. Record project, global CLI and Docker versions
+  separately; upgrading one does not qualify the others. Existing owner authorization remains valid.
 - Verify current code and packages using official docs, Context7 or Hermes research; do not trust recalled APIs. Prefer current maintained libraries and minimal
   changes. No abstraction without a second consumer; every schema field needs a consumer and every limit a provider/OS source
   or explicit client-policy label. Ask on a new major framework/library/model decision; do not reopen authorized choices.
@@ -51,7 +61,7 @@ in `docs/benchmarks/*.json`; `benchmarks/` owns datasets/protocols.
 - Acquisition accepts lawful copies named by provider records: OpenAlex locations/`oa_url`/keyed Content API, arXiv identifiers
   from records or DOIs, Semantic Scholar `openAccessPdf`/arXiv, and PMC via Europe PMC. Disclose differently-DOI'd preprints.
   No landing-page scraping, title-derived URLs, paywall circumvention or Unpaywall.
-- Verification defaults to the hosted d3-mini engine (free key, `doctor` reports setup); local Decision 2.0 Eos and other engines remain selectable. Browser pins are in the handoff (section 7 and appendix C).
+- Verification defaults to the hosted d3-mini engine (free key, `doctor` reports setup); local Decision 2.0 Eos and other engines remain selectable. Current pins and browser qualification limits are in [the handoff](docs/handoff.md).
   No support found never means false; scores are evidence, not guarantees. Disclose untested/unsupported paths.
 - `verify` and `passages` share section chunks (`boundary: section`, 512 tokens). Splitter/heading changes require property/golden
   tests and a `SECTION_CHUNKING_VERSION` bump. Retrieval is FTS5 plus optional embeddings; searches never download models.

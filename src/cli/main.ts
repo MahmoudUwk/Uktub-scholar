@@ -81,9 +81,10 @@ commands:
   attach <doi|citekey> <file>   prepare a local PDF/TEI inside the project as a paper's source
   verify <claim> [--papers all|<doi|citekey>,...] [--query <words>] [--continuation <token>]
                                 find supporting passages for ONE claim (default: all papers)
-  verify (--document <entry.tex> | --text <fragment>)
+  verify (--document <entry.tex> | --text <fragment>) [--offset <n>]
                                 check the text as written, one unit at a time (cited units against their own
-                                papers, uncited units against all papers); at most 50 units per call
+                                papers, uncited units against all papers); at most 50 units per call — when the
+                                result says NOT DONE, call again with the same text and the offset it names
   search <query> [--papers all|<doi|citekey>,...] [--limit <n>]
                                 find the passages that best match a topic or question (keyword,
                                 plus semantic when an embedding server is available)
@@ -137,6 +138,7 @@ function parseVerifyArgs(args: string[]): VerifyArgs | null {
   let continuation: string | undefined;
   let document: string | undefined;
   let text: string | undefined;
+  let offset: number | undefined;
   for (let i = 0; i < args.length; i++) {
     const a = args[i];
     if (a === "--papers" && args[i + 1] !== undefined) {
@@ -146,12 +148,17 @@ function parseVerifyArgs(args: string[]): VerifyArgs | null {
     else if (a === "--continuation" && args[i + 1] !== undefined) continuation = args[++i];
     else if (a === "--document" && args[i + 1] !== undefined) document = args[++i];
     else if (a === "--text" && args[i + 1] !== undefined) text = args[++i];
-    else claimParts.push(a);
+    else if (a === "--offset" && args[i + 1] !== undefined) {
+      const n = Number(args[++i]);
+      if (!Number.isInteger(n) || n < 0) return null;
+      offset = n;
+    } else claimParts.push(a);
   }
   if (document !== undefined || text !== undefined) {
     if (claimParts.length > 0 || papers !== "all" || query !== undefined || continuation !== undefined) return null;
-    return { ...(document !== undefined ? { document } : {}), ...(text !== undefined ? { text } : {}) } as VerifyArgs;
+    return { ...(document !== undefined ? { document } : {}), ...(text !== undefined ? { text } : {}), ...(offset !== undefined ? { offset } : {}) } as VerifyArgs;
   }
+  if (offset !== undefined) return null;
   if (claimParts.length === 0) return null;
   return { claim: claimParts.join(" "), papers, ...(query !== undefined ? { query } : {}), ...(continuation !== undefined ? { continuation } : {}) } as VerifyArgs;
 }
@@ -697,11 +704,6 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
         }
         return 0;
       }
-      case "help":
-      case "--help":
-      case "-h":
-        out(USAGE);
-        return 0;
       case "list": {
         const db = openRegistry(root);
         try {

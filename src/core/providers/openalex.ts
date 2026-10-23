@@ -20,7 +20,7 @@ import {
   getJson,
   plainText,
 } from "./http.ts";
-import { dedupKey, type PaperCandidate, type ProviderConfig, type SearchFilters } from "./types.ts";
+import { dedupKey, ProviderRequestError, type PaperCandidate, type ProviderConfig, type SearchFilters } from "./types.ts";
 
 /**
  * OpenAlex `per-page` ceiling: 1..100 (200 is accepted legacy and deprecated).
@@ -79,8 +79,17 @@ async function resolveOpenAlexSourceId(
 ): Promise<string | null> {
   const params = new URLSearchParams({ search: venue.trim(), "per-page": "1", select: "id,display_name" });
   const body = await getJson(fetchFn, cfg, "openalex", `${cfg.openalexBaseUrl}/sources?${params.toString()}`);
-  const results = asArray(asRecord(body)?.["results"]);
+  const results = openAlexResults(body);
   return asString(asRecord(results[0])?.["id"]);
+}
+
+/** OpenAlex list envelope: `results` is always an array (empty on a zero-hit page,
+ *  as its paging docs show: "repeat until next_cursor is null and results is empty").
+ *  Anything else is a broken call, not "no papers". */
+function openAlexResults(body: unknown): unknown[] {
+  const results = asRecord(body)?.["results"];
+  if (!Array.isArray(results)) throw new ProviderRequestError("openalex", null, "results is not an array");
+  return results;
 }
 
 /** One OpenAlex work → one candidate. A record without a title cannot be
@@ -152,7 +161,7 @@ export async function searchOpenAlex(
   const provenance = new URL(url);
   provenance.searchParams.delete("api_key");
   const candidates: PaperCandidate[] = [];
-  for (const work of asArray(asRecord(body)?.["results"])) {
+  for (const work of openAlexResults(body)) {
     const candidate = normalizeOpenAlexWork(work, provenance.toString());
     if (candidate !== null) candidates.push(candidate);
   }

@@ -1,0 +1,474 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-10-17",
+  "scope": "Section writer completion, cancellation, and current-prompt output integrity",
+  "git": {
+    "branch": "main",
+    "head": "d5f21fa2d5bc4e0e50e5d36068d09722a00a48b2",
+    "uncommitted": true
+  },
+  "implementation": [
+    "Verify every document page, including all pages after at most one repair; reject malformed or duplicated paging.",
+    "Host abort reaches owned child and verification; wait for abort settlement before disposal.",
+    "HTTP fetch/body/retry waits observe cancellation and clear timers. Eos active native batch drains; no new batch is dispatched.",
+    "Incomplete supported units remain unresolved.",
+    "Read only current-prompt writer text; reject error/aborted/truncated turns; expose static error categories without raw provider bodies."
+  ],
+  "offlineBeforeUpgrade": {
+    "piVersion": "1.1.0",
+    "nodeTypecheck": "PASS",
+    "noUnusedTypecheck": "PASS",
+    "browserTypecheck": "PASS",
+    "tests": {
+      "total": 1523,
+      "pass": 1522,
+      "fail": 0,
+      "skip": 1,
+      "skipReason": "Opt-in real-binary compile test"
+    },
+    "focusedPi": {
+      "pass": 51,
+      "fail": 0
+    },
+    "focusedCore": {
+      "pass": 81,
+      "fail": 0
+    },
+    "doctor": {
+      "command": "node src/cli/main.ts doctor",
+      "verification": "Shell key missing; harness uses existing repository mapping.",
+      "registry": "Absent in source checkout.",
+      "compile": "Tectonic0.15.0 available.",
+      "providers": "Optional provider keys absent in shell."
+    }
+  },
+  "live": {
+    "verdict": "PASS_SECTION_LIFECYCLE_SMOKE",
+    "runs": [
+      {
+        "id": "run-20261017-a",
+        "status": "FAILED_THEN_STOPPED",
+        "stopReason": "Orchestrator stopped after writer error to prevent parent self-debugging.",
+        "modelsObserved": [
+          "google-vertex/gemini-3.8-flash"
+        ],
+        "verifyEngine": "hosted",
+        "manifest": {
+          "commit": "d5f21fa2d5bc4e0e50e5d36068d09722a00a48b2",
+          "workingTreeDiffSha256": "e1f91fc7b4b129e7dbc1281a00cdf1bcc7cf8548af0ab490bc130966138bf418",
+          "untracked": [
+            ".claude/settings.json",
+            "docs/benchmarks/acceptance-batch-2026-10-16.json",
+            "docs/benchmarks/sections-ab-2-2026-10-16.json",
+            "docs/benchmarks/sections-ab-2026-10-15.json",
+            "docs/benchmarks/verify-wording-and-strategy-2026-10-15.json",
+            "src/core/provenance/results.ts",
+            "src/core/verify/strategy.ts",
+            "src/core/verify/wording.ts",
+            "tests/grade-resume.spec.ts",
+            "tests/pi-section-lifecycle.spec.ts",
+            "tests/provenance-computed.spec.ts",
+            "tests/verify-429-retry.spec.ts",
+            "tests/verify-cancellation.spec.ts",
+            "tests/verify-continuation-integrity.spec.ts",
+            "tests/verify-strategy.spec.ts",
+            "tests/verify-wording.spec.ts"
+          ],
+          "untrackedSha256": {
+            "src/core/provenance/results.ts": "2ef46039a5d75a0a5fe0c0ebf77360baace717b6bbf73bc088665d0c3be9cdab",
+            "src/core/verify/strategy.ts": "d9d52ef227f5ed4a1f7aff40e3e0f17b58fff111658719cc0fa59f23e5f41361",
+            "src/core/verify/wording.ts": "2f978a0161da9fbad8817a4c60cdae2c5940de4840227198c0b25d409991d691",
+            "tests/grade-resume.spec.ts": "e20ca9051b1097c81d9543f335ef871a65d94a7c8ad4976d4ef17107304c1c34",
+            "tests/pi-section-lifecycle.spec.ts": "a8071e3d10e6497671c1f1c2715ed0aff2fbd3984237dc5e816606cbef53db56",
+            "tests/provenance-computed.spec.ts": "09ea6ac2ab5a9f7a6376ad6818163c9f3d021f2fe7d0ff32fe576d78074f8c01",
+            "tests/verify-429-retry.spec.ts": "5aa58de0a26e09fb9547d3edf9039080ec8bc04dbaa774d7ad70d29a1a84ee69",
+            "tests/verify-cancellation.spec.ts": "9b0f88267b737ee6aaaa7ce1ae0de6c765d6a130f0286f26a5bb7185bfd4366a",
+            "tests/verify-continuation-integrity.spec.ts": "13576c9f5f293c5f243384e7f90aba768e0f4cf77a671183a453d14507d073df",
+            "tests/verify-strategy.spec.ts": "55d8b6f102e2bafc0439f47b028a3124c4d28bfbc0488c8a775fd126e75a54af",
+            "tests/verify-wording.spec.ts": "0a6cff707b87e3c64269dcbd71aa5289edfc70c6052ac3cf2b391dbc556afcbd"
+          },
+          "packageHash": "18805c6d3169bf69c7a5a25fac2dc3085f86f264e12aeab64ade0169a0c1fd12",
+          "image": "sha256:a701bcfb9d7a81642931e0bb7512e7b4745e7d0b6fe5c69097332fa4f9a85c71",
+          "docker": "Docker version 28.4.0, build d8eb465",
+          "node": "v26.3.1",
+          "sandboxSha256": "180398545fc968d81f1bf3af59c2832e047d3bd16476c097b2c71aeef1a5b776",
+          "engineDevice": "cpu (no NVIDIA container runtime on this host)",
+          "providerKeysPassed": [
+            "SEMANTIC_SCHOLAR_API_KEY",
+            "OPENALEX_API_KEY"
+          ],
+          "graderKeysPassed": [
+            "OPENCODE_API_KEY"
+          ],
+          "policy": {
+            "mcpCallTimeoutMs": 120000,
+            "mcpTotalTimeoutMs": 900000,
+            "caseTimeoutMs": 1200000,
+            "retries": 0
+          },
+          "startedAt": "2026-10-17T11:39:10.320Z",
+          "suite": "section-smoke",
+          "only": "all"
+        },
+        "writerStarts": 1,
+        "writerEnds": 1,
+        "writerErrorEnds": 1,
+        "agentSettled": 0,
+        "toolStarts": {
+          "write_section": 1,
+          "mcp__uktub__registry": 1,
+          "mcp__uktub__doctor": 1,
+          "bash": 1,
+          "read": 3
+        },
+        "artifactRoot": "/home/mahmoud/.cache/uktub-bench/section-lifecycle-2026-10-17/live/run-20261017-a",
+        "firstWriterError": "the writer sub-session returned no text"
+      },
+      {
+        "id": "run-20261017-b",
+        "status": "OWNER_STOPPED_INCOMPLETE",
+        "stopReason": "Owner asked to wrap up immediately to conserve quota; orchestrator stopped active Pi container.",
+        "modelsObserved": [
+          "google-vertex/gemini-3.5-flash-lite",
+          "google-vertex/gemini-3.8-flash"
+        ],
+        "verifyEngine": "hosted",
+        "manifest": {
+          "commit": "d5f21fa2d5bc4e0e50e5d36068d09722a00a48b2",
+          "workingTreeDiffSha256": "22fac788dd668776890bc6b62cfa3bbf2a3e69b2cd674fe35732617cc5654f90",
+          "untracked": [
+            ".claude/settings.json",
+            "docs/benchmarks/acceptance-batch-2026-10-16.json",
+            "docs/benchmarks/sections-ab-2-2026-10-16.json",
+            "docs/benchmarks/sections-ab-2026-10-15.json",
+            "docs/benchmarks/verify-wording-and-strategy-2026-10-15.json",
+            "src/core/provenance/results.ts",
+            "src/core/verify/strategy.ts",
+            "src/core/verify/wording.ts",
+            "tests/grade-resume.spec.ts",
+            "tests/pi-section-lifecycle.spec.ts",
+            "tests/provenance-computed.spec.ts",
+            "tests/verify-429-retry.spec.ts",
+            "tests/verify-cancellation.spec.ts",
+            "tests/verify-continuation-integrity.spec.ts",
+            "tests/verify-strategy.spec.ts",
+            "tests/verify-wording.spec.ts"
+          ],
+          "untrackedSha256": {
+            "src/core/provenance/results.ts": "2ef46039a5d75a0a5fe0c0ebf77360baace717b6bbf73bc088665d0c3be9cdab",
+            "src/core/verify/strategy.ts": "d9d52ef227f5ed4a1f7aff40e3e0f17b58fff111658719cc0fa59f23e5f41361",
+            "src/core/verify/wording.ts": "2f978a0161da9fbad8817a4c60cdae2c5940de4840227198c0b25d409991d691",
+            "tests/grade-resume.spec.ts": "e20ca9051b1097c81d9543f335ef871a65d94a7c8ad4976d4ef17107304c1c34",
+            "tests/pi-section-lifecycle.spec.ts": "a8071e3d10e6497671c1f1c2715ed0aff2fbd3984237dc5e816606cbef53db56",
+            "tests/provenance-computed.spec.ts": "09ea6ac2ab5a9f7a6376ad6818163c9f3d021f2fe7d0ff32fe576d78074f8c01",
+            "tests/verify-429-retry.spec.ts": "5aa58de0a26e09fb9547d3edf9039080ec8bc04dbaa774d7ad70d29a1a84ee69",
+            "tests/verify-cancellation.spec.ts": "9b0f88267b737ee6aaaa7ce1ae0de6c765d6a130f0286f26a5bb7185bfd4366a",
+            "tests/verify-continuation-integrity.spec.ts": "13576c9f5f293c5f243384e7f90aba768e0f4cf77a671183a453d14507d073df",
+            "tests/verify-strategy.spec.ts": "55d8b6f102e2bafc0439f47b028a3124c4d28bfbc0488c8a775fd126e75a54af",
+            "tests/verify-wording.spec.ts": "0a6cff707b87e3c64269dcbd71aa5289edfc70c6052ac3cf2b391dbc556afcbd"
+          },
+          "packageHash": "6591d1fc28cc5d8c8efc92740aabe289d5edefb52f30c15668295ba3b582a862",
+          "image": "sha256:a701bcfb9d7a81642931e0bb7512e7b4745e7d0b6fe5c69097332fa4f9a85c71",
+          "docker": "Docker version 28.4.0, build d8eb465",
+          "node": "v26.3.1",
+          "sandboxSha256": "180398545fc968d81f1bf3af59c2832e047d3bd16476c097b2c71aeef1a5b776",
+          "engineDevice": "cpu (no NVIDIA container runtime on this host)",
+          "providerKeysPassed": [
+            "SEMANTIC_SCHOLAR_API_KEY",
+            "OPENALEX_API_KEY"
+          ],
+          "graderKeysPassed": [
+            "OPENCODE_API_KEY"
+          ],
+          "policy": {
+            "mcpCallTimeoutMs": 120000,
+            "mcpTotalTimeoutMs": 900000,
+            "caseTimeoutMs": 1200000,
+            "retries": 0
+          },
+          "startedAt": "2026-10-17T11:54:04.135Z",
+          "suite": "section-smoke",
+          "only": "all"
+        },
+        "writerStarts": 1,
+        "writerEnds": 0,
+        "writerErrorEnds": 0,
+        "agentSettled": 1,
+        "toolStarts": {
+          "write_section": 1,
+          "mcp__uktub__passages": 4,
+          "mcp__uktub__verify": 8
+        },
+        "artifactRoot": "/home/mahmoud/.cache/uktub-bench/section-lifecycle-2026-10-17/live/run-20261017-b",
+        "firstWriterError": null
+      },
+      {
+        "id": "run-20261017-c",
+        "status": "PASS",
+        "piVersionInDocker": "1.3.0",
+        "modelsObserved": [
+          "google-vertex/gemini-3.8-flash",
+          "google-vertex/gemini-3.5-flash-lite"
+        ],
+        "verifyEngine": "hosted",
+        "manifest": {
+          "commit": "d5f21fa2d5bc4e0e50e5d36068d09722a00a48b2",
+          "workingTreeDiffSha256": "0159492a6479d1a75383154dc1f4e13f9157dd9a166d1f3071a25d96afb19e30",
+          "untracked": [
+            ".claude/settings.json",
+            "docs/benchmarks/acceptance-batch-2026-10-16.json",
+            "docs/benchmarks/section-lifecycle-2026-10-17.json",
+            "docs/benchmarks/sections-ab-2-2026-10-16.json",
+            "docs/benchmarks/sections-ab-2026-10-15.json",
+            "docs/benchmarks/verify-wording-and-strategy-2026-10-15.json",
+            "src/core/provenance/results.ts",
+            "src/core/verify/strategy.ts",
+            "src/core/verify/wording.ts",
+            "tests/grade-resume.spec.ts",
+            "tests/pi-section-lifecycle.spec.ts",
+            "tests/provenance-computed.spec.ts",
+            "tests/verify-429-retry.spec.ts",
+            "tests/verify-cancellation.spec.ts",
+            "tests/verify-continuation-integrity.spec.ts",
+            "tests/verify-strategy.spec.ts",
+            "tests/verify-wording.spec.ts"
+          ],
+          "untrackedSha256": {
+            "src/core/provenance/results.ts": "2ef46039a5d75a0a5fe0c0ebf77360baace717b6bbf73bc088665d0c3be9cdab",
+            "src/core/verify/strategy.ts": "d9d52ef227f5ed4a1f7aff40e3e0f17b58fff111658719cc0fa59f23e5f41361",
+            "src/core/verify/wording.ts": "2f978a0161da9fbad8817a4c60cdae2c5940de4840227198c0b25d409991d691",
+            "tests/grade-resume.spec.ts": "e20ca9051b1097c81d9543f335ef871a65d94a7c8ad4976d4ef17107304c1c34",
+            "tests/pi-section-lifecycle.spec.ts": "a8071e3d10e6497671c1f1c2715ed0aff2fbd3984237dc5e816606cbef53db56",
+            "tests/provenance-computed.spec.ts": "09ea6ac2ab5a9f7a6376ad6818163c9f3d021f2fe7d0ff32fe576d78074f8c01",
+            "tests/verify-429-retry.spec.ts": "5aa58de0a26e09fb9547d3edf9039080ec8bc04dbaa774d7ad70d29a1a84ee69",
+            "tests/verify-cancellation.spec.ts": "9b0f88267b737ee6aaaa7ce1ae0de6c765d6a130f0286f26a5bb7185bfd4366a",
+            "tests/verify-continuation-integrity.spec.ts": "13576c9f5f293c5f243384e7f90aba768e0f4cf77a671183a453d14507d073df",
+            "tests/verify-strategy.spec.ts": "55d8b6f102e2bafc0439f47b028a3124c4d28bfbc0488c8a775fd126e75a54af",
+            "tests/verify-wording.spec.ts": "0a6cff707b87e3c64269dcbd71aa5289edfc70c6052ac3cf2b391dbc556afcbd"
+          },
+          "packageHash": "d943c166c45f3e2614cc8e55a0e1a20cb45582a34f52e63b3f4dd4300a0e6925",
+          "image": "sha256:8f841fa8ceeb478dbe74a547f1969a0ab9f3e29551952c46e4bcafc648f0eacc",
+          "docker": "Docker version 28.4.0, build d8eb465",
+          "node": "v26.3.1",
+          "sandboxSha256": "180398545fc968d81f1bf3af59c2832e047d3bd16476c097b2c71aeef1a5b776",
+          "engineDevice": "cpu (no NVIDIA container runtime on this host)",
+          "providerKeysPassed": [
+            "SEMANTIC_SCHOLAR_API_KEY",
+            "OPENALEX_API_KEY"
+          ],
+          "graderKeysPassed": [
+            "OPENCODE_API_KEY"
+          ],
+          "policy": {
+            "mcpCallTimeoutMs": 120000,
+            "mcpTotalTimeoutMs": 900000,
+            "caseTimeoutMs": 1200000,
+            "retries": 0
+          },
+          "startedAt": "2026-10-17T12:33:00.099Z",
+          "suite": "section-smoke",
+          "only": "3,2"
+        },
+        "cases": {
+          "case3": {
+            "status": "cancel-observed",
+            "model": "google-vertex/gemini-3.5-flash-lite",
+            "parentFallbackNote": "Parent primary google-vertex/gemini-3.8-flash hit HTTP 429 on turn start; startAgent reran once on google-vertex/gemini-3.5-flash-lite (smoke.log line 9).",
+            "abortAcked": true,
+            "activeCallEnd": {
+              "isError": true,
+              "textHead": "This operation was aborted"
+            },
+            "agentSettled": true,
+            "abortToObservedMs": 2003,
+            "newStartsAfterAbort": []
+          },
+          "case2": {
+            "status": "pass-live->50",
+            "model": "google-vertex/gemini-3.5-flash-lite",
+            "fallbackFrom": "child write_section on google-vertex/gemini-3.8-flash: the writer provider rate-limited the request (HTTP 429 / RESOURCE_EXHAUSTED); retry the section later",
+            "ok": 49,
+            "n": 60,
+            "incomplete": 0,
+            "repaired": true,
+            "recountTotal": 60,
+            "recountSupported": 49,
+            "retries": 0,
+            "parentRpcChildToolEventsObserved": 7
+          }
+        },
+        "artifactRoot": "/home/mahmoud/.cache/uktub-bench/section-lifecycle-2026-10-17/live/run-20261017-c"
+      },
+      {
+        "id": "run-20261017-d",
+        "status": "PASSED",
+        "modelsObserved": [
+          "google-vertex/gemini-3.8-flash",
+          "google-vertex/gemini-3.5-flash-lite"
+        ],
+        "verifyEngine": "hosted",
+        "manifest": {
+          "commit": "d5f21fa2d5bc4e0e50e5d36068d09722a00a48b2",
+          "workingTreeDiffSha256": "e96126c8a4a57ba98a04ca9f4193d59b8f0521a778f540ff776c0ab057f4a570",
+          "packageHash": "215de6df1b66a217ee2036707dd7dfa856f4299c90ee0f22e5d98702f7e033b4",
+          "image": "sha256:8f841fa8ceeb478dbe74a547f1969a0ab9f3e29551952c46e4bcafc648f0eacc",
+          "docker": "Docker version 28.4.0, build d8eb465",
+          "node": "v26.3.1",
+          "sandboxSha256": "180398545fc968d81f1bf3af59c2832e047d3bd16476c097b2c71aeef1a5b776",
+          "startedAt": "2026-10-17T13:21:24.047Z",
+          "suite": "section-smoke",
+          "only": "1"
+        },
+        "cases": {
+          "case1": {
+            "status": "pass",
+            "model": "google-vertex/gemini-3.5-flash-lite",
+            "fallbackFrom": "turn ws-normal: provider/model error: HTTP 429 / RESOURCE_EXHAUSTED",
+            "ok": 5,
+            "n": 5,
+            "incomplete": 0,
+            "repaired": true,
+            "retries": 0
+          }
+        },
+        "artifactRoot": "/home/mahmoud/.cache/uktub-bench/section-lifecycle-2026-10-17/live/run-20261017-d"
+      }
+    ],
+    "proven": [
+      "Docker sandbox rebuilt on Pi 1.3.0 (sha256:8f841fa8ceeb478dbe74a547f1969a0ab9f3e29551952c46e4bcafc648f0eacc) and passed boundary-probe (35/35 expected blocks/allows, 2 documented exposures, 0 failures) plus 5/5 focused direct MCP/CLI cases (direct-focused-20261017-b)",
+      "Single-page happy-path write_section in real Pi 1.3.0 (run-20261017-d case1: n=5, ok=5, incomplete=0, repaired=true, retries=0)",
+      "Graceful in-flight cancellation of write_section in real Pi 1.3.0 (run-20261017-c case3: abortAcked=true, activeCallEnd='This operation was aborted', abortToObservedMs=2003, agentSettled=true, newStartsAfterAbort=0)",
+      "Section-writer completion beyond 50 units in real Pi 1.3.0 (run-20261017-c case2: n=60 units verified across 2 pages offset=0 and offset=50, 1 repair round, ok=49/60, incomplete=0, independent 2-page MCP verify recount 49/60)"
+    ],
+    "notProven": [
+      "Full 6-tool live agent/direct/skills acceptance rerun on Pi 1.3.0 (accepted baseline remains the Pi 1.1.0 batch)",
+      "Pure google-vertex/gemini-3.8-flash completion without Vertex 429 fallback to google-vertex/gemini-3.5-flash-lite"
+    ],
+    "initialFailureCause": "Exact child provider cause in run-20261017-a unproven; original child metadata was not retained. In run-20261017-c, child on google-vertex/gemini-3.8-flash explicitly surfaced HTTP 429 / RESOURCE_EXHAUSTED after 1 passages call, triggering the one permitted labelled fresh-session fallback to google-vertex/gemini-3.5-flash-lite.",
+    "fallbackUsed": true,
+    "stoppedForQuota": false,
+    "sourceChangesDuringRunB": [],
+    "fallbackBasis": "In run-20261017-c and run-20261017-d: case1 and case3 parent primary hit Vertex 429 and reran once in a fresh session on google-vertex/gemini-3.5-flash-lite; case2 child writer on google-vertex/gemini-3.8-flash hit Vertex 429 after 1 passages call and reran once in a fresh session on google-vertex/gemini-3.5-flash-lite.",
+    "postShutdownChangesObserved": [
+      "package.json",
+      "pnpm-lock.yaml",
+      "docker/test-sandbox.Dockerfile"
+    ],
+    "sourceAttestationNote": "src and dist digests unchanged during live runs; browser qualification edits made after run-20261017-c completed and all owned containers were removed."
+  },
+  "sandboxQualification": {
+    "status": "PASS",
+    "dockerPiVersion": "1.3.0",
+    "dockerfile": "docker/test-sandbox.Dockerfile",
+    "imageId": "sha256:8f841fa8ceeb478dbe74a547f1969a0ab9f3e29551952c46e4bcafc648f0eacc",
+    "boundaryProbe": {
+      "status": "PASS",
+      "report": "/home/mahmoud/.cache/uktub-bench/section-lifecycle-2026-10-17/boundary-probe-20261017/boundary-report.json",
+      "at": "2026-10-17T12:22:40.942Z",
+      "rows": 37,
+      "expectedBlocksAndAllows": 35,
+      "failures": 0,
+      "documentedExposures": [
+        "adc-readable",
+        "host-bridge-gateway"
+      ]
+    },
+    "focusedDirectCases": {
+      "status": "PASS",
+      "artifactRoot": "/home/mahmoud/.cache/uktub-bench/section-lifecycle-2026-10-17/live/direct-focused-20261017-b",
+      "cases": [
+        "registry.register-mixed",
+        "cli.exit-contracts-and-init",
+        "cli.mcp-install-preserves-and-handshakes",
+        "compile.multi-file-input",
+        "doctor.reports-setup"
+      ],
+      "pass": 5,
+      "fail": 0,
+      "leftoverContainers": 0
+    }
+  },
+  "browserQualification": {
+    "status": "PASS",
+    "browserTypecheck": "PASS",
+    "browserTests": {
+      "total": 23,
+      "pass": 23,
+      "fail": 0,
+      "skip": 0
+    },
+    "browserNetTests": {
+      "total": 30,
+      "pass": 30,
+      "fail": 0,
+      "skip": 0
+    },
+    "bundledToolGraphs": 6,
+    "workflowQualified": [
+      "doctor (before and after registration/source readiness with computed figures from project result files, hosted d3-mini probe over ctx.fetch, plus 401 and wrong-model probe error diagnosis and openrouter check)",
+      "papers / search (OpenAlex + Semantic Scholar via platformFetch)",
+      "registry (register, acquire arXiv PDF via DataCite + arXiv, attach TEI XML + PDF, sync_bibliography)",
+      "passages (lexical FTS5 over acquired PDF and attached TEI)",
+      "verify claim mode (hosted d3-mini and openrouter over ctx.fetch, SQLite judgment caching)",
+      "verify document mode (both LaTeX fragment text and multi-file manuscript/main.tex with \\input{sections/intro}, plus claim_ledger release)",
+      "provenance (hostRunProvenance over manuscript/main.tex with \\input expansion, claim_ledger verified statements, and results/bench.csv computed figures)",
+      "file-store RPC ops (writeFile, readFile including read-only refs/references.bib, listFiles, deleteFile, with /proj confinement, MAX_SOURCE_BYTES cap, and .registry/*, .git/*, refs/references.bib guards)",
+      "importSource (manual PDF/TEI staging under papers/<filename> and attach_source in one guarded step, with atomic cleanup on refusal)",
+      "createBrowserFetch (HTTPS/no-userinfo string-URL enforcement, Headers/tuple/record normalization, and origin-scoped Authorization header restricted to https://decision.vllm-sr.ai and https://openrouter.ai)",
+      "cancelTool (in-flight AbortSignal cancellation in both claim mode and document mode, idempotence on unknown/settled callId, and concurrent call isolation with passages)",
+      "reload persistence (OPFS SQLite durability across worker termination + reopen, cached judgment reuse without network, and v3 continuation token resume across reload with CONTINUATION_INVALID scope guard)",
+      "exportProject and importProject round-trip (refs/references.bib, manuscript/main.tex, manuscript/sections/intro.tex, results/bench.csv zip + SQLite registry.db bytes restored into a fresh worker, with atomic rollback on non-SQLite or foreign user_version=999 DBs and path-escaping zips)"
+    ],
+    "limitations": [
+      "Offline Chromium qualification uses deterministic canned HTTPS routes over real Worker/OPFS/platformFetch seams (no live third-party CORS/keyed call in CI)",
+      "compile_document remains an explicit typed refusal (COMPILE_ENGINE_MISSING) in the browser worker until a WASM TeX engine is wired"
+    ]
+  },
+  "acceptanceBaseline": {
+    "file": "docs/benchmarks/acceptance-batch-2026-10-16.json",
+    "tier1": "PASS16/16",
+    "tier2": "PASSsingle-grader",
+    "regradedOrRerunThisCloseout": false
+  },
+  "evidenceRoot": "/home/mahmoud/.cache/uktub-bench/section-lifecycle-2026-10-17",
+  "cleanup": {
+    "ownedContainersRemaining": 0,
+    "committed": false,
+    "pushed": false
+  },
+  "postUpgradeValidation": {
+    "status": "PASS",
+    "projectPiVersion": "1.3.0",
+    "dockerPiVersion": "1.3.0",
+    "officialRegistry": "https://registry.npmjs.org/@earendil-works/pi-coding-agent/latest",
+    "officialChangelog": "https://github.com/earendil-works/pi/blob/main/packages/coding-agent/CHANGELOG.md",
+    "command": "pnpm add -D @earendil-works/pi-coding-agent@1.3.0",
+    "nodeVersion": "26.7.0",
+    "nodeTypecheck": "PASS",
+    "noUnusedTypecheck": "PASS",
+    "tests": {
+      "total": 1527,
+      "pass": 1526,
+      "fail": 0,
+      "skip": 1
+    },
+    "browserTypecheck": "PASS",
+    "browserTests": {
+      "total": 23,
+      "pass": 23,
+      "fail": 0,
+      "skip": 0
+    },
+    "sourceCompatibilityEditsNeeded": false,
+    "globalCliChanged": false,
+    "dockerImageRebuilt": true,
+    "liveSectionSmokeQualified": true,
+    "fullSuiteLiveRerunOnPi13": false,
+    "doctorExitCode": 0,
+    "doctorProblems": 3,
+    "piCliVersionSmoke": {
+      "exitCode": 0,
+      "version": "1.3.0"
+    }
+  }
+}

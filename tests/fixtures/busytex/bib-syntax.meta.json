@@ -1,0 +1,10 @@
+{
+  "variant": "bib-syntax",
+  "status": 0,
+  "hasPdf": true,
+  "logChars": 18261,
+  "files": [
+    "manuscript/main.tex",
+    "manuscript/broken.bib"
+  ]
+}

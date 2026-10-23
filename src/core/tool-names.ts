@@ -48,7 +48,3 @@ export function normalizeToolName(name: string): string {
   return KNOWN_TOOLS.has(name) ? (TOOL_ALIASES[name] ?? name) : name;
 }
 
-/** Whether a normalized name is one of the six canonical tools. */
-export function isCanonicalToolName(name: string): name is ToolName {
-  return (TOOL_NAMES as readonly string[]).includes(name);
-}

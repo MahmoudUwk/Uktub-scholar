@@ -8,25 +8,42 @@
  */
 import type { Paper } from "../review/latex.ts";
 import { figuresOf, matchFigure, normalizePaperText, type Figure } from "./figures.ts";
-import { countBodyWords, extractUnits, type Unit } from "./units.ts";
+import { countBodyWords, documentCiteKeys, extractUnits, type Unit } from "./units.ts";
 
 export interface PaperInput { citekey: string; doi: string; title: string; text: string | null }
 export interface LedgerHit { pointers: string[]; dois: string[] }
 /** Support the package's verify ledger holds for one of the candidate wordings of a statement, if any. */
 export type Ledger = (variants: string[]) => LedgerHit | null;
-export type FigureStatus = "ok" | "check" | "open" | "unsourced" | "uncited" | "unavailable";
+export type FigureStatus = "ok" | "check" | "open" | "unsourced" | "uncited" | "unavailable" | "computed";
 export interface FigureAudit { token: string; status: FigureStatus; detail: string; papers: string[] }
-export interface UnitAudit { unit: Unit; status: "verified" | "cited" | "uncited"; ledger: LedgerHit | null; unregistered: string[]; figures: FigureAudit[] }
+/** One non-empty normalized line of a project result file, with its `file:line` pointer. */
+export interface ResultLine { file: string; line: number; text: string }
+/** Label convention (D1, client policy): a statement is labelled unverified when its plain text contains the word "unverified". */
+export const UNVERIFIED_LABEL = /\bunverified\b/i;
+/** A prose statement or caption that is not verified as written: D1 lets it ship only when labelled unverified. */
+export const isNonVerifiedProse = (u: UnitAudit): boolean => u.unit.kind !== "row" && u.status !== "verified";
+/** The non-verified prose that is not labelled unverified (D1: these fail the deliverable checks). */
+export const unlabelledUnverifiedUnits = (a: ProvenanceAudit): UnitAudit[] => a.units.filter((u) => isNonVerifiedProse(u) && !u.labelledUnverified);
+/** A unit written as nothing but bibliography commands (`\bibliographystyle{plain}`, `\bibliography{refs}`). */
+const BIBLIOGRAPHY_ONLY = /^\s*(?:\\(?:bibliographystyle|bibliography|addbibresource)\s*(?:\[[^\]]*\]\s*)?\{[^}]*\}\s*)+$/;
+export interface UnitAudit { unit: Unit; status: "verified" | "cited" | "uncited"; ledger: LedgerHit | null; unregistered: string[]; figures: FigureAudit[]; labelledUnverified: boolean }
 export interface OpenItem { severity: "open" | "check" | "info"; status: FigureStatus; papers: string[]; file: string; line: number; section: string; kind: Unit["kind"]; token: string; why: string; excerpt: string }
 export interface ProvenanceSummary {
   words: number;
-  /** Statements, rows and captions that cite a paper or state a figure. */
+  /** Prose statements and captions (all of them), and table rows that cite a paper or state a figure. */
   audited: number;
   verified: number;
   cited: number;
   uncited: number;
-  figures: { ok: number; check: number; open: number; info: number };
+  /** Prose statements and captions that are not verified and carry the unverified label (D1). */
+  labelledUnverified: number;
+  /** Prose statements and captions that are not verified and do not carry the unverified label (D1: these fail the gate). */
+  unlabelledUnverified: number;
+  figures: { ok: number; check: number; open: number; info: number; computed: number };
+  /** Every cite key in the document that no registry record carries, including cites outside any unit. */
   unregistered: string[];
+  /** Every cite key in the document, sorted (Tier 1 reads it; units alone miss a cite after the full stop). */
+  citeKeys: string[];
 }
 /** `units` are the audited statements (they cite a paper or state a figure); `extracted` is every unit, for readers that must see all of them. */
 export interface ProvenanceAudit { summary: ProvenanceSummary; units: UnitAudit[]; items: OpenItem[]; extracted: Unit[] }
@@ -51,10 +68,34 @@ export function claimVariants(plain: string): string[] {
   return [...out].slice(0, MAX_VARIANTS);
 }
 
-const RANK: Record<FigureStatus, number> = { ok: 0, check: 1, unavailable: 1, uncited: 2, unsourced: 3, open: 3 };
+const RANK: Record<FigureStatus, number> = { ok: 0, computed: 0, check: 1, unavailable: 1, uncited: 2, unsourced: 3, open: 3 };
 
-function auditFigure(f: Figure, unit: Unit, registered: PaperInput[], texts: Map<string, string>, cited: boolean): FigureAudit {
+/**
+ * The computed-results search for a figure no registered paper is cited
+ * for: the same matching rules as paper figures (a decimal or a number
+ * found with its unit is strong; a round integer alone is weak), over the
+ * project's result-file lines. A strong match is `computed` with the
+ * `file:line` pointer; a weak-only match is `check`; no match keeps the
+ * caller's uncited/unsourced audit.
+ */
+function auditComputed(f: Figure, lines: ResultLine[]): FigureAudit | null {
+  let weak: ResultLine | null = null;
+  for (const r of lines) {
+    const m = matchFigure(f, r.text);
+    if (m === "exact" || (m === "number-only" && f.decimal)) {
+      return { token: f.token, status: "computed", detail: `"${f.token}" found in ${r.file}:${r.line}`, papers: [] };
+    }
+    if (m === "number-only" && weak === null) weak = r;
+  }
+  return weak === null
+    ? null
+    : { token: f.token, status: "check", detail: `the number ${f.value} occurs in ${weak.file}:${weak.line} but never with ${f.unit ?? "its unit"}`, papers: [] };
+}
+
+function auditFigure(f: Figure, unit: Unit, registered: PaperInput[], texts: Map<string, string>, cited: boolean, results: ResultLine[]): FigureAudit {
   if (registered.length === 0) {
+    const computed = auditComputed(f, results);
+    if (computed !== null) return computed;
     return unit.kind === "row"
       ? { token: f.token, status: "unsourced", detail: `"${f.token}" is in a table row that cites no registered paper`, papers: [] }
       : cited
@@ -79,7 +120,7 @@ function auditFigure(f: Figure, unit: Unit, registered: PaperInput[], texts: Map
   return best!;
 }
 
-export function auditProvenance(input: { paper: Paper; tex: string; papers: PaperInput[]; ledger: Ledger }): ProvenanceAudit {
+export function auditProvenance(input: { paper: Paper; tex: string; papers: PaperInput[]; ledger: Ledger; results?: ResultLine[] }): ProvenanceAudit {
   const byKey = new Map(input.papers.map((p) => [p.citekey, p]));
   const texts = new Map<string, string>();
   for (const p of input.papers) if (p.text !== null && p.text !== "") texts.set(p.citekey, normalizePaperText(p.text));
@@ -88,7 +129,10 @@ export function auditProvenance(input: { paper: Paper; tex: string; papers: Pape
   const extracted = extractUnits(input.paper);
   for (const unit of extracted) {
     const figures = figuresOf(unit.plain);
-    if (unit.cites.length === 0 && figures.length === 0) continue;
+    // Prose (sentences and captions) is always audited, so uncited prose reaches the D1 gate; a table row is audited only when it cites or states a figure.
+    if (unit.kind === "row" && unit.cites.length === 0 && figures.length === 0) continue;
+    // A unit that is only bibliography commands states nothing; the frozen segmenter keeps it, the audit does not count it.
+    if (BIBLIOGRAPHY_ONLY.test(unit.raw)) continue;
     const registered = unit.cites.flatMap((k) => (byKey.has(k) ? [byKey.get(k)!] : []));
     const unregistered = unit.cites.filter((k) => !byKey.has(k));
     for (const k of unregistered) unregisteredAll.add(k);
@@ -102,16 +146,25 @@ export function auditProvenance(input: { paper: Paper; tex: string; papers: Pape
       status: hit !== null ? "verified" : registered.length > 0 ? "cited" : "uncited",
       ledger: hit,
       unregistered,
-      figures: figures.map((f) => auditFigure(f, unit, registered, texts, unit.cites.length > 0)),
+      figures: figures.map((f) => auditFigure(f, unit, registered, texts, unit.cites.length > 0, input.results ?? [])),
+      labelledUnverified: UNVERIFIED_LABEL.test(unit.plain),
     });
   }
   const items: OpenItem[] = [];
-  const summary: ProvenanceSummary = { words: countBodyWords(input.tex), audited: units.length, verified: 0, cited: 0, uncited: 0, figures: { ok: 0, check: 0, open: 0, info: 0 }, unregistered: [...unregisteredAll].sort() };
+  const citeKeys = documentCiteKeys(input.paper);
+  for (const k of citeKeys) if (!byKey.has(k)) unregisteredAll.add(k);
+  const summary: ProvenanceSummary = { words: countBodyWords(input.tex), audited: units.length, verified: 0, cited: 0, uncited: 0, labelledUnverified: 0, unlabelledUnverified: 0, figures: { ok: 0, check: 0, open: 0, info: 0, computed: 0 }, unregistered: [...unregisteredAll].sort(), citeKeys };
   for (const u of units) {
     if (u.status === "verified") summary.verified++;
     else if (u.status === "cited") summary.cited++;
     else summary.uncited++;
+    if (isNonVerifiedProse(u)) {
+      if (u.labelledUnverified) summary.labelledUnverified++;
+      else summary.unlabelledUnverified++;
+    }
     for (const f of u.figures) {
+      // `computed` is evidence, not an open item: counted, never listed.
+      if (f.status === "computed") { summary.figures.computed++; continue; }
       const severity: OpenItem["severity"] | null = f.status === "open" || f.status === "unsourced" ? "open" : f.status === "check" || f.status === "unavailable" ? "check" : f.status === "uncited" ? "info" : null;
       if (severity === null) { summary.figures.ok++; continue; }
       summary.figures[severity]++;

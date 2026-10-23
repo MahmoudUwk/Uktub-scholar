@@ -7,23 +7,49 @@ function defaultSleep(ms) {
   setTimeout(resolve, ms);
   return promise;
 }
+function abortableSleep(ms, signal) {
+  if (signal === void 0) return defaultSleep(ms);
+  if (signal.aborted) return Promise.reject(signal.reason);
+  return new Promise((resolve, reject) => {
+    const onAbort = () => {
+      clearTimeout(timer);
+      reject(signal.reason);
+    };
+    const timer = setTimeout(() => {
+      signal.removeEventListener("abort", onAbort);
+      resolve();
+    }, ms);
+    signal.addEventListener("abort", onAbort, { once: true });
+  });
+}
+function untilAborted(pending, signal) {
+  if (signal === void 0) return pending;
+  if (signal.aborted) return Promise.reject(signal.reason);
+  return new Promise((resolve, reject) => {
+    const onAbort = () => reject(signal.reason);
+    signal.addEventListener("abort", onAbort, { once: true });
+    pending.then(resolve, reject).finally(() => signal.removeEventListener("abort", onAbort));
+  });
+}
 
 // src/core/providers/semantic-scholar.ts
 function createStartSpacer(opts) {
   let lastStartMs = Number.NEGATIVE_INFINITY;
   let queue = Promise.resolve();
   return {
-    wait() {
+    wait(signal) {
+      if (signal?.aborted) return Promise.reject(signal.reason);
       const turn = queue.then(async () => {
+        signal?.throwIfAborted();
         const elapsed = opts.now() - lastStartMs;
-        if (elapsed < opts.minIntervalMs) await opts.sleep(opts.minIntervalMs - elapsed);
+        if (elapsed < opts.minIntervalMs) await untilAborted(opts.sleep(opts.minIntervalMs - elapsed, signal), signal);
         lastStartMs = opts.now();
       });
       queue = turn.then(
         () => void 0,
         () => void 0
       );
-      return turn;
+      return untilAborted(turn, signal);
     }
   };
 }
@@ -85,7 +111,7 @@ function arxivSpacer(sleep) {
   const clock = sleep ?? defaultSleep;
   let spacer = spacers.get(clock);
   if (spacer === void 0) {
-    spacer = createStartSpacer({ minIntervalMs: ARXIV_MIN_SPACING_MS, sleep: clock, now: () => Date.now() });
+    spacer = createStartSpacer({ minIntervalMs: ARXIV_MIN_SPACING_MS, sleep: sleep ?? abortableSleep, now: () => Date.now() });
     spacers.set(clock, spacer);
   }
   return spacer;

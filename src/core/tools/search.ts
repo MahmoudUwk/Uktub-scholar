@@ -73,6 +73,7 @@ export async function searchPapersTool(
     const result = await searchPapers(ctx.fetch, providerConfigOf(ctx), {
       query: args.query,
       limit: args.limit,
+      signal: ctx.signal,
     });
     const structured: SearchPapersStructured = {
       query: args.query.trim(),

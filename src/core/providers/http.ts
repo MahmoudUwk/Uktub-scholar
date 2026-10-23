@@ -43,6 +43,8 @@ function backoffMs(attempt: number): number {
  * Fetch with the ported retry policy: max 2 retries on 429/5xx/network only,
  * per-attempt timeout, Retry-After (delta-seconds, capped at 5s) honored.
  * Aborts via AbortController so a hung provider cannot stall the loop forever.
+ * A caller `signal` cancels the current attempt and any backoff wait, is never
+ * retried, and rejects with the caller's abort reason.
  */
 export async function fetchWithRetry(
   fetchFn: FetchLike,
@@ -52,19 +54,22 @@ export async function fetchWithRetry(
     maxRetries?: number;
     sleep?: (ms: number) => Promise<void>;
     headers?: Record<string, string>;
+    signal?: AbortSignal;
   } = {},
 ): Promise<FetchResult> {
   const timeoutMs = opts.timeoutMs ?? DEFAULT_SCHOLARLY_PROVIDER_TIMEOUT_MS;
   const maxRetries = opts.maxRetries ?? MAX_RETRIES;
-  const sleep = opts.sleep ?? ((ms) => defaultSleep(ms));
+  const callerSignal = opts.signal;
   let attempt = 0;
   for (;;) {
+    callerSignal?.throwIfAborted();
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+    const attemptSignal = callerSignal === undefined ? ctrl.signal : AbortSignal.any([ctrl.signal, callerSignal]);
     try {
       const res = await fetchFn(url, {
         headers: opts.headers,
-        signal: ctrl.signal,
+        signal: attemptSignal,
       });
       const retryable = res.status === 429 || (res.status >= 500 && res.status < 600);
       if (!retryable || attempt >= maxRetries) {
@@ -77,10 +82,11 @@ export async function fetchWithRetry(
       const raw = res.headers.get("retry-after");
       const secs = raw !== null && /^[0-9]+$/.test(raw.trim()) ? parseInt(raw.trim(), 10) : NaN;
       const wait = Number.isNaN(secs) ? backoffMs(attempt) : Math.min(secs * 1000, 5000);
-      await sleep(wait);
+      await retryWait(wait, opts.sleep, callerSignal);
     } catch (err) {
+      if (callerSignal?.aborted) throw callerSignal.reason;
       if (attempt >= maxRetries) throw err;
-      await sleep(backoffMs(attempt));
+      await retryWait(backoffMs(attempt), opts.sleep, callerSignal);
     } finally {
       clearTimeout(timer);
     }
@@ -162,15 +168,50 @@ export function defaultSleep(ms: number): Promise<void> {
   return promise;
 }
 
-/** Optional provider timeout and test sleep, passed to the retry helper. */
+/** Optional provider timeout, test sleep and caller signal, passed to the retry helper. */
 export function retryOpts(cfg: ProviderConfig): {
   timeoutMs?: number;
   sleep?: (ms: number) => Promise<void>;
+  signal?: AbortSignal;
 } {
   return {
     ...(cfg.timeoutMs !== undefined ? { timeoutMs: cfg.timeoutMs } : {}),
     ...(cfg.sleep !== undefined ? { sleep: cfg.sleep } : {}),
+    ...(cfg.signal !== undefined ? { signal: cfg.signal } : {}),
   };
+}
+
+/** A backoff wait that a caller abort ends at once, clearing its timer. An injected `sleep` (tests) is raced against the signal. */
+function retryWait(ms: number, sleep: ((ms: number) => Promise<void>) | undefined, signal: AbortSignal | undefined): Promise<void> {
+  return sleep !== undefined ? untilAborted(sleep(ms), signal) : abortableSleep(ms, signal);
+}
+
+/** Real-time sleep that an abort ends at once with the abort reason, clearing its timer. */
+export function abortableSleep(ms: number, signal?: AbortSignal): Promise<void> {
+  if (signal === undefined) return defaultSleep(ms);
+  if (signal.aborted) return Promise.reject(signal.reason);
+  return new Promise<void>((resolve, reject) => {
+    const onAbort = (): void => {
+      clearTimeout(timer);
+      reject(signal.reason);
+    };
+    const timer = setTimeout(() => {
+      signal.removeEventListener("abort", onAbort);
+      resolve();
+    }, ms);
+    signal.addEventListener("abort", onAbort, { once: true });
+  });
+}
+
+/** Waits for `pending`, but ends at this caller's abort with its reason; the work itself is not cancelled. */
+export function untilAborted<T>(pending: Promise<T>, signal: AbortSignal | undefined): Promise<T> {
+  if (signal === undefined) return pending;
+  if (signal.aborted) return Promise.reject(signal.reason);
+  return new Promise<T>((resolve, reject) => {
+    const onAbort = (): void => reject(signal.reason);
+    signal.addEventListener("abort", onAbort, { once: true });
+    pending.then(resolve, reject).finally(() => signal.removeEventListener("abort", onAbort));
+  });
 }
 
 /** Clamp `limit` to the provider's own ceiling; a missing limit is the
@@ -200,22 +241,4 @@ export async function getJson(
   const res = await fetchWithRetry(fetchFn, url, retryOpts(cfg));
   if (res.status !== 200) throw new ProviderRequestError(provider, res.status, "GET failed");
   return parseJsonBody(res.body, provider);
-}
-
-/**
- * The frozen `FetchLike` init carries only `signal`, so an API key cannot ride
- * a fresh literal. It rides a WIDER init object instead: object types are
- * structural, so `{ signal, headers }` is assignable to `{ signal?: AbortSignal }`
- * and the platform fetch still receives the header.
- */
-interface FetchInitWithHeaders {
-  signal?: AbortSignal;
-  headers: Record<string, string>;
-}
-
-export function withHeaders(fetchFn: FetchLike, headers: Record<string, string>): FetchLike {
-  return (url, init) => {
-    const widened: FetchInitWithHeaders = { ...init, headers };
-    return fetchFn(url, widened);
-  };
 }

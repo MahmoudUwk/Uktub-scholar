@@ -7,7 +7,7 @@
  */
 
 import { existsSync, readFileSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { isAbsolute, join, resolve } from "node:path";
 import { parse as yamlParse } from "yaml";
 
 import { VERIFICATION_ENGINES } from "./verify/engines.ts";
@@ -29,6 +29,9 @@ export interface ChunkConfig {
     min_confidence: number;
     workers: number;
     max_judgments: number;
+  };
+  provenance: {
+    results_glob: string;
   };
 }
 
@@ -61,6 +64,8 @@ export const DEFAULTS: ChunkConfig = {
   // scientific-writing confidence bar. 4 lanes (one resident model serializes them) and 120
   // judgments per call: client policy — seconds on the hosted endpoint, minutes locally.
   verification: { engine: "hosted", min_confidence: 0.99, workers: 4, max_judgments: 120 },
+  // results_glob: client policy — where the computed-results audit searches a figure no registered paper is cited for.
+  provenance: { results_glob: "results/**/*.{csv,json,txt,log}" },
 };
 
 function validate(parsed: unknown): ChunkConfig {
@@ -81,6 +86,12 @@ function validate(parsed: unknown): ChunkConfig {
     }
   }
   const c = parsed as ChunkConfig;
+  if ((obj as Record<string, unknown>).provenance === undefined) {
+    // Older project files predate the computed-results audit: the default glob applies.
+    c.provenance = { ...DEFAULTS.provenance };
+  } else {
+    validateProvenance((obj as Record<string, unknown>).provenance);
+  }
   if (c.chunking.chunk_tokens < 256 || c.chunking.chunk_tokens > 1_000_000) {
     throw new ConfigError(`chunking.chunk_tokens out of range: ${c.chunking.chunk_tokens}`);
   }
@@ -96,6 +107,20 @@ function validate(parsed: unknown): ChunkConfig {
   }
   validateVerification(c.verification);
   return c;
+}
+
+function validateProvenance(p: unknown): void {
+  if (typeof p !== "object" || p === null) throw new ConfigError("provenance must be a YAML mapping");
+  const o = p as Record<string, unknown>;
+  for (const key of Object.keys(o)) {
+    if (key !== "results_glob") throw new ConfigError(`unknown key provenance.${key}`);
+  }
+  const g = o.results_glob;
+  if (typeof g !== "string" || g.trim() === "") throw new ConfigError("provenance.results_glob must be a non-empty string");
+  // The audit reads inside the project only: an absolute glob or a `..` segment can never match.
+  if (isAbsolute(g) || g.split("/").includes("..")) {
+    throw new ConfigError(`provenance.results_glob must be a project-relative glob without "..": ${JSON.stringify(g).slice(0, 120)}`);
+  }
 }
 
 function validateVerification(v: ChunkConfig["verification"]): void {

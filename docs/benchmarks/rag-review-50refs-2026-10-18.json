@@ -1,0 +1,132 @@
+{
+ "name": "rag-review-50refs-v1 live full-session stress smoke",
+ "date": "2026-10-18",
+ "scenario": "experiments/scenarios/rag-review-50refs-v1.md",
+ "code": "main d5f21fa + uncommitted audit hardening (handoff \u00a72.4); run packs the working tree",
+ "pi": "1.3.0 (Docker sandbox uktub-scholar-sandbox 8f841fa8ceeb)",
+ "note": "single stress smoke, not an acceptance batch; product defaults (write_section on, provenance on), hosted d3-mini verify, scripted user, owner provider keys from .env",
+ "runs": [
+  {
+   "iteration": "iter-01",
+   "args": "--verify-engine hosted",
+   "assistantModel": "google-vertex/gemini-3.8-flash",
+   "turnModels": [
+    "google-vertex/gemini-3.8-flash"
+   ],
+   "fallbackTurns": {
+    "uktub": [],
+    "simulator": []
+   },
+   "outcome": "blocked: turn agent-1: client deadline 5400000ms reached in phase \"waiting for model\"",
+   "validity": "BLOCKED",
+   "userTurns": 1,
+   "wallMs": 5454266,
+   "perTurn": [
+    {
+     "id": "agent-1",
+     "ms": 5400036,
+     "calls": 344
+    }
+   ],
+   "registryPapers": 38,
+   "toolCalls": 331,
+   "byTool": {
+    "doctor": 1,
+    "registry:register": 4,
+    "registry:read": 2,
+    "registry:remove": 1,
+    "papers": 1,
+    "registry:acquire": 2,
+    "registry:sync_bibliography": 1,
+    "passages": 88,
+    "verify": 231
+   },
+   "toolMsByTool": {
+    "doctor": 123,
+    "registry": 82629,
+    "papers": 476,
+    "passages": 498908,
+    "verify": 88201
+   },
+   "costUsd": 0.2444,
+   "slowSteps": 16,
+   "slowStepMsTotal": 2464514,
+   "tier1Failed": [
+    "citations-in-registry",
+    "bibliography-matches-registry",
+    "compiled-after-last-edit"
+   ],
+   "provenance": null
+  },
+  {
+   "iteration": "iter-02",
+   "args": "--verify-engine hosted --turn-max-minutes 170",
+   "assistantModel": "google-vertex/gemini-3.8-flash",
+   "turnModels": [
+    "google-vertex/gemini-3.8-flash",
+    "google-vertex/gemini-3.8-flash"
+   ],
+   "fallbackTurns": {
+    "uktub": [],
+    "simulator": []
+   },
+   "outcome": "success",
+   "validity": "VALID",
+   "userTurns": 2,
+   "wallMs": 8077062,
+   "perTurn": [
+    {
+     "id": "agent-1",
+     "ms": 7396588,
+     "calls": 776
+    },
+    {
+     "id": "agent-2",
+     "ms": 646946,
+     "calls": 51
+    }
+   ],
+   "registryPapers": 35,
+   "toolCalls": 766,
+   "byTool": {
+    "doctor": 1,
+    "registry:register": 3,
+    "papers": 5,
+    "registry:read": 5,
+    "registry:remove": 1,
+    "registry:acquire": 1,
+    "registry:sync_bibliography": 1,
+    "passages": 210,
+    "verify": 525,
+    "compile": 14
+   },
+   "toolMsByTool": {
+    "doctor": 132,
+    "registry": 46344,
+    "papers": 2388,
+    "passages": 507489,
+    "verify": 198430,
+    "compile": 19080
+   },
+   "costUsd": 2.502,
+   "slowSteps": 19,
+   "slowStepMsTotal": 1922676,
+   "tier1Failed": [],
+   "provenance": {
+    "words": 3417,
+    "audited": 155,
+    "verified": 145,
+    "cited": 10,
+    "uncited": 0,
+    "figures": {
+     "ok": 58,
+     "check": 0,
+     "open": 0,
+     "info": 0,
+     "computed": 0
+    },
+    "unregistered": []
+   }
+  }
+ ]
+}

@@ -9,10 +9,12 @@ import {
   BAD_LABELS,
   CITED_LABELS,
   UNCITED_LABELS,
+  UNGRADEABLE_LABEL,
   adjudicationSeed,
   allowedCorpusHost,
   applyAdjudication,
   classOf,
+  corpusFetchDelayMs,
   corpusFileName,
   graderSecretsOnly,
   isBadLabel,
@@ -23,8 +25,10 @@ import {
   sha256Text,
   shufflePair,
   splitExportArgs,
+  tier2Counts,
   toBinaryLabels,
   validateLabels,
+  type AdjudicatedFile,
   type LabelFile,
   type NoteJson,
 } from "../scripts/live/grade-lib.ts";
@@ -188,18 +192,100 @@ describe("toBinaryLabels", () => {
 });
 
 describe("corpus helpers", () => {
-  it("names files by content hash and only allows arXiv/ACL origins", () => {
+  it("names files by content hash and accepts any recorded non-keyed HTTPS origin the product acquired from", () => {
     assert.equal(corpusFileName("ab".repeat(32), "pdf"), `${"ab".repeat(32)}.pdf`);
     assert.ok(allowedCorpusHost("https://arxiv.org/pdf/2106.09685"));
+    assert.ok(allowedCorpusHost("https://export.arxiv.org/pdf/2106.09685"));
     assert.ok(allowedCorpusHost("https://aclanthology.org/2024.acl-long.1.pdf"));
-    assert.ok(!allowedCorpusHost("https://example.com/paper.pdf"));
+    assert.ok(allowedCorpusHost("https://www.ijcai.org/proceedings/2026/0486.pdf"), "RF pilot origin (was refused)");
+    assert.ok(allowedCorpusHost("https://backoffice.biblio.ugent.be/download/01KC3GNFABAKVY9NHG56XY4FW5/01KC3GRQSD5BK01K5Y2"), "university repository origin (was refused)");
+    assert.ok(!allowedCorpusHost("http://www.ijcai.org/proceedings/2026/0486.pdf"), "plain HTTP is never fetched");
     assert.ok(!allowedCorpusHost("not a url"));
+    assert.ok(!allowedCorpusHost(""));
   });
 
   it("refuses keyed origins (credentials or key-like query)", () => {
     assert.ok(keyedOriginRefused("https://user:pass@arxiv.org/pdf/1"));
     assert.ok(keyedOriginRefused("https://example.com/api?api_key=abc"));
+    assert.ok(keyedOriginRefused("https://content.openalex.org/works/x.pdf?api_key=abc"), "the Content API tier stays keyed");
     assert.ok(!keyedOriginRefused("https://arxiv.org/pdf/2106.09685"));
+    assert.ok(!keyedOriginRefused("https://www.ijcai.org/proceedings/2026/0486.pdf"));
+  });
+});
+
+describe("corpusFetchDelayMs", () => {
+  it("spaces requests per host: first fetch and other hosts go immediately", () => {
+    const last = new Map<string, number>();
+    assert.equal(corpusFetchDelayMs("arxiv.org", 10_000, last, 3000), 0);
+    last.set("arxiv.org", 10_000);
+    assert.equal(corpusFetchDelayMs("arxiv.org", 11_000, last, 3000), 2000);
+    assert.equal(corpusFetchDelayMs("arxiv.org", 13_000, last, 3000), 0);
+    assert.equal(corpusFetchDelayMs("www.ijcai.org", 11_000, last, 3000), 0, "per-host spacing, not global");
+  });
+});
+
+describe("ungradeable", () => {
+  it("is valid for cited and uncited units alike", () => {
+    assert.equal(UNGRADEABLE_LABEL, "ungradeable");
+    assert.equal(classOf("ungradeable", true), "ungradeable");
+    assert.equal(classOf("ungradeable", false), "ungradeable");
+  });
+
+  it("needs no location/excerpt (no paper to point at) but must record the reason", () => {
+    const rubric = "r".repeat(64);
+    const noReason = labels({
+      units: [
+        { id: "u1", label: "ungradeable" },
+        { id: "u2", label: "background" },
+      ],
+    });
+    const errs = validateLabels(note(), noReason, rubric);
+    assert.ok(errs.some((e) => e.includes("u1") && /reason/i.test(e)), errs.join("; "));
+    const withReason = labels({
+      units: [
+        { id: "u1", label: "ungradeable", rationale: "k1 is missing from the corpus" },
+        { id: "u2", label: "background" },
+      ],
+    });
+    assert.deepEqual(validateLabels(note(), withReason, rubric), []);
+  });
+
+  it("disagrees with every gradeable class and stays out of binary agreement labels", () => {
+    const a = labels();
+    const b = labels({
+      units: [
+        { id: "u1", label: "ungradeable", rationale: "k1 missing from the corpus" },
+        { id: "u2", label: "background" },
+      ],
+    });
+    const d = selectDisagreements(note(), a, b);
+    assert.equal(d.cited.length, 1);
+    assert.deepEqual(toBinaryLabels("abcdef12", b), [], "an ungradeable cited unit is not a bad/not-bad row");
+    assert.deepEqual(toBinaryLabels("abcdef12", a), [{ note: "abcdef12", unit: "u1", bad: false }]);
+  });
+
+  it("is excluded from Tier 2 denominators and counted separately", () => {
+    const n = note({
+      units: [
+        { id: "u1", kind: "sentence", file: "main.tex", line: 1, section: "S", text: "Cited one.", cites: ["k1"], cited: true },
+        { id: "u2", kind: "sentence", file: "main.tex", line: 2, section: "S", text: "Cited two.", cites: ["k2"], cited: true },
+        { id: "u3", kind: "sentence", file: "main.tex", line: 3, section: "S", text: "Plain background.", cites: [], cited: false },
+      ],
+    });
+    const adj: AdjudicatedFile = {
+      note: "abcdef12",
+      document_digest: "d".repeat(64),
+      rubric_sha256: "r".repeat(64),
+      adjudicator_model: "m",
+      seed: 1,
+      trap_violated: false,
+      units: [
+        { id: "u1", final: "wrong", basis: "adjudicated", a: "supported", b: "wrong" },
+        { id: "u2", final: "ungradeable", basis: "adjudicated", a: "supported", b: "ungradeable" },
+        { id: "u3", final: "background", basis: "agreed", a: "background", b: "background" },
+      ],
+    };
+    assert.deepEqual(tier2Counts(n, adj), { id: "abcdef12", bad: 1, rows: 1, ungradeable: 1 });
   });
 });
 

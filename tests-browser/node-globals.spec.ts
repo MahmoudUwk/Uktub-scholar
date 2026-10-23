@@ -82,12 +82,12 @@ export const ALLOW: Record<string, AllowEntry> = {
     files: ["src/core/registry.ts", "src/core/compile/managed.ts", "src/core/embed/runtime.ts", "src/browser/worker.ts"],
   },
   "process.platform": {
-    cover: "leaf:src/core/compile/engine.ts + src/core/embed/runtime.ts + src/core/verify/eos-onnx.ts (engine dispatch)",
-    files: ["src/core/compile/engine.ts", "src/core/embed/runtime.ts", "src/core/verify/eos-onnx.ts", "src/browser/worker.ts"],
+    cover: "leaf:src/core/compile/engine.ts + src/core/embed/runtime.ts + src/core/verify/eos-onnx.ts + src/core/tools/doctor.ts (engine dispatch / PATH check)",
+    files: ["src/core/compile/engine.ts", "src/core/embed/runtime.ts", "src/core/verify/eos-onnx.ts", "src/core/tools/doctor.ts", "src/browser/worker.ts"],
   },
   "process.removeListener": {
-    cover: "leaf:src/core/embed/runtime.ts (embed engine dispatch)",
-    files: ["src/core/embed/runtime.ts"],
+    cover: "leaf:src/core/embed/runtime.ts + src/core/verify/claim.ts (engine dispatch)",
+    files: ["src/core/embed/runtime.ts", "src/core/verify/claim.ts"],
   },
 };
 

@@ -19,11 +19,19 @@
  * derivation `src/core/tools/registry.ts` does from `db.location()`
  * (`resolve(dirname(location), "..")`) keeps working. Parent directories are
  * not created or required: the browser namespace is flat per pool directory.
- * A second open of the same file in the SAME worker is a second connection
- * (reads see committed rows; writes serialize). A second TAB boots degraded
- * (its pool install fails while the first worker lives) and is refused by
- * the project lock (`src/browser/lock.ts`, taken before any open) with the
- * typed refusal — never a VFS crash.
+ *
+ * Per-project pools (Phase 4b, see `src/browser/projects.ts`): every
+ * project installs its own pool under its own OPFS directory, so two live
+ * workers on one origin coexist whenever they hold different projects. Only
+ * one project is open per worker: `ensurePoolInstalled` keeps one installed
+ * pool per directory and one ACTIVE pool (the open project's, or the
+ * scenario scratch pool); every `DatabaseSync` opens on the active pool. A
+ * second tab on the SAME project is refused by the project lock
+ * (`src/browser/lock.ts`, taken before any install) with the typed refusal
+ * — never a VFS crash. `hostClose` pauses the active pool (releases its
+ * SAHs without destroying data) so a fresh worker can install the same
+ * directory afterwards; `removeProjectPool` unregisters a project's VFS
+ * and destroys its OPFS directory (project deletion).
  *
  * Error shapes match `node:sqlite`: failures are `Error` with
  * `code === "ERR_SQLITE_ERROR"` and the extended result code on `errcode`
@@ -54,6 +62,7 @@ interface WasmModule {
   capi: Record<string, number | string | ((...args: never[]) => unknown)>;
   installOpfsSAHPoolVfs: (opts: {
     directory?: string;
+    name?: string;
     initialCapacity?: number;
     clearOnInit?: boolean;
   }) => Promise<SahPoolUtil>;
@@ -82,75 +91,147 @@ interface SahPoolUtil {
   getCapacity(): number;
   addCapacity(n: number): Promise<number>;
   exportFile(filename: string): Uint8Array;
+  importDb(filename: string, data: Uint8Array | ArrayBuffer): Promise<number>;
+  unlink(filename: string): boolean;
+  /** The SQLite VFS name this pool is registered under. */
+  vfsName: string;
+  isPaused(): boolean;
+  /**
+   * Unregister this VFS and release file access handles, without clearing
+   * files. Databases on it must be closed first. Reversible with
+   * `unpauseVfs()` (same worker) or a fresh install (any worker).
+   */
+  pauseVfs(): SahPoolUtil;
+  /** Re-register this VFS and re-acquire file access handles. */
+  unpauseVfs(): Promise<SahPoolUtil>;
+  /**
+   * Unregister the VFS and remove its directory from OPFS (all client
+   * content destroyed). Only the bottom-most directory level is removed.
+   * No longer usable afterwards; false when the VFS was not installed.
+   * Results are undefined while a database on it is in use.
+   */
+  removeVfs(): Promise<boolean>;
 }
 
 type WasmInput = null | number | bigint | string | Uint8Array;
 
 let sqlite3: WasmModule | null = null;
-let poolUtil: SahPoolUtil | null = null;
-/** A failed pool install is remembered so pool-needing ops can report it. */
-let poolInstallError: unknown = null;
+/** Installed pools by OPFS directory (one per project, plus the scenario scratch pool). */
+const pools = new Map<string, SahPoolUtil>();
+/** Directory of the pool `DatabaseSync` opens on (the open project's, or scratch). */
+let activePoolDir: string | null = null;
 
 export interface BootOptions {
-  /** OPFS pool directory (one per project root derivation is the caller's job). */
+  /** OPFS pool directory for this install (required: pools are per project, see `src/browser/projects.ts`). */
   poolDirectory?: string;
+  /** VFS registration name, unique per directory (required alongside the directory). */
+  vfsName?: string;
   /** SAH pool capacity; defaults to 8 (registry + temp files). */
   poolCapacity?: number;
 }
 
 /**
- * Install the `opfs-sahpool` VFS (async, idempotent per worker). Sync access
- * handles are exclusive per file: a SECOND live worker on the same origin
- * fails HERE while the first holds the pool. That failure is recorded, not
- * thrown, so the worker still boots and the project lock (`src/browser/lock.ts`,
- * taken before any open in `hostInit`) can refuse the second tab with the
- * typed refusal instead of a VFS crash. A worker whose pool install failed
- * retries it in `hostInit` once it holds the lock (the first worker may have
- * died since boot).
+ * Install the pool for one OPFS directory (async, once per directory per
+ * worker) and make it the active pool. Fail closed: both `poolDirectory`
+ * and `vfsName` are required — there is no implicit global pool. A second
+ * live worker holding the SAME directory fails here; that only happens for
+ * the same project, which the project lock refuses before any install.
  */
 export async function ensurePoolInstalled(options: BootOptions = {}): Promise<void> {
   if (sqlite3 === null) {
     throw new Error("sqlite pool install before ensureBooted() (call it once in the worker)");
   }
-  if (poolUtil !== null) return;
-  const mod = sqlite3;
-  try {
-    const pool = await mod.installOpfsSAHPoolVfs({
-      directory: options.poolDirectory ?? "/uktub-sahpool",
-    });
-    const want = options.poolCapacity ?? 8;
-    try {
-      const have = Number(pool.getCapacity());
-      if (have < want) await pool.addCapacity(want - have);
-    } catch {
-      // Capacity probe is best-effort; the pool default already holds a database.
-    }
-    poolUtil = pool;
-    poolInstallError = null;
-  } catch (err) {
-    poolInstallError = err;
-    throw err;
+  const dir = options.poolDirectory;
+  if (typeof dir !== "string" || dir === "") {
+    throw new TypeError("ensurePoolInstalled: poolDirectory must be a non-empty string (no implicit global pool)");
   }
+  const hit = pools.get(dir);
+  if (hit !== undefined) {
+    const live = hit.isPaused() ? await hit.unpauseVfs() : hit;
+    pools.set(dir, live);
+    activePoolDir = dir;
+    return;
+  }
+  const name = options.vfsName;
+  if (typeof name !== "string" || name === "") {
+    throw new TypeError("ensurePoolInstalled: vfsName must be a non-empty string (one name per directory)");
+  }
+  const mod = sqlite3;
+  const pool = await mod.installOpfsSAHPoolVfs({ directory: dir, name });
+  const want = options.poolCapacity ?? 8;
+  try {
+    const have = Number(pool.getCapacity());
+    if (have < want) await pool.addCapacity(want - have);
+  } catch {
+    // Capacity probe is best-effort; the pool default already holds a database.
+  }
+  pools.set(dir, pool);
+  activePoolDir = dir;
 }
 
-/** The installed pool, or a clear error (boot-degraded second worker). */
+/** True once some pool is installed and active in this worker. */
+export function hasActivePool(): boolean {
+  return activePoolDir !== null && pools.has(activePoolDir);
+}
+
+/** The installed pool every `DatabaseSync` opens on, or a clear error. */
 function requirePool(): SahPoolUtil {
-  if (poolUtil !== null) return poolUtil;
-  const detail = poolInstallError instanceof Error ? poolInstallError.message : String(poolInstallError ?? "unknown");
-  throw new Error(
-    `sqlite sahpool unavailable after boot (${detail}); ` +
-      "another live worker on this origin holds the pool — the project lock refuses a second tab before any open",
-  );
+  const dir = activePoolDir;
+  const pool = dir === null ? undefined : pools.get(dir);
+  if (pool === undefined) {
+    throw new Error(
+      "sqlite sahpool has no active pool (call init first, or a scenario op that installs the scratch pool)",
+    );
+  }
+  return pool;
 }
 
 /**
- * Async one-time boot for the worker: loads WASM, refuses to run without
- * FTS5, then installs the `opfs-sahpool` VFS best-effort (see
- * `ensurePoolInstalled`: a live second worker records the install failure and
- * still boots). Every `DatabaseSync` method after this is synchronous. Must
+ * Pause (unregister, keep data) the active pool and forget it, releasing
+ * its SAHs so another worker can install the same directory. Called by
+ * `hostClose` after all connections are dropped. No-op without an active
+ * pool.
+ */
+export async function pauseActivePool(): Promise<void> {
+  const dir = activePoolDir;
+  activePoolDir = null;
+  if (dir === null) return;
+  const pool = pools.get(dir);
+  pools.delete(dir);
+  if (pool !== undefined && !pool.isPaused()) pool.pauseVfs();
+}
+
+/**
+ * Unregister a project's VFS and destroy its OPFS directory (project
+ * deletion). Installs a handle for the directory first when this worker
+ * never opened the project. Callers must hold the project lock and hold no
+ * open connections on the pool.
+ */
+export async function removeProjectPool(directory: string, vfsName: string): Promise<boolean> {
+  if (sqlite3 === null) {
+    throw new Error("sqlite shim used before ensureBooted() (call it once in the worker)");
+  }
+  let pool = pools.get(directory);
+  if (pool === undefined) {
+    const mod = sqlite3;
+    pool = await mod.installOpfsSAHPoolVfs({ directory, name: vfsName });
+    pools.set(directory, pool);
+  }
+  if (pool.isPaused()) pool = await pool.unpauseVfs();
+  const removed = await pool.removeVfs();
+  pools.delete(directory);
+  if (activePoolDir === directory) activePoolDir = null;
+  return removed;
+}
+
+/**
+ * Async one-time boot for the worker: loads WASM and refuses to run without
+ * FTS5. Installs NO pool: the open project's pool is installed by `hostInit`
+ * (per-project directory, after the lock), scenario ops install the scratch
+ * pool lazily. Every `DatabaseSync` method after this is synchronous. Must
  * be called inside the dedicated Worker.
  */
-export async function ensureBooted(options: BootOptions = {}): Promise<void> {
+export async function ensureBooted(): Promise<void> {
   if (sqlite3 !== null) return;
   const init = sqlite3InitModule as unknown as (cfg: {
     locateFile: (path: string, prefix: string) => string;
@@ -162,11 +243,6 @@ export async function ensureBooted(options: BootOptions = {}): Promise<void> {
   // JSON is core since SQLite 3.38 (no compile option); only FTS5 is gated.
   if (!used("ENABLE_FTS5")) throw new Error("browser sqlite build lacks ENABLE_FTS5; refusing to boot");
   sqlite3 = mod;
-  try {
-    await ensurePoolInstalled(options);
-  } catch {
-    // Recorded on poolInstallError; the project lock refuses before any pool use.
-  }
 }
 
 function api(): WasmModule {
@@ -256,11 +332,36 @@ export class StatementSync {
   private readonly stmt: WasmStmt;
   private readonly db: DatabaseSync;
   private columnNames: string[] | null = null;
+  /** Set once `finalizeForClose` runs (always via the owning db's `close`). */
+  private finalized = false;
 
   /** @internal constructed by DatabaseSync.prepare only. */
   constructor(stmt: WasmStmt, db: DatabaseSync) {
     this.stmt = stmt;
     this.db = db;
+  }
+
+  /**
+   * @internal finalize the underlying OO1 statement so the owning
+   * connection can truly close (unfinalized statements keep the VFS file
+   * open as a zombie, which blocks `pauseVfs`/`removeVfs`). Idempotent.
+   */
+  finalizeForClose(): void {
+    if (this.finalized) return;
+    this.finalized = true;
+    try {
+      this.stmt.finalize();
+    } catch {
+      // Best-effort during close; the db close reports real failures.
+    }
+  }
+
+  /** Same refusal as before when the db is closed, plus a finalized guard. */
+  private assertUsable(): void {
+    this.db.assertOpen();
+    if (this.finalized) {
+      throw Object.assign(new Error("statement has been finalized"), { code: "ERR_INVALID_STATE" });
+    }
   }
 
   private bindAll(params: unknown[]): void {
@@ -381,7 +482,7 @@ export class StatementSync {
   }
 
   get(...params: Array<SQLInputValue | SQLInputRecord>): Record<string, SQLOutputValue> | undefined {
-    this.db.assertOpen();
+    this.assertUsable();
     return this.guarded(() => {
       this.bindAll(params);
       let hasRow = false;
@@ -396,7 +497,7 @@ export class StatementSync {
   }
 
   all(...params: Array<SQLInputValue | SQLInputRecord>): Array<Record<string, SQLOutputValue>> {
-    this.db.assertOpen();
+    this.assertUsable();
     return this.guarded(() => {
       this.bindAll(params);
       const rows: Array<Record<string, SQLOutputValue>> = [];
@@ -415,7 +516,7 @@ export class StatementSync {
   }
 
   run(...params: Array<SQLInputValue | SQLInputRecord>): RunResult {
-    this.db.assertOpen();
+    this.assertUsable();
     return this.guarded(() => {
       this.bindAll(params);
       try {
@@ -436,6 +537,8 @@ export class DatabaseSync {
   private handle: WasmDb | null;
   private readonly originalPath: string;
   private open = true;
+  /** Every statement prepared on this connection (finalized by `close`). */
+  private readonly statements = new Set<StatementSync>();
 
   constructor(path: string, options: DatabaseOptions = {}) {
     const mod = api();
@@ -490,7 +593,9 @@ export class DatabaseSync {
     }
     try {
       // Like node:sqlite, only the first statement of the string is prepared.
-      return new StatementSync((this.handle as WasmDb).prepare(sql), this);
+      const stmt = new StatementSync((this.handle as WasmDb).prepare(sql), this);
+      this.statements.add(stmt);
+      return stmt;
     } catch (err) {
       throw toNodeError(err);
     }
@@ -510,6 +615,11 @@ export class DatabaseSync {
 
   close(): void {
     this.assertOpen();
+    // Finalize every prepared statement first: an unfinalized statement
+    // keeps the connection a zombie with its VFS file open, which blocks
+    // `pauseVfs`/`removeVfs` (and a fresh worker's install) after close.
+    for (const stmt of this.statements) stmt.finalizeForClose();
+    this.statements.clear();
     try {
       (this.handle as WasmDb).close();
     } catch (err) {
@@ -538,13 +648,32 @@ export class DatabaseSync {
  * file throws inside `exportFile`, which maps to null here.
  */
 export function sahpoolFileBytes(path: string): Uint8Array | null {
-  if (sqlite3 === null || poolUtil === null) {
+  if (sqlite3 === null || !hasActivePool()) {
     throw new Error("sqlite shim used before ensureBooted() (call it once in the worker)");
   }
   try {
-    const bytes = poolUtil.exportFile(path);
+    const bytes = requirePool().exportFile(path);
     return bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
   } catch {
     return null;
   }
+}
+
+/**
+ * Import raw SQLite database bytes into a sahpool file slot, overwriting any
+ * existing contents. Must only be called when no connection is open on `path`.
+ */
+export async function sahpoolImportDb(path: string, bytes: Uint8Array): Promise<number> {
+  if (sqlite3 === null || !hasActivePool()) {
+    throw new Error("sqlite shim used before ensureBooted() (call it once in the worker)");
+  }
+  return await requirePool().importDb(path, bytes);
+}
+
+/** Remove a sahpool file slot if present. */
+export function sahpoolUnlink(path: string): boolean {
+  if (sqlite3 === null || !hasActivePool()) {
+    throw new Error("sqlite shim used before ensureBooted() (call it once in the worker)");
+  }
+  return requirePool().unlink(path);
 }

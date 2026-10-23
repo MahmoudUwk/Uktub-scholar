@@ -346,6 +346,24 @@ describe("uktub-scholar register / attach / verify (same tools as the agent)", (
     assert.match(bad.lines.err.join("\n"), /ARGUMENT_INVALID/);
   });
 
+  it("verify --text pages a long fragment: the result names the next offset, and --offset finishes it", async () => {
+    db.close();
+    const text = Array.from({ length: 61 }, (_, i) => `Fact number ${i} about the laboratory setup.`).join(" ");
+    const first = io();
+    assert.equal(await runCli(["verify", "--text", text], first), 0);
+    const out1 = first.lines.out.join("\n");
+    assert.match(out1, /DOCUMENT:/);
+    assert.match(out1, /offset 50/, "the first page names the next offset");
+    const second = io();
+    assert.equal(await runCli(["verify", "--text", text, "--offset", "50"], second), 0);
+    const out2 = second.lines.out.join("\n");
+    assert.match(out2, /51.*61 of 61/);
+    assert.doesNotMatch(out2, /NOT DONE/, "the last page completes the document");
+    const badOffset = io();
+    assert.equal(await runCli(["verify", "--text", text, "--offset", "banana"], badOffset), 1);
+    assert.match(badOffset.lines.err.join("\n"), /--offset/, "usage documents the offset flag");
+  });
+
   it("the retired claim-array verify and trace commands are gone, and usage names the new ones", async () => {
     db.close();
     const t = io();

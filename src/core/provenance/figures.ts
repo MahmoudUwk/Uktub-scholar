@@ -6,6 +6,10 @@
  * accept; a round integer is not (80 occurs in any paper as a batch size), so it is reported as weaker evidence. Measured on the
  * papers of the workflow experiment (docs/handoff.md): unit-attached matching alone wrongly flags header-unit values, number-only
  * matching alone misses "32GB" and "80GB" invented for papers that contain a 32 and an 80 elsewhere.
+ *
+ * Magnitude tokens (number plus an attached k/K/M/B suffix: "8k" context lengths, "3B" parameters) are figures;
+ * lowercase attached suffixes are accepted at extraction, and at matching only the same number with the same suffix
+ * (case-insensitively) counts, never a bare expanded number.
  */
 export interface Figure {
   /** As written, thousands separators removed ("24 GB", "37.3GB", "10000 times", "A100"). */
@@ -20,7 +24,7 @@ export interface Figure {
 export type FigureMatch = "exact" | "number-only" | "absent";
 
 const HARDWARE = /\b(?:A100|A800|H100|H200|H800|V100|P100|A6000|RTX ?A?\d{4}[A-Za-z]{0,2}|TITAN ?X[pP]?|TPU ?v\d[a-z]?|GTX ?\d{3,4}|MI\d{3}X?)\b/gi;
-const NUMBER = /(?<![\w.])(\d{1,3}(?:,\d{3})+|\d+)(\.\d+)?(?:\s?-?\s?(%|GB|GiB|MB|MiB|TB|KB|bits?|B|M|K|×|x|X|times|percent)(?![A-Za-z0-9]))?/g;
+const NUMBER = /(?<![\w.])(\d{1,3}(?:,\d{3})+|\d+)(\.\d+)?(?:\s?-?\s?(%|GB|GiB|MB|MiB|TB|KB|bits?|B|M|K|×|x|X|times|percent)(?![A-Za-z0-9])|([kmb])(?![A-Za-z0-9]))?/g;
 const REFERENCE_WORD = /(?:table|section|sec\.|figure|fig\.|eq\.|equation|algorithm|appendix|listing|step|chapter|version|v)\s*$/i;
 
 function canonicalUnit(u: string | undefined): string | null {
@@ -48,7 +52,7 @@ export function figuresOf(plain: string): Figure[] {
     const at = m.index ?? 0;
     const int = (m[1] ?? "").replace(/,/g, "");
     const frac = m[2] ?? "";
-    const unit = canonicalUnit(m[3]);
+    const unit = canonicalUnit(m[3] ?? m[4]);
     const decimal = frac !== "";
     const value = int + frac;
     if (REFERENCE_WORD.test(plain.slice(Math.max(0, at - 12), at))) continue;
@@ -86,6 +90,15 @@ const UNIT_ALTERNATIVES: Record<string, string> = {
   bit: "bits?",
 };
 
+/**
+ * Magnitude suffixes (K/M/B: "8k" context lengths, "3B" parameters). A bare number
+ * match says nothing (8 occurs in any paper as a batch size), so only the same
+ * number with the same suffix, case-insensitively, counts as exact; otherwise the
+ * figure is absent, never a weak number-only match. Written forms are never
+ * expanded ("8k" does not match "8192").
+ */
+const MAGNITUDE_UNIT = new Set(["K", "M", "B"]);
+
 export function matchFigure(f: Figure, paperNorm: string): FigureMatch {
   if (f.kind === "hardware") {
     // a name may wrap across a line in the captured text ("TITAN" / "Xp")
@@ -95,5 +108,6 @@ export function matchFigure(f: Figure, paperNorm: string): FigureMatch {
   if (!number.test(paperNorm)) return "absent";
   if (f.unit === null) return "exact";
   const withUnit = new RegExp(`(?<![\\d.])${esc(f.value)}\\s?-?\\s?(?:${UNIT_ALTERNATIVES[f.unit] ?? esc(f.unit)})(?![A-Za-z0-9])`, "i");
-  return withUnit.test(paperNorm) ? "exact" : "number-only";
+  if (withUnit.test(paperNorm)) return "exact";
+  return MAGNITUDE_UNIT.has(f.unit) ? "absent" : "number-only";
 }

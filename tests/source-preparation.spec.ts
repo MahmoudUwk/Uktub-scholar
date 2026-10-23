@@ -25,6 +25,17 @@ const goodTei = new TextEncoder().encode(
 );
 
 const KEY = "SECRET-KEY";
+/** Europe PMC answers, with no record, unless a test scripts its own answer (first matching route wins). */
+const EUROPE_PMC_NO_RECORD = {
+  match: (u: string) => u.startsWith("https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=DOI"),
+  body: JSON.stringify({ hitCount: 0, resultList: { result: [] } }),
+};
+/** Semantic Scholar answers an unknown paper with its documented HTTP 404 (Error404), unless a test scripts its own answer. */
+const S2_UNKNOWN_PAPER = {
+  match: (u: string) => u.startsWith("https://api.semanticscholar.test/graph/v1/paper/DOI:"),
+  status: 404,
+  body: JSON.stringify({ error: `Paper with id DOI:${PAPER.doi} not found` }),
+};
 const CONTENT = "https://content.openalex.test";
 const conf = (extra: Record<string, unknown> = {}) => cfg({ openalexContentOrigin: CONTENT, ...extra });
 
@@ -53,7 +64,7 @@ function fakeDownload(files: Record<string, Uint8Array | SourceError>): { downlo
 }
 
 async function run(work: Parameters<typeof openalexRoute>[0], files: Record<string, Uint8Array | SourceError>, opts: { key?: string } = {}) {
-  const { fetchFn } = createFakeFetch([openalexRoute(work)]);
+  const { fetchFn } = createFakeFetch([openalexRoute(work), EUROPE_PMC_NO_RECORD, S2_UNKNOWN_PAPER]);
   const dl = fakeDownload(files);
   const result = await acquireSource({ fetch: fetchFn, download: dl.download, cfg: conf(opts.key ? { openalexApiKey: opts.key } : {}) }, PAPER);
   return { result, calls: dl.calls };

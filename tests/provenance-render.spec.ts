@@ -45,8 +45,8 @@ describe("renderSummary", () => {
     assert.equal((small.match(/^(?:OPEN|CHECK)/gm) ?? []).length, 1);
     assert.match(small, /\+\d+ more/);
   });
-  it("is empty for a manuscript with nothing to audit", () => {
-    const empty = auditProvenance({ paper: parsePaper(linesFromString("\\begin{document}\nNothing numeric here.\n\\end{document}")), tex: "x", papers: [], ledger: () => null });
+  it("is empty for a manuscript with no prose, figures or citations (an uncited sentence is audited as uncited since D1)", () => {
+    const empty = auditProvenance({ paper: parsePaper(linesFromString("\\begin{document}\n\\end{document}")), tex: "x", papers: [], ledger: () => null });
     assert.deepEqual(renderSummary(empty), []);
   });
 });

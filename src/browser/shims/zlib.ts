@@ -88,7 +88,6 @@ const unsupported = (name: string) => (..._args: never[]): never => {
   throw new Error(`not implemented in the browser build: node:zlib.${name}`);
 };
 
-export const gzipSyncBrowser = unsupported("gzipSync");
 export const deflateSync = unsupported("deflateSync");
 export const inflateSync = unsupported("inflateSync");
 export const brotliDecompressSync = unsupported("brotliDecompressSync");

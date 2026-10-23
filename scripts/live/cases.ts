@@ -655,6 +655,7 @@ export const directCases: Case[] = [
   {
     id: "cli.exit-contracts-and-init",
     tool: "cli",
+    needs: ["registry.register-mixed"],
     contract: "unknown command exits non-zero with usage; init is idempotent and keeps the registry; nested projects are refused; list reads the registry",
     async run(ctx) {
       const cli = "node /opt/stage/node_modules/uktub-scholar/bin/uktub-scholar.js";

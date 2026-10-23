@@ -19,6 +19,7 @@ Uncited units take one of `background`, `specific`.
 | `misattributed` | Stated by another registered paper, not the cited one. |
 | `background` | Generic textbook fact, or no factual claim: signposting, disclosed limits, the trap claim when labelled unverified. |
 | `specific` | Any uncited number, measured result, method property, hardware requirement or attribution. |
+| `ungradeable` | Every cited paper is unavailable in the corpus; the rationale names the missing papers. |
 
 A unit with no cited paper that states no checkable fact is `background`; the label
 `supported` requires the same fact in the cited paper, not merely a related one.

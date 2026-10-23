@@ -107,7 +107,7 @@ export const STUB_PACKAGES = ["tar"];
  *   The only core caller is the registry open-refusal message
  *   (`openRegistry`, never run through the worker); `cliCommand` throws at
  *   CALL time. Preferred fix, which deletes this stub: lazy `BIN_PATH` in
- *   core (see CORE-CHANGES-NEEDED.md).
+ *   core.
  */
 export const CORE_STUBS = {
   [path.join(root, "src/core/launch.ts")]: [
@@ -195,13 +195,14 @@ export async function bundle(entryRel, outRel, { extraEntries = {} } = {}) {
   return found;
 }
 
-/** The five tool graphs the bundle proof must compile (task 5). */
+/** The six tool graphs the bundle proof must compile (task 5 + doctor). */
 export const TOOL_ENTRIES = [
   "src/core/tools/registry.ts",
   "src/core/tools/passages.ts",
   "src/core/tools/verify.ts",
   "src/core/tools/compile.ts",
   "src/core/tools/search.ts",
+  "src/core/tools/doctor.ts",
 ];
 
 /**

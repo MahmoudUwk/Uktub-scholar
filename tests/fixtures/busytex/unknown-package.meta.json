@@ -1,0 +1,9 @@
+{
+  "variant": "unknown-package",
+  "status": 3,
+  "hasPdf": false,
+  "logChars": 8862,
+  "files": [
+    "manuscript/main.tex"
+  ]
+}

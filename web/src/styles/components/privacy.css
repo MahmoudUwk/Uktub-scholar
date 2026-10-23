@@ -1,0 +1,53 @@
+.footer-links {
+	align-items: center;
+	gap: var(--space-xs);
+	padding: var(--ui-footer-links-padding, 0);
+	font-size: var(--ui-footer-links-font-size, var(--font-size-meta));
+	white-space: nowrap;
+	line-height: 1;
+	color: var(--text-secondary, var(--pico-secondary));
+}
+
+.footer-links-toggle {
+	display: none;
+}
+
+.footer-links.open {
+	display: inline-flex;
+	width: max-content;
+	max-width: var(--ui-footer-links-open-max-width, calc(100vw - 16px));
+	padding: var(--ui-footer-links-open-padding, var(--space-sm));
+	background: var(--ui-footer-links-open-background, var(--pico-background));
+	border: var(--ui-footer-links-open-border, 1px solid var(--accent-border));
+	border-radius: var(--ui-footer-links-open-radius, var(--radius-sm));
+	box-shadow: var(--ui-footer-links-open-shadow, var(--shadow-md));
+	flex-wrap: wrap;
+	justify-content: center;
+	white-space: normal;
+}
+
+.footer-links :is(a, .button[data-variant="text"]) {
+	display: inline-flex;
+	align-items: center;
+	margin: 0;
+	padding-block: 0;
+	color: var(--text-secondary, var(--pico-secondary));
+	font-size: inherit;
+	line-height: 1;
+}
+
+.footer-links img {
+	display: block;
+}
+.footer-status {
+	font-size: var(
+		--ui-footer-status-font-size,
+		var(--ui-footer-links-font-size, var(--font-size-meta))
+	);
+	line-height: var(--ui-footer-status-line-height, 1);
+}
+
+.footer-status .ui-badge[data-variant="label"] {
+	font-size: inherit;
+	line-height: inherit;
+}

@@ -26,7 +26,7 @@ import { createHash } from "node:crypto";
 import { fetchWithRetry, retryOpts, asArray, asRecord, asString, parseJsonBody } from "../providers/http.ts";
 import type { FetchLike, ProviderConfig } from "../providers/types.ts";
 import { normalizeRegistryDoi } from "../doi.ts";
-import { semanticScholarSpacer } from "../providers/semantic-scholar.ts";
+import { semanticScholarGet } from "../providers/semantic-scholar.ts";
 import { arxivCoolingDown, arxivIdFromDoi, arxivIdFromUrl, arxivPdfUrl, arxivSpacer, isArxivHost, noteArxivRefusal, noteArxivSuccess, isArxivId, isDoiResolver, sameArxivWork } from "./arxiv.ts";
 import { MAX_SOURCE_BYTES, SourceError, extractPdf, extractTei, matchesPaperIdentity, type SourceFailureCode } from "./extract.ts";
 import type { DownloadLike } from "./download.ts";
@@ -115,6 +115,9 @@ type Deps = { fetch: FetchLike; download: DownloadLike; cfg: ProviderConfig; sig
 type Failure = { kind: SourceKind; code: SourceFailureCode };
 type TierResult = { source: PreparedSource } | { failures: Failure[] };
 
+/** The provider config of one acquisition: its requests are cancelled by the acquisition's own signal. */
+const requestCfg = (deps: Deps): ProviderConfig => ({ ...deps.cfg, signal: deps.signal });
+
 /** Client policy: arXiv-derived and oa_url candidates tried per paper from the OpenAlex record (pdf_url keeps MAX_PDF_URL_CANDIDATES). */
 const MAX_DERIVED_CANDIDATES = 2;
 
@@ -129,7 +132,7 @@ async function tryAttempts(deps: Deps, paper: { doi: string; title: string }, at
       continue;
     }
     try {
-      if (arxiv) await arxivSpacer(deps.cfg.sleep).wait();
+      if (arxiv) await arxivSpacer(deps.cfg.sleep).wait(deps.signal);
       const got = await deps.download(a.url, {
         maxBytes: MAX_SOURCE_BYTES,
         signal: deps.signal,
@@ -146,23 +149,25 @@ async function tryAttempts(deps: Deps, paper: { doi: string; title: string }, at
   return { failures };
 }
 
-/** Candidates Semantic Scholar names for this DOI. A lookup that fails, is rate limited or answers for another work yields none. */
-async function semanticScholarAttempts(deps: Deps, paper: { doi: string }, seen: Set<string>): Promise<Attempt[]> {
+/** Candidates Semantic Scholar names for this DOI. HTTP 404 is its documented "unknown paper" answer and a 200 without an open copy is a
+ *  genuine "no copy"; a rate limit, a 5xx, a network error or an unreadable body is an outage. A record for another work yields nothing. */
+async function semanticScholarAttempts(deps: Deps, paper: { doi: string }, seen: Set<string>): Promise<{ attempts: Attempt[]; outages: Failure[] }> {
   const { cfg } = deps;
-  const key = cfg.semanticScholarApiKey?.trim() ?? "";
   const url = `${cfg.semanticScholarBaseUrl}/graph/v1/paper/DOI:${paper.doi.split("/").map(encodeURIComponent).join("/")}?fields=openAccessPdf,externalIds`;
   let record: Record<string, unknown> | null;
   try {
-    await semanticScholarSpacer(cfg).wait();
-    const res = await fetchWithRetry(deps.fetch, url, { ...retryOpts(cfg), ...(key ? { headers: { "x-api-key": key } } : {}) });
-    if (res.status !== 200) return [];
+    const res = await semanticScholarGet(deps.fetch, requestCfg(deps), url);
+    if (res.status === 404) return { attempts: [], outages: [] };
+    if (res.status !== 200) return { attempts: [], outages: [S2_OUTAGE] };
     record = asRecord(parseJsonBody(res.body, "semantic-scholar"));
-  } catch {
-    return [];
+  } catch (err) {
+    if (deps.signal?.aborted) throw err;
+    return { attempts: [], outages: [S2_OUTAGE] };
   }
-  const ids = asRecord(record?.["externalIds"]);
+  if (record === null) return { attempts: [], outages: [S2_OUTAGE] };
+  const ids = asRecord(record["externalIds"]);
   const recordDoi = normalizeRegistryDoi(asString(ids?.["DOI"]) ?? "");
-  if (record === null || (recordDoi !== null && recordDoi !== paper.doi)) return [];
+  if (recordDoi !== null && recordDoi !== paper.doi) return { attempts: [], outages: [] };
   const attempts: Attempt[] = [];
   const pdf = asRecord(record["openAccessPdf"]);
   const pdfUrl = asString(pdf?.["url"]);
@@ -176,58 +181,73 @@ async function semanticScholarAttempts(deps: Deps, paper: { doi: string }, seen:
     const own = arxivIdFromDoi(paper.doi);
     attempts.push({ kind: own !== null && sameArxivWork(own, arxiv) ? "arxiv-pdf" : "arxiv-preprint-pdf", url: arxivPdfUrl(arxiv), license: null, credentialed: false });
   }
-  return attempts;
+  return { attempts, outages: [] };
 }
 
 const PMC_OPEN_DATA = "https://pmc-oa-opendata.s3.amazonaws.com";
 const EUROPE_PMC = "https://www.ebi.ac.uk/europepmc/webservices/rest";
 
+/** A provider lookup either answers (a candidate, or null for a genuine "no copy") or is down: an outage is a failure, never an empty answer. */
+type Lookup<T> = { answer: T } | { outage: Failure };
+const PMC_OUTAGE: Failure = { kind: "pmc-pdf", code: "download_failed" };
+const EPMC_OUTAGE: Failure = { kind: "epmc-pdf", code: "download_failed" };
+const S2_OUTAGE: Failure = { kind: "s2-open-access-pdf", code: "download_failed" };
+
 /** The PubMed Central open-access copy of `pmcid` from the AWS open-data bucket (built for programmatic access, no bot challenge):
- *  list the versions, read the newest version's JSON, require the same DOI, and turn its `s3://` pdf_url into the bucket's HTTPS URL. */
-async function pmcOpenDataAttempt(deps: Deps, paper: { doi: string }, pmcid: string): Promise<Attempt | null> {
+ *  list the versions, read the newest version's JSON, require the same DOI, and turn its `s3://` pdf_url into the bucket's HTTPS URL.
+ *  A listing with no prefix match, or a missing version object (S3 404), is a genuine "no copy"; a 5xx/429, a network error or an
+ *  unreadable listing or record is an outage. */
+async function pmcOpenDataAttempt(deps: Deps, paper: { doi: string }, pmcid: string): Promise<Lookup<Attempt | null>> {
   const base = deps.cfg.pmcOpenDataBaseUrl ?? PMC_OPEN_DATA;
   try {
-    const list = await fetchWithRetry(deps.fetch, `${base}/?list-type=2&prefix=${encodeURIComponent(`${pmcid}.`)}&delimiter=/`, retryOpts(deps.cfg));
-    if (list.status !== 200) return null;
+    const list = await fetchWithRetry(deps.fetch, `${base}/?list-type=2&prefix=${encodeURIComponent(`${pmcid}.`)}&delimiter=/`, retryOpts(requestCfg(deps)));
+    if (list.status !== 200 || !list.body.includes("<ListBucketResult")) return { outage: PMC_OUTAGE };
     const versions = [...list.body.matchAll(/<Prefix>(PMC\d+)\.(\d+)\/<\/Prefix>/g)].filter((m) => m[1] === pmcid).map((m) => Number(m[2]));
-    if (versions.length === 0) return null;
+    if (versions.length === 0) return { answer: null };
     const version = Math.max(...versions);
-    const meta = await fetchWithRetry(deps.fetch, `${base}/${pmcid}.${version}/${pmcid}.${version}.json`, retryOpts(deps.cfg));
-    if (meta.status !== 200) return null;
+    const meta = await fetchWithRetry(deps.fetch, `${base}/${pmcid}.${version}/${pmcid}.${version}.json`, retryOpts(requestCfg(deps)));
+    if (meta.status === 404) return { answer: null };
+    if (meta.status !== 200) return { outage: PMC_OUTAGE };
     const rec = asRecord(JSON.parse(meta.body) as unknown);
-    if (rec === null || asString(rec["pmcid"]) !== pmcid || normalizeRegistryDoi(asString(rec["doi"]) ?? "") !== paper.doi) return null;
+    if (rec === null || asString(rec["pmcid"]) !== pmcid || normalizeRegistryDoi(asString(rec["doi"]) ?? "") !== paper.doi) return { answer: null };
     const m = /^s3:\/\/pmc-oa-opendata\/([^?#]+)/.exec(asString(rec["pdf_url"]) ?? "");
     const key = m?.[1] ?? "";
-    if (!new RegExp(`^${pmcid}\\.${version}/[A-Za-z0-9._-]+\\.pdf$`).test(key)) return null;
-    return { kind: "pmc-pdf", url: `${base}/${key}`, license: asString(rec["license_code"]), credentialed: false };
-  } catch {
-    return null;
+    if (!new RegExp(`^${pmcid}\\.${version}/[A-Za-z0-9._-]+\\.pdf$`).test(key)) return { answer: null };
+    return { answer: { kind: "pmc-pdf", url: `${base}/${key}`, license: asString(rec["license_code"]), credentialed: false } };
+  } catch (err) {
+    if (deps.signal?.aborted) throw err;
+    return { outage: PMC_OUTAGE };
   }
 }
 
 /** What Europe PMC knows about this DOI: the PubMed Central open-data copy of its PMCID, then open-access PDF links on other hosts.
  *  europepmc.org's own `?pdf=render` links answer scripted clients with a bot challenge and are never fetched. */
-async function europePmcAttempts(deps: Deps, paper: { doi: string }, seen: Set<string>): Promise<Attempt[]> {
+async function europePmcAttempts(deps: Deps, paper: { doi: string }, seen: Set<string>): Promise<{ attempts: Attempt[]; outages: Failure[] }> {
   const { cfg } = deps;
   const url = `${cfg.europePmcBaseUrl ?? EUROPE_PMC}/search?query=${encodeURIComponent(`DOI:"${paper.doi}"`)}&resultType=core&format=json&pageSize=1`;
-  let records: unknown[];
+  let search: Record<string, unknown> | null;
   try {
-    const res = await fetchWithRetry(deps.fetch, url, retryOpts(cfg));
-    if (res.status !== 200) return [];
-    records = asArray(asRecord(asRecord(JSON.parse(res.body) as unknown)?.["resultList"])?.["result"]);
-  } catch {
-    return [];
+    const res = await fetchWithRetry(deps.fetch, url, retryOpts(requestCfg(deps)));
+    search = res.status === 200 ? asRecord(JSON.parse(res.body) as unknown) : null;
+  } catch (err) {
+    if (deps.signal?.aborted) throw err;
+    search = null;
   }
+  // A search answer always carries its hit count (zero hits is HTTP 200 with hitCount 0); anything else is an outage, not "no record".
+  if (search === null || typeof search["hitCount"] !== "number") return { attempts: [], outages: [EPMC_OUTAGE] };
+  const records = asArray(asRecord(search["resultList"])?.["result"]);
   const attempts: Attempt[] = [];
+  const outages: Failure[] = [];
   for (const raw of records) {
     const rec = asRecord(raw);
     if (rec === null || normalizeRegistryDoi(asString(rec["doi"]) ?? "") !== paper.doi) continue;
     const pmcid = asString(rec["pmcid"]);
     if (pmcid !== null && /^PMC\d+$/.test(pmcid)) {
       const pmc = await pmcOpenDataAttempt(deps, paper, pmcid);
-      if (pmc !== null && !seen.has(pmc.url)) {
-        seen.add(pmc.url);
-        attempts.push(pmc);
+      if ("outage" in pmc) outages.push(pmc.outage);
+      else if (pmc.answer !== null && !seen.has(pmc.answer.url)) {
+        seen.add(pmc.answer.url);
+        attempts.push(pmc.answer);
       }
     }
     for (const entry of asArray(asRecord(rec["fullTextUrlList"])?.["fullTextUrl"])) {
@@ -245,7 +265,7 @@ async function europePmcAttempts(deps: Deps, paper: { doi: string }, seen: Set<s
       if (attempts.length < MAX_DERIVED_CANDIDATES) attempts.push({ kind: "epmc-pdf", url: href, license: null, credentialed: false });
     }
   }
-  return attempts;
+  return { attempts, outages };
 }
 
 export async function acquireSource(deps: Deps, paper: { doi: string; title: string }): Promise<AcquireResult> {
@@ -257,14 +277,15 @@ export async function acquireSource(deps: Deps, paper: { doi: string; title: str
   let work: Record<string, unknown> | null = null;
   let unusable: AcquireResult | null = null;
   try {
-    const res = await fetchWithRetry(deps.fetch, lookup, retryOpts(cfg));
+    const res = await fetchWithRetry(deps.fetch, lookup, retryOpts(requestCfg(deps)));
     if (res.status === 404) unusable = { ok: false, status: "unavailable", code: "no_open_copy", detail: "OpenAlex does not know this work" };
     else if (res.status !== 200) unusable = { ok: false, status: "failed", code: "download_failed", detail: `OpenAlex lookup answered HTTP ${res.status}` };
     else {
       work = asRecord(parseJsonBody(res.body, "openalex"));
       if (work === null) unusable = { ok: false, status: "failed", code: "download_failed", detail: "OpenAlex returned an unusable record" };
     }
-  } catch {
+  } catch (err) {
+    if (deps.signal?.aborted) throw err;
     unusable = { ok: false, status: "failed", code: "download_failed", detail: "OpenAlex lookup failed" };
   }
   if (work !== null) {
@@ -352,11 +373,14 @@ export async function acquireSource(deps: Deps, paper: { doi: string; title: str
 
   // Last resorts, asked only now so a run that already has its source spends no quota: Europe PMC (a published or author-manuscript copy)
   // before Semantic Scholar (which may only know a preprint).
-  const epmc = await tryAttempts(deps, paper, await europePmcAttempts(deps, paper, seen), origin, key);
+  const epmcLookup = await europePmcAttempts(deps, paper, seen);
+  failures.push(...epmcLookup.outages);
+  const epmc = await tryAttempts(deps, paper, epmcLookup.attempts, origin, key);
   if ("source" in epmc) return { ok: true, source: epmc.source };
   failures.push(...epmc.failures);
-  const s2 = await semanticScholarAttempts(deps, paper, seen);
-  const second = await tryAttempts(deps, paper, s2, origin, key);
+  const s2Lookup = await semanticScholarAttempts(deps, paper, seen);
+  failures.push(...s2Lookup.outages);
+  const second = await tryAttempts(deps, paper, s2Lookup.attempts, origin, key);
   if ("source" in second) return { ok: true, source: second.source };
   failures.push(...second.failures);
 

@@ -11,8 +11,8 @@ import { GRADER_KEY_NAMES } from "./keys.ts";
 
 /** Grader A and the adjudicator (PLAN section 1): Meta through OpenCode Go. */
 export const GRADER_A = { provider: "opencode-go", id: "muse-spark-1.3-contributor" } as const;
-/** Grader B (PLAN section 1): Gemini through Pi's Vertex client. */
-export const GRADER_B = { provider: "google-vertex", id: "gemini-3.8-flash" } as const;
+/** Grader B (owner decision 2026-10-19): MiniMax M3.1 Flash Free through OpenCode Go (custom Pi model, see sandbox.ts PI_CUSTOM_MODELS). */
+export const GRADER_B = { provider: "opencode-go", id: "minimax-m3.1-flash-free" } as const;
 export type GraderName = "A" | "B";
 export const graderModel = (g: GraderName): { provider: string; id: string } =>
   g === "A" ? { ...GRADER_A } : { ...GRADER_B };
@@ -26,14 +26,17 @@ export const RUBRIC_PATH = "experiments/harness/factcheck-rubric-v1.md";
 
 export const CITED_LABELS = ["supported", "overstated", "unsupported", "wrong", "misattributed"] as const;
 export const UNCITED_LABELS = ["background", "specific"] as const;
+/** Cited/uncited-agnostic: every cited paper is unavailable in the corpus (the reason is recorded). */
+export const UNGRADEABLE_LABEL = "ungradeable" as const;
 /** Labels that count as bad in the pooled bad-row rate and in PA_bad. */
 export const BAD_LABELS = ["unsupported", "wrong", "misattributed"] as const;
-export type AdjudicationClass = "supported" | "overstated" | "bad" | "background" | "specific";
+export type AdjudicationClass = "supported" | "overstated" | "bad" | "background" | "specific" | "ungradeable";
 
 export const isBadLabel = (label: string): boolean => (BAD_LABELS as readonly string[]).includes(label);
 
 /** The adjudication class of a label; throws when the label is invalid for the unit's cited flag. */
 export function classOf(label: string, cited: boolean): AdjudicationClass {
+  if (label === UNGRADEABLE_LABEL) return "ungradeable";
   if (cited) {
     if ((CITED_LABELS as readonly string[]).includes(label)) return isBadLabel(label) ? "bad" : (label as "supported" | "overstated");
     throw new Error(`label ${JSON.stringify(label)} is not valid for a cited unit (need one of ${CITED_LABELS.join("|")})`);
@@ -140,7 +143,11 @@ export function validateLabels(note: NoteJson, labels: unknown, rubricSha256: st
     } catch (err) {
       errs.push(`unit ${e.id}: ${(err as Error).message}`);
     }
-    if (unit.cited) {
+    if (e.label === UNGRADEABLE_LABEL) {
+      if (typeof e.rationale !== "string" || e.rationale === "") {
+        errs.push(`unit ${e.id}: ungradeable units need the reason in rationale (which cited papers are unavailable in the corpus)`);
+      }
+    } else if (unit.cited) {
       if (typeof e.location !== "string" || e.location === "") errs.push(`unit ${e.id}: cited units need a source location`);
       if (typeof e.excerpt !== "string" || e.excerpt === "") errs.push(`unit ${e.id}: cited units need a verbatim excerpt`);
       else if (e.excerpt.length > 300) errs.push(`unit ${e.id}: excerpt is ${e.excerpt.length} chars, over the 300-char cap`);
@@ -182,7 +189,7 @@ export function selectDisagreements(note: NoteJson, a: LabelFile, b: LabelFile):
 export interface AdjudicatedUnit {
   id: string;
   final: string;
-  basis: "agreed" | "adjudicated";
+  basis: "agreed" | "adjudicated" | "single-grader";
   a: string;
   b: string;
 }
@@ -191,6 +198,8 @@ export interface AdjudicatedFile {
   note: string;
   document_digest: string;
   rubric_sha256: string;
+  /** sha256 of JSON.stringify(note export) at finalization (single-grader only): binds trap/units metadata. */
+  input_sha256?: string;
   adjudicator_model: string;
   seed: number;
   trap_violated: boolean;
@@ -227,6 +236,36 @@ export function applyAdjudication(
   return { note: note.note, document_digest: note.document_digest, rubric_sha256: rubricSha256, adjudicator_model: adjudicatorModel, seed, trap_violated: trapViolated, units };
 }
 
+/** Marker written as adjudicator_model when finals come from the single approved
+ * grader (A) with no second model and no adjudication session. */
+export const SINGLE_GRADER_MODEL = "single-grader";
+
+/**
+ * Finalize notes graded by the single approved grader: validate the labels file
+ * (identity, digest, rubric, schema via validateLabels) and take every label as
+ * final. No second model, no fabricated B file, no session. The complete note input
+ * is bound via input_sha256, so any later trap/units change invalidates these finals.
+ * Throws on any mismatch. Basis is explicitly single-grader, never adjudicated.
+ */
+export function finalizeSingleGrader(note: NoteJson, a: LabelFile, rubricSha256: string): AdjudicatedFile {
+  if (a.grader_model !== graderModelId("A")) {
+    throw new Error(`grader_model mismatch: need ${graderModelId("A")}, got ${JSON.stringify(a.grader_model)}`);
+  }
+  const errs = validateLabels(note, a, rubricSha256);
+  if (errs.length > 0) throw new Error(`labels-A invalid: ${errs[0]}`);
+  const byId = new Map(a.units.map((u) => [u.id, u.label]));
+  return {
+    note: note.note, document_digest: note.document_digest, rubric_sha256: rubricSha256,
+    input_sha256: sha256Text(JSON.stringify(note)),
+    adjudicator_model: SINGLE_GRADER_MODEL, seed: adjudicationSeed(note.note),
+    trap_violated: a.trap_violated,
+    units: note.units.map((u) => {
+      const label = byId.get(u.id) ?? "";
+      return { id: u.id, final: label, basis: "single-grader" as const, a: label, b: "" };
+    }),
+  };
+}
+
 /** Deterministic uint32 seed per note, so the unattributed order is reproducible. */
 export function adjudicationSeed(noteId: string): number {
   return parseInt(sha256Text(`uktub-adjudication:${noteId}`).slice(0, 8), 16);
@@ -249,9 +288,10 @@ export function shufflePair<T>(pair: [T, T], seed: number): [T, T] {
   return mulberry32(seed)() < 0.5 ? [pair[1]!, pair[0]!] : [pair[0]!, pair[1]!];
 }
 
-/** Binary labels for `analysis.ts` agreement: cited units only, bad vs not-bad. */
+/** Binary labels for `analysis.ts` agreement: gradeable cited units only (bad vs not-bad). Ungradeable units are not judged and stay out of the agreement denominator. */
 export function toBinaryLabels(noteId: string, labels: LabelFile): Array<{ note: string; unit: string; bad: boolean }> {
   return labels.units.filter((u) => {
+    if (u.label === UNGRADEABLE_LABEL) return false;
     try {
       classOf(u.label, true);
       return true;
@@ -261,17 +301,55 @@ export function toBinaryLabels(noteId: string, labels: LabelFile): Array<{ note:
   }).map((u) => ({ note: noteId, unit: u.id, bad: isBadLabel(u.label) }));
 }
 
+/** Tier 2 denominator over adjudicated finals: bad/rows count gradeable cited units only; ungradeable cited units are counted separately. */
+export interface Tier2Counts {
+  id: string;
+  bad: number;
+  rows: number;
+  ungradeable: number;
+}
+
+export function tier2Counts(note: NoteJson, adjudicated: AdjudicatedFile): Tier2Counts {
+  const cited = new Set(note.units.filter((u) => u.cited).map((u) => u.id));
+  let bad = 0;
+  let rows = 0;
+  let ungradeable = 0;
+  for (const u of adjudicated.units) {
+    if (!cited.has(u.id)) continue;
+    if (u.final === UNGRADEABLE_LABEL) {
+      ungradeable++;
+      continue;
+    }
+    rows++;
+    if (isBadLabel(u.final)) bad++;
+  }
+  return { id: note.note, bad, rows, ungradeable };
+}
+
 export const corpusFileName = (sha256: string, ext: "pdf" | "txt"): string => `${sha256}.${ext}`;
 
-/** Frozen-corpus origins (PLAN section 4.6): arXiv and ACL Anthology only. */
+/**
+ * Frozen-corpus origins (PLAN section 4.6, widened): any recorded non-keyed HTTPS origin the product itself
+ * acquired from. The registry `ref` is only ever set by a successful product acquisition (OpenAlex
+ * pdf_url/oa_url locations, arXiv PDFs, Europe PMC/PMC copies, Semantic Scholar openAccessPdf), so any
+ * recorded HTTPS ref names a lawful copy; keyed origins stay refused via `keyedOriginRefused`, non-PDF
+ * bytes are refused at fetch, and the fetched bytes are verified against the registry sha256.
+ */
 export function allowedCorpusHost(url: string): boolean {
-  let host = "";
+  let u: URL;
   try {
-    host = new URL(url).hostname.toLowerCase();
+    u = new URL(url);
   } catch {
     return false;
   }
-  return host === "arxiv.org" || host.endsWith(".arxiv.org") || host === "aclanthology.org" || host.endsWith(".aclanthology.org");
+  return u.protocol === "https:" && u.hostname !== "";
+}
+
+/** ms to wait before requesting `host` so per-host spacing stays >= `spacingMs` (arXiv spacing; one request per 3 s per host). */
+export function corpusFetchDelayMs(host: string, nowMs: number, lastFetchMs: ReadonlyMap<string, number>, spacingMs: number): number {
+  const last = lastFetchMs.get(host.toLowerCase());
+  if (last === undefined) return 0;
+  return Math.max(0, spacingMs - (nowMs - last));
 }
 
 /** Keyed origins (e.g. the OpenAlex content API) are refused: credentials or key-like query. */

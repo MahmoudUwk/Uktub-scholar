@@ -1,0 +1,1327 @@
+[
+  {
+    "name": "papers",
+    "title": "Search papers",
+    "description": "Search OpenAlex, Crossref, and Semantic Scholar for papers matching a query. Returns merged candidates in a deterministic relevance order with per-provider warnings; a single provider failing degrades the result, and a DOI-shaped query still searches. At most 20 results per call (client policy after a tool-payload incident). On failure the result is an error carrying a stable code — e.g. `Refused: CODE — what happened. Next: what to do.`",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "query": {
+          "type": "string",
+          "description": "Free-text scholarly query; DOI-shaped strings are allowed and hinted"
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Max candidates to return (default 5, cap 20)"
+        }
+      },
+      "required": [
+        "query"
+      ]
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "query": {
+          "type": "string"
+        },
+        "candidates": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "title",
+              "doi",
+              "authors",
+              "venue",
+              "year",
+              "citationCount",
+              "endpoint"
+            ],
+            "properties": {
+              "title": {
+                "type": "string"
+              },
+              "doi": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "authors": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "venue": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "year": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "citationCount": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "endpoint": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "warnings": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "provider",
+              "code",
+              "message"
+            ],
+            "properties": {
+              "provider": {
+                "type": "string"
+              },
+              "code": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "requested": {
+          "type": "number"
+        },
+        "returned": {
+          "type": "number"
+        },
+        "truncated": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "query",
+        "candidates",
+        "warnings",
+        "requested",
+        "returned",
+        "truncated"
+      ]
+    },
+    "annotations": {
+      "title": "Search papers",
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "registry",
+    "title": "Paper registry",
+    "description": "Manage the project's paper collection in one tool. action=register: add papers by DOI or arxiv:YYMM.NNNNN (at most 50); every input gets an outcome in order, aliases of one paper register once, a refresh keeps the pinned citekey. action=remove: delete explicit DOIs/citekeys (at most 50; there is no remove-all). action=read: list all papers or an explicit subset with the fields you ask for (default title, year, citable; also authors, venue, bibtex, bibtexSource, abstract, source, refreshedAt), paged with a cursor. action=attach_source: prepare a PDF or GROBID TEI file inside the project as a paper's source (at most 10); the file is neither copied nor deleted and its text is never shown to you. action=sync_bibliography: re-render refs/references.bib from the registry. action=acquire: fetch an open-access source for papers that have none (omit handles for all of them; the same work registration starts in the background); read with the source field shows each paper's source status: metadata_only, acquiring, ready, unavailable or failed. A paper without provider BibTeX is citable: false — BibTeX is never synthesized. Sources: register a paper only when the user asks or the text you write cites it, and only DOIs from search results or the user; if the user says to use only the papers already registered, neither search nor register more. A paper the user names that is not found is reported as not found: never substitute another work. refs/references.bib is rendered from the registry: never edit it by hand (use sync_bibliography). Only if the user asks for a stub citation, write it in a separate .bib file with only the fields the user gave and note={UNREGISTERED PLACEHOLDER - verify}, and say it is a placeholder. On failure the result is an error carrying a stable code — e.g. `Refused: CODE — what happened. Next: what to do.`",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "register"
+            },
+            {
+              "type": "string",
+              "const": "remove"
+            },
+            {
+              "type": "string",
+              "const": "read"
+            },
+            {
+              "type": "string",
+              "const": "attach_source"
+            },
+            {
+              "type": "string",
+              "const": "sync_bibliography"
+            },
+            {
+              "type": "string",
+              "const": "acquire"
+            }
+          ],
+          "description": "register | remove | read | attach_source | sync_bibliography | acquire"
+        },
+        "identifiers": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 50,
+          "description": "register: DOIs (10.xxxx/suffix, doi: or doi.org forms) or arxiv:YYMM.NNNNN; at most 50"
+        },
+        "handles": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 50,
+          "description": "remove: DOIs or citekeys to delete (required, never \"all\"); read: restrict to these papers (omit for every paper); acquire: papers to fetch an open-access source for (omit for every paper without a source); at most 50"
+        },
+        "fields": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "read: fields to return besides doi and citekey; default title, year, citable. Allowed: title, year, citable, authors, venue, bibtex, bibtexSource, abstract, source, refreshedAt"
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "read: page size (default 50; at most 100, or 25 with abstract/bibtex)"
+        },
+        "cursor": {
+          "type": "string",
+          "description": "read: continuation token from the previous page of the same request"
+        },
+        "attachments": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "handle",
+              "path"
+            ],
+            "properties": {
+              "handle": {
+                "type": "string",
+                "description": "DOI or citekey of a registered paper"
+              },
+              "path": {
+                "type": "string",
+                "description": "PDF or GROBID TEI file inside the project"
+              }
+            }
+          },
+          "maxItems": 10,
+          "description": "attach_source: local files to prepare as these papers' sources; at most 10"
+        }
+      },
+      "required": [
+        "action"
+      ]
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "type": "string"
+        },
+        "outcomes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "index",
+              "input",
+              "status",
+              "doi",
+              "citekey",
+              "citable",
+              "duplicateOf",
+              "refusalCode",
+              "refusalMessage",
+              "refusalNext",
+              "warnings",
+              "source"
+            ],
+            "properties": {
+              "index": {
+                "type": "integer"
+              },
+              "input": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string"
+              },
+              "doi": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "citekey": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "citable": {
+                "anyOf": [
+                  {
+                    "type": "boolean"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "duplicateOf": {
+                "anyOf": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "refusalCode": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "refusalMessage": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "refusalNext": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "warnings": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "source": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "required": [
+                      "status",
+                      "revision"
+                    ],
+                    "properties": {
+                      "status": {
+                        "type": "string"
+                      },
+                      "revision": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "kind": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "failureDetail": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "reused": {
+                        "type": "boolean"
+                      },
+                      "failureCode": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "characters": {
+                        "type": "integer"
+                      },
+                      "pages": {
+                        "anyOf": [
+                          {
+                            "type": "integer"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "chunks": {
+                        "type": "integer"
+                      }
+                    }
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "warnings": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "code",
+              "message",
+              "next"
+            ],
+            "properties": {
+              "code": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              },
+              "next": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "records": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "patternProperties": {
+              "^.*$": {}
+            }
+          }
+        },
+        "total": {
+          "type": "integer"
+        },
+        "nextCursor": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "unresolved": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "handle",
+              "reason"
+            ],
+            "properties": {
+              "handle": {
+                "type": "string"
+              },
+              "reason": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "synced": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "action"
+      ]
+    },
+    "annotations": {
+      "title": "Paper registry",
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "compile",
+    "title": "Compile document",
+    "description": "Compile the project's LaTeX entry with a local Tectonic engine (the user's binary: PATH or UKTUB_TECTONIC_BIN). Entry defaults to manuscript/main.tex, then main.tex, then a lone top-level .tex; with several candidates the refusal names them. Output (PDF) lands in build/; structured diagnostics (severity, file, line, message) come back on failure, so fix and recompile. The engine must be installed — a missing engine is a refusal, not a download. On failure the result is an error carrying a stable code — e.g. `Refused: CODE — what happened. Next: what to do.`",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "entry": {
+          "type": "string",
+          "description": "Project-relative .tex path; omit to use the default entry resolution"
+        }
+      }
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "compiled"
+            },
+            {
+              "type": "string",
+              "const": "errors"
+            }
+          ]
+        },
+        "engine": {
+          "type": "string"
+        },
+        "entry": {
+          "type": "string"
+        },
+        "pdfPath": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "pdfSizeBytes": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "diagnostics": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "severity",
+              "message"
+            ],
+            "properties": {
+              "severity": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "const": "error"
+                  },
+                  {
+                    "type": "string",
+                    "const": "warning"
+                  }
+                ]
+              },
+              "file": {
+                "type": "string"
+              },
+              "line": {
+                "type": "integer"
+              },
+              "message": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "diagnosticsTruncated": {
+          "type": "boolean"
+        },
+        "provenance": {
+          "type": "object",
+          "required": [
+            "words",
+            "audited",
+            "verified",
+            "cited",
+            "uncited",
+            "figures",
+            "unregistered",
+            "items"
+          ],
+          "properties": {
+            "words": {
+              "type": "integer"
+            },
+            "audited": {
+              "type": "integer"
+            },
+            "verified": {
+              "type": "integer"
+            },
+            "cited": {
+              "type": "integer"
+            },
+            "uncited": {
+              "type": "integer"
+            },
+            "figures": {
+              "type": "object",
+              "required": [
+                "ok",
+                "check",
+                "open",
+                "info",
+                "computed"
+              ],
+              "properties": {
+                "ok": {
+                  "type": "integer"
+                },
+                "check": {
+                  "type": "integer"
+                },
+                "open": {
+                  "type": "integer"
+                },
+                "info": {
+                  "type": "integer"
+                },
+                "computed": {
+                  "type": "integer"
+                }
+              }
+            },
+            "unregistered": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "severity",
+                  "file",
+                  "line",
+                  "token",
+                  "why"
+                ],
+                "properties": {
+                  "severity": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "const": "open"
+                      },
+                      {
+                        "type": "string",
+                        "const": "check"
+                      }
+                    ]
+                  },
+                  "file": {
+                    "type": "string"
+                  },
+                  "line": {
+                    "type": "integer"
+                  },
+                  "token": {
+                    "type": "string"
+                  },
+                  "why": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "required": [
+        "status",
+        "engine",
+        "entry",
+        "pdfPath",
+        "pdfSizeBytes",
+        "diagnostics",
+        "diagnosticsTruncated"
+      ]
+    },
+    "annotations": {
+      "title": "Compile document",
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "verify",
+    "title": "Verify claim",
+    "description": "Find support for ONE claim in the registered papers: papers is \"all\" or an explicit list of DOIs/citekeys. The package prepares sources, searches and judges internally; you receive only supporting passages with exact pointers (doi@revision#start-end) and four separate coverage reports — sources, candidates, work, output. \"No support found\" is not evidence that the claim is false. If verify cannot run, the claim stays unverified: passages you retrieved are unchecked reading, never support. An optional query only narrows WHICH passages are checked (the search is then query-limited, not exhaustive). If the response carries a continuation, repeat the same request with it to continue unfinished checking or page more evidence. Rare direct path: passages=[{source: pointer}|{text}] judges exactly those passages; text carries no paper provenance. Engine and bar come from verification.* in config/chunking.yaml or the documented defaults. Document mode (exclusive with the above): {document: project-relative .tex path} or {text: LaTeX fragment} checks the text as written, one unit at a time (cited units against their own papers, uncited units against all papers), with per-unit supported | cited-unsupported | missing-citation | unsourced | unregistered | skipped (too short, or too long — split it). At most 50 units per call (client policy); exhaustive per unit at the configured bar, so it is slow with local Eos. On failure the result is an error carrying a stable code — e.g. `Refused: CODE — what happened. Next: what to do.`",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "claim": {
+          "type": "string",
+          "minLength": 8,
+          "maxLength": 2000,
+          "description": "ONE proposition to find support for, stated as a sentence; it is passed to the verifier unchanged"
+        },
+        "papers": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1,
+              "maxItems": 100
+            }
+          ],
+          "description": "Scope: \"all\" registered papers, or an explicit list of DOIs/citekeys (at most 100); an empty list is refused, never read as all"
+        },
+        "query": {
+          "type": "string",
+          "maxLength": 500,
+          "description": "Optional locator words that only narrow WHICH passages are checked; the claim is unchanged and the search becomes query-limited, not exhaustive. The hosted engine otherwise checks the top-10 retrieval candidates per claim (every passage on other engines, or with UKTUB_VERIFY_STRATEGY=exhaustive) and can take minutes for long papers; use a query when a focused check is enough"
+        },
+        "passages": {
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "type": "object",
+                "required": [
+                  "source"
+                ],
+                "properties": {
+                  "source": {
+                    "type": "string",
+                    "description": "pointer from an earlier result (doi@revision#start-end)"
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "required": [
+                  "text"
+                ],
+                "properties": {
+                  "text": {
+                    "type": "string",
+                    "maxLength": 4000,
+                    "description": "caller-supplied text; judged with no paper attribution"
+                  }
+                }
+              }
+            ]
+          },
+          "minItems": 1,
+          "maxItems": 8,
+          "description": "Rare direct path instead of papers: judge exactly these passages (at most 8)"
+        },
+        "continuation": {
+          "type": "string",
+          "description": "Token from the previous response of the SAME request: continues unfinished checking and/or the next page of evidence"
+        },
+        "document": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Document mode (exclusive with claim, papers, query, passages, continuation): project-relative .tex entry to check as written, its includes expanded"
+        },
+        "text": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Document mode (exclusive with claim, papers, query, passages, continuation): LaTeX fragment to check as written"
+        },
+        "offset": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Document mode: first unit to check (pages of 50 units); the result names the next offset until the whole text is checked"
+        }
+      }
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "claim": {
+          "type": "string"
+        },
+        "mode": {
+          "type": "string"
+        },
+        "result": {
+          "type": "object",
+          "required": [
+            "supportFound",
+            "searched",
+            "complete",
+            "limitations"
+          ],
+          "properties": {
+            "supportFound": {
+              "type": "boolean"
+            },
+            "searched": {
+              "type": "string"
+            },
+            "complete": {
+              "type": "boolean"
+            },
+            "limitations": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "engine": {
+          "type": "object",
+          "required": [
+            "name",
+            "model",
+            "protocol",
+            "minConfidence",
+            "cache"
+          ],
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "model": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "protocol": {
+              "type": "string"
+            },
+            "minConfidence": {
+              "type": "number"
+            },
+            "cache": {
+              "type": "boolean"
+            }
+          }
+        },
+        "coverage": {
+          "type": "object",
+          "required": [
+            "sources",
+            "candidates",
+            "work",
+            "output"
+          ],
+          "properties": {
+            "sources": {
+              "type": "object",
+              "required": [
+                "selected",
+                "ready",
+                "unavailable",
+                "unresolved",
+                "preprint"
+              ],
+              "properties": {
+                "selected": {
+                  "type": "integer"
+                },
+                "ready": {
+                  "type": "integer"
+                },
+                "unavailable": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "patternProperties": {
+                      "^.*$": {}
+                    }
+                  }
+                },
+                "unresolved": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "patternProperties": {
+                      "^.*$": {}
+                    }
+                  }
+                },
+                "preprint": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "candidates": {
+              "type": "object",
+              "required": [
+                "total",
+                "perPaper"
+              ],
+              "properties": {
+                "total": {
+                  "type": "integer"
+                },
+                "perPaper": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "patternProperties": {
+                      "^.*$": {}
+                    }
+                  }
+                }
+              }
+            },
+            "work": {
+              "type": "object",
+              "patternProperties": {
+                "^.*$": {}
+              }
+            },
+            "output": {
+              "type": "object",
+              "required": [
+                "available",
+                "returned",
+                "deliveredEarlier",
+                "withheld",
+                "staleDropped"
+              ],
+              "properties": {
+                "available": {
+                  "type": "integer"
+                },
+                "returned": {
+                  "type": "integer"
+                },
+                "deliveredEarlier": {
+                  "type": "integer"
+                },
+                "withheld": {
+                  "type": "integer"
+                },
+                "staleDropped": {
+                  "type": "integer"
+                }
+              }
+            }
+          }
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "patternProperties": {
+              "^.*$": {}
+            }
+          }
+        },
+        "direct": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "patternProperties": {
+              "^.*$": {}
+            }
+          }
+        },
+        "continuation": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "claim",
+        "mode",
+        "result",
+        "engine",
+        "coverage",
+        "evidence",
+        "continuation"
+      ]
+    },
+    "annotations": {
+      "title": "Verify claim",
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "passages",
+    "title": "Search passages",
+    "description": "Exploratory retrieval over the registered papers' full text: describe a topic, question or phrase and get the best-matching passages, each with its paper, section, page, an exact pointer (doi@revision#start-end) and a verbatim excerpt (withheld, with its reason, when it would export too much of one paper — the pointer still identifies it). papers is \"all\" (default) or an explicit list of DOIs/citekeys; limit at most 10. Search is keyword (BM25) and, when an embedding server is configured (UKTUB_EMBED_URL), semantic as well; a failing embedder degrades to keyword results and says so. Results are retrieval, not verification: check a claim with verify before you cite it. On failure the result is an error carrying a stable code — e.g. `Refused: CODE — what happened. Next: what to do.`",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "query": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500,
+          "description": "What to look for: a topic, question or phrase. Natural language is fine; this is retrieval, not verification"
+        },
+        "papers": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1,
+              "maxItems": 100
+            }
+          ],
+          "description": "Scope: \"all\" registered papers (default), or a list of DOIs/citekeys (at most 100); an empty list is refused, never read as all"
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10,
+          "description": "Passages to return (default 5, at most 10)"
+        }
+      },
+      "required": [
+        "query"
+      ]
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "query": {
+          "type": "string"
+        },
+        "mode": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "hybrid"
+            },
+            {
+              "type": "string",
+              "const": "lexical"
+            }
+          ]
+        },
+        "result": {
+          "type": "object",
+          "required": [
+            "found",
+            "limitations"
+          ],
+          "properties": {
+            "found": {
+              "type": "boolean"
+            },
+            "limitations": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "coverage": {
+          "type": "object",
+          "required": [
+            "papers"
+          ],
+          "properties": {
+            "papers": {
+              "type": "object",
+              "required": [
+                "selected",
+                "searchable",
+                "notSearchable",
+                "unresolved"
+              ],
+              "properties": {
+                "selected": {
+                  "type": "integer"
+                },
+                "searchable": {
+                  "type": "integer"
+                },
+                "notSearchable": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "doi",
+                      "citekey",
+                      "reason"
+                    ],
+                    "properties": {
+                      "doi": {
+                        "type": "string"
+                      },
+                      "citekey": {
+                        "type": "string"
+                      },
+                      "reason": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                },
+                "unresolved": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "hits": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "rank",
+              "doi",
+              "citekey",
+              "pointer",
+              "section",
+              "page",
+              "found",
+              "excerpt",
+              "withheld"
+            ],
+            "properties": {
+              "rank": {
+                "type": "integer"
+              },
+              "doi": {
+                "type": "string"
+              },
+              "citekey": {
+                "type": "string"
+              },
+              "pointer": {
+                "type": "string"
+              },
+              "section": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "page": {
+                "anyOf": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "found": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "excerpt": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "withheld": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      },
+      "required": [
+        "query",
+        "mode",
+        "result",
+        "coverage",
+        "hits"
+      ]
+    },
+    "annotations": {
+      "title": "Search passages",
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "doctor",
+    "title": "Diagnose setup",
+    "description": "Diagnose the setup and say what is wrong and how to fix it: whether claim verification can run now (the configured engine, with one minimal probe of the hosted endpoint when it is configured), whether the registry is present, whether a LaTeX engine is available, and which optional provider keys are set. Takes no arguments. For any check that reports an error, tell the user the fix. On failure the result is an error carrying a stable code — e.g. `Refused: CODE — what happened. Next: what to do.`",
+    "inputSchema": {
+      "type": "object",
+      "properties": {}
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "summary": {
+          "type": "string"
+        },
+        "checks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "status",
+              "detail",
+              "fix"
+            ],
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "status": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "const": "ok"
+                  },
+                  {
+                    "type": "string",
+                    "const": "warn"
+                  },
+                  {
+                    "type": "string",
+                    "const": "error"
+                  }
+                ]
+              },
+              "detail": {
+                "type": "string"
+              },
+              "fix": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "required": [
+        "summary",
+        "checks"
+      ]
+    },
+    "annotations": {
+      "title": "Diagnose setup",
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": true
+    }
+  }
+]

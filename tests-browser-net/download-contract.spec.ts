@@ -332,6 +332,21 @@ describe("browser-only cases", () => {
       }),
     );
   });
+
+  it("clears the timer and removes abort listener on fetch failure", async () => {
+    let cleared = false;
+    const timerHandle = 123;
+    const ac = new AbortController();
+    const calls: string[] = [];
+    await createBrowserDownloader({
+      fetch: stubFetch({ "https://pub.example/a.pdf": { fail: "cors" } }, calls) as unknown as typeof fetch,
+      setTimeoutFn: () => timerHandle,
+      clearTimeoutFn: (h) => {
+        if (h === timerHandle) cleared = true;
+      },
+    })("https://pub.example/a.pdf", { maxBytes: 64, signal: ac.signal }).catch(() => {});
+    assert.equal(cleared, true, "timer should have been cleared on fetch failure");
+  });
 });
 
 describe("node-only cases (no browser equivalent)", () => {
@@ -348,5 +363,69 @@ describe("node-only cases (no browser equivalent)", () => {
       "https://pub.example/a.pdf": { status: 302, headers: { location: "https://pub.example/a.pdf" } },
     });
     assert.equal(await codeOf(createSafeDownloader({ resolve: publicResolver, transport })("https://pub.example/a.pdf", { maxBytes: 64 })), "unsafe_redirect");
+  });
+});
+
+/* ── browser body release: every pre-stream exit cancels the unread body ── */
+describe("browser-only: unread response bodies are cancelled exactly once", () => {
+  /** A response body with bytes queued and no close: a cancel reaches the source and is counted. */
+  const liveBody = (n: number) => {
+    const cancels = { count: 0 };
+    const body = new ReadableStream({
+      start(c) {
+        c.enqueue(bytes(n));
+      },
+      cancel() {
+        cancels.count += 1;
+      },
+    });
+    return { body, cancels };
+  };
+  const responseWith = (opts: { status?: number; url?: string; contentLength?: string; n: number }) => {
+    const live = liveBody(opts.n);
+    const headers = opts.contentLength !== undefined ? { "content-length": opts.contentLength } : {};
+    return {
+      live,
+      response: {
+        status: opts.status ?? 200,
+        url: opts.url ?? "https://pub.example/a.pdf",
+        headers: { get: (name: string) => headers[name.toLowerCase() as keyof typeof headers] ?? null },
+        body: live.body,
+      },
+    };
+  };
+  const fetchReturning = (response: unknown) => (async () => response) as unknown as typeof fetch;
+
+  it("a non-200 status cancels the body", async () => {
+    const { live, response } = responseWith({ status: 404, n: 16 });
+    assert.equal(await codeOf(createBrowserDownloader({ fetch: fetchReturning(response) })("https://pub.example/a.pdf", { maxBytes: 64 })), "download_failed");
+    assert.equal(live.cancels.count, 1);
+  });
+
+  it("a declared Content-Length over the cap cancels the body", async () => {
+    const { live, response } = responseWith({ contentLength: "100", n: 16 });
+    assert.equal(await codeOf(createBrowserDownloader({ fetch: fetchReturning(response) })("https://pub.example/a.pdf", { maxBytes: 64 })), "too_large");
+    assert.equal(live.cancels.count, 1);
+  });
+
+  it("a final URL that is not https cancels the body", async () => {
+    const { live, response } = responseWith({ url: "http://pub.example/a.pdf", n: 16 });
+    assert.equal(await codeOf(createBrowserDownloader({ fetch: fetchReturning(response) })("https://pub.example/a.pdf", { maxBytes: 64 })), "unsafe_redirect");
+    assert.equal(live.cancels.count, 1);
+  });
+
+  it("a caller abort after headers cancels the body", async () => {
+    const caller = new AbortController();
+    const live = liveBody(16);
+    const fetchThenAbort = (async () => {
+      caller.abort();
+      return { status: 200, url: "https://pub.example/a.pdf", headers: { get: () => null }, body: live.body };
+    }) as unknown as typeof fetch;
+    const err = await createBrowserDownloader({ fetch: fetchThenAbort })("https://pub.example/a.pdf", { maxBytes: 64, signal: caller.signal }).then(
+      () => "NO_THROW",
+      (e) => e,
+    );
+    assert.notEqual(err, "NO_THROW");
+    assert.equal(live.cancels.count, 1);
   });
 });

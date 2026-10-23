@@ -1,0 +1,127 @@
+// src/editor/FileCreationMenu.tsx
+import type React from 'react';
+import { useRef } from 'react';
+
+import { t } from '@/i18n';
+import type { ProjectType } from '../../types/projects';
+import { pluginRegistry } from '../../plugins/PluginRegistry';
+import { typesetterRegistryService } from '../../services/TypesetterRegistryService';
+import { resolveLabel } from '../../utils/compilerUtils';
+import { FilePlusIcon } from '../common/Icons';
+import DropdownMenu from '../common/DropdownMenu';
+
+interface FileCreationMenuProps {
+	isOpen: boolean;
+	onClose: () => void;
+	onCreate: (fileName: string, extension: string) => void;
+	triggerElement: HTMLElement | null;
+	projectType: ProjectType;
+	parentPath?: string;
+	mode?: 'dropdown' | 'submenu';
+}
+
+interface FileTemplate {
+	label: string;
+	extension: string;
+	icon?: React.ComponentType;
+	category: 'project' | 'viewers';
+}
+
+const FileCreationMenu: React.FC<FileCreationMenuProps> = ({
+	isOpen,
+	onClose,
+	onCreate,
+	triggerElement,
+	projectType,
+	parentPath = '/',
+	mode = 'dropdown',
+}) => {
+	const targetRef = useRef<HTMLElement>(null);
+
+	if (triggerElement && targetRef.current !== triggerElement) {
+		(targetRef as React.RefObject<HTMLElement | null>).current = triggerElement;
+	}
+
+	const projectInputFiles =
+		typesetterRegistryService.getInputFilesForProjectType(projectType);
+
+	const fileTemplates: FileTemplate[] = [
+		...projectInputFiles.map((input) => ({
+			label: input.label
+				? resolveLabel(input.label)
+				: `.${input.extension} File`,
+			extension: `.${input.extension}`,
+			category: 'project' as const,
+		})),
+		...pluginRegistry.getEditableViewersWithExtensions().flatMap((viewer) => {
+			const extensions = viewer.getSupportedExtensions?.() || [];
+			return extensions.map((ext) => ({
+				label: ext.fileLabel || viewer.name,
+				extension: `.${ext.extension}`,
+				icon: viewer.icon,
+				category: 'viewers' as const,
+			}));
+		}),
+		{ label: t('Other'), extension: '', category: 'project' as const },
+	];
+
+	const projectFiles = fileTemplates.filter((t) => t.category === 'project');
+	const viewerFiles = fileTemplates.filter((t) => t.category === 'viewers');
+
+	const handleCreateFile = (extension: string) => {
+		const baseName = extension === '' ? 'new_file' : `new_file${extension}`;
+		onCreate(baseName, extension);
+		onClose();
+	};
+
+	return (
+		<DropdownMenu
+			targetRef={targetRef}
+			isOpen={isOpen}
+			onClose={onClose}
+			mode={mode}
+			width={250}
+			maxHeight={400}
+			className='file-creation-dropdown'
+		>
+			<div className='ui-menu-section' data-variant='control'>
+				{projectFiles.map((template, idx) => (
+					<button
+						type='button'
+						key={`project-${idx}`}
+						className='ui-menu-item'
+						onClick={() => handleCreateFile(template.extension)}
+					>
+						{template.icon ? <template.icon /> : <FilePlusIcon />}
+						<span className='ui-menu-label'>{t(template.label)}</span>
+						<span className='ui-menu-value'>{template.extension}</span>
+					</button>
+				))}
+			</div>
+
+			{viewerFiles.length > 0 && (
+				<>
+					<div className='ui-menu-section' data-variant='control'>
+						<div className='ui-menu-title' data-variant='control'>
+							{t('Editable Viewers')}
+						</div>
+						{viewerFiles.map((template, idx) => (
+							<button
+								type='button'
+								key={`viewer-${idx}`}
+								className='ui-menu-item'
+								onClick={() => handleCreateFile(template.extension)}
+							>
+								{template.icon ? <template.icon /> : <FilePlusIcon />}
+								<span className='ui-menu-label'>{t(template.label)}</span>
+								<span className='ui-menu-value'>{template.extension}</span>
+							</button>
+						))}
+					</div>
+				</>
+			)}
+		</DropdownMenu>
+	);
+};
+
+export default FileCreationMenu;

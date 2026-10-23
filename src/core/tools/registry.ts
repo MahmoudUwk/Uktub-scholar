@@ -15,7 +15,6 @@
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
-import type { DatabaseSync } from "node:sqlite";
 import { Type, type Static } from "typebox";
 
 import { loadChunkConfig, ConfigError } from "../config.ts";
@@ -29,6 +28,7 @@ import {
   resolveHandle,
   selectPapers,
   syncBibliography,
+  type DatabaseSync,
   type PaperDetail,
 } from "../registry.ts";
 import { InvalidDoiError, fetchPaperMetadata, normalizeDoiQuery, reasonOf } from "../scholarly.ts";
@@ -251,11 +251,15 @@ async function crossCheckTitle(ctx: ToolContext, cfg: ProviderConfig, doi: strin
 }
 
 async function resolveCanonical(ctx: ToolContext, cfg: ProviderConfig, doi: string): Promise<Resolved> {
+  // The caller's cancellation reaches every provider request of this lookup.
+  const scoped: ProviderConfig = { ...cfg, signal: ctx.signal };
   try {
-    const record = await fetchPaperMetadata(ctx.fetch, cfg, { doi });
+    const record = await fetchPaperMetadata(ctx.fetch, scoped, { doi });
     if (record === null) return { record: null, failure: { code: "DOI_NOT_FOUND", message: `no provider knows "${doi}"` }, mismatch: null };
-    return { record, failure: null, mismatch: await crossCheckTitle(ctx, cfg, record.doi ?? doi, record.title) };
+    return { record, failure: null, mismatch: await crossCheckTitle(ctx, scoped, record.doi ?? doi, record.title) };
   } catch (err) {
+    // A cancelled lookup ends the call with the caller's reason; it is not a resolution failure.
+    ctx.signal?.throwIfAborted();
     if (err instanceof InvalidDoiError) return { record: null, failure: { code: "INVALID_DOI", message: `not a DOI: ${JSON.stringify(doi)}` }, mismatch: null };
     return { record: null, failure: { code: "SEARCH_UNAVAILABLE", message: `resolution failed for "${doi}": ${reasonOf(err)}` }, mismatch: null };
   }
@@ -281,9 +285,10 @@ async function registerAction(ctx: ToolContext, db: DatabaseSync, identifiers: s
   let rawError: unknown = null;
   await Promise.all(
     [...firstIndex].map(async ([doi, index]) => {
-      const one = await resolves.get(doi)!;
       try {
+        const one = await resolves.get(doi)!;
         const outcome = await ctx.queue.runExclusive((): Outcome & { rendered: RenderedWarning[] } => {
+          ctx.signal?.throwIfAborted(); // a lookup that finished after the abort commits nothing
           if (one.failure !== null || one.record === null) {
             const code = (one.failure?.code ?? "DOI_NOT_FOUND") as RefusalCode;
             return { ...refusedOutcome(index, identifiers[index], code, one.failure?.message ?? `no provider knows "${doi}"`), doi, rendered: [] };
@@ -331,6 +336,8 @@ async function registerAction(ctx: ToolContext, db: DatabaseSync, identifiers: s
       }
     }),
   );
+  // A cancelled call ends with the caller's reason once every section settled, never as per-item outcomes.
+  ctx.signal?.throwIfAborted();
   if (rawError !== null) throw rawError;
 
   const warnings: RenderedWarning[] = [];

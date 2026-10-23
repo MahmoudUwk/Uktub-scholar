@@ -30,7 +30,7 @@ const ProvenanceOutput = Type.Object({
   verified: Type.Integer(),
   cited: Type.Integer(),
   uncited: Type.Integer(),
-  figures: Type.Object({ ok: Type.Integer(), check: Type.Integer(), open: Type.Integer(), info: Type.Integer() }),
+  figures: Type.Object({ ok: Type.Integer(), check: Type.Integer(), open: Type.Integer(), info: Type.Integer(), computed: Type.Integer() }),
   unregistered: Type.Array(Type.String()),
   items: Type.Array(
     Type.Object({ severity: Type.Union([Type.Literal("open"), Type.Literal("check")]), file: Type.String(), line: Type.Integer(), token: Type.String(), why: Type.String() }),
@@ -91,14 +91,29 @@ export function provenanceBlock(ctx: ToolContext, entry: string): { lines: strin
 
 export async function compileDocumentTool(ctx: ToolContext, args: CompileDocumentArgs = {}): Promise<ToolResult<CompileDocumentStructured>> {
   const outcome: CompileOutcome = await ctx.queue.runExclusive(() =>
-    compileDocument({ root: ctx.root, env: ctx.env, spawn: prodSpawn }, args.entry),
+    compileDocument({ root: ctx.root, env: ctx.env, spawn: prodSpawn, signal: ctx.signal }, args.entry),
   );
   if (outcome.kind === "refusal") {
     return refusalResult({ code: outcome.code, message: outcome.message });
   }
+  return compileToolResult(ctx, outcome, "tectonic");
+}
+
+/**
+ * Shared outcome-to-tool-result assembly (Phase 7): the Node/Tectonic tool
+ * and the browser/BusyTeX worker op build the identical result shape —
+ * same keys, same `describeOutcome` layout, same provenance block — through
+ * this function. `engineNoun` labels the engine ("tectonic" on Node,
+ * "busytex" in the browser) in `engine` and the human text.
+ */
+export function compileToolResult(
+  ctx: ToolContext,
+  outcome: Exclude<CompileOutcome, { kind: "refusal" }>,
+  engineNoun = "tectonic",
+): ToolResult<CompileDocumentStructured> {
   const structured: CompileDocumentStructured = {
     status: outcome.kind,
-    engine: `tectonic ${outcome.engineVersion}`,
+    engine: `${engineNoun} ${outcome.engineVersion}`,
     entry: outcome.entry,
     pdfPath: outcome.kind === "compiled" ? outcome.pdfPath : null,
     pdfSizeBytes: outcome.kind === "compiled" ? outcome.pdfSizeBytes : null,
@@ -108,7 +123,7 @@ export async function compileDocumentTool(ctx: ToolContext, args: CompileDocumen
   const provenance = outcome.kind === "compiled" ? provenanceBlock(ctx, outcome.entry) : null;
   if (provenance !== null) structured.provenance = provenance.structured;
   return {
-    content: [{ type: "text", text: provenance === null ? describeOutcome(outcome) : `${describeOutcome(outcome)}\n\n${provenance.lines.join("\n")}` }],
+    content: [{ type: "text", text: provenance === null ? describeOutcome(outcome, engineNoun) : `${describeOutcome(outcome, engineNoun)}\n\n${provenance.lines.join("\n")}` }],
     structuredContent: structured,
     details: {},
   };
